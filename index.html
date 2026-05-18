@@ -108,6 +108,40 @@
     font-size: 13px;
   }
 
+  .nav-btn {
+    border: 0;
+    border-radius: 9px;
+    padding: 8px 10px;
+    font-weight: 700;
+    background: #ffffff;
+    box-shadow: 0 1px 6px rgba(0,0,0,.25);
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  .nav-btn:active {
+    transform: translateY(1px);
+  }
+
+  .leaflet-popup-content .nav-btn {
+    width: 100%;
+    max-width: 220px;
+  }
+
+  .nav-dir-arrow {
+    color: #0047ff;
+    font-size: 30px;
+    font-weight: 900;
+    line-height: 1;
+    text-shadow:
+      -1px -1px 0 #fff,
+       1px -1px 0 #fff,
+      -1px  1px 0 #fff,
+       1px  1px 0 #fff;
+    transform-origin: center center;
+    pointer-events: none;
+  }
+
 
   .searchbox {
     display: flex;
@@ -295,6 +329,124 @@ function propTable(props) {
   ).join('') + '</table>';
 }
 
+function haversineMeters(a, b) {
+  const toRad = d => d * Math.PI / 180;
+  const R = 6371000;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const la1 = toRad(a.lat);
+  const la2 = toRad(b.lat);
+  const h = Math.sin(dLat / 2) ** 2 +
+            Math.cos(la1) * Math.cos(la2) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+function bearingDegrees(a, b) {
+  const toRad = d => d * Math.PI / 180;
+  const toDeg = r => r * 180 / Math.PI;
+  const la1 = toRad(a.lat);
+  const la2 = toRad(b.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const y = Math.sin(dLng) * Math.cos(la2);
+  const x = Math.cos(la1) * Math.sin(la2) - Math.sin(la1) * Math.cos(la2) * Math.cos(dLng);
+  return (toDeg(Math.atan2(y, x)) + 360) % 360;
+}
+
+function formatDistance(meters) {
+  if (meters < 1000) return Math.round(meters) + ' m';
+  return (meters / 1000).toFixed(2) + ' km';
+}
+
+let navTarget = null;
+let navTargetMarker = null;
+let navLine = null;
+let navArrowMarker = null;
+
+function clearNavGuide() {
+  if (navLine) {
+    map.removeLayer(navLine);
+    navLine = null;
+  }
+  if (navArrowMarker) {
+    map.removeLayer(navArrowMarker);
+    navArrowMarker = null;
+  }
+}
+
+function renderNavGuide(fitView) {
+  if (!navTarget) return;
+
+  if (!navTargetMarker) {
+    navTargetMarker = L.circleMarker(navTarget, {
+      radius: 8,
+      color: '#0047ff',
+      weight: 3,
+      fillColor: '#ffffff',
+      fillOpacity: 1
+    }).addTo(map).bindPopup('Navigationsziel');
+  } else {
+    navTargetMarker.setLatLng(navTarget);
+  }
+
+  const userPos = gpsMarker ? gpsMarker.getLatLng() : null;
+  if (!userPos) {
+    clearNavGuide();
+    setStatus('Ziel markiert. Für Richtungs-Pfeil bitte GPS aktivieren.');
+    if (fitView) map.setView(navTarget, Math.max(map.getZoom(), 18));
+    return;
+  }
+
+  const distance = haversineMeters(userPos, navTarget);
+  const bearing = bearingDegrees(userPos, navTarget);
+  const mid = L.latLng((userPos.lat + navTarget.lat) / 2, (userPos.lng + navTarget.lng) / 2);
+
+  if (!navLine) {
+    navLine = L.polyline([userPos, navTarget], {
+      color: '#0047ff',
+      weight: 3,
+      opacity: 0.9,
+      dashArray: '10 8'
+    }).addTo(map);
+  } else {
+    navLine.setLatLngs([userPos, navTarget]);
+  }
+
+  const arrowIcon = L.divIcon({
+    className: '',
+    html: `<div class="nav-dir-arrow" style="transform: rotate(${bearing}deg);">➤</div>`,
+    iconSize: [34, 34],
+    iconAnchor: [17, 17]
+  });
+
+  if (!navArrowMarker) {
+    navArrowMarker = L.marker(mid, { icon: arrowIcon, interactive: false }).addTo(map);
+  } else {
+    navArrowMarker.setLatLng(mid);
+    navArrowMarker.setIcon(arrowIcon);
+  }
+
+  if (fitView) map.fitBounds(L.latLngBounds([userPos, navTarget]).pad(0.25));
+  setStatus('Richtung aktiv: ' + formatDistance(distance) + ' | Kurs ' + Math.round(bearing) + '°');
+}
+
+function startFieldNavigation(lat, lng) {
+  navTarget = L.latLng(lat, lng);
+  renderNavGuide(true);
+
+  if (navigator.geolocation && !gpsMarker) {
+    navigator.geolocation.getCurrentPosition(updatePosition, gpsError, {
+      enableHighAccuracy: true,
+      maximumAge: 1000,
+      timeout: 15000
+    });
+  }
+}
+
+function navButtonHtml(lat, lng) {
+  if (typeof lat !== 'number' || typeof lng !== 'number') return '';
+  return `<br><br><button class="nav-btn" onclick="startFieldNavigation(${lat}, ${lng})">Richtung anzeigen</button>`;
+}
+
 function hashColor(str) {
   let h = 0;
   str = String(str ?? '');
@@ -312,16 +464,19 @@ function featureCenter(layer) {
   }
 }
 
-function addLabel(targetGroup, layer, text, className) {
-  const c = featureCenter(layer);
-  if (!c || !text) return;
-  const icon = L.divIcon({
+function makeLabelIcon(text, className) {
+  return L.divIcon({
     className: className,
     html: text,
     iconSize: null,
     iconAnchor: [0, 0]
   });
-  L.marker(c, {icon, interactive: false}).addTo(targetGroup);
+}
+
+function addLabel(targetGroup, layer, text, className) {
+  const c = featureCenter(layer);
+  if (!c || !text) return null;
+  return L.marker(c, { icon: makeLabelIcon(text, className), interactive: false }).addTo(targetGroup);
 }
 
 const bounds = L.latLngBounds([]);
@@ -344,7 +499,9 @@ const kranLabels = L.layerGroup();
 const kranLayer = L.geoJSON(kranData, {
   style: f => { return { color: '#ff0000', weight: 2, opacity: 1, fillColor: '#ff0000', fillOpacity: .08 }; },
   onEachFeature: (f, layer) => {
-    layer.bindPopup('<b>Kranstandort ' + (f.properties.id ?? '') + '</b><br>' + propTable(f.properties));
+    const target = featureCenter(layer);
+    const navButton = target ? navButtonHtml(target.lat, target.lng) : '';
+    layer.bindPopup('<b>Kranstandort ' + (f.properties.id ?? '') + '</b><br>' + propTable(f.properties) + navButton);
     addLabel(kranLabels, layer, 'K' + (f.properties.id ?? ''), 'label-kran');
     try { bounds.extend(layer.getBounds()); } catch(e) {}
   }
@@ -366,10 +523,98 @@ const kranCenterLayer = L.geoJSON(kranCentersData, {
 
 const tableLabels = L.layerGroup();
 const tableIndex = new Map();
+const tableRecords = [];
+const effectiveTypeById = new Map();
 let tableLabelsVisible = true;
 
 function tableStyle(f) {
   return { color: '#000000', weight: 2, opacity: .95 };
+}
+
+function csvLineToFields(line) {
+  const out = [];
+  let cur = '';
+  let i = 0;
+  let inQuotes = false;
+  while (i < line.length) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        cur += '"';
+        i += 2;
+        continue;
+      }
+      inQuotes = !inQuotes;
+      i++;
+      continue;
+    }
+    if (ch === ',' && !inQuotes) {
+      out.push(cur);
+      cur = '';
+      i++;
+      continue;
+    }
+    cur += ch;
+    i++;
+  }
+  out.push(cur);
+  return out.map(v => v.trim());
+}
+
+function buildTableLabel(idKey, type) {
+  return idKey + ' - ' + String(type ?? '');
+}
+
+function buildTablePopupHtml(name, label, effectiveType, props, target) {
+  const navButton = target ? navButtonHtml(target.lat, target.lng) : '';
+  return '<b>' + name + ' | ' + label + '</b><br>' +
+    'Effektiver Typ: <b>' + String(effectiveType ?? '') + '</b><br>' +
+    propTable(props) + navButton;
+}
+
+function applyEffectiveTypesToTables() {
+  let updated = 0;
+  tableRecords.forEach(rec => {
+    const effectiveType = effectiveTypeById.get(rec.idKey) || rec.originalType;
+    const label = buildTableLabel(rec.idKey, effectiveType);
+    rec.label = label;
+    rec.effectiveType = effectiveType;
+
+    if (rec.labelMarker) rec.labelMarker.setIcon(makeLabelIcon(label, 'label-table'));
+    rec.layer.bindPopup(buildTablePopupHtml(rec.name, label, effectiveType, rec.props, rec.target));
+
+    const hit = tableIndex.get(rec.idKey);
+    if (hit) hit.label = label;
+    if (effectiveTypeById.has(rec.idKey)) updated++;
+  });
+  setStatus('Effektive Typen geladen: ' + updated + ' Tisch-Typen aus CSV angewendet');
+}
+
+async function loadEffectiveTypesCsv() {
+  try {
+    const res = await fetch('./export-tableId-2026-05-18.csv', { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = (await res.text()).replace(/^\uFEFF/, '');
+    const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+    if (!lines.length) return;
+
+    const header = csvLineToFields(lines[0]);
+    const nrIdx = header.findIndex(h => h === 'Nr.');
+    const typIdx = header.findIndex(h => h === 'Typ');
+    if (nrIdx < 0 || typIdx < 0) return;
+
+    for (let i = 1; i < lines.length; i++) {
+      const fields = csvLineToFields(lines[i]);
+      if (fields.length <= Math.max(nrIdx, typIdx)) continue;
+      const id = String(fields[nrIdx] ?? '').trim();
+      const typ = String(fields[typIdx] ?? '').trim();
+      if (!id || !typ) continue;
+      effectiveTypeById.set(id, typ);
+    }
+    applyEffectiveTypesToTables();
+  } catch (e) {
+    setStatus('CSV mit effektiven Typen konnte nicht geladen werden (' + e.message + ')');
+  }
 }
 
 function addTableLayer(data, name) {
@@ -377,11 +622,15 @@ function addTableLayer(data, name) {
     style: tableStyle,
     onEachFeature: (f, layer) => {
       const p = f.properties || {};
-      const label = String(p.id ?? '') + ' - ' + String(p.tisch_typ ?? '');
-      layer.bindPopup('<b>' + name + ' | ' + label + '</b><br>' + propTable(p));
       const idKey = String(p.id ?? '').trim();
+      const originalType = String(p.tisch_typ ?? '');
+      const effectiveType = effectiveTypeById.get(idKey) || originalType;
+      const label = buildTableLabel(idKey, effectiveType);
+      const target = featureCenter(layer);
+      layer.bindPopup(buildTablePopupHtml(name, label, effectiveType, p, target));
       if (idKey) tableIndex.set(idKey, { layer, feature: f, name, label });
-      addLabel(tableLabels, layer, label, 'label-table');
+      const labelMarker = addLabel(tableLabels, layer, label, 'label-table');
+      if (idKey) tableRecords.push({ idKey, name, layer, props: p, target, originalType, labelMarker, label, effectiveType });
       try { bounds.extend(layer.getBounds()); } catch(e) {}
     }
   }).addTo(map);
@@ -391,6 +640,7 @@ const pz1Layer = addTableLayer(pz1Data, 'PZ1');
 const pz2Layer = addTableLayer(pz2Data, 'PZ2');
 const pz2025Layer = addTableLayer(pz2025Data, 'PZ2025');
 tableLabels.addTo(map);
+loadEffectiveTypesCsv();
 
 const layerGroups = [
   {
@@ -546,6 +796,7 @@ function updatePosition(pos) {
   }
 
   if (follow) map.setView([lat, lng], Math.max(map.getZoom(), 18));
+  if (navTarget) renderNavGuide(false);
   setStatus('GPS aktiv. Genauigkeit ca. ' + Math.round(acc) + ' m');
 }
 
