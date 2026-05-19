@@ -80,14 +80,20 @@
     background: var(--panel);
     border: 1px solid var(--line);
     border-radius: 12px;
-    overflow: hidden;
+    overflow: auto;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 10px;
+    box-sizing: border-box;
   }
 
-  iframe {
-    width: 100%;
-    height: 100%;
-    border: 0;
-    background: #e8ebef;
+  #pdfCanvas {
+    display: block;
+    background: #fff;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.20);
+    max-width: 100%;
+    touch-action: pan-y pan-x;
   }
 
   @media (max-width: 700px) {
@@ -122,11 +128,12 @@
     <span id="status" class="status">Lade Begleitplaene PDF ...</span>
   </div>
 
-  <div class="viewer">
-    <iframe id="pdfFrame" title="Begleitplaene PDF"></iframe>
+  <div id="viewer" class="viewer">
+    <canvas id="pdfCanvas"></canvas>
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 const SOURCE = {
   label: 'Begleitplaene',
@@ -136,13 +143,18 @@ const SOURCE = {
 const state = {
   pdfPath: null,
   zoom: 100,
-  filter: null
+  filter: null,
+  pdfDoc: null,
+  renderId: 0
 };
 
 const statusEl = document.getElementById('status');
-const frameEl = document.getElementById('pdfFrame');
+const viewerEl = document.getElementById('viewer');
+const canvasEl = document.getElementById('pdfCanvas');
 const zoomLabelEl = document.getElementById('zoomLabel');
 const filterButtons = Array.from(document.querySelectorAll('.filter-btn'));
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 function setStatus(text) {
   statusEl.textContent = text;
@@ -203,11 +215,11 @@ function detectGitHubRepo() {
   const owner = host.split('.')[0];
   const parts = window.location.pathname.split('/').filter(Boolean);
   if (!parts.length) {
-    return { owner, repo: owner + '.github.io', basePathParts: [] };
+    return { owner: owner, repo: owner + '.github.io', basePathParts: [] };
   }
 
   return {
-    owner,
+    owner: owner,
     repo: parts[0],
     basePathParts: parts.slice(1, -1)
   };
@@ -248,11 +260,6 @@ function clampZoom(value) {
   return Math.max(40, Math.min(400, value));
 }
 
-function buildPdfSrc(path, zoom) {
-  const normalized = String(path || '').split('#')[0];
-  return normalized + '#zoom=' + zoom;
-}
-
 function renderFilterButtons() {
   filterButtons.forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.filter === state.filter);
@@ -263,35 +270,80 @@ function renderZoom() {
   zoomLabelEl.textContent = state.zoom + '%';
 }
 
-function renderPdf() {
+async function renderPage() {
   renderFilterButtons();
   renderZoom();
 
-  if (!state.pdfPath) {
-    frameEl.removeAttribute('src');
+  if (!state.pdfDoc) {
+    const ctx = canvasEl.getContext('2d');
+    ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
     setStatus(SOURCE.label + ': kein PDF gefunden');
     return;
   }
 
-  frameEl.src = buildPdfSrc(state.pdfPath, state.zoom);
-  const filterInfo = state.filter ? ' | Filter: ' + state.filter + ' (Platzhalter)' : '';
-  setStatus(SOURCE.label + ': ' + state.pdfPath + ' (Zoom ' + state.zoom + '%)' + filterInfo);
+  const renderToken = ++state.renderId;
+  setStatus('Rendere PDF ...');
+
+  try {
+    const page = await state.pdfDoc.getPage(1);
+    if (renderToken !== state.renderId) return;
+
+    const baseViewport = page.getViewport({ scale: 1 });
+    const availableWidth = Math.max(280, viewerEl.clientWidth - 20);
+    const fitScale = availableWidth / baseViewport.width;
+    const userScale = state.zoom / 100;
+    const viewport = page.getViewport({ scale: fitScale * userScale });
+
+    const ratio = window.devicePixelRatio || 1;
+    canvasEl.width = Math.floor(viewport.width * ratio);
+    canvasEl.height = Math.floor(viewport.height * ratio);
+    canvasEl.style.width = Math.floor(viewport.width) + 'px';
+    canvasEl.style.height = Math.floor(viewport.height) + 'px';
+
+    const context = canvasEl.getContext('2d', { alpha: false });
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+
+    await page.render({ canvasContext: context, viewport: viewport }).promise;
+    if (renderToken !== state.renderId) return;
+
+    const filterInfo = state.filter ? ' | Filter: ' + state.filter + ' (in Arbeit)' : '';
+    setStatus(SOURCE.label + ': ' + state.pdfPath + ' (Seite 1/' + state.pdfDoc.numPages + ', Zoom ' + state.zoom + '%)' + filterInfo);
+  } catch (err) {
+    setStatus('PDF konnte nicht gerendert werden');
+  }
 }
 
 function setZoom(nextZoom) {
   state.zoom = clampZoom(nextZoom);
-  renderPdf();
+  renderPage();
 }
 
 function setFilter(filterKey) {
   state.filter = state.filter === filterKey ? null : filterKey;
-  renderPdf();
+  renderPage();
 }
 
 async function loadPdf() {
   setStatus('Suche Begleitplaene PDF ...');
-  state.pdfPath = await discoverPdf(SOURCE.folder);
-  renderPdf();
+  const found = await discoverPdf(SOURCE.folder);
+
+  state.pdfPath = found;
+  state.pdfDoc = null;
+
+  if (!found) {
+    renderPage();
+    return;
+  }
+
+  try {
+    const task = pdfjsLib.getDocument({ url: found, withCredentials: false });
+    state.pdfDoc = await task.promise;
+  } catch (err) {
+    setStatus('PDF Laden fehlgeschlagen: ' + found);
+    return;
+  }
+
+  await renderPage();
 }
 
 function backToMap() {
@@ -311,6 +363,10 @@ document.getElementById('zoomResetBtn').addEventListener('click', () => setZoom(
 
 filterButtons.forEach((btn) => {
   btn.addEventListener('click', () => setFilter(btn.dataset.filter));
+});
+
+window.addEventListener('resize', () => {
+  if (state.pdfDoc) renderPage();
 });
 
 loadPdf();

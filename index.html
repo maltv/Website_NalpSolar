@@ -121,7 +121,7 @@
   font-weight: 700;
   color: #000;
   white-space: nowrap;
-  pointer-events: none;
+  pointer-events: auto;
 
   text-shadow:
     -1px -1px 0 #fff,
@@ -142,7 +142,7 @@
     font-weight: 900;
     border-radius: 999px;
     padding: 2px 6px;
-    pointer-events: none;
+    pointer-events: auto;
   }
 
   .leaflet-control-layers {
@@ -575,14 +575,17 @@ function makeLabelIcon(text, className, angleDeg) {
   });
 }
 
-function addLabel(targetGroup, layer, text, className, angleDeg, paneName) {
+function addLabel(targetGroup, layer, text, className, angleDeg, paneName, options) {
   const c = featureCenter(layer);
   if (!c || !text) return null;
-  return L.marker(c, {
+  const opts = options || {};
+  const marker = L.marker(c, {
     icon: makeLabelIcon(text, className, angleDeg),
-    interactive: false,
+    interactive: !!opts.interactive,
     pane: paneName || 'markerPane'
   }).addTo(targetGroup);
+  if (opts.popupHtml) marker.bindPopup(opts.popupHtml);
+  return marker;
 }
 
 function lineEndpoints(layer) {
@@ -647,8 +650,12 @@ const kranLayer = L.geoJSON(kranData, {
   onEachFeature: (f, layer) => {
     const target = featureCenter(layer);
     const navButton = target ? navButtonHtml(target.lat, target.lng) : '';
-    layer.bindPopup('<b>Kranstandort ' + (f.properties.id ?? '') + '</b><br>' + propTable(f.properties) + navButton);
-    addLabel(kranLabels, layer, 'K' + (f.properties.id ?? ''), 'label-kran', undefined, 'kranLabelPane');
+    const popupHtml = '<b>Kranstandort ' + (f.properties.id ?? '') + '</b><br>' + propTable(f.properties) + navButton;
+    layer.bindPopup(popupHtml);
+    addLabel(kranLabels, layer, 'K' + (f.properties.id ?? ''), 'label-kran', undefined, 'kranLabelPane', {
+      interactive: true,
+      popupHtml: popupHtml
+    });
     try { bounds.extend(layer.getBounds()); } catch(e) {}
   }
 }).addTo(map);
@@ -664,7 +671,9 @@ const kranCenterLayer = L.geoJSON(kranCentersData, {
     pane: 'kranPane'
   }),
   onEachFeature: (f, layer) => {
-    layer.bindPopup('<b>Mittelpunkt Kranradius K' + (f.properties.id ?? '') + '</b><br>' + propTable(f.properties));
+    const target = layer.getLatLng ? layer.getLatLng() : null;
+    const navButton = target ? navButtonHtml(target.lat, target.lng) : '';
+    layer.bindPopup('<b>Mittelpunkt Kranradius K' + (f.properties.id ?? '') + '</b><br>' + propTable(f.properties) + navButton);
   }
 }).addTo(map);
 
@@ -777,12 +786,16 @@ function addTableLayer(data, name) {
       const idKey = String(p.id ?? '').trim();
       const label = buildTableLabel(idKey, p.tisch_typ);
       const target = featureCenter(layer);
-      layer.bindPopup(buildTablePopupHtml(name, label, p, target));
+      const popupHtml = buildTablePopupHtml(name, label, p, target);
+      layer.bindPopup(popupHtml);
       if (idKey) tableIndex.set(idKey, { layer, feature: f, name, label });
       const line = lineEndpoints(layer);
       const labelBearing = line ? bearingDegrees(line.a, line.b) : 90;
       const labelAngle = normalizeLabelAngle(labelBearing - 90);
-      addLabel(tableLabels, layer, label, 'label-table', labelAngle, 'tablesLabelPane');
+      addLabel(tableLabels, layer, label, 'label-table', labelAngle, 'tablesLabelPane', {
+        interactive: true,
+        popupHtml: popupHtml
+      });
       addTableTypeVisuals(layer, p.tisch_typ, 3);
       try { bounds.extend(layer.getBounds()); } catch(e) {}
     }
