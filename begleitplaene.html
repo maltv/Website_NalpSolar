@@ -128,15 +128,29 @@
 </div>
 
 <script>
-const SOURCE = {
-  label: 'Begleitplaene',
-  folder: '5W-Programm/Begleitplaene'
+const FILTER_SOURCES = {
+  bohren: {
+    label: 'Bohren',
+    folder: '5W-Programm/Begleitplaene/Bohren'
+  },
+  stahlbau: {
+    label: 'Stahlbau',
+    folder: '5W-Programm/Begleitplaene/Stahlbau'
+  },
+  bestellung: {
+    label: 'Stahlbaubestellung',
+    folder: '5W-Programm/Begleitplaene/StahlbauBestellungen'
+  },
+  stapel: {
+    label: 'Modultraegerstapel',
+    folder: '5W-Programm/Begleitplaene/Stapel'
+  }
 };
 
 const state = {
   pdfPath: null,
   zoom: 100,
-  filter: null
+  filter: 'bohren'
 };
 
 const statusEl = document.getElementById('status');
@@ -269,13 +283,14 @@ function renderPdf() {
 
   if (!state.pdfPath) {
     frameEl.removeAttribute('src');
-    setStatus(SOURCE.label + ': kein PDF gefunden');
+    const source = FILTER_SOURCES[state.filter];
+    setStatus(source.label + ': kein PDF gefunden');
     return;
   }
 
   frameEl.src = buildPdfSrc(state.pdfPath, state.zoom);
-  const filterInfo = state.filter ? ' | Filter: ' + state.filter + ' (Platzhalter)' : '';
-  setStatus(SOURCE.label + ': ' + state.pdfPath + ' (Zoom ' + state.zoom + '%)' + filterInfo);
+  const source = FILTER_SOURCES[state.filter];
+  setStatus(source.label + ': ' + state.pdfPath + ' (Zoom ' + state.zoom + '%)');
 }
 
 function setZoom(nextZoom) {
@@ -284,13 +299,15 @@ function setZoom(nextZoom) {
 }
 
 function setFilter(filterKey) {
-  state.filter = state.filter === filterKey ? null : filterKey;
-  renderPdf();
+  if (!FILTER_SOURCES[filterKey]) return;
+  state.filter = filterKey;
+  loadPdf();
 }
 
 async function loadPdf() {
-  setStatus('Suche Begleitplaene PDF ...');
-  state.pdfPath = await discoverPdf(SOURCE.folder);
+  const source = FILTER_SOURCES[state.filter];
+  setStatus('Suche PDF: ' + source.label + ' ...');
+  state.pdfPath = await discoverPdf(source.folder);
   renderPdf();
 }
 
