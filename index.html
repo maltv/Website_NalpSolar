@@ -330,6 +330,7 @@
 <div class="topbar">
   <button id="gpsBtn" type="button" onclick="toggleGps()">GPS</button>
   <button id="allBtn" type="button" onclick="zoomAll()">Alle</button>
+  <button id="progBtn" type="button" onclick="open5WProgram()">5W-Prog.</button>
   <form id="searchForm" class="searchbox" onsubmit="searchTableId(); return false;">
     <input id="tableSearch" type="search" inputmode="numeric" placeholder="Tisch-ID suchen" autocomplete="off">
     <button id="searchBtn" type="submit">Suchen</button>
@@ -1011,6 +1012,10 @@ function zoomAll() {
   } else {
     setStatus('Keine gültigen Geometrien gefunden');
   }
+}
+
+function open5WProgram() {
+  window.open('5w-programm.html', '_blank', 'noopener');
 }
 
 document.getElementById('gpsBtn').addEventListener('click', toggleGps);

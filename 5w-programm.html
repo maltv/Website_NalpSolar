@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5W-Programm</title>
+<style>
+  :root {
+    --bg: #f2f4f7;
+    --panel: #ffffff;
+    --line: rgba(0, 0, 0, 0.14);
+    --txt: #111;
+    --accent: #0b5fff;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--bg);
+    color: var(--txt);
+    font-family: Arial, Helvetica, sans-serif;
+  }
+
+  .page {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    box-sizing: border-box;
+  }
+
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 8px;
+  }
+
+  .spacer {
+    flex: 1;
+  }
+
+  .status {
+    font-size: 12px;
+    opacity: 0.85;
+  }
+
+  button {
+    border: 0;
+    border-radius: 10px;
+    padding: 9px 12px;
+    font-weight: 700;
+    background: #fff;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.18);
+    cursor: pointer;
+  }
+
+  .zoom-chip {
+    min-width: 66px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .viewer {
+    flex: 1;
+    min-height: 0;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #e8ebef;
+  }
+
+  @media (max-width: 700px) {
+    .toolbar {
+      gap: 6px;
+    }
+
+    button {
+      padding: 8px 10px;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="toolbar">
+    <button type="button" id="backToMapBtn">Zur Karte</button>
+    <button type="button" id="toBegleitBtn">Begleitplaene Seite</button>
+    <button type="button" id="reloadBtn">Neu laden</button>
+    <button type="button" id="zoomOutBtn">-</button>
+    <span id="zoomLabel" class="zoom-chip">100%</span>
+    <button type="button" id="zoomInBtn">+</button>
+    <button type="button" id="zoomResetBtn">100%</button>
+    <span class="spacer"></span>
+    <span id="status" class="status">Lade PDF ...</span>
+  </div>
+
+  <div class="viewer">
+    <iframe id="pdfFrame" title="5W Programm PDF"></iframe>
+  </div>
+</div>
+
+<script>
+const SOURCE = {
+  label: '5W-Programm',
+  folder: '5W-Programm'
+};
+
+const state = {
+  pdfPath: null,
+  zoom: 100
+};
+
+const statusEl = document.getElementById('status');
+const frameEl = document.getElementById('pdfFrame');
+const zoomLabelEl = document.getElementById('zoomLabel');
+
+function setStatus(text) {
+  statusEl.textContent = text;
+}
+
+function normalizePdfHref(href, folder) {
+  if (!href) return null;
+  const clean = href.trim();
+  if (!clean) return null;
+  if (/^(https?:)?\/\//i.test(clean)) return clean;
+  if (clean.startsWith('/')) return clean;
+  if (clean.toLowerCase().includes('%2f') || clean.includes('/')) return clean;
+  return folder + '/' + clean;
+}
+
+async function fetchJson(url) {
+  try {
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    return null;
+  }
+}
+
+async function findByManifest(folder) {
+  const manifest = await fetchJson(folder + '/manifest.json');
+  if (!manifest) return null;
+  const candidate = manifest.pdf || manifest.file || manifest.main || manifest.path;
+  return normalizePdfHref(candidate, folder);
+}
+
+function parseListingForPdf(text, folder) {
+  const matches = [];
+  const re = /href=["']([^"']+\.pdf(?:\?[^"']*)?)["']/ig;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    matches.push(normalizePdfHref(m[1], folder));
+  }
+  return matches.find(Boolean) || null;
+}
+
+async function findByDirectoryListing(folder) {
+  try {
+    const res = await fetch(folder + '/', { cache: 'no-store' });
+    if (!res.ok) return null;
+    const text = await res.text();
+    return parseListingForPdf(text, folder);
+  } catch (err) {
+    return null;
+  }
+}
+
+function detectGitHubRepo() {
+  const host = window.location.hostname;
+  if (!host.endsWith('github.io')) return null;
+
+  const owner = host.split('.')[0];
+  const parts = window.location.pathname.split('/').filter(Boolean);
+  if (!parts.length) {
+    return { owner, repo: owner + '.github.io', basePathParts: [] };
+  }
+
+  return {
+    owner,
+    repo: parts[0],
+    basePathParts: parts.slice(1, -1)
+  };
+}
+
+async function findByGitHubApi(folder) {
+  const gh = detectGitHubRepo();
+  if (!gh) return null;
+
+  const folderParts = folder.split('/').filter(Boolean);
+  const repoPath = [...gh.basePathParts, ...folderParts].join('/');
+  const url = 'https://api.github.com/repos/' + gh.owner + '/' + gh.repo + '/contents/' + encodeURIComponent(repoPath).replace(/%2F/g, '/');
+
+  try {
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!Array.isArray(data)) return null;
+
+    const pdfItem = data.find((entry) => String(entry.name || '').toLowerCase().endsWith('.pdf'));
+    if (!pdfItem || !pdfItem.name) return null;
+
+    return folder + '/' + pdfItem.name;
+  } catch (err) {
+    return null;
+  }
+}
+
+async function discoverPdf(folder) {
+  return (
+    await findByManifest(folder) ||
+    await findByDirectoryListing(folder) ||
+    await findByGitHubApi(folder)
+  );
+}
+
+function clampZoom(value) {
+  return Math.max(40, Math.min(400, value));
+}
+
+function buildPdfSrc(path, zoom) {
+  const normalized = String(path || '').split('#')[0];
+  return normalized + '#zoom=' + zoom;
+}
+
+function renderZoom() {
+  zoomLabelEl.textContent = state.zoom + '%';
+}
+
+function renderPdf() {
+  renderZoom();
+
+  if (!state.pdfPath) {
+    frameEl.removeAttribute('src');
+    setStatus(SOURCE.label + ': kein PDF gefunden');
+    return;
+  }
+
+  frameEl.src = buildPdfSrc(state.pdfPath, state.zoom);
+  setStatus(SOURCE.label + ': ' + state.pdfPath + ' (Zoom ' + state.zoom + '%)');
+}
+
+function setZoom(nextZoom) {
+  state.zoom = clampZoom(nextZoom);
+  renderPdf();
+}
+
+async function loadPdf() {
+  setStatus('Suche PDF ...');
+  state.pdfPath = await discoverPdf(SOURCE.folder);
+  renderPdf();
+}
+
+function backToMap() {
+  window.location.href = 'index.html';
+}
+
+function toBegleitPage() {
+  window.location.href = 'begleitplaene.html';
+}
+
+document.getElementById('backToMapBtn').addEventListener('click', backToMap);
+document.getElementById('toBegleitBtn').addEventListener('click', toBegleitPage);
+document.getElementById('reloadBtn').addEventListener('click', loadPdf);
+document.getElementById('zoomOutBtn').addEventListener('click', () => setZoom(state.zoom - 20));
+document.getElementById('zoomInBtn').addEventListener('click', () => setZoom(state.zoom + 20));
+document.getElementById('zoomResetBtn').addEventListener('click', () => setZoom(100));
+
+loadPdf();
+</script>
+</body>
+</html>
