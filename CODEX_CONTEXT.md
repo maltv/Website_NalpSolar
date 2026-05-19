@@ -3,7 +3,7 @@
 ## Ziel dieses Dokuments
 Schneller Einstieg fuer weitere Anpassungen an `index.html` mit minimalem Kontextbedarf (Token sparen).
 
-## Projektstatus (Stand: 2026-05-18)
+## Projektstatus (Stand: 2026-05-19)
 - Single-file App: **`index.html`** (Leaflet 1.9.4, keine Build-Tools).
 - Zusaetzliche Datendatei: **`export-tableId-2026-05-18.csv`**.
 - Alles laeuft clientseitig im Browser.
@@ -33,13 +33,13 @@ Schneller Einstieg fuer weitere Anpassungen an `index.html` mit minimalem Kontex
 - UI:
   - GPS Button
   - `Alle` Button
-  - `Tisch-Labels` Button
   - ID-Suche
   - gruppiertes Layerfenster
-  - kompakte Legende unten links fuer Typfarben A-E (mehrspaltig, mobil breit)
+  - kompakte Legende unten rechts fuer Typfarben A-E
 - Labels:
   - Tisch-Labels mit schwarzem Text + weissem Halo
   - Tisch-Labels parallel zur jeweiligen Tischlinie ausgerichtet
+  - Labels sind erst ab Zoomstufe 18 sichtbar
 - Typflaechen der Tische:
   - pro Tisch wird aus der bestehenden Linie ein Rechteck (ca. 3m nach hinten) erzeugt
   - Einfaerbung nach Grundtyp `A/B/C/D/E`
@@ -56,6 +56,7 @@ Schneller Einstieg fuer weitere Anpassungen an `index.html` mit minimalem Kontex
 - Kartenansicht:
   - klassische 2D Leaflet-Karte ohne Rotationsfunktion
   - Satelliten-BaseLayer mit 60% Opazitaet
+  - feste Layerreihenfolge per Pane: Bereiche (hinten), Kranstandorte (mitte), Tische (vorne)
 
 ## Effektive Typen aus CSV (wichtig)
 - Kein Laufzeit-CSV-Import mehr.

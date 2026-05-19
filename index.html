@@ -58,26 +58,26 @@
 
   .legend {
     position: absolute;
-    left: 10px;
+    right: 10px;
     bottom: 10px;
     z-index: 1000;
     background: rgba(255,255,255,.94);
-    border-radius: 10px;
-    box-shadow: 0 2px 12px rgba(0,0,0,.25);
-    padding: 8px 10px;
-    font-size: 12px;
-    width: min(96vw, 430px);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.22);
+    padding: 5px 7px;
+    font-size: 10px;
+    width: auto;
   }
 
   .legend-title {
     font-weight: 900;
-    margin: 0 0 6px 0;
+    margin: 0 0 4px 0;
   }
 
   .legend-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 4px 10px;
+    grid-template-columns: repeat(3, auto);
+    gap: 3px 7px;
   }
 
   .legend-row {
@@ -88,11 +88,17 @@
   }
 
   .legend-swatch {
-    width: 12px;
-    height: 12px;
+    width: 9px;
+    height: 9px;
     border-radius: 2px;
     border: 1px solid rgba(0,0,0,.25);
     flex: 0 0 auto;
+  }
+
+  #map.labels-hidden .label,
+  #map.labels-hidden .label-table,
+  #map.labels-hidden .label-kran {
+    display: none !important;
   }
 
   .label {
@@ -262,7 +268,7 @@
 
   @media (max-width: 700px) {
     .topbar {
-      right: 10px;
+      right: 132px;
       gap: 6px;
     }
 
@@ -283,13 +289,18 @@
     }
 
     .grouped-layer-control {
-      min-width: 190px;
-      max-width: calc(100vw - 20px);
+      min-width: 112px;
+      max-width: 170px;
       font-size: 12px;
     }
 
     .leaflet-top.leaflet-right {
-      top: 72px;
+      top: 10px;
+      right: 10px;
+    }
+
+    .grouped-layer-control .layer-header {
+      padding: 8px 10px;
     }
 
     .grouped-layer-control:not(.collapsed) .layer-body {
@@ -302,13 +313,11 @@
     }
 
     .legend {
-      font-size: 11px;
-      width: calc(100vw - 20px);
-    }
-
-    .legend-grid {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 4px 8px;
+      font-size: 10px;
+      right: 10px;
+      left: auto;
+      width: auto;
+      max-width: calc(100vw - 20px);
     }
   }
 
@@ -321,7 +330,6 @@
 <div class="topbar">
   <button id="gpsBtn" type="button" onclick="toggleGps()">GPS</button>
   <button id="allBtn" type="button" onclick="zoomAll()">Alle</button>
-  <button id="tableBtn" type="button" onclick="toggleTableLabels()">Tisch-Labels</button>
   <form id="searchForm" class="searchbox" onsubmit="searchTableId(); return false;">
     <input id="tableSearch" type="search" inputmode="numeric" placeholder="Tisch-ID suchen" autocomplete="off">
     <button id="searchBtn" type="submit">Suchen</button>
@@ -357,6 +365,33 @@ const map = L.map('map', {
   zoomControl: true,
   preferCanvas: true
 }).setView([46.637, 8.769], 17);
+
+const LABELS_MIN_ZOOM = 18;
+
+map.createPane('bereichePane');
+map.getPane('bereichePane').style.zIndex = 410;
+map.createPane('bereicheLabelPane');
+map.getPane('bereicheLabelPane').style.zIndex = 415;
+map.createPane('kranPane');
+map.getPane('kranPane').style.zIndex = 430;
+map.createPane('kranLabelPane');
+map.getPane('kranLabelPane').style.zIndex = 435;
+map.createPane('tablesPane');
+map.getPane('tablesPane').style.zIndex = 450;
+map.createPane('tablesTypePane');
+map.getPane('tablesTypePane').style.zIndex = 455;
+map.createPane('tablesHatchPane');
+map.getPane('tablesHatchPane').style.zIndex = 456;
+map.createPane('tablesLabelPane');
+map.getPane('tablesLabelPane').style.zIndex = 460;
+
+function syncLabelVisibilityByZoom() {
+  const hidden = map.getZoom() < LABELS_MIN_ZOOM;
+  map.getContainer().classList.toggle('labels-hidden', hidden);
+}
+
+map.on('zoomend', syncLabelVisibilityByZoom);
+syncLabelVisibilityByZoom();
 
 const swisstopo = L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg', {
   maxZoom: 20,
@@ -539,10 +574,14 @@ function makeLabelIcon(text, className, angleDeg) {
   });
 }
 
-function addLabel(targetGroup, layer, text, className, angleDeg) {
+function addLabel(targetGroup, layer, text, className, angleDeg, paneName) {
   const c = featureCenter(layer);
   if (!c || !text) return null;
-  return L.marker(c, { icon: makeLabelIcon(text, className, angleDeg), interactive: false }).addTo(targetGroup);
+  return L.marker(c, {
+    icon: makeLabelIcon(text, className, angleDeg),
+    interactive: false,
+    pane: paneName || 'markerPane'
+  }).addTo(targetGroup);
 }
 
 function lineEndpoints(layer) {
@@ -591,11 +630,11 @@ const bereichLabels = L.layerGroup();
 const bereicheLayer = L.geoJSON(bereicheData, {
   style: f => {
     const col = hashColor(f.properties.BZCH || f.properties.id);
-    return { color: col, weight: 2, opacity: .95, fillColor: col, fillOpacity: .22 };
+    return { color: col, weight: 2, opacity: .95, fillColor: col, fillOpacity: .22, pane: 'bereichePane' };
   },
   onEachFeature: (f, layer) => {
     layer.bindPopup('<b>Bereich ' + (f.properties.BZCH ?? '') + '</b><br>' + propTable(f.properties));
-    addLabel(bereichLabels, layer, f.properties.BZCH, 'label');
+    addLabel(bereichLabels, layer, f.properties.BZCH, 'label', undefined, 'bereicheLabelPane');
     try { bounds.extend(layer.getBounds()); } catch(e) {}
   }
 }).addTo(map);
@@ -603,12 +642,12 @@ bereichLabels.addTo(map);
 
 const kranLabels = L.layerGroup();
 const kranLayer = L.geoJSON(kranData, {
-  style: f => { return { color: '#ff0000', weight: 2, opacity: 1, fillColor: '#ff0000', fillOpacity: .08 }; },
+  style: f => { return { color: '#ff0000', weight: 2, opacity: 1, fillColor: '#ff0000', fillOpacity: .08, pane: 'kranPane' }; },
   onEachFeature: (f, layer) => {
     const target = featureCenter(layer);
     const navButton = target ? navButtonHtml(target.lat, target.lng) : '';
     layer.bindPopup('<b>Kranstandort ' + (f.properties.id ?? '') + '</b><br>' + propTable(f.properties) + navButton);
-    addLabel(kranLabels, layer, 'K' + (f.properties.id ?? ''), 'label-kran');
+    addLabel(kranLabels, layer, 'K' + (f.properties.id ?? ''), 'label-kran', undefined, 'kranLabelPane');
     try { bounds.extend(layer.getBounds()); } catch(e) {}
   }
 }).addTo(map);
@@ -620,7 +659,8 @@ const kranCenterLayer = L.geoJSON(kranCentersData, {
     color: '#000',
     weight: 2,
     fillColor: '#ffff00',
-    fillOpacity: 1
+    fillOpacity: 1,
+    pane: 'kranPane'
   }),
   onEachFeature: (f, layer) => {
     layer.bindPopup('<b>Mittelpunkt Kranradius K' + (f.properties.id ?? '') + '</b><br>' + propTable(f.properties));
@@ -631,10 +671,9 @@ const tableLabels = L.layerGroup();
 const tableTypeFillLayer = L.layerGroup();
 const tableTypeHatchLayer = L.layerGroup();
 const tableIndex = new Map();
-let tableLabelsVisible = true;
 
 function tableStyle(f) {
-  return { color: '#000000', weight: 2, opacity: .95 };
+  return { color: '#000000', weight: 2, opacity: .95, pane: 'tablesPane' };
 }
 
 function buildTableLabel(idKey, type) {
@@ -685,7 +724,8 @@ function addTableTypeVisuals(layer, typeText, thicknessMeters) {
     stroke: false,
     fillColor: color,
     fillOpacity: 0.28,
-    interactive: false
+    interactive: false,
+    pane: 'tablesTypePane'
   }).addTo(tableTypeFillLayer);
 
   const side = tableHatchSide(typeText);
@@ -722,7 +762,8 @@ function addTableTypeVisuals(layer, typeText, thicknessMeters) {
       color: '#111111',
       weight: 1,
       opacity: 0.65,
-      interactive: false
+      interactive: false,
+      pane: 'tablesHatchPane'
     }).addTo(tableTypeHatchLayer);
   }
 }
@@ -740,7 +781,7 @@ function addTableLayer(data, name) {
       const line = lineEndpoints(layer);
       const labelBearing = line ? bearingDegrees(line.a, line.b) : 90;
       const labelAngle = normalizeLabelAngle(labelBearing - 90);
-      addLabel(tableLabels, layer, label, 'label-table', labelAngle);
+      addLabel(tableLabels, layer, label, 'label-table', labelAngle, 'tablesLabelPane');
       addTableTypeVisuals(layer, p.tisch_typ, 3);
       try { bounds.extend(layer.getBounds()); } catch(e) {}
     }
@@ -891,7 +932,6 @@ function searchTableId() {
   }
 
   if (!map.hasLayer(hit.layer)) map.addLayer(hit.layer);
-  if (!map.hasLayer(tableLabels) && tableLabelsVisible) map.addLayer(tableLabels);
 
   const target = featureCenter(hit.layer);
   if (target) map.setView(target, Math.max(map.getZoom(), 20));
@@ -973,21 +1013,8 @@ function zoomAll() {
   }
 }
 
-function toggleTableLabels() {
-  if (tableLabelsVisible) {
-    map.removeLayer(tableLabels);
-    tableLabelsVisible = false;
-    setStatus('Tisch-Labels aus');
-  } else {
-    map.addLayer(tableLabels);
-    tableLabelsVisible = true;
-    setStatus('Tisch-Labels an');
-  }
-}
-
 document.getElementById('gpsBtn').addEventListener('click', toggleGps);
 document.getElementById('allBtn').addEventListener('click', zoomAll);
-document.getElementById('tableBtn').addEventListener('click', toggleTableLabels);
 
 setStatus(
   'Geladen: ' +
