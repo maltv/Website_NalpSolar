@@ -131,19 +131,23 @@
 const FILTER_SOURCES = {
   bohren: {
     label: 'Bohren',
-    folder: '5W-Programm/Begleitplaene/Bohren'
+    folder: '5W-Programm/Begleitplaene/Bohren',
+    preferredFiles: ['5W_Bohren_21-25.pdf']
   },
   stahlbau: {
     label: 'Stahlbau',
-    folder: '5W-Programm/Begleitplaene/Stahlbau'
+    folder: '5W-Programm/Begleitplaene/Stahlbau',
+    preferredFiles: ['5W_Stahlbau_21-25_Optimized.pdf', '5W_Stahlbau_21-25.pdf']
   },
   bestellung: {
     label: 'Stahlbaubestellung',
-    folder: '5W-Programm/Begleitplaene/StahlbauBestellungen'
+    folder: '5W-Programm/Begleitplaene/StahlbauBestellungen',
+    preferredFiles: ['5W_Stahlbaubestellung_21-25.pdf']
   },
   stapel: {
     label: 'Modultraegerstapel',
-    folder: '5W-Programm/Begleitplaene/Stapel'
+    folder: '5W-Programm/Begleitplaene/Stapel',
+    preferredFiles: ['5W_Stapel_21-25.pdf']
   }
 };
 
@@ -258,6 +262,33 @@ async function discoverPdf(folder) {
   );
 }
 
+async function fileExists(url) {
+  try {
+    const res = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+    if (res.ok) return true;
+  } catch (err) {
+  }
+
+  try {
+    const res = await fetch(url, { cache: 'no-store' });
+    if (res.body && typeof res.body.cancel === 'function') {
+      res.body.cancel();
+    }
+    return res.ok;
+  } catch (err) {
+    return false;
+  }
+}
+
+async function resolvePdfSource(source) {
+  const files = Array.isArray(source.preferredFiles) ? source.preferredFiles : [];
+  for (const file of files) {
+    const candidate = source.folder + '/' + file;
+    if (await fileExists(candidate)) return candidate;
+  }
+  return await discoverPdf(source.folder);
+}
+
 function clampZoom(value) {
   return Math.max(40, Math.min(400, value));
 }
@@ -307,7 +338,7 @@ function setFilter(filterKey) {
 async function loadPdf() {
   const source = FILTER_SOURCES[state.filter];
   setStatus('Suche PDF: ' + source.label + ' ...');
-  state.pdfPath = await discoverPdf(source.folder);
+  state.pdfPath = await resolvePdfSource(source);
   renderPdf();
 }
 
