@@ -385,6 +385,8 @@ map.createPane('tablesHatchPane');
 map.getPane('tablesHatchPane').style.zIndex = 456;
 map.createPane('tablesLabelPane');
 map.getPane('tablesLabelPane').style.zIndex = 460;
+map.createPane('geodataPane');
+map.getPane('geodataPane').style.zIndex = 440;
 
 function syncLabelVisibilityByZoom() {
   const hidden = map.getZoom() < LABELS_MIN_ZOOM;
@@ -425,6 +427,62 @@ function propTable(props) {
   return '<table>' + Object.entries(props).map(([k,v]) =>
     '<tr><td><b>' + k + '</b></td><td>' + (v ?? '') + '</td></tr>'
   ).join('') + '</table>';
+}
+
+function ch1903PlusToWgs84(north, east) {
+  const x = (north - 1200000) / 1000000;
+  const y = (east - 2600000) / 1000000;
+
+  const latSex =
+    16.9023892 +
+    3.238272 * x -
+    0.270978 * y * y -
+    0.002528 * x * x -
+    0.0447 * y * y * x -
+    0.0140 * x * x * x;
+
+  const lngSex =
+    2.6779094 +
+    4.728982 * y +
+    0.791484 * y * x +
+    0.1306 * y * x * x -
+    0.0436 * y * y * y;
+
+  return L.latLng(latSex * 100 / 36, lngSex * 100 / 36);
+}
+
+function parseLandXmlToLatLngTracks(xmlText) {
+  const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
+  const parseError = doc.querySelector('parsererror');
+  if (parseError) throw new Error('LandXML konnte nicht geparst werden.');
+
+  const ns = 'http://www.landxml.org/schema/LandXML-1.2';
+  const lines = Array.from(doc.getElementsByTagNameNS(ns, 'Line'));
+  if (!lines.length) return [];
+
+  const track = [];
+
+  function pushPoint(latlng) {
+    const last = track[track.length - 1];
+    if (!last || Math.abs(last.lat - latlng.lat) > 1e-10 || Math.abs(last.lng - latlng.lng) > 1e-10) {
+      track.push(latlng);
+    }
+  }
+
+  lines.forEach((line) => {
+    const start = line.getElementsByTagNameNS(ns, 'Start')[0]?.textContent?.trim();
+    const end = line.getElementsByTagNameNS(ns, 'End')[0]?.textContent?.trim();
+    if (!start || !end) return;
+
+    const s = start.split(/\s+/).map(Number);
+    const e = end.split(/\s+/).map(Number);
+    if (s.length < 2 || e.length < 2 || !Number.isFinite(s[0]) || !Number.isFinite(s[1]) || !Number.isFinite(e[0]) || !Number.isFinite(e[1])) return;
+
+    pushPoint(ch1903PlusToWgs84(s[0], s[1]));
+    pushPoint(ch1903PlusToWgs84(e[0], e[1]));
+  });
+
+  return track.length > 1 ? [track] : [];
 }
 
 function haversineMeters(a, b) {
@@ -809,6 +867,76 @@ tableTypeFillLayer.addTo(map);
 tableTypeHatchLayer.addTo(map);
 tableLabels.addTo(map);
 
+const werkleitungenLayer = L.layerGroup().addTo(map);
+const baupisteAchseLayer = L.layerGroup().addTo(map);
+const hrbGrabenAchseLayer = L.layerGroup().addTo(map);
+
+async function loadGeoJsonIntoLayer(url, targetLayer, style, popupTitle) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error('HTTP ' + response.status);
+  const geojson = await response.json();
+
+  L.geoJSON(geojson, {
+    style: style,
+    pointToLayer: (f, latlng) => L.circleMarker(latlng, {
+      radius: 5,
+      color: style?.(f)?.color || '#0f5132',
+      weight: 2,
+      fillColor: style?.(f)?.fillColor || '#74c69d',
+      fillOpacity: 0.75,
+      pane: 'geodataPane'
+    }),
+    onEachFeature: (f, layer) => {
+      layer.bindPopup('<b>' + popupTitle + '</b><br>' + propTable(f.properties || {}));
+      try { bounds.extend(layer.getBounds()); } catch (e) {
+        if (layer.getLatLng) bounds.extend(layer.getLatLng());
+      }
+    }
+  }).addTo(targetLayer);
+}
+
+async function loadLandXmlIntoLayer(url, targetLayer, color, popupTitle) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error('HTTP ' + response.status);
+  const xmlText = await response.text();
+  const tracks = parseLandXmlToLatLngTracks(xmlText);
+
+  tracks.forEach((track) => {
+    const line = L.polyline(track, {
+      color: color,
+      weight: 4,
+      opacity: 0.95,
+      pane: 'geodataPane'
+    }).addTo(targetLayer);
+
+    line.bindPopup('<b>' + popupTitle + '</b><br>Quelle: ' + url);
+    try { bounds.extend(line.getBounds()); } catch (e) {}
+  });
+}
+
+Promise.allSettled([
+  loadGeoJsonIntoLayer(
+    'Geodaten_Anzuzeigen/Werkleitungen_Nalpi_260506.geojson',
+    werkleitungenLayer,
+    () => ({ color: '#0f5132', weight: 2, opacity: 0.9, fillColor: '#74c69d', fillOpacity: 0.22, pane: 'geodataPane' }),
+    'Werkleitungen Nalpi 260506'
+  ),
+  loadLandXmlIntoLayer(
+    'Geodaten_Anzuzeigen/PZ2_Baupiste_Achse_260507 (2).xml',
+    baupisteAchseLayer,
+    '#ff8c00',
+    'PZ2 Baupiste Achse 260507'
+  ),
+  loadLandXmlIntoLayer(
+    'Geodaten_Anzuzeigen/PZ2_HRB_Graben_Achse_260507 (1).xml',
+    hrbGrabenAchseLayer,
+    '#7b2cbf',
+    'PZ2 HRB Graben Achse 260507'
+  )
+]).then(() => {
+  if (bounds.isValid()) map.fitBounds(bounds.pad(0.05));
+});
+
 const layerGroups = [
   {
     title: 'Kartenhintergrund',
@@ -849,6 +977,16 @@ const layerGroups = [
       { name: 'Kranradien 2026', layer: kranLayer },
       { name: 'Kran Labels', layer: kranLabels },
       { name: 'Mittelpunkte Kranradien', layer: kranCenterLayer }
+    ]
+  },
+  {
+    title: 'Neue Geodaten',
+    type: 'overlay',
+    groupToggle: true,
+    layers: [
+      { name: 'Werkleitungen Nalpi 260506', layer: werkleitungenLayer },
+      { name: 'PZ2 Baupiste Achse 260507', layer: baupisteAchseLayer },
+      { name: 'PZ2 HRB Graben Achse 260507', layer: hrbGrabenAchseLayer }
     ]
   }
 ];
