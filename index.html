@@ -386,7 +386,7 @@ map.getPane('tablesHatchPane').style.zIndex = 456;
 map.createPane('tablesLabelPane');
 map.getPane('tablesLabelPane').style.zIndex = 460;
 map.createPane('geodataPane');
-map.getPane('geodataPane').style.zIndex = 440;
+map.getPane('geodataPane').style.zIndex = 470;
 
 function syncLabelVisibilityByZoom() {
   const hidden = map.getZoom() < LABELS_MIN_ZOOM;
@@ -877,10 +877,22 @@ async function loadGeoJsonIntoLayer(url, targetLayer, style, popupTitle) {
   const geojson = await response.json();
 
   L.geoJSON(geojson, {
-    style: style,
+    style: (f) => {
+      const base = style ? style(f) : {};
+      const p = f?.properties || {};
+      return {
+        ...base,
+        color: p.stroke || p.color || base.color || '#0f5132',
+        weight: Number.isFinite(p['stroke-width']) ? Number(p['stroke-width']) : (base.weight || 2),
+        opacity: Number.isFinite(p['stroke-opacity']) ? Number(p['stroke-opacity']) : (base.opacity || 0.9),
+        fillColor: p.fill || base.fillColor || '#74c69d',
+        fillOpacity: Number.isFinite(p['fill-opacity']) ? Number(p['fill-opacity']) : (base.fillOpacity || 0.22),
+        pane: 'geodataPane'
+      };
+    },
     pointToLayer: (f, latlng) => L.circleMarker(latlng, {
       radius: 5,
-      color: style?.(f)?.color || '#0f5132',
+      color: f?.properties?.stroke || f?.properties?.color || style?.(f)?.color || '#0f5132',
       weight: 2,
       fillColor: style?.(f)?.fillColor || '#74c69d',
       fillOpacity: 0.75,
@@ -904,7 +916,7 @@ async function loadLandXmlIntoLayer(url, targetLayer, color, popupTitle) {
   tracks.forEach((track) => {
     const line = L.polyline(track, {
       color: color,
-      weight: 4,
+      weight: 6,
       opacity: 0.95,
       pane: 'geodataPane'
     }).addTo(targetLayer);
@@ -933,7 +945,17 @@ Promise.allSettled([
     '#7b2cbf',
     'PZ2 HRB Graben Achse 260507'
   )
-]).then(() => {
+]).then((results) => {
+  const failed = results.filter((r) => r.status === 'rejected');
+  [werkleitungenLayer, baupisteAchseLayer, hrbGrabenAchseLayer].forEach((group) => {
+    group.eachLayer((layer) => {
+      if (layer.bringToFront) layer.bringToFront();
+    });
+  });
+  if (failed.length > 0) {
+    const reason = String(failed[0].reason?.message || failed[0].reason || 'Unbekannter Fehler');
+    setStatus('Fehler beim Laden von Geodaten: ' + reason);
+  }
   if (bounds.isValid()) map.fitBounds(bounds.pad(0.05));
 });
 
