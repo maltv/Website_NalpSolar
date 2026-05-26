@@ -101,6 +101,7 @@
   <div class="toolbar">
     <button type="button" id="backToMapBtn">Zur Karte</button>
     <button type="button" id="toBegleitBtn">Begleitplaene Seite</button>
+    <button type="button" id="toAdminBtn">Admin</button>
     <button type="button" id="reloadBtn">Neu laden</button>
     <button type="button" id="zoomOutBtn">-</button>
     <span id="zoomLabel" class="zoom-chip">100%</span>
@@ -115,6 +116,7 @@
   </div>
 </div>
 
+<script src="assets/js/nalp-storage.js"></script>
 <script>
 const SOURCE = {
   label: '5W-Programm',
@@ -123,7 +125,9 @@ const SOURCE = {
 
 const state = {
   pdfPath: null,
-  zoom: 100
+  zoom: 100,
+  objectUrl: null,
+  sourceLabel: null
 };
 
 const statusEl = document.getElementById('status');
@@ -132,6 +136,13 @@ const zoomLabelEl = document.getElementById('zoomLabel');
 
 function setStatus(text) {
   statusEl.textContent = text;
+}
+
+function clearObjectUrl() {
+  if (state.objectUrl) {
+    URL.revokeObjectURL(state.objectUrl);
+    state.objectUrl = null;
+  }
 }
 
 function normalizePdfHref(href, folder) {
@@ -239,6 +250,25 @@ function buildPdfSrc(path, zoom) {
   return normalized + '#zoom=' + zoom;
 }
 
+async function getAdminPdf() {
+  try {
+    const settings = window.NalpStorage.getSettings();
+    if (!settings.active5wFileId) return null;
+
+    const row = await window.NalpStorage.getFile(settings.active5wFileId);
+    if (!row || !row.blob) return null;
+
+    clearObjectUrl();
+    state.objectUrl = URL.createObjectURL(row.blob);
+    return {
+      path: state.objectUrl,
+      sourceLabel: 'Admin Upload: ' + row.name
+    };
+  } catch (err) {
+    return null;
+  }
+}
+
 function renderZoom() {
   zoomLabelEl.textContent = state.zoom + '%';
 }
@@ -253,7 +283,7 @@ function renderPdf() {
   }
 
   frameEl.src = buildPdfSrc(state.pdfPath, state.zoom);
-  setStatus(SOURCE.label + ': ' + state.pdfPath + ' (Zoom ' + state.zoom + '%)');
+  setStatus((state.sourceLabel || SOURCE.label + ': ' + state.pdfPath) + ' (Zoom ' + state.zoom + '%)');
 }
 
 function setZoom(nextZoom) {
@@ -263,7 +293,18 @@ function setZoom(nextZoom) {
 
 async function loadPdf() {
   setStatus('Suche PDF ...');
+  clearObjectUrl();
+
+  const adminPdf = await getAdminPdf();
+  if (adminPdf) {
+    state.pdfPath = adminPdf.path;
+    state.sourceLabel = adminPdf.sourceLabel;
+    renderPdf();
+    return;
+  }
+
   state.pdfPath = await discoverPdf(SOURCE.folder);
+  state.sourceLabel = SOURCE.label + ': ' + state.pdfPath;
   renderPdf();
 }
 
@@ -275,12 +316,19 @@ function toBegleitPage() {
   window.location.href = 'begleitplaene.html';
 }
 
+function toAdminPage() {
+  window.location.href = 'admin.html';
+}
+
 document.getElementById('backToMapBtn').addEventListener('click', backToMap);
 document.getElementById('toBegleitBtn').addEventListener('click', toBegleitPage);
+document.getElementById('toAdminBtn').addEventListener('click', toAdminPage);
 document.getElementById('reloadBtn').addEventListener('click', loadPdf);
 document.getElementById('zoomOutBtn').addEventListener('click', () => setZoom(state.zoom - 20));
 document.getElementById('zoomInBtn').addEventListener('click', () => setZoom(state.zoom + 20));
 document.getElementById('zoomResetBtn').addEventListener('click', () => setZoom(100));
+
+window.addEventListener('beforeunload', clearObjectUrl);
 
 loadPdf();
 </script>

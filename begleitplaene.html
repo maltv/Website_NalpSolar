@@ -106,6 +106,7 @@
   <div class="toolbar">
     <button type="button" id="backToMapBtn">Zur Karte</button>
     <button type="button" id="toMainBtn">5W-Programm Seite</button>
+    <button type="button" id="toAdminBtn">Admin</button>
 
     <button type="button" class="filter-btn" data-filter="bohren">Bohren</button>
     <button type="button" class="filter-btn" data-filter="stahlbau">Stahlbau</button>
@@ -127,6 +128,7 @@
   </div>
 </div>
 
+<script src="assets/js/nalp-storage.js"></script>
 <script>
 const FILTER_SOURCES = {
   bohren: {
@@ -154,7 +156,9 @@ const FILTER_SOURCES = {
 const state = {
   pdfPath: null,
   zoom: 100,
-  filter: 'bohren'
+  filter: 'bohren',
+  objectUrl: null,
+  sourceLabel: null
 };
 
 const statusEl = document.getElementById('status');
@@ -164,6 +168,13 @@ const filterButtons = Array.from(document.querySelectorAll('.filter-btn'));
 
 function setStatus(text) {
   statusEl.textContent = text;
+}
+
+function clearObjectUrl() {
+  if (state.objectUrl) {
+    URL.revokeObjectURL(state.objectUrl);
+    state.objectUrl = null;
+  }
 }
 
 function normalizePdfHref(href, folder) {
@@ -289,6 +300,26 @@ async function resolvePdfSource(source) {
   return await discoverPdf(source.folder);
 }
 
+async function getAdminPdfForFilter(filterKey) {
+  try {
+    const settings = window.NalpStorage.getSettings();
+    const fileId = settings.planFiles?.[filterKey];
+    if (!fileId) return null;
+
+    const row = await window.NalpStorage.getFile(fileId);
+    if (!row || !row.blob) return null;
+
+    clearObjectUrl();
+    state.objectUrl = URL.createObjectURL(row.blob);
+    return {
+      path: state.objectUrl,
+      sourceLabel: FILTER_SOURCES[filterKey].label + ': Admin Upload ' + row.name
+    };
+  } catch (err) {
+    return null;
+  }
+}
+
 function clampZoom(value) {
   return Math.max(40, Math.min(400, value));
 }
@@ -320,8 +351,7 @@ function renderPdf() {
   }
 
   frameEl.src = buildPdfSrc(state.pdfPath, state.zoom);
-  const source = FILTER_SOURCES[state.filter];
-  setStatus(source.label + ': ' + state.pdfPath + ' (Zoom ' + state.zoom + '%)');
+  setStatus((state.sourceLabel || FILTER_SOURCES[state.filter].label + ': ' + state.pdfPath) + ' (Zoom ' + state.zoom + '%)');
 }
 
 function setZoom(nextZoom) {
@@ -338,7 +368,18 @@ function setFilter(filterKey) {
 async function loadPdf() {
   const source = FILTER_SOURCES[state.filter];
   setStatus('Suche PDF: ' + source.label + ' ...');
+
+  const adminPdf = await getAdminPdfForFilter(state.filter);
+  if (adminPdf) {
+    state.pdfPath = adminPdf.path;
+    state.sourceLabel = adminPdf.sourceLabel;
+    renderPdf();
+    return;
+  }
+
+  clearObjectUrl();
   state.pdfPath = await resolvePdfSource(source);
+  state.sourceLabel = source.label + ': ' + state.pdfPath;
   renderPdf();
 }
 
@@ -350,8 +391,13 @@ function toMainPage() {
   window.location.href = '5w-programm.html';
 }
 
+function toAdminPage() {
+  window.location.href = 'admin.html';
+}
+
 document.getElementById('backToMapBtn').addEventListener('click', backToMap);
 document.getElementById('toMainBtn').addEventListener('click', toMainPage);
+document.getElementById('toAdminBtn').addEventListener('click', toAdminPage);
 document.getElementById('reloadBtn').addEventListener('click', loadPdf);
 document.getElementById('zoomOutBtn').addEventListener('click', () => setZoom(state.zoom - 20));
 document.getElementById('zoomInBtn').addEventListener('click', () => setZoom(state.zoom + 20));
@@ -360,6 +406,8 @@ document.getElementById('zoomResetBtn').addEventListener('click', () => setZoom(
 filterButtons.forEach((btn) => {
   btn.addEventListener('click', () => setFilter(btn.dataset.filter));
 });
+
+window.addEventListener('beforeunload', clearObjectUrl);
 
 loadPdf();
 </script>
