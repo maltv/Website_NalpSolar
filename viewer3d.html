@@ -204,47 +204,46 @@ var allLbls = [];
 var labelsOn = false;
 
 var IFC_FILES = [
-  { slot:'wl',     url:'uploads/ifc/werkleitungen.json' },
-  { slot:'erdung', url:'uploads/ifc/erdung.json'        }
+  { slot:'wl',     base:'uploads/ifc/werkleitungen', color:[0.129,0.588,0.953] },
+  { slot:'erdung', base:'uploads/ifc/erdung',        color:[1.0,0.596,0.0]     }
 ];
 
-function b64ToBuffer(b64) {
-  var bin = atob(b64);
-  var len = bin.length;
-  var bytes = new Uint8Array(len);
-  for (var i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
-  return bytes.buffer;
+async function fetchBin(url) {
+  var r = await fetch(url);
+  if (!r.ok) throw new Error(url + ' ' + r.status);
+  return r.arrayBuffer();
 }
 
 async function loadLayer(cfg) {
-  setTxt('Lade ' + cfg.slot + '.json …');
-  var resp;
-  try { resp = await fetch(cfg.url); }
-  catch(e) { console.warn('Netzwerk:', cfg.url); return null; }
-  if (!resp.ok) { console.info('Nicht gefunden:', cfg.url); return null; }
+  setTxt('Lade ' + cfg.slot + ' …');
+  var meta, vBuf, fBuf;
+  try {
+    var metaR = await fetch(cfg.base + '.meta.json');
+    if (!metaR.ok) { console.info('Nicht gefunden:', cfg.base); return null; }
+    meta = await metaR.json();
+    setTxt('Lade Geometrie ' + cfg.slot + ' …');
+    [vBuf, fBuf] = await Promise.all([
+      fetchBin(cfg.base + '.v.bin'),
+      fetchBin(cfg.base + '.f.bin')
+    ]);
+  } catch(e) { console.warn(cfg.slot, e); return null; }
 
-  setTxt('Verarbeite ' + cfg.slot + ' …');
-  var data = await resp.json();
-
-  var verts = new Float32Array(b64ToBuffer(data.v));
-  var idxs  = new Uint32Array(b64ToBuffer(data.f));
+  setTxt('Aufbau ' + cfg.slot + ' …');
+  var verts = new Float32Array(vBuf);
+  var idxs  = new Uint32Array(fBuf);
+  var [r,g,b] = meta.color || cfg.color;
 
   var geom = new THREE.BufferGeometry();
   geom.setAttribute('position', new THREE.BufferAttribute(verts, 3));
   geom.setIndex(new THREE.BufferAttribute(idxs, 1));
   geom.computeVertexNormals();
 
-  var [r,g,b] = data.color;
-  var mat  = new THREE.MeshLambertMaterial({
-    color: new THREE.Color(r, g, b),
-    side: THREE.DoubleSide
-  });
+  var mat = new THREE.MeshLambertMaterial({ color: new THREE.Color(r,g,b), side: THREE.DoubleSide });
   var mesh = new THREE.Mesh(geom, mat);
   scene.add(mesh);
   layers[cfg.slot] = mesh;
 
-  // Labels
-  (data.labels || []).forEach(function(lbl) {
+  (meta.labels || []).forEach(function(lbl) {
     var div = document.createElement('div');
     div.className = 'lbl';
     div.textContent = lbl.t;
@@ -255,7 +254,7 @@ async function loadLayer(cfg) {
     allLbls.push(obj);
   });
 
-  console.info(cfg.slot + ': ' + data.vCount + ' Punkte, ' + data.fCount + ' Dreiecke, ' + (data.labels||[]).length + ' Labels');
+  console.info(cfg.slot + ': ' + meta.vCount + ' Punkte, ' + meta.fCount + ' Dreiecke, ' + (meta.labels||[]).length + ' Labels');
   return mesh;
 }
 
