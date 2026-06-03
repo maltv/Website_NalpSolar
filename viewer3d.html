@@ -8,124 +8,112 @@
 <link rel="manifest" href="manifest.json">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { width:100%; height:100%; overflow:hidden;
-  font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
-  background: #0d1117; color: #fff; user-select: none; }
+html, body { width:100%; height:100%; overflow:hidden; background:#0d1117;
+  font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif; color:#fff; }
 
 /* ── Loading ─────────────────────────────────────────────── */
 #loading {
   position:fixed; inset:0; z-index:500;
-  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;
   background: radial-gradient(ellipse at center, #0d1f3c 0%, #060b14 100%);
   transition: opacity .8s;
 }
 #loading.fade { opacity:0; pointer-events:none; }
-#loading h1 { font-size:22px; font-weight:800; letter-spacing:.05em; }
+#loading h1 { font-size:22px; font-weight:800; letter-spacing:.06em; }
 #loading h1 span { color:#2196F3; }
 #loadTxt { font-size:13px; opacity:.6; text-align:center; max-width:280px; line-height:1.5; }
-#loadErr  { font-size:12px; color:#ff6b6b; text-align:center; max-width:300px; display:none; }
-.progress-bar {
-  width:200px; height:4px; background:rgba(255,255,255,.1); border-radius:2px; overflow:hidden;
-}
-.progress-fill {
-  height:100%; width:0%; background: linear-gradient(90deg, #0b5fff, #2196F3);
-  border-radius:2px; transition: width .4s;
-}
+#loadErr  { font-size:12px; color:#ff6b6b; text-align:center; max-width:300px; display:none;
+             background:rgba(255,50,50,.1); padding:8px 12px; border-radius:8px; }
+.progress-bar { width:200px; height:4px; background:rgba(255,255,255,.1); border-radius:2px; overflow:hidden; }
+.progress-fill { height:100%; width:0%; background: linear-gradient(90deg,#0b5fff,#2196F3);
+                  border-radius:2px; transition: width .35s; }
 
-/* ── Canvas ──────────────────────────────────────────────── */
-#canvas3d { position:fixed; inset:0; }
-#canvas3d canvas { width:100%!important; height:100%!important; display:block; }
+/* ── Canvas ─────────────────────────────────────────────── */
+#canvas3d  { position:fixed; inset:0; }
+#canvas3d canvas { display:block; width:100%!important; height:100%!important; }
 #lblLayer  { position:fixed; inset:0; pointer-events:none; overflow:hidden; }
 
 /* ── Toolbar ─────────────────────────────────────────────── */
 #toolbar {
   position:fixed; top:0; left:0; right:0; z-index:100;
   display:flex; flex-wrap:wrap; align-items:center; gap:4px; padding:6px 8px;
-  background: rgba(5,10,20,.85); backdrop-filter: blur(14px);
+  background: rgba(5,10,20,.88); backdrop-filter: blur(16px);
   border-bottom:1px solid rgba(255,255,255,.07);
 }
 .tb-btn {
-  border: 1px solid rgba(255,255,255,.15); border-radius:8px;
+  border:1px solid rgba(255,255,255,.15); border-radius:8px;
   padding:5px 10px; font-size:12px; font-weight:700; cursor:pointer;
-  background: rgba(255,255,255,.07); color:#fff; white-space:nowrap;
+  background:rgba(255,255,255,.07); color:#fff; white-space:nowrap;
   transition: background .15s, border-color .15s;
 }
-.tb-btn:hover  { background:rgba(255,255,255,.15); }
-.tb-btn.active { background:#0b5fff; border-color:#0b5fff; }
-.tb-btn.gps-on { background:#1a6b35; border-color:#1a6b35; }
-.tb-btn.tl-on  { background:#b34700; border-color:#b34700; }
+.tb-btn:hover  { background:rgba(255,255,255,.16); }
+.tb-btn.active { background:#0b5fff; border-color:#2979ff; }
+.tb-btn.gps-on { background:#1a6b35; border-color:#2e9e53; }
+.tb-btn.tl-on  { background:#b34700; border-color:#e05800; }
 .sep { width:1px; height:20px; background:rgba(255,255,255,.12); flex-shrink:0; }
 
-/* ── Labels ──────────────────────────────────────────────── */
+/* ── 2D Labels ─────────────────────────────────────────── */
 .lbl {
-  background:rgba(0,0,0,.8); color:#fff; font-size:10px; font-weight:700;
+  background:rgba(0,0,0,.82); color:#fff; font-size:10px; font-weight:700;
   padding:2px 5px; border-radius:4px; white-space:nowrap;
   border:1px solid rgba(255,255,255,.2);
 }
 .lbl-gps {
-  background:rgba(33,150,243,.9); border-color:#2196F3; font-size:11px;
-  animation: gpsPulse 1.4s ease-in-out infinite;
-}
-@keyframes gpsPulse {
-  0%,100% { box-shadow:0 0 0 0 rgba(33,150,243,.6); }
-  50%      { box-shadow:0 0 0 8px rgba(33,150,243,0); }
+  background:rgba(33,150,243,.92); border-color:#2196F3; font-size:11px;
+  box-shadow: 0 0 12px rgba(33,150,243,.6);
 }
 
-/* ── Status bar ──────────────────────────────────────────── */
+/* ── Status bar ─────────────────────────────────────────── */
 #statusBar {
   position:fixed; bottom:0; left:0; right:0; z-index:100;
   display:flex; gap:14px; align-items:center; padding:3px 10px;
-  background:rgba(5,10,20,.82); font-size:11px;
+  background:rgba(5,10,20,.85); font-size:11px;
   color:rgba(255,255,255,.55); border-top:1px solid rgba(255,255,255,.06);
 }
-#statusBar strong { color:rgba(255,255,255,.85); }
 
 /* ── Compass ─────────────────────────────────────────────── */
 #compass {
-  position:fixed; right:12px; bottom:30px; z-index:99;
-  width:42px; height:42px;
-  background:rgba(5,10,20,.78); border:1px solid rgba(255,255,255,.12);
+  position:fixed; right:12px; bottom:28px; z-index:99;
+  width:44px; height:44px;
+  background:rgba(5,10,20,.82); border:1px solid rgba(255,255,255,.14);
   border-radius:50%; display:flex; align-items:center; justify-content:center;
-  backdrop-filter:blur(6px);
+  backdrop-filter:blur(8px);
 }
-#compass svg { width:26px; height:26px; }
+#compassNeedle { transition:transform .2s; }
 
-/* ── Legend ──────────────────────────────────────────────── */
+/* ── Legend ─────────────────────────────────────────────── */
 #legend {
-  position:fixed; left:10px; bottom:30px; z-index:99;
-  background:rgba(5,10,20,.78); border:1px solid rgba(255,255,255,.1);
-  border-radius:10px; padding:8px 10px; font-size:11px;
-  display:flex; flex-direction:column; gap:4px; backdrop-filter:blur(6px);
+  position:fixed; left:10px; bottom:28px; z-index:99;
+  background:rgba(5,10,20,.82); border:1px solid rgba(255,255,255,.1);
+  border-radius:10px; padding:8px 11px; font-size:11px;
+  display:flex; flex-direction:column; gap:4px; backdrop-filter:blur(8px);
 }
 .leg { display:flex; align-items:center; gap:7px; }
 .leg-dot { width:10px; height:10px; border-radius:2px; flex-shrink:0; }
 
-/* ── Sun widget ──────────────────────────────────────────── */
+/* ── Sun widget ─────────────────────────────────────────── */
 #sunWidget {
   position:fixed; right:12px; top:52px; z-index:99;
-  background:rgba(5,10,20,.78); border:1px solid rgba(255,255,255,.1);
-  border-radius:10px; padding:8px 10px; font-size:11px;
-  width:110px; backdrop-filter:blur(6px);
+  background:rgba(5,10,20,.82); border:1px solid rgba(255,255,255,.1);
+  border-radius:10px; padding:8px 11px; font-size:11px;
+  width:115px; backdrop-filter:blur(8px);
 }
-#sunWidget .sun-label { opacity:.55; margin-bottom:2px; font-size:10px; }
-#sunWidget .sun-time  { font-weight:700; font-size:13px; margin-bottom:4px; }
-#sunArc {
-  width:100%; height:28px; position:relative;
-}
-#sunArc svg { width:100%; height:100%; overflow:visible; }
+#sunWidget .sun-lbl { opacity:.5; font-size:9px; text-transform:uppercase; letter-spacing:.06em; }
+#sunWidget .sun-time { font-weight:700; font-size:14px; margin:2px 0; }
+#sunWidget .sun-alt  { opacity:.55; font-size:10px; }
+#sunArc { width:100%; height:30px; }
+#sunArc svg { overflow:visible; }
 </style>
 </head>
 <body>
 
-<!-- Loading screen -->
+<!-- Loading -->
 <div id="loading">
-  <div>
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-      <circle cx="24" cy="24" r="22" stroke="#2196F3" stroke-width="2.5" opacity=".3"/>
-      <path d="M24 8 L28 18 L40 18 L30 26 L34 38 L24 31 L14 38 L18 26 L8 18 L20 18Z"
-            fill="#2196F3" opacity=".8"/>
-    </svg>
-  </div>
+  <svg width="52" height="52" viewBox="0 0 52 52">
+    <circle cx="26" cy="26" r="24" stroke="#2196F3" stroke-width="2.5" fill="none" opacity=".3"/>
+    <path d="M26 6 L30 18 L44 18 L33 27 L37 40 L26 32 L15 40 L19 27 L8 18 L22 18Z"
+          fill="#2196F3" opacity=".85"/>
+  </svg>
   <h1>Nalp<span>Solar</span> 3D</h1>
   <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
   <p id="loadTxt">Initialisiere …</p>
@@ -137,7 +125,7 @@ html, body { width:100%; height:100%; overflow:hidden;
   <button class="tb-btn" onclick="location.href='index.html'">← Karte</button>
   <div class="sep"></div>
   <button class="tb-btn active" id="btnTerrain" onclick="toggleTerrain()">🏔 Terrain</button>
-  <button class="tb-btn active" id="btnSat"     onclick="toggleSatellite()">🛰 Satellit</button>
+  <button class="tb-btn active" id="btnSat"     onclick="toggleSat()">🛰 Satellit</button>
   <button class="tb-btn active" id="btnWL"      onclick="toggleLayer('wl')">🔵 WL</button>
   <button class="tb-btn active" id="btnErdung"  onclick="toggleLayer('erdung')">🟠 Erdung</button>
   <div class="sep"></div>
@@ -145,40 +133,39 @@ html, body { width:100%; height:100%; overflow:hidden;
   <button class="tb-btn"        id="btnGps"     onclick="toggleGps()">📍 GPS</button>
   <div class="sep"></div>
   <button class="tb-btn"        id="btnTL"      onclick="toggleTimelapse()">⏩ Zeitraffer</button>
-  <button class="tb-btn"        onclick="resetCam()">↺ Ansicht</button>
+  <button class="tb-btn"                         onclick="resetCam()">↺ Ansicht</button>
 </div>
 
-<!-- 3D canvas -->
 <div id="canvas3d"></div>
 <div id="lblLayer"></div>
 
-<!-- Sun info widget -->
+<!-- Sun widget -->
 <div id="sunWidget">
-  <div class="sun-label">Sonne · Nalp</div>
+  <div class="sun-lbl">Sonne · Nalp</div>
   <div class="sun-time" id="sunTime">--:--</div>
   <div id="sunArc">
-    <svg viewBox="0 0 100 36" preserveAspectRatio="none">
-      <path d="M5 30 Q50 -10 95 30" stroke="rgba(255,255,255,.15)" stroke-width="1.5" fill="none"/>
-      <circle id="sunDot" cx="50" cy="10" r="5" fill="#FFA500"/>
+    <svg width="93" height="30" viewBox="0 0 93 30">
+      <path d="M3 25 Q46 -8 90 25" stroke="rgba(255,255,255,.15)" stroke-width="1.5" fill="none"/>
+      <circle id="sunDot" cx="46" cy="8" r="5" fill="#FFA000"/>
     </svg>
   </div>
-  <div id="sunAlt" style="font-size:10px;opacity:.55;margin-top:2px;">Höhe: --°</div>
+  <div class="sun-alt" id="sunAlt">Höhe: --°</div>
+</div>
+
+<!-- Compass -->
+<div id="compass">
+  <svg id="compassNeedle" width="28" height="28" viewBox="0 0 28 28">
+    <polygon points="14,2 16.5,14 14,12 11.5,14" fill="#ff4444"/>
+    <polygon points="14,26 16.5,14 14,16 11.5,14" fill="rgba(255,255,255,.35)"/>
+    <text x="14" y="9" text-anchor="middle" font-size="5.5" fill="#ff4444" font-weight="800">N</text>
+  </svg>
 </div>
 
 <!-- Legend -->
 <div id="legend">
   <div class="leg"><div class="leg-dot" style="background:#2196F3"></div>Werkleitungen</div>
   <div class="leg"><div class="leg-dot" style="background:#FF9800"></div>Erdung</div>
-  <div class="leg"><div class="leg-dot" style="background:rgba(100,200,100,.6)"></div>Terrain</div>
-</div>
-
-<!-- Compass -->
-<div id="compass">
-  <svg viewBox="0 0 26 26" fill="none">
-    <polygon points="13,2 15.5,13 13,11 10.5,13" fill="#ff4444"/>
-    <polygon points="13,24 15.5,13 13,15 10.5,13" fill="rgba(255,255,255,.4)"/>
-    <text x="13" y="7" text-anchor="middle" font-size="5" fill="#ff4444" font-weight="700">N</text>
-  </svg>
+  <div class="leg"><div class="leg-dot" style="background:rgba(120,200,120,.6)"></div>Terrain</div>
 </div>
 
 <!-- Status bar -->
@@ -195,525 +182,520 @@ html, body { width:100%; height:100%; overflow:hidden;
 <script>
 'use strict';
 
-// ── Constants ────────────────────────────────────────────────────────────────
-var ORIGIN_E = 2701555, ORIGIN_N = 1165641, BASE_ALT = 1950;
-var LAT_DEG  = 46.6404,  LON_DEG  = 8.7687;
-var EXTENT   = 360;   // half-width in metres
-var GRID     = 64;
-var IFC_FILES = [
+/* ═══════════════════════════════════════════════════════════════
+   COORDINATE SYSTEM: Standard Three.js Y-UP
+   LV95 (East, North, Elev)  →  Scene (East, Elev, -North)
+   Transformation: scX=lv95E-OE  scY=lv95Z-OZ  scZ=-(lv95N-ON)
+═══════════════════════════════════════════════════════════════ */
+var OE = 2701555, ON = 1165641, OZ = 1950;
+var LAT = 46.6404, LON = 8.7687;
+var EXTENT = 360, GRID = 64;
+
+var IFC = [
   { slot:'wl',     base:'uploads/ifc/werkleitungen', col:[0.129,0.588,0.953] },
-  { slot:'erdung', base:'uploads/ifc/erdung',        col:[1.0,0.596,0.0]     }
+  { slot:'erdung', base:'uploads/ifc/erdung',        col:[1.0,  0.596,0.0]   }
 ];
-var SAT_URL = (
-  'https://wms.geo.admin.ch/?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0' +
-  '&LAYERS=ch.swisstopo.swissimage&STYLES=&CRS=EPSG:2056' +
-  '&WIDTH=1024&HEIGHT=1024&FORMAT=image/jpeg' +
-  '&BBOX=' + (ORIGIN_E-EXTENT) + ',' + (ORIGIN_N-EXTENT) + ',' +
-             (ORIGIN_E+EXTENT) + ',' + (ORIGIN_N+EXTENT)
-);
 
-// ── Sun Position (NOAA simplified) ───────────────────────────────────────────
-function sunPosition(date) {
-  var ms  = date.getTime();
-  var jd  = ms / 86400000 + 2440587.5;
-  var n   = jd - 2451545.0;
-  var L   = ((280.46 + 0.9856474 * n) % 360 + 360) % 360;
-  var g   = (((357.528 + 0.9856003 * n) % 360 + 360) % 360) * Math.PI / 180;
-  var lam = (L + 1.915 * Math.sin(g) + 0.020 * Math.sin(2*g)) * Math.PI / 180;
-  var eps = 23.439 * Math.PI / 180;
-  var ra  = Math.atan2(Math.cos(eps) * Math.sin(lam), Math.cos(lam));
-  var dec = Math.asin(Math.sin(eps) * Math.sin(lam));
-  var utcH= date.getUTCHours() + date.getUTCMinutes()/60 + date.getUTCSeconds()/3600;
-  var gmst= (6.697375 + 0.0657098242 * n + utcH) % 24;
-  var lmst= (gmst + LON_DEG / 15) % 24;
-  var haDeg=((lmst * 15 - ra * 180/Math.PI) % 360 + 360) % 360;
-  if (haDeg > 180) haDeg -= 360;
-  var ha  = haDeg * Math.PI / 180;
-  var latR= LAT_DEG * Math.PI / 180;
-  var alt = Math.asin(Math.sin(latR)*Math.sin(dec) + Math.cos(latR)*Math.cos(dec)*Math.cos(ha));
-  var az  = Math.atan2(-Math.cos(dec)*Math.sin(ha),
-                        Math.sin(dec)*Math.cos(latR) - Math.cos(dec)*Math.cos(ha)*Math.sin(latR));
-  return { alt: alt, az: az };
+// LV95 → scene (Y-up)
+function lv95s(e, n, z) {
+  return new THREE.Vector3(e - OE, (z || OZ) - OZ, -(n - ON));
 }
 
-// ── Globals ───────────────────────────────────────────────────────────────────
-var scene, camera, renderer, controls, lblRenderer, clock;
-var layers = {}, allLbls = [], labelsOn = false;
-var terrainMesh = null, satTexture = null;
-var terrainOn = true, satOn = true;
-var gpsGroup = null, gpsWatch = null, gpsOn = false;
-var sunLight, hemiLight, skyColor = new THREE.Color();
-var timeOffset = 0, tlOn = false, tlRate = 3600;
-var flyDone = false, flyT = 0;
-var camTarget0 = new THREE.Vector3(), camPos0 = new THREE.Vector3();
-var camTarget1 = new THREE.Vector3(), camPos1 = new THREE.Vector3();
-var compass = document.getElementById('compass').querySelector('svg');
-
-// ── DOM helpers ───────────────────────────────────────────────────────────────
-function setTxt(t) { document.getElementById('loadTxt').textContent = t; }
-function setProgress(p) { document.getElementById('progress').style.width = p + '%'; }
-function showErr(msg) {
-  var e = document.getElementById('loadErr');
-  e.style.display = 'block'; e.textContent = '⚠ ' + msg;
-  document.querySelector('.progress-fill').style.background = '#ff6b6b';
-}
-
-// ── WGS84 ↔ scene ─────────────────────────────────────────────────────────────
-function wgs84ToScene(lat, lon, alt) {
+// WGS84 approx → LV95 → scene
+function gpsToScene(lat, lon, alt) {
   var phi = lat*3600, lam = lon*3600;
-  var p = (phi - 169028.66) / 10000, l = (lam - 26782.5) / 10000;
-  var E = 2600072.37 + 211455.93*l - 10938.51*l*p - 0.36*l*p*p - 44.54*l*l*l;
-  var N = 1200147.07 + 308807.95*p + 3745.25*l*l + 76.63*p*p - 194.56*l*l*p + 119.79*p*p*p;
-  return { x: E - ORIGIN_E, y: N - ORIGIN_N, z: (alt || BASE_ALT) - BASE_ALT };
+  var p = (phi-169028.66)/10000, l = (lam-26782.5)/10000;
+  var E = 2600072.37+211455.93*l-10938.51*l*p-0.36*l*p*p-44.54*l*l*l;
+  var N = 1200147.07+308807.95*p+3745.25*l*l+76.63*p*p-194.56*l*l*p+119.79*p*p*p;
+  return lv95s(E, N, alt || OZ);
 }
 
-// ── Sun visuals ───────────────────────────────────────────────────────────────
-var SKY_NIGHT = new THREE.Color(0x020510);
-var SKY_DAWN  = new THREE.Color(0x1a2a6c);
-var SKY_MORN  = new THREE.Color(0xff8c42);
-var SKY_DAY   = new THREE.Color(0x1565c0);
-
-function lerpColor3(a, b, c, t) {
-  if (t < 0.5) return new THREE.Color().lerpColors(a, b, t * 2);
-  return new THREE.Color().lerpColors(b, c, (t - 0.5) * 2);
+/* ── Sun position (NOAA simplified) ──────────────────────── */
+function sunPos(date) {
+  var ms = date.getTime();
+  var jd = ms / 86400000 + 2440587.5;
+  var n  = jd - 2451545.0;
+  var L  = ((280.46 + 0.9856474*n) % 360 + 360) % 360;
+  var g  = (((357.528 + 0.9856003*n) % 360 + 360) % 360) * Math.PI/180;
+  var lam= (L + 1.915*Math.sin(g) + 0.02*Math.sin(2*g)) * Math.PI/180;
+  var eps= 23.439 * Math.PI/180;
+  var ra = Math.atan2(Math.cos(eps)*Math.sin(lam), Math.cos(lam));
+  var dec= Math.asin(Math.sin(eps)*Math.sin(lam));
+  var utH= date.getUTCHours() + date.getUTCMinutes()/60 + date.getUTCSeconds()/3600;
+  var gst= (6.697375 + 0.0657098242*n + utH) % 24;
+  var lst= (gst + LON/15) % 24;
+  var ha = (((lst*15 - ra*180/Math.PI) % 360 + 360) % 360);
+  if (ha > 180) ha -= 360;
+  ha *= Math.PI/180;
+  var lr = LAT * Math.PI/180;
+  var alt= Math.asin(Math.sin(lr)*Math.sin(dec) + Math.cos(lr)*Math.cos(dec)*Math.cos(ha));
+  var az = Math.atan2(-Math.cos(dec)*Math.sin(ha),
+                       Math.sin(dec)*Math.cos(lr) - Math.cos(dec)*Math.cos(ha)*Math.sin(lr));
+  return { alt:alt, az:az };
 }
 
+/* ── Globals ─────────────────────────────────────────────── */
+var scene, camera, renderer, controls, lblRenderer, clock;
+var layers={}, allLbls=[], labelsOn=false;
+var terrainMesh=null, satTex=null, terrainOn=true, satOn=true;
+var sunLight, hemiLight;
+var gpsGroup=null, gpsWid=null, gpsOn=false;
+var timeOff=0, tlOn=false;
+var flyDone=false, flyT=0;
+var camP0=new THREE.Vector3(), camT0=new THREE.Vector3();
+var camP1=new THREE.Vector3(), camT1=new THREE.Vector3();
+var frameN=0;
+
+/* ── DOM helpers ─────────────────────────────────────────── */
+function pct(p)  { document.getElementById('progress').style.width = p+'%'; }
+function txt(t)  { document.getElementById('loadTxt').textContent = t; }
+function err(msg) {
+  var el=document.getElementById('loadErr');
+  el.style.display='block'; el.textContent='⚠ '+msg;
+  document.querySelector('.progress-fill').style.background='#c0392b';
+}
+
+/* ── Sun → scene light direction (Y-up) ──────────────────── */
 function updateSun(date) {
-  var s   = sunPosition(date);
-  var alt = s.alt;  // radians
-  var az  = s.az;
-  var D   = 900;
+  var s   = sunPos(date);
+  var alt = s.alt, az = s.az;
+  var D   = 800;
 
-  // Light position
+  // Light position: East = sin(az), Up(Y) = sin(alt), -North = -cos(az)
   if (sunLight) {
     sunLight.position.set(
       D * Math.cos(alt) * Math.sin(az),
-      D * Math.cos(alt) * Math.cos(az),
-      D * Math.sin(alt)
+      D * Math.sin(alt),
+      D * -Math.cos(alt) * Math.cos(az)
     );
-    // Sun color: orange at horizon, white at zenith
-    var t = Math.max(0, Math.min(1, alt / (Math.PI / 6)));
-    sunLight.color.setRGB(1, 0.55 + 0.45*t, 0.2 + 0.8*t);
-    sunLight.intensity = Math.max(0, Math.sin(Math.max(0, alt))) * 1.4 + 0.05;
+    // Color: orange at horizon → warm white overhead
+    var t  = Math.max(0, Math.min(1, alt / (30*Math.PI/180)));
+    sunLight.color.setRGB(1, 0.55+0.45*t, 0.2+0.8*t);
+    sunLight.intensity = Math.max(0, Math.sin(Math.max(0,alt))) * 1.4 + 0.05;
   }
 
   // Sky color
-  var tNorm = Math.max(-0.1, Math.min(0.4, alt)) / 0.4;  // -0.1…0.4 → 0…1
-  var sky;
-  if (tNorm < 0) sky = SKY_NIGHT.clone();
-  else if (tNorm < 0.25) sky = new THREE.Color().lerpColors(SKY_DAWN, SKY_MORN, tNorm / 0.25);
-  else sky = new THREE.Color().lerpColors(SKY_MORN, SKY_DAY, (tNorm - 0.25) / 0.75);
+  var norm = Math.max(-0.12, Math.min(0.45, alt)) / 0.45;
+  var sky  = new THREE.Color();
+  if (norm <= 0)      sky.setRGB(0.01, 0.02, 0.06);
+  else if (norm < 0.3) sky.lerpColors(new THREE.Color(0x0d2060), new THREE.Color(0xe8520a), norm/0.3);
+  else                 sky.lerpColors(new THREE.Color(0xe8520a), new THREE.Color(0x1565c0), (norm-0.3)/0.7);
+  if (scene) { scene.background=sky; if (scene.fog) scene.fog.color.copy(sky); }
+  if (hemiLight) hemiLight.color.set(sky);
 
-  if (scene) { scene.background = sky; scene.fog.color.copy(sky); }
-  if (hemiLight) {
-    hemiLight.color.setRGB(
-      Math.min(1, sky.r + 0.1),
-      Math.min(1, sky.g + 0.15),
-      Math.min(1, sky.b + 0.3)
-    );
-  }
+  // Widget
+  var h  = date.getHours().toString().padStart(2,'0');
+  var m  = date.getMinutes().toString().padStart(2,'0');
+  var ad = (alt*180/Math.PI).toFixed(1);
+  document.getElementById('sunTime').textContent = h+':'+m;
+  document.getElementById('sunAlt').textContent  = 'Höhe: '+ad+'°';
 
-  // Sun widget
-  var altDeg = alt * 180 / Math.PI;
-  var h = date.getHours().toString().padStart(2, '0');
-  var m = date.getMinutes().toString().padStart(2, '0');
-  document.getElementById('sunTime').textContent = h + ':' + m;
-  document.getElementById('sunAlt').textContent = 'Höhe: ' + altDeg.toFixed(1) + '°';
-
-  // Sun arc dot: az ranges -π…+π, map to 5…95 on svg x, alt to y
-  var azNorm = (az / Math.PI + 1) / 2;  // 0…1 from West through North to East (approx)
-  var cx = 5 + azNorm * 90;
-  var t2 = Math.max(0, Math.min(1, (alt + 0.2) / 0.8));
-  var cy = 30 - t2 * 28;
-  var dot = document.getElementById('sunDot');
-  dot.setAttribute('cx', cx.toFixed(1));
-  dot.setAttribute('cy', cy.toFixed(1));
-  dot.setAttribute('fill', altDeg < 0 ? 'rgba(255,150,0,.3)' : '#FFA500');
+  // Arc dot (azimuth → x: West=5, East=88; altitude → y: horizon=25, zenith=3)
+  var azN= (az/Math.PI + 1)/2;
+  var cx = 3 + azN*87;
+  var t2 = Math.max(0, Math.min(1, (alt+0.15)/0.7));
+  var cy = 25 - t2*22;
+  document.getElementById('sunDot').setAttribute('cx', cx.toFixed(1));
+  document.getElementById('sunDot').setAttribute('cy', cy.toFixed(1));
+  document.getElementById('sunDot').setAttribute('fill', alt<0 ? 'rgba(255,100,0,.25)' : '#FFA000');
 }
 
-// ── Terrain ───────────────────────────────────────────────────────────────────
+/* ── Terrain ─────────────────────────────────────────────── */
 async function loadTerrain() {
-  setTxt('Lade Terrain-Daten …');
-  setProgress(20);
+  txt('Lade Terrain-Höhen …'); pct(20);
 
-  var resp = await fetch('uploads/terrain/terrain.json');
-  if (!resp.ok) throw new Error('terrain.json nicht gefunden');
-  var td = await resp.json();
+  var r = await fetch('uploads/terrain/terrain.json');
+  if (!r.ok) throw new Error('terrain.json HTTP '+r.status);
+  var td = await r.json();
 
-  var G = td.grid;  // 64
-  var ext = td.extent;
+  var G = td.grid; // 64
+  var ext = td.extent; // 360
 
-  // Positions
-  var pos = new Float32Array(G * G * 3);
-  var uvs = new Float32Array(G * G * 2);
-  for (var row = 0; row < G; row++) {
-    for (var col = 0; col < G; col++) {
-      var idx = row * G + col;
-      pos[idx*3]   = -ext + col * 2*ext / (G-1);
-      pos[idx*3+1] = -ext + row * 2*ext / (G-1);
-      pos[idx*3+2] = td.heights[idx] - BASE_ALT;
-      uvs[idx*2]   = col / (G-1);
-      uvs[idx*2+1] = row / (G-1);
+  var pos = new Float32Array(G*G*3);
+  var uv  = new Float32Array(G*G*2);
+
+  // Build Y-up terrain: X=East, Y=elevation, Z=-(North)
+  // row 0 = most-South (lv95N = ON-ext, sceneZ = +ext)
+  // row G-1= most-North (lv95N = ON+ext, sceneZ = -ext)
+  for (var row=0; row<G; row++) {
+    for (var col=0; col<G; col++) {
+      var i    = row*G + col;
+      var xOff = -ext + col*2*ext/(G-1);       // West(-360)→East(+360)
+      var zOff = ext - row*2*ext/(G-1);         // South(+360)→North(-360) in scene Z
+      var yOff = td.heights[i] - OZ;            // elevation offset
+      pos[i*3]   = xOff;
+      pos[i*3+1] = yOff;
+      pos[i*3+2] = zOff;
+      // UV: U=West→East, V=South→North (matches WMS flipY)
+      uv[i*2]   = col/(G-1);
+      uv[i*2+1] = row/(G-1);
     }
   }
 
-  // Indices
-  var idxArr = new Uint32Array((G-1) * (G-1) * 6);
-  var ip = 0;
-  for (var row = 0; row < G-1; row++) {
-    for (var col = 0; col < G-1; col++) {
-      var a = row*G + col, b = a+1, c = (row+1)*G + col, d = c+1;
-      idxArr[ip++]=a; idxArr[ip++]=b; idxArr[ip++]=c;
-      idxArr[ip++]=b; idxArr[ip++]=d; idxArr[ip++]=c;
+  var idx = new Uint32Array((G-1)*(G-1)*6);
+  var ip  = 0;
+  for (var row=0; row<G-1; row++) {
+    for (var col=0; col<G-1; col++) {
+      var a=row*G+col, b=a+1, c=(row+1)*G+col, d=c+1;
+      idx[ip++]=a; idx[ip++]=b; idx[ip++]=c;
+      idx[ip++]=b; idx[ip++]=d; idx[ip++]=c;
     }
   }
 
   var geom = new THREE.BufferGeometry();
   geom.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  geom.setAttribute('uv',       new THREE.BufferAttribute(uvs, 2));
-  geom.setIndex(new THREE.BufferAttribute(idxArr, 1));
-  geom.computeVertexNormals();  // fast for 64x64 terrain
+  geom.setAttribute('uv',       new THREE.BufferAttribute(uv,  2));
+  geom.setIndex(new THREE.BufferAttribute(idx, 1));
+  geom.computeVertexNormals();
 
   var mat = new THREE.MeshPhongMaterial({
-    color: 0xaad5a0,
+    color:       0x88cc88,
     transparent: true,
-    opacity: 0.60,
-    side: THREE.DoubleSide,
-    specular: 0x223322,
-    shininess: 8,
-    depthWrite: false
+    opacity:     0.60,
+    side:        THREE.DoubleSide,
+    specular:    0x223322,
+    shininess:   6,
+    depthWrite:  false
   });
 
   terrainMesh = new THREE.Mesh(geom, mat);
-  terrainMesh.renderOrder = 1;
+  terrainMesh.renderOrder = 10;
   scene.add(terrainMesh);
 
-  // Satellite texture (non-blocking)
-  setTxt('Lade Satellitenbild …');
-  setProgress(45);
-  new THREE.TextureLoader().load(
-    SAT_URL,
+  // Satellite texture (async, non-blocking)
+  txt('Lade Satellitenbild …'); pct(45);
+  var bbox = (OE-ext)+','+(ON-ext)+','+(OE+ext)+','+(ON+ext);
+  var wmsUrl = 'https://wms.geo.admin.ch/?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0'
+             + '&LAYERS=ch.swisstopo.swissimage&STYLES=&CRS=EPSG:2056'
+             + '&WIDTH=1024&HEIGHT=1024&FORMAT=image/jpeg&BBOX='+bbox;
+
+  var loader = new THREE.TextureLoader();
+  loader.crossOrigin = 'anonymous';
+  loader.load(wmsUrl,
     function(tex) {
+      satTex = tex;
       tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
-      satTexture = tex;
       terrainMesh.material.map = tex;
       terrainMesh.material.color.set(0xffffff);
       terrainMesh.material.needsUpdate = true;
     },
     undefined,
-    function() { console.warn('Satellit-Textur konnte nicht geladen werden'); }
+    function(e) { console.warn('WMS Satellit:', e); }
   );
 }
 
-// ── IFC layers ────────────────────────────────────────────────────────────────
+/* ── IFC geometry layers ─────────────────────────────────── */
 async function loadLayer(cfg) {
-  setTxt('Lade ' + cfg.slot + ' …');
+  txt('Lade '+cfg.slot+' …');
+  var mr = await fetch(cfg.base+'.meta.json');
+  if (!mr.ok) { console.warn(cfg.slot,'meta not found'); return null; }
+  var meta = await mr.json();
 
-  var metaR = await fetch(cfg.base + '.meta.json');
-  if (!metaR.ok) return null;
-  var meta = await metaR.json();
-
-  var results = await Promise.all([
-    fetch(cfg.base + '.v.bin').then(function(r){ return r.arrayBuffer(); }),
-    fetch(cfg.base + '.f.bin').then(function(r){ return r.arrayBuffer(); })
+  var bufs = await Promise.all([
+    fetch(cfg.base+'.v.bin').then(function(r){ if(!r.ok) throw new Error('v.bin '+r.status); return r.arrayBuffer(); }),
+    fetch(cfg.base+'.f.bin').then(function(r){ if(!r.ok) throw new Error('f.bin '+r.status); return r.arrayBuffer(); })
   ]);
-  var verts = new Float32Array(results[0]);
-  var idxs  = new Uint32Array(results[1]);
+
+  // Raw binary: vertex layout is [East-OE, North-ON, Elev-OZ] per vertex
+  // Convert to Y-up:  sceneX=East-OE, sceneY=Elev-OZ, sceneZ=-(North-ON)
+  var raw  = new Float32Array(bufs[0]);
+  var verts= new Float32Array(raw.length);
+  for (var i=0; i<raw.length; i+=3) {
+    verts[i]   = raw[i];       // X: East offset (unchanged)
+    verts[i+1] = raw[i+2];    // Y: elevation offset
+    verts[i+2] = -raw[i+1];   // Z: -(North offset)
+  }
+  var idxs = new Uint32Array(bufs[1]);
 
   var geom = new THREE.BufferGeometry();
   geom.setAttribute('position', new THREE.BufferAttribute(verts, 3));
   geom.setIndex(new THREE.BufferAttribute(idxs, 1));
+  // No computeVertexNormals – flatShading:true handles per-face lighting
 
   var c   = meta.color || cfg.col;
   var mat = new THREE.MeshPhongMaterial({
-    color: new THREE.Color(c[0], c[1], c[2]),
+    color:      new THREE.Color(c[0], c[1], c[2]),
     flatShading: true,
-    side: THREE.DoubleSide,
-    specular: new THREE.Color(0.1, 0.1, 0.1),
-    shininess: 20
+    specular:   0x222222,
+    shininess:  25,
+    side:       THREE.DoubleSide
   });
 
   var mesh = new THREE.Mesh(geom, mat);
   scene.add(mesh);
   layers[cfg.slot] = mesh;
 
-  (meta.labels || []).forEach(function(lbl) {
+  // Labels: lbl.x=East-OE, lbl.y=North-ON, lbl.z=Elev-OZ
+  (meta.labels||[]).forEach(function(lbl) {
     var div = document.createElement('div');
     div.className = 'lbl';
     div.textContent = lbl.t;
     var obj = new THREE.CSS2DObject(div);
-    obj.position.set(lbl.x, lbl.y, lbl.z + 4);
+    obj.position.set(lbl.x, lbl.z + 4, -lbl.y);  // Y-up
     obj.visible = false;
     scene.add(obj);
     allLbls.push(obj);
   });
 
+  console.info(cfg.slot+': '+meta.vCount+' verts  '+meta.fCount+' faces  '+(meta.labels||[]).length+' labels');
   return mesh;
 }
 
-// ── GPS marker ────────────────────────────────────────────────────────────────
-function mkGpsMarker() {
+/* ── GPS marker ──────────────────────────────────────────── */
+function mkGps() {
   var g = new THREE.Group();
   g.add(new THREE.Mesh(
-    new THREE.SphereGeometry(2.5, 16, 12),
-    new THREE.MeshPhongMaterial({ color:0x2196F3, flatShading:true, emissive:0x0b4fa0 })
+    new THREE.SphereGeometry(2.5,16,12),
+    new THREE.MeshPhongMaterial({ color:0x2196F3, emissive:0x0b4fa0, shininess:60 })
   ));
-  var ringGeo = new THREE.RingGeometry(4, 6.5, 32);
-  g.add(new THREE.Mesh(ringGeo,
+  var ring = new THREE.Mesh(
+    new THREE.RingGeometry(4, 6.5, 32),
     new THREE.MeshBasicMaterial({ color:0x2196F3, transparent:true, opacity:.5, side:THREE.DoubleSide })
-  ));
+  );
+  ring.rotation.x = -Math.PI/2;  // flat on XZ plane (Y-up)
+  g.add(ring);
   var d = document.createElement('div');
-  d.className = 'lbl lbl-gps'; d.textContent = '📍 Mein Standort';
-  var lbl = new THREE.CSS2DObject(d); lbl.position.set(0, 0, 10);
+  d.className='lbl lbl-gps'; d.textContent='📍 Mein Standort';
+  var lbl=new THREE.CSS2DObject(d); lbl.position.set(0,10,0);
   g.add(lbl);
   return g;
 }
 
-// ── Toggles ───────────────────────────────────────────────────────────────────
-window.toggleTerrain   = function() {
-  terrainOn = !terrainOn;
-  if (terrainMesh) terrainMesh.visible = terrainOn;
-  document.getElementById('btnTerrain').classList.toggle('active', terrainOn);
+/* ── Toggle buttons ──────────────────────────────────────── */
+window.toggleTerrain = function() {
+  terrainOn=!terrainOn;
+  if (terrainMesh) terrainMesh.visible=terrainOn;
+  document.getElementById('btnTerrain').classList.toggle('active',terrainOn);
 };
-window.toggleSatellite = function() {
-  satOn = !satOn;
+window.toggleSat = function() {
+  satOn=!satOn;
   if (terrainMesh) {
-    terrainMesh.material.map = satOn && satTexture ? satTexture : null;
-    terrainMesh.material.color.set(satOn && satTexture ? 0xffffff : 0xaad5a0);
-    terrainMesh.material.needsUpdate = true;
+    terrainMesh.material.map = satOn&&satTex ? satTex : null;
+    terrainMesh.material.color.set(satOn&&satTex ? 0xffffff : 0x88cc88);
+    terrainMesh.material.needsUpdate=true;
   }
-  document.getElementById('btnSat').classList.toggle('active', satOn);
+  document.getElementById('btnSat').classList.toggle('active',satOn);
 };
-window.toggleLayer     = function(slot) {
-  var m = layers[slot]; if (!m) return;
-  m.visible = !m.visible;
-  var id = slot === 'wl' ? 'btnWL' : 'btnErdung';
-  document.getElementById(id).classList.toggle('active', m.visible);
+window.toggleLayer = function(slot) {
+  var m=layers[slot]; if(!m) return;
+  m.visible=!m.visible;
+  document.getElementById(slot==='wl'?'btnWL':'btnErdung').classList.toggle('active',m.visible);
 };
-window.toggleLabels    = function() {
-  labelsOn = !labelsOn;
-  allLbls.forEach(function(l) { l.visible = labelsOn; });
-  document.getElementById('btnLabels').classList.toggle('active', labelsOn);
+window.toggleLabels = function() {
+  labelsOn=!labelsOn;
+  allLbls.forEach(function(l){ l.visible=labelsOn; });
+  document.getElementById('btnLabels').classList.toggle('active',labelsOn);
 };
-window.toggleGps       = function() {
-  var btn = document.getElementById('btnGps');
+window.toggleGps = function() {
+  var btn=document.getElementById('btnGps');
   if (gpsOn) {
-    if (gpsWatch != null) navigator.geolocation.clearWatch(gpsWatch);
-    if (gpsGroup) { scene.remove(gpsGroup); gpsGroup = null; }
-    gpsOn = false; btn.classList.remove('gps-on');
-    document.getElementById('sGps').textContent = 'GPS: inaktiv';
+    if (gpsWid!=null) navigator.geolocation.clearWatch(gpsWid);
+    if (gpsGroup) { scene.remove(gpsGroup); gpsGroup=null; }
+    gpsOn=false; btn.classList.remove('gps-on');
+    document.getElementById('sGps').textContent='GPS: inaktiv';
     return;
   }
-  if (!navigator.geolocation) { alert('Kein GPS'); return; }
-  gpsOn = true; btn.classList.add('gps-on');
-  gpsWatch = navigator.geolocation.watchPosition(
+  if (!navigator.geolocation) { alert('Kein GPS verfügbar'); return; }
+  gpsOn=true; btn.classList.add('gps-on');
+  gpsWid=navigator.geolocation.watchPosition(
     function(p) {
-      var s = wgs84ToScene(p.coords.latitude, p.coords.longitude, p.coords.altitude);
-      if (!gpsGroup) { gpsGroup = mkGpsMarker(); scene.add(gpsGroup); }
-      gpsGroup.position.set(s.x, s.y, s.z + 5);
+      var s=gpsToScene(p.coords.latitude, p.coords.longitude, p.coords.altitude);
+      if (!gpsGroup) { gpsGroup=mkGps(); scene.add(gpsGroup); }
+      gpsGroup.position.copy(s);
       document.getElementById('sGps').textContent =
-        p.coords.latitude.toFixed(4) + '°N  ' + p.coords.longitude.toFixed(4) + '°E  ' +
-        '±' + Math.round(p.coords.accuracy) + 'm';
+        p.coords.latitude.toFixed(4)+'°N  '+p.coords.longitude.toFixed(4)+'°E  ±'+
+        Math.round(p.coords.accuracy)+'m';
     },
-    function(e) { document.getElementById('sGps').textContent = 'GPS: ' + e.message; },
-    { enableHighAccuracy: true, timeout: 30000, maximumAge: 5000 }
+    function(e){ document.getElementById('sGps').textContent='GPS: '+e.message; },
+    { enableHighAccuracy:true, timeout:30000, maximumAge:5000 }
   );
 };
 window.toggleTimelapse = function() {
-  tlOn = !tlOn;
-  document.getElementById('btnTL').classList.toggle('tl-on', tlOn);
-  if (!tlOn) timeOffset = 0;  // reset on stop
+  tlOn=!tlOn;
+  document.getElementById('btnTL').classList.toggle('tl-on',tlOn);
+  if (!tlOn) timeOff=0;
 };
-window.resetCam        = function() {
-  camera.position.copy(camPos1);
-  controls.target.copy(camTarget1);
+window.resetCam = function() {
+  camera.position.copy(camP1);
+  controls.target.copy(camT1);
   controls.update();
 };
 
-// ── Compass update ────────────────────────────────────────────────────────────
-function updateCompass() {
-  var dir = new THREE.Vector3();
-  camera.getWorldDirection(dir);
-  var az = -Math.atan2(dir.x, dir.y) * 180 / Math.PI;
-  compass.style.transform = 'rotate(' + az.toFixed(1) + 'deg)';
+/* ── Resize ──────────────────────────────────────────────── */
+function resize() {
+  var el=document.getElementById('canvas3d');
+  var w=el.clientWidth, h=el.clientHeight;
+  if (!w||!h) return;
+  camera.aspect=w/h; camera.updateProjectionMatrix();
+  renderer.setSize(w,h); lblRenderer.setSize(w,h);
 }
 
-// ── Elevation readout ─────────────────────────────────────────────────────────
-var lastAltFrame = 0;
-function updateAltDisplay(frame) {
-  if (frame - lastAltFrame < 30) return;
-  lastAltFrame = frame;
-  var tgt = controls.target;
-  var z = tgt.z + BASE_ALT;
-  document.getElementById('sAlt').textContent = '⛰ ' + Math.round(z) + ' m ü. M.';
-}
-
-// ── Camera fly-in ─────────────────────────────────────────────────────────────
-function easeInOut(t) { return t < 0.5 ? 2*t*t : -1 + (4-2*t)*t; }
+/* ── Fly-in (easeInOut) ──────────────────────────────────── */
+function easeIO(t) { return t<.5 ? 2*t*t : -1+(4-2*t)*t; }
 
 function startFlyIn(box) {
-  var ctr = box.getCenter(new THREE.Vector3());
-  var sz  = box.getSize(new THREE.Vector3());
-  var d   = Math.max(sz.x, sz.y, sz.z);
+  var c=box.getCenter(new THREE.Vector3());
+  var s=box.getSize(new THREE.Vector3());
+  var d=Math.max(s.x, s.y, s.z, 80);
 
-  camTarget0.set(0, 0, 80);
-  camPos0.set(0, 0, 600);
+  // Start: high oblique (not straight down to avoid gimbal lock)
+  camP0.set(c.x+5, d*4, c.z+d*2);
+  camT0.set(c.x, c.y, c.z);
 
-  camTarget1.copy(ctr);
-  camPos1.set(ctr.x + d*0.2, ctr.y - d*1.1, ctr.z + d*0.6);
+  // End: nice 3/4 angle from south-east
+  camP1.set(c.x+d*.3, d*.9, c.z+d*1.3);
+  camT1.set(c.x, c.y, c.z);
 
-  camera.position.copy(camPos0);
-  controls.target.copy(camTarget0);
+  camera.position.copy(camP0);
+  controls.target.copy(camT0);
   controls.update();
-  flyT = 0;
-  flyDone = false;
+  flyT=0; flyDone=false;
 }
 
-// ── Render loop ───────────────────────────────────────────────────────────────
-var frame = 0;
-var sunUpdateEvery = 90;   // frames between sun recalculation
+/* ── Compass ─────────────────────────────────────────────── */
+function updateCompass() {
+  var dir=new THREE.Vector3();
+  camera.getWorldDirection(dir);
+  var az=-Math.atan2(dir.x, -dir.z) * 180/Math.PI;
+  document.getElementById('compassNeedle').style.transform='rotate('+az.toFixed(1)+'deg)';
+}
+
+/* ── Animate ─────────────────────────────────────────────── */
+var tlRate = 3600; // seconds per real second in timelapse
 
 function animate() {
   requestAnimationFrame(animate);
-  frame++;
+  frameN++;
 
   // Timelapse
-  var now = new Date(Date.now() + timeOffset * 1000);
-  if (tlOn) timeOffset += tlRate / 60;
+  if (tlOn) timeOff += tlRate/60;
+  var now = new Date(Date.now() + timeOff*1000);
 
-  // Sun update
-  if (frame % sunUpdateEvery === 0 || tlOn) updateSun(now);
+  // Sun (every 60 frames, always in timelapse)
+  if (frameN%60===0 || tlOn) updateSun(now);
 
-  // GPS ring pulse (CSS animation handles it)
+  // GPS ring pulse (scale ring)
+  if (gpsGroup && gpsGroup.children[1]) {
+    var t=clock.getElapsedTime();
+    var ring=gpsGroup.children[1];
+    var s=1+.3*Math.abs(Math.sin(t*1.8));
+    ring.scale.set(s,s,s);
+    ring.material.opacity=.35+.3*Math.abs(Math.sin(t*1.8));
+  }
 
   // Fly-in
   if (!flyDone) {
-    flyT += 0.006;
-    if (flyT >= 1) { flyT = 1; flyDone = true; }
-    var t = easeInOut(flyT);
-    camera.position.lerpVectors(camPos0, camPos1, t);
-    controls.target.lerpVectors(camTarget0, camTarget1, t);
-    controls.update();
+    flyT=Math.min(1, flyT+0.005);
+    var tt=easeIO(flyT);
+    camera.position.lerpVectors(camP0, camP1, tt);
+    controls.target.lerpVectors(camT0, camT1, tt);
+    if (flyT>=1) flyDone=true;
   }
 
   controls.update();
   updateCompass();
-  updateAltDisplay(frame);
 
-  renderer.render(scene, camera);
-  lblRenderer.render(scene, camera);
+  // Elevation display (target Y + OZ)
+  if (frameN%30===0) {
+    var elev=Math.round(controls.target.y + OZ);
+    document.getElementById('sAlt').textContent = '⛰ '+elev+' m ü. M.';
+  }
+
+  renderer.render(scene,camera);
+  lblRenderer.render(scene,camera);
 }
 
-// ── Resize ────────────────────────────────────────────────────────────────────
-function resize() {
-  var c = document.getElementById('canvas3d');
-  var w = c.clientWidth, h = c.clientHeight;
-  if (!w || !h) return;
-  camera.aspect = w / h;
-  camera.updateProjectionMatrix();
-  renderer.setSize(w, h);
-  lblRenderer.setSize(w, h);
-}
-
-// ── Init ──────────────────────────────────────────────────────────────────────
+/* ── Init ────────────────────────────────────────────────── */
 async function init() {
   try {
-    if (typeof THREE === 'undefined') { showErr('Three.js fehlt'); return; }
+    if (typeof THREE==='undefined') { err('Three.js nicht geladen!'); return; }
 
-    setProgress(5); setTxt('Szene aufbauen …');
+    txt('Szene aufbauen …'); pct(5);
 
     // Renderer
-    var container = document.getElementById('canvas3d');
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.sortObjects = true;
+    var container=document.getElementById('canvas3d');
+    renderer=new THREE.WebGLRenderer({ antialias:true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    renderer.sortObjects=true;
     container.appendChild(renderer.domElement);
 
     // CSS2D
-    lblRenderer = new THREE.CSS2DRenderer();
-    lblRenderer.domElement.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;';
+    lblRenderer=new THREE.CSS2DRenderer();
+    lblRenderer.domElement.style.cssText='position:absolute;top:0;left:0;pointer-events:none;';
     document.getElementById('lblLayer').appendChild(lblRenderer.domElement);
 
-    // Clock
-    clock = new THREE.Clock();
+    clock=new THREE.Clock();
 
-    // Scene
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0d1117);
-    scene.fog = new THREE.FogExp2(0x0d1117, 0.0012);
+    // Scene (Y-up, standard Three.js)
+    scene=new THREE.Scene();
+    scene.background=new THREE.Color(0x0d1525);
+    scene.fog=new THREE.Fog(0x0d1525, 400, 2500);
 
-    // Camera
-    camera = new THREE.PerspectiveCamera(48, 1, 0.5, 4000);
-    camera.up.set(0, 0, 1);
-    camera.position.set(0, 0, 600);
+    // Camera – standard Y-up, NO camera.up change
+    camera=new THREE.PerspectiveCamera(50, 1, 0.5, 5000);
+    camera.position.set(100, 400, 600);
     camera.lookAt(0, 0, 0);
 
     // Controls
-    controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.08;
-    controls.maxPolarAngle = Math.PI * 0.9;
-    controls.minDistance = 2;
-    controls.maxDistance = 2000;
+    controls=new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping=true;
+    controls.dampingFactor=0.08;
+    controls.maxPolarAngle=Math.PI*0.88;
+    controls.minDistance=5;
+    controls.maxDistance=3000;
+    controls.screenSpacePanning=true;
     controls.update();
 
     // Lights
-    hemiLight = new THREE.HemisphereLight(0x87ceeb, 0x5a3e28, 0.55);
+    hemiLight=new THREE.HemisphereLight(0x87ceeb, 0x5a3e28, 0.6);
     scene.add(hemiLight);
 
-    sunLight = new THREE.DirectionalLight(0xffe8cc, 1.2);
-    sunLight.position.set(200, -100, 400);
+    sunLight=new THREE.DirectionalLight(0xffe8cc, 1.3);
+    sunLight.position.set(300, 500, 200);
     scene.add(sunLight);
 
-    scene.add(new THREE.AmbientLight(0x203050, 0.4));
+    scene.add(new THREE.AmbientLight(0x102030, 0.5));
 
     resize();
     window.addEventListener('resize', resize);
+    pct(10);
 
-    // Initial sun update
     updateSun(new Date());
-    setProgress(15);
 
-    // Load terrain
+    // Load terrain + IFC
     await loadTerrain();
-    setProgress(55);
+    pct(55);
 
-    // Load IFC
-    var loaded = 0;
-    for (var i = 0; i < IFC_FILES.length; i++) {
-      try {
-        if (await loadLayer(IFC_FILES[i])) loaded++;
-      } catch(e) { console.warn(IFC_FILES[i].slot, e); }
-      setProgress(55 + (i+1) * 20);
+    var loaded=0;
+    for (var i=0; i<IFC.length; i++) {
+      try { if (await loadLayer(IFC[i])) loaded++; }
+      catch(e) { console.error(IFC[i].slot, e); }
+      pct(55 + (i+1)*20);
     }
+    pct(100);
 
-    setProgress(100);
-    setTxt('Bereit!');
-
-    // Build bounding box
-    var box = new THREE.Box3();
+    // Compute scene bounding box
+    var box=new THREE.Box3();
     Object.values(layers).forEach(function(m){ box.expandByObject(m); });
-    if (box.isEmpty()) box.set(new THREE.Vector3(-100,-100,-50), new THREE.Vector3(100,100,50));
+    if (box.isEmpty()) box.set(new THREE.Vector3(-150,-80,-150), new THREE.Vector3(150,20,150));
 
-    // Fly-in animation
     startFlyIn(box);
 
-    // Hide loading screen
-    setTimeout(function() {
-      var el = document.getElementById('loading');
+    // Fade out loading screen
+    setTimeout(function(){
+      var el=document.getElementById('loading');
       el.classList.add('fade');
-      setTimeout(function(){ el.style.display='none'; }, 850);
-    }, 600);
+      setTimeout(function(){ el.style.display='none'; },900);
+    }, 500);
 
     document.getElementById('sLoad').textContent =
-      loaded + ' IFC-Layer · ' + GRID + '×' + GRID + ' Terrain';
+      loaded+' IFC-Layer  ·  '+GRID+'×'+GRID+' Terrain ('+Math.round(EXTENT*2)+'m)';
 
-    // Start render loop
     animate();
 
   } catch(e) {
-    showErr(e.message || String(e));
-    console.error(e);
+    err(e.message || String(e));
+    console.error('INIT ERROR:', e);
   }
 }
 
