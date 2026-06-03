@@ -12,6 +12,12 @@
   var GITHUB_REPO = 'website_nalpsolar';
   var GITHUB_BRANCH = 'main';
 
+  // Fixed repo paths for IFC slots
+  var IFC_REPO_PATHS = {
+    wl:     'uploads/ifc/werkleitungen.ifc',
+    erdung: 'uploads/ifc/erdung.ifc'
+  };
+
   // Fixed repo paths for each PDF slot
   var PDF_REPO_PATHS = {
     '5w': '5W-Programm/KW21-25.pdf',
@@ -26,6 +32,7 @@
   function defaultSettings() {
     return {
       pdfMeta: { '5w': null, bohren: null, stahlbau: null, bestellung: null, stapel: null },
+      ifcMeta: { wl: null, erdung: null },
       geojsonIds: []
     };
   }
@@ -39,6 +46,10 @@
       var m = pm[k];
       base.pdfMeta[k] = (m && typeof m === 'object') ? m : null;
     });
+
+    var im = value.ifcMeta && typeof value.ifcMeta === 'object' ? value.ifcMeta : {};
+    base.ifcMeta.wl     = (im.wl     && typeof im.wl     === 'object') ? im.wl     : null;
+    base.ifcMeta.erdung = (im.erdung && typeof im.erdung === 'object') ? im.erdung : null;
 
     base.geojsonIds = Array.isArray(value.geojsonIds)
       ? value.geojsonIds.filter(function (id) { return typeof id === 'string'; })
@@ -168,6 +179,53 @@
     }
   }
 
+  async function uploadIfcToGitHub(file, slotKey, token) {
+    var path = IFC_REPO_PATHS[slotKey];
+    if (!path) throw new Error('Unbekannter IFC-Slot: ' + slotKey);
+
+    var base64 = await new Promise(function (resolve, reject) {
+      var reader = new global.FileReader();
+      reader.onload = function (e) { resolve(e.target.result.split(',')[1]); };
+      reader.onerror = function () { reject(new Error('Datei konnte nicht gelesen werden')); };
+      reader.readAsDataURL(file);
+    });
+
+    var sha = await getFileSha(path, token);
+    var body = { message: 'IFC Upload: ' + file.name, content: base64, branch: GITHUB_BRANCH };
+    if (sha) body.sha = sha;
+
+    var res = await global.fetch(ghContentsUrl(path), {
+      method: 'PUT',
+      headers: ghHeaders(token),
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+      var err = await res.json().catch(function () { return {}; });
+      throw new Error('GitHub ' + res.status + ': ' + (err.message || 'Unbekannter Fehler'));
+    }
+    return await res.json();
+  }
+
+  async function deleteIfcFromGitHub(slotKey, token) {
+    var path = IFC_REPO_PATHS[slotKey];
+    if (!path) throw new Error('Unbekannter IFC-Slot: ' + slotKey);
+
+    var sha = await getFileSha(path, token);
+    if (!sha) return;
+
+    var res = await global.fetch(ghContentsUrl(path), {
+      method: 'DELETE',
+      headers: ghHeaders(token),
+      body: JSON.stringify({ message: 'IFC entfernt: ' + path, sha: sha, branch: GITHUB_BRANCH })
+    });
+
+    if (!res.ok) {
+      var err = await res.json().catch(function () { return {}; });
+      throw new Error('GitHub ' + res.status + ': ' + (err.message || 'Unbekannter Fehler'));
+    }
+  }
+
   // ── IndexedDB (GeoJSON only) ────────────────────────────────────────────────
 
   function openDb() {
@@ -266,6 +324,7 @@
   global.NalpStorage = {
     PLAN_KEYS: PLAN_KEYS,
     PDF_REPO_PATHS: PDF_REPO_PATHS,
+    IFC_REPO_PATHS: IFC_REPO_PATHS,
     GITHUB_OWNER: GITHUB_OWNER,
     GITHUB_REPO: GITHUB_REPO,
     GITHUB_BRANCH: GITHUB_BRANCH,
@@ -274,6 +333,8 @@
     updateSettings: updateSettings,
     uploadPdfToGitHub: uploadPdfToGitHub,
     deletePdfFromGitHub: deletePdfFromGitHub,
+    uploadIfcToGitHub: uploadIfcToGitHub,
+    deleteIfcFromGitHub: deleteIfcFromGitHub,
     saveFile: saveFile,
     getFile: getFile,
     deleteFile: deleteFile,

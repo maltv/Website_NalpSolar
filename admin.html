@@ -256,6 +256,34 @@
     </div>
 
     <div class="panel">
+      <h2>IFC Upload (3D Viewer)</h2>
+      <div class="grid">
+        <div>
+          <label for="uploadWL">Werkleitungen IFC</label>
+          <div class="row">
+            <input id="uploadWL" type="file" accept=".ifc">
+            <button data-ifc="wl" class="save-ifc primary" type="button">Upload</button>
+            <button data-ifc="wl" class="clear-ifc danger" type="button">Loeschen</button>
+          </div>
+          <div id="activeIfc-wl" class="hint"></div>
+        </div>
+        <div>
+          <label for="uploadErdung">Erdung IFC</label>
+          <div class="row">
+            <input id="uploadErdung" type="file" accept=".ifc">
+            <button data-ifc="erdung" class="save-ifc primary" type="button">Upload</button>
+            <button data-ifc="erdung" class="clear-ifc danger" type="button">Loeschen</button>
+          </div>
+          <div id="activeIfc-erdung" class="hint"></div>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button type="button" onclick="window.location.href='viewer3d.html'">3D Viewer oeffnen</button>
+      </div>
+      <div class="deploy-note">Aenderungen sichtbar nach GitHub Pages Deploy (~1–2 Min.).</div>
+    </div>
+
+    <div class="panel">
       <h2>GeoJSON Upload</h2>
       <div class="row">
         <input id="uploadGeojson" type="file" accept=".geojson,application/geo+json,application/json" multiple>
@@ -359,6 +387,12 @@ async function refreshActiveInfo() {
     el.textContent = getPdfMetaLabel(settings.pdfMeta[key]);
   });
 
+  // IFC Slots
+  ['wl', 'erdung'].forEach(function (key) {
+    var el = document.getElementById('activeIfc-' + key);
+    if (el) el.textContent = getPdfMetaLabel(settings.ifcMeta[key]);
+  });
+
   // GeoJSON (bleibt geraetlokal / IndexedDB)
   var listEl = document.getElementById('geojsonList');
   listEl.innerHTML = '';
@@ -456,6 +490,51 @@ async function deletePdf(pathKey) {
     refreshActiveInfo();
   } catch (err) {
     setStatus('Fehler beim Loeschen: ' + err.message);
+  }
+}
+
+var IFC_INPUTS = { wl: 'uploadWL', erdung: 'uploadErdung' };
+
+async function uploadIfc(file, slotKey) {
+  var token = getToken();
+  if (!token) { setStatus('Fehler: Kein GitHub Token gesetzt.'); return; }
+  if (!file)  { setStatus('Bitte zuerst eine IFC-Datei auswaehlen.'); return; }
+
+  setStatus('IFC Upload laeuft: ' + file.name + ' (' + bytesToLabel(file.size) + ') ...');
+
+  try {
+    await window.NalpStorage.uploadIfcToGitHub(file, slotKey, token);
+    var meta = { name: file.name, size: file.size, uploadedAt: new Date().toISOString() };
+    window.NalpStorage.updateSettings(function (prev) {
+      var ifcMeta = Object.assign({}, prev.ifcMeta);
+      ifcMeta[slotKey] = meta;
+      return Object.assign({}, prev, { ifcMeta: ifcMeta });
+    });
+    setStatus('IFC gespeichert: ' + file.name + ' — 3D Viewer aktualisiert sich in ~1–2 Min.');
+    refreshActiveInfo();
+  } catch (err) {
+    setStatus('IFC Fehler: ' + err.message);
+  }
+}
+
+async function deleteIfc(slotKey) {
+  var token = getToken();
+  if (!token) { setStatus('Fehler: Kein GitHub Token gesetzt.'); return; }
+  var path = window.NalpStorage.IFC_REPO_PATHS[slotKey];
+  if (!confirm('IFC-Datei aus dem Repository loeschen?\n\n' + path)) return;
+
+  setStatus('Loesche ' + path + ' ...');
+  try {
+    await window.NalpStorage.deleteIfcFromGitHub(slotKey, token);
+    window.NalpStorage.updateSettings(function (prev) {
+      var ifcMeta = Object.assign({}, prev.ifcMeta);
+      ifcMeta[slotKey] = null;
+      return Object.assign({}, prev, { ifcMeta: ifcMeta });
+    });
+    setStatus('IFC geloescht: ' + path);
+    refreshActiveInfo();
+  } catch (err) {
+    setStatus('IFC Fehler: ' + err.message);
   }
 }
 
@@ -564,6 +643,20 @@ function bindEvents() {
   document.querySelectorAll('.clear-plan').forEach(function (btn) {
     btn.addEventListener('click', async function () {
       await deletePdf(btn.dataset.plan);
+    });
+  });
+
+  document.querySelectorAll('.save-ifc').forEach(function (btn) {
+    btn.addEventListener('click', async function () {
+      var key = btn.dataset.ifc;
+      var file = document.getElementById(IFC_INPUTS[key]).files[0];
+      await uploadIfc(file, key);
+    });
+  });
+
+  document.querySelectorAll('.clear-ifc').forEach(function (btn) {
+    btn.addEventListener('click', async function () {
+      await deleteIfc(btn.dataset.ifc);
     });
   });
 
