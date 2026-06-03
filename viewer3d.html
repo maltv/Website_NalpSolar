@@ -208,21 +208,26 @@ var IFC_FILES = [
   { slot:'erdung', url:'uploads/ifc/erdung.json'        }
 ];
 
+function b64ToBuffer(b64) {
+  var bin = atob(b64);
+  var len = bin.length;
+  var bytes = new Uint8Array(len);
+  for (var i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes.buffer;
+}
+
 async function loadLayer(cfg) {
   setTxt('Lade ' + cfg.slot + '.json …');
   var resp;
-  try { resp = await fetch(cfg.url, { cache:'no-store' }); }
+  try { resp = await fetch(cfg.url); }
   catch(e) { console.warn('Netzwerk:', cfg.url); return null; }
   if (!resp.ok) { console.info('Nicht gefunden:', cfg.url); return null; }
 
   setTxt('Verarbeite ' + cfg.slot + ' …');
   var data = await resp.json();
 
-  // Decode base64 Float32 vertices and Uint32 indices
-  var vBuf = Uint8Array.from(atob(data.v), c => c.charCodeAt(0)).buffer;
-  var fBuf = Uint8Array.from(atob(data.f), c => c.charCodeAt(0)).buffer;
-  var verts = new Float32Array(vBuf);   // x,y,z per vertex
-  var idxs  = new Uint32Array(fBuf);    // triangle indices
+  var verts = new Float32Array(b64ToBuffer(data.v));
+  var idxs  = new Uint32Array(b64ToBuffer(data.f));
 
   var geom = new THREE.BufferGeometry();
   geom.setAttribute('position', new THREE.BufferAttribute(verts, 3));
