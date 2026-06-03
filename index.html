@@ -355,6 +355,7 @@
     <div class="legend-row"><span class="legend-swatch" style="background:#dc2626"></span><span>D</span></div>
     <div class="legend-row"><span class="legend-swatch" style="background:#6b7280"></span><span>E</span></div>
   </div>
+  <div id="lastPush" style="margin-top:5px;padding-top:4px;border-top:1px solid rgba(0,0,0,.12);font-size:9px;color:#555;white-space:nowrap;">Aktualisiert: …</div>
 </div>
 
 <script>
@@ -1300,6 +1301,25 @@ setStatus(
   (pz1Data.features.length + pz2Data.features.length + pz2025Data.features.length) + ' Modultische, ' +
   kranData.features.length + ' Kranstandorte 2026'
 );
+</script>
+
+<script>
+(async function () {
+  try {
+    var r = await fetch('https://api.github.com/repos/maltv/website_nalpsolar/commits/main');
+    if (!r.ok) return;
+    var d = await r.json();
+    var iso = d.commit && d.commit.author && d.commit.author.date;
+    if (!iso) return;
+    var dt = new Date(iso);
+    var fmt = dt.toLocaleString('de-CH', {
+      timeZone: 'Europe/Zurich',
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
+    document.getElementById('lastPush').textContent = 'Aktualisiert: ' + fmt;
+  } catch (e) {}
+})();
 </script>
 </body>
 </html>
