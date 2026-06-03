@@ -12,6 +12,7 @@
     --text: #111;
     --accent: #0b5fff;
     --danger: #c62828;
+    --ok: #1b7e3c;
   }
 
   html, body {
@@ -32,6 +33,11 @@
   h1 {
     margin: 0 0 12px;
     font-size: 24px;
+  }
+
+  h2 {
+    margin: 0 0 8px;
+    font-size: 17px;
   }
 
   .panel {
@@ -61,9 +67,13 @@
     font-size: 14px;
   }
 
-  input[type="password"], input[type="file"] {
+  input[type="password"], input[type="file"], input[type="text"] {
     width: 100%;
     box-sizing: border-box;
+    padding: 6px 8px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: 14px;
   }
 
   button {
@@ -74,6 +84,7 @@
     cursor: pointer;
     background: #fff;
     box-shadow: 0 1px 8px rgba(0,0,0,0.18);
+    white-space: nowrap;
   }
 
   button.primary {
@@ -94,6 +105,21 @@
   .hint {
     font-size: 12px;
     opacity: 0.8;
+    margin-top: 4px;
+  }
+
+  .token-ok {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ok);
+    margin-top: 4px;
+  }
+
+  .token-missing {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--danger);
+    margin-top: 4px;
   }
 
   .list {
@@ -128,6 +154,16 @@
     gap: 8px;
     flex-wrap: wrap;
   }
+
+  .deploy-note {
+    font-size: 12px;
+    color: #555;
+    margin-top: 6px;
+    padding: 6px 8px;
+    background: #f0f4ff;
+    border-radius: 8px;
+    border-left: 3px solid var(--accent);
+  }
 </style>
 </head>
 <body>
@@ -140,10 +176,10 @@
       <input id="passwordInput" type="password" autocomplete="current-password" placeholder="Passwort eingeben">
       <button id="loginBtn" class="primary" type="button">Anmelden</button>
     </div>
-    <div class="hint">Hinweis: Passwort ist client-seitig in <code>admin.html</code> hinterlegt und kann dort geaendert werden.</div>
   </div>
 
   <div id="adminPanel" class="hidden">
+
     <div class="panel">
       <div class="links">
         <button type="button" id="toMapBtn">Karte</button>
@@ -151,17 +187,29 @@
         <button type="button" id="toPlansBtn">Begleitplaene</button>
         <button type="button" id="logoutBtn" class="danger">Abmelden</button>
       </div>
-      <div id="status" class="status">Bereit</div>
+      <div id="status" class="status" style="margin-top:8px">Bereit</div>
+    </div>
+
+    <div class="panel">
+      <h2>GitHub Token</h2>
+      <div class="hint">Benoetigt fuer PDF-Uploads ins Repository. Token braucht <strong>Contents: Read &amp; Write</strong> Berechtigung (Fine-grained PAT).</div>
+      <div class="row">
+        <input id="tokenInput" type="password" placeholder="github_pat_xxxx..." autocomplete="off" style="flex:1;min-width:200px">
+        <button id="saveTokenBtn" class="primary" type="button">Token speichern</button>
+        <button id="clearTokenBtn" type="button">Entfernen</button>
+      </div>
+      <div id="tokenStatus"></div>
     </div>
 
     <div class="panel">
       <h2>5W-Programm PDF</h2>
       <div class="row">
         <input id="upload5w" type="file" accept="application/pdf,.pdf">
-        <button id="save5wBtn" class="primary" type="button">5W PDF hochladen</button>
-        <button id="clear5wBtn" class="danger" type="button">5W PDF entfernen</button>
+        <button id="save5wBtn" class="primary" type="button">Hochladen &amp; ins Repo pushen</button>
+        <button id="clear5wBtn" class="danger" type="button">Aus Repo loeschen</button>
       </div>
       <div id="active5w" class="hint"></div>
+      <div class="deploy-note">Aenderung sichtbar nach GitHub Pages Deploy (~1–2 Min.).</div>
     </div>
 
     <div class="panel">
@@ -172,7 +220,7 @@
           <div class="row">
             <input id="uploadBohren" type="file" accept="application/pdf,.pdf">
             <button data-plan="bohren" class="save-plan primary" type="button">Upload</button>
-            <button data-plan="bohren" class="clear-plan danger" type="button">Entfernen</button>
+            <button data-plan="bohren" class="clear-plan danger" type="button">Loeschen</button>
           </div>
           <div id="activePlan-bohren" class="hint"></div>
         </div>
@@ -181,7 +229,7 @@
           <div class="row">
             <input id="uploadStahlbau" type="file" accept="application/pdf,.pdf">
             <button data-plan="stahlbau" class="save-plan primary" type="button">Upload</button>
-            <button data-plan="stahlbau" class="clear-plan danger" type="button">Entfernen</button>
+            <button data-plan="stahlbau" class="clear-plan danger" type="button">Loeschen</button>
           </div>
           <div id="activePlan-stahlbau" class="hint"></div>
         </div>
@@ -190,7 +238,7 @@
           <div class="row">
             <input id="uploadBestellung" type="file" accept="application/pdf,.pdf">
             <button data-plan="bestellung" class="save-plan primary" type="button">Upload</button>
-            <button data-plan="bestellung" class="clear-plan danger" type="button">Entfernen</button>
+            <button data-plan="bestellung" class="clear-plan danger" type="button">Loeschen</button>
           </div>
           <div id="activePlan-bestellung" class="hint"></div>
         </div>
@@ -199,11 +247,12 @@
           <div class="row">
             <input id="uploadStapel" type="file" accept="application/pdf,.pdf">
             <button data-plan="stapel" class="save-plan primary" type="button">Upload</button>
-            <button data-plan="stapel" class="clear-plan danger" type="button">Entfernen</button>
+            <button data-plan="stapel" class="clear-plan danger" type="button">Loeschen</button>
           </div>
           <div id="activePlan-stapel" class="hint"></div>
         </div>
       </div>
+      <div class="deploy-note">Aenderungen sichtbar nach GitHub Pages Deploy (~1–2 Min.).</div>
     </div>
 
     <div class="panel">
@@ -212,25 +261,27 @@
         <input id="uploadGeojson" type="file" accept=".geojson,application/geo+json,application/json" multiple>
         <button id="saveGeojsonBtn" class="primary" type="button">GeoJSON hochladen</button>
       </div>
-      <div class="hint">Mehrere Dateien gleichzeitig sind moeglich. Sie erscheinen danach in der Karten-Ebene "Admin GeoJSON Uploads".</div>
+      <div class="hint">Mehrere Dateien gleichzeitig sind moeglich. Sie erscheinen in der Karten-Ebene "Admin GeoJSON Uploads". Hinweis: GeoJSON-Uploads sind geraetlokal gespeichert.</div>
       <div id="geojsonList" class="list"></div>
     </div>
+
   </div>
 </div>
 
 <script src="assets/js/nalp-storage.js"></script>
 <script>
-const ADMIN_PASSWORD = 'Nalpi2026!';
-const AUTH_KEY = 'nalp_admin_auth_v1';
+var ADMIN_PASSWORD = 'Nalpi2026!';
+var AUTH_KEY = 'nalp_admin_auth_v1';
+var TOKEN_KEY = 'nalp_github_token_v1';
 
-const PLAN_INPUTS = {
+var PLAN_INPUTS = {
   bohren: 'uploadBohren',
   stahlbau: 'uploadStahlbau',
   bestellung: 'uploadBestellung',
   stapel: 'uploadStapel'
 };
 
-const PLAN_LABELS = {
+var PLAN_LABELS = {
   bohren: 'Bohren',
   stahlbau: 'Stahlbau',
   bestellung: 'Stahlbaubestellung',
@@ -242,7 +293,7 @@ function setStatus(text) {
 }
 
 function bytesToLabel(value) {
-  const size = Number(value || 0);
+  var size = Number(value || 0);
   if (size < 1024) return size + ' B';
   if (size < 1024 * 1024) return (size / 1024).toFixed(1) + ' KB';
   return (size / (1024 * 1024)).toFixed(1) + ' MB';
@@ -250,11 +301,7 @@ function bytesToLabel(value) {
 
 function formatDate(isoText) {
   if (!isoText) return '-';
-  try {
-    return new Date(isoText).toLocaleString('de-CH');
-  } catch (err) {
-    return String(isoText);
-  }
+  try { return new Date(isoText).toLocaleString('de-CH'); } catch (e) { return String(isoText); }
 }
 
 function isAuthed() {
@@ -264,6 +311,15 @@ function isAuthed() {
 function setAuthed(value) {
   if (value) sessionStorage.setItem(AUTH_KEY, '1');
   else sessionStorage.removeItem(AUTH_KEY);
+}
+
+function getToken() {
+  return localStorage.getItem(TOKEN_KEY) || '';
+}
+
+function setToken(value) {
+  if (value) localStorage.setItem(TOKEN_KEY, value.trim());
+  else localStorage.removeItem(TOKEN_KEY);
 }
 
 function showPanel() {
@@ -276,57 +332,70 @@ function showLogin() {
   document.getElementById('adminPanel').classList.add('hidden');
 }
 
-async function getFileLabelById(id) {
-  if (!id) return 'Kein Upload aktiv';
-  const row = await window.NalpStorage.getFile(id);
-  if (!row) return 'Datei nicht mehr vorhanden';
-  return row.name + ' (' + bytesToLabel(row.size) + ', ' + formatDate(row.updatedAt) + ')';
+function updateTokenStatus() {
+  var token = getToken();
+  var el = document.getElementById('tokenStatus');
+  if (token) {
+    el.className = 'token-ok';
+    el.textContent = 'Token aktiv — PDF-Upload moeglich.';
+  } else {
+    el.className = 'token-missing';
+    el.textContent = 'Kein Token — PDF-Upload gesperrt. Bitte Token eingeben und speichern.';
+  }
+}
+
+function getPdfMetaLabel(meta) {
+  if (!meta) return 'Noch kein Upload gespeichert.';
+  return 'Zuletzt: ' + meta.name + ' (' + bytesToLabel(meta.size) + ', ' + formatDate(meta.uploadedAt) + ')';
 }
 
 async function refreshActiveInfo() {
-  const settings = window.NalpStorage.getSettings();
+  var settings = window.NalpStorage.getSettings();
 
-  document.getElementById('active5w').textContent = 'Aktiv: ' + await getFileLabelById(settings.active5wFileId);
+  document.getElementById('active5w').textContent = getPdfMetaLabel(settings.pdfMeta['5w']);
 
-  for (const key of window.NalpStorage.PLAN_KEYS) {
-    const el = document.getElementById('activePlan-' + key);
-    el.textContent = 'Aktiv: ' + await getFileLabelById(settings.planFiles[key]);
-  }
+  window.NalpStorage.PLAN_KEYS.forEach(function (key) {
+    var el = document.getElementById('activePlan-' + key);
+    el.textContent = getPdfMetaLabel(settings.pdfMeta[key]);
+  });
 
-  const listEl = document.getElementById('geojsonList');
+  // GeoJSON (bleibt geraetlokal / IndexedDB)
+  var listEl = document.getElementById('geojsonList');
   listEl.innerHTML = '';
 
   if (!settings.geojsonIds.length) {
-    const empty = document.createElement('div');
+    var empty = document.createElement('div');
     empty.className = 'hint';
     empty.textContent = 'Keine GeoJSON Uploads aktiv';
     listEl.appendChild(empty);
     return;
   }
 
-  for (const id of settings.geojsonIds) {
-    const row = await window.NalpStorage.getFile(id);
+  for (var i = 0; i < settings.geojsonIds.length; i++) {
+    var id = settings.geojsonIds[i];
+    var row = await window.NalpStorage.getFile(id);
     if (!row) continue;
 
-    const item = document.createElement('div');
+    var item = document.createElement('div');
     item.className = 'list-item';
 
-    const left = document.createElement('div');
+    var left = document.createElement('div');
     left.innerHTML = '<strong>' + row.name + '</strong><div class="list-meta">' + bytesToLabel(row.size) + ' | ' + formatDate(row.updatedAt) + '</div>';
 
-    const removeBtn = document.createElement('button');
+    var removeBtn = document.createElement('button');
     removeBtn.className = 'danger';
     removeBtn.type = 'button';
     removeBtn.textContent = 'Entfernen';
-    removeBtn.addEventListener('click', async () => {
-      await window.NalpStorage.deleteFile(id);
-      window.NalpStorage.updateSettings((prev) => {
-        const next = { ...prev, geojsonIds: prev.geojsonIds.filter((entry) => entry !== id) };
-        return next;
+    (function (capturedId, capturedName) {
+      removeBtn.addEventListener('click', async function () {
+        await window.NalpStorage.deleteFile(capturedId);
+        window.NalpStorage.updateSettings(function (prev) {
+          return Object.assign({}, prev, { geojsonIds: prev.geojsonIds.filter(function (e) { return e !== capturedId; }) });
+        });
+        setStatus('GeoJSON entfernt: ' + capturedName);
+        refreshActiveInfo();
       });
-      setStatus('GeoJSON entfernt: ' + row.name);
-      refreshActiveInfo();
-    });
+    })(id, row.name);
 
     item.appendChild(left);
     item.appendChild(removeBtn);
@@ -334,65 +403,81 @@ async function refreshActiveInfo() {
   }
 }
 
-async function savePdfToSetting(file, kind, settingKey, labelPrefix) {
+async function uploadPdf(file, pathKey, label) {
+  var token = getToken();
+  if (!token) {
+    setStatus('Fehler: Kein GitHub Token gesetzt. Bitte oben eingeben und speichern.');
+    return;
+  }
   if (!file) {
-    setStatus('Bitte zuerst eine PDF auswaehlen.');
+    setStatus('Bitte zuerst eine PDF-Datei auswaehlen.');
     return;
   }
 
-  const row = await window.NalpStorage.saveFile(file, { kind, label: labelPrefix });
-  window.NalpStorage.updateSettings((prev) => {
-    const next = { ...prev, planFiles: { ...prev.planFiles } };
-    if (settingKey === 'active5wFileId') {
-      next.active5wFileId = row.id;
-    } else {
-      next.planFiles[settingKey] = row.id;
-    }
-    return next;
-  });
+  setStatus('Upload lauft: ' + file.name + ' ...');
 
-  setStatus('Gespeichert: ' + row.name);
-  refreshActiveInfo();
+  try {
+    await window.NalpStorage.uploadPdfToGitHub(file, pathKey, token);
+
+    var meta = { name: file.name, size: file.size, uploadedAt: new Date().toISOString() };
+    window.NalpStorage.updateSettings(function (prev) {
+      var pdfMeta = Object.assign({}, prev.pdfMeta);
+      pdfMeta[pathKey] = meta;
+      return Object.assign({}, prev, { pdfMeta: pdfMeta });
+    });
+
+    setStatus('Erfolgreich hochgeladen: ' + file.name + ' — Seite aktualisiert sich in ~1–2 Min.');
+    refreshActiveInfo();
+  } catch (err) {
+    setStatus('Fehler beim Upload: ' + err.message);
+  }
 }
 
-async function clearPdfSetting(settingKey) {
-  const settings = window.NalpStorage.getSettings();
-  const id = settingKey === 'active5wFileId' ? settings.active5wFileId : settings.planFiles[settingKey];
+async function deletePdf(pathKey) {
+  var token = getToken();
+  if (!token) {
+    setStatus('Fehler: Kein GitHub Token gesetzt.');
+    return;
+  }
 
-  if (id) await window.NalpStorage.deleteFile(id);
+  var path = window.NalpStorage.PDF_REPO_PATHS[pathKey];
+  if (!confirm('Datei wirklich aus dem Repository loeschen?\n\n' + path + '\n\nDiese Aktion kann nicht rueckgaengig gemacht werden.')) return;
 
-  window.NalpStorage.updateSettings((prev) => {
-    const next = { ...prev, planFiles: { ...prev.planFiles } };
-    if (settingKey === 'active5wFileId') {
-      next.active5wFileId = null;
-    } else {
-      next.planFiles[settingKey] = null;
-    }
-    return next;
-  });
+  setStatus('Loesche ' + path + ' ...');
 
-  setStatus('Upload entfernt.');
-  refreshActiveInfo();
+  try {
+    await window.NalpStorage.deletePdfFromGitHub(pathKey, token);
+    window.NalpStorage.updateSettings(function (prev) {
+      var pdfMeta = Object.assign({}, prev.pdfMeta);
+      pdfMeta[pathKey] = null;
+      return Object.assign({}, prev, { pdfMeta: pdfMeta });
+    });
+    setStatus('Geloescht aus Repo: ' + path);
+    refreshActiveInfo();
+  } catch (err) {
+    setStatus('Fehler beim Loeschen: ' + err.message);
+  }
 }
 
 async function uploadGeojsonFiles() {
-  const input = document.getElementById('uploadGeojson');
-  const files = Array.from(input.files || []);
+  var input = document.getElementById('uploadGeojson');
+  var files = Array.from(input.files || []);
 
   if (!files.length) {
     setStatus('Bitte GeoJSON-Datei(en) auswaehlen.');
     return;
   }
 
-  const addedIds = [];
+  var addedIds = [];
 
-  for (const file of files) {
-    const lower = String(file.name || '').toLowerCase();
-    const type = String(file.type || '').toLowerCase();
-    const looksJson = lower.endsWith('.geojson') || lower.endsWith('.json') || type.includes('json');
+  for (var i = 0; i < files.length; i++) {
+    var file = files[i];
+    var lower = String(file.name || '').toLowerCase();
+    var type = String(file.type || '').toLowerCase();
+    var looksJson = lower.endsWith('.geojson') || lower.endsWith('.json') || type.includes('json');
     if (!looksJson) continue;
 
-    const row = await window.NalpStorage.saveFile(file, { kind: 'geojson', label: 'GeoJSON' });
+    var row = await window.NalpStorage.saveFile(file, { kind: 'geojson', label: 'GeoJSON' });
     addedIds.push(row.id);
   }
 
@@ -401,59 +486,84 @@ async function uploadGeojsonFiles() {
     return;
   }
 
-  window.NalpStorage.updateSettings((prev) => {
-    const merged = [...prev.geojsonIds, ...addedIds];
-    const unique = Array.from(new Set(merged));
-    return { ...prev, geojsonIds: unique };
+  window.NalpStorage.updateSettings(function (prev) {
+    var merged = prev.geojsonIds.concat(addedIds);
+    var unique = merged.filter(function (v, i, a) { return a.indexOf(v) === i; });
+    return Object.assign({}, prev, { geojsonIds: unique });
   });
 
   input.value = '';
-  setStatus(addedIds.length + ' GeoJSON-Datei(en) gespeichert.');
+  setStatus(addedIds.length + ' GeoJSON-Datei(en) gespeichert (geraetlokal).');
   refreshActiveInfo();
 }
 
 function bindEvents() {
-  document.getElementById('loginBtn').addEventListener('click', () => {
-    const entered = document.getElementById('passwordInput').value;
+  document.getElementById('loginBtn').addEventListener('click', function () {
+    var entered = document.getElementById('passwordInput').value;
     if (entered === ADMIN_PASSWORD) {
       setAuthed(true);
       showPanel();
       setStatus('Anmeldung erfolgreich.');
+      updateTokenStatus();
       refreshActiveInfo();
     } else {
       alert('Falsches Passwort');
     }
   });
 
-  document.getElementById('logoutBtn').addEventListener('click', () => {
+  document.getElementById('passwordInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') document.getElementById('loginBtn').click();
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', function () {
     setAuthed(false);
     showLogin();
   });
 
-  document.getElementById('toMapBtn').addEventListener('click', () => { window.location.href = 'index.html'; });
-  document.getElementById('to5wBtn').addEventListener('click', () => { window.location.href = '5w-programm.html'; });
-  document.getElementById('toPlansBtn').addEventListener('click', () => { window.location.href = 'begleitplaene.html'; });
-
-  document.getElementById('save5wBtn').addEventListener('click', async () => {
-    const file = document.getElementById('upload5w').files[0];
-    await savePdfToSetting(file, 'pdf-5w', 'active5wFileId', '5W-Programm PDF');
+  document.getElementById('saveTokenBtn').addEventListener('click', function () {
+    var val = document.getElementById('tokenInput').value.trim();
+    if (!val) { setStatus('Kein Token eingegeben.'); return; }
+    setToken(val);
+    document.getElementById('tokenInput').value = '';
+    updateTokenStatus();
+    setStatus('GitHub Token gespeichert.');
   });
 
-  document.getElementById('clear5wBtn').addEventListener('click', async () => {
-    await clearPdfSetting('active5wFileId');
+  document.getElementById('clearTokenBtn').addEventListener('click', function () {
+    setToken('');
+    document.getElementById('tokenInput').value = '';
+    updateTokenStatus();
+    setStatus('GitHub Token entfernt.');
   });
 
-  document.querySelectorAll('.save-plan').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const key = btn.dataset.plan;
-      const file = document.getElementById(PLAN_INPUTS[key]).files[0];
-      await savePdfToSetting(file, 'pdf-plan:' + key, key, PLAN_LABELS[key]);
+  document.getElementById('tokenInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') document.getElementById('saveTokenBtn').click();
+  });
+
+  document.getElementById('toMapBtn').addEventListener('click', function () { window.location.href = 'index.html'; });
+  document.getElementById('to5wBtn').addEventListener('click', function () { window.location.href = '5w-programm.html'; });
+  document.getElementById('toPlansBtn').addEventListener('click', function () { window.location.href = 'begleitplaene.html'; });
+
+  document.getElementById('save5wBtn').addEventListener('click', async function () {
+    var file = document.getElementById('upload5w').files[0];
+    await uploadPdf(file, '5w', '5W-Programm PDF');
+  });
+
+  document.getElementById('clear5wBtn').addEventListener('click', async function () {
+    await deletePdf('5w');
+  });
+
+  document.querySelectorAll('.save-plan').forEach(function (btn) {
+    btn.addEventListener('click', async function () {
+      var key = btn.dataset.plan;
+      var file = document.getElementById(PLAN_INPUTS[key]).files[0];
+      await uploadPdf(file, key, PLAN_LABELS[key]);
     });
   });
 
-  document.querySelectorAll('.clear-plan').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      await clearPdfSetting(btn.dataset.plan);
+  document.querySelectorAll('.clear-plan').forEach(function (btn) {
+    btn.addEventListener('click', async function () {
+      await deletePdf(btn.dataset.plan);
     });
   });
 
@@ -463,6 +573,7 @@ function bindEvents() {
 bindEvents();
 if (isAuthed()) {
   showPanel();
+  updateTokenStatus();
   refreshActiveInfo();
 } else {
   showLogin();
