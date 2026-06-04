@@ -396,7 +396,7 @@ async function loadTische(){
     var mesh=new THREE.Mesh(len<11?geomA:geomB, mat);
     mesh.position.set(x,y,z);
     // tisch_ausrichtung is the bearing of the table's long axis
-    mesh.rotation.y=(90-az)*Math.PI/180;
+    mesh.rotation.y=-az*Math.PI/180;
     tischeGroup.add(mesh);
 
     // ID label
