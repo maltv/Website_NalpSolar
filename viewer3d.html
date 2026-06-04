@@ -507,11 +507,17 @@ window.toggleGps=function(){
   gpsOn=true; btn.classList.add('gps-on');
   gpsWid=navigator.geolocation.watchPosition(
     function(p){
-      var s=gpsToScene(p.coords.latitude,p.coords.longitude,p.coords.altitude);
+      var s=gpsToScene(p.coords.latitude,p.coords.longitude,null);
+      // Snap to terrain surface (GPS altitude is unreliable, use terrain mesh)
+      if(terrainMesh){
+        var tr=new THREE.Raycaster(new THREE.Vector3(s.x,500,s.z),new THREE.Vector3(0,-1,0));
+        var th=tr.intersectObject(terrainMesh);
+        if(th.length) s.y=th[0].point.y+1.5;
+      }
       if(!gpsGroup){gpsGroup=mkGps();scene.add(gpsGroup);}
       gpsGroup.position.copy(s);
       document.getElementById('sGps').textContent=
-        p.coords.latitude.toFixed(4)+'°N  '+p.coords.longitude.toFixed(4)+'°E  ±'+
+        p.coords.latitude.toFixed(5)+'°N  '+p.coords.longitude.toFixed(5)+'°E  ±'+
         Math.round(p.coords.accuracy)+'m';
     },
     function(e){document.getElementById('sGps').textContent='GPS: '+e.message;},
@@ -611,36 +617,45 @@ async function startAR(){
     alert('Kamerazugriff verweigert. AR benötigt die hintere Kamera.'); return;
   }
 
-  // Video element behind the canvas
+  // Video element — inserted as first child of body, behind everything
   if(!arVideo){
     arVideo=document.createElement('video');
     arVideo.autoplay=true; arVideo.muted=true; arVideo.playsInline=true;
     arVideo.setAttribute('playsinline','');
-    arVideo.style.cssText='position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;pointer-events:none;';
-    document.body.insertBefore(arVideo, document.getElementById('canvas3d'));
+    arVideo.setAttribute('webkit-playsinline','');
+    arVideo.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;'
+      +'object-fit:cover;z-index:-1;pointer-events:none;background:#000;';
+    document.body.prepend(arVideo);
   }
   arVideo.srcObject=arStream;
   arVideo.style.display='block';
-  try{ await arVideo.play(); }catch(e){}
+  try{ await arVideo.play(); }catch(e){ console.warn('AR video play:',e); }
 
   // Transparent Three.js background
   scene.background=null;
   scene.fog=null;
   renderer.setClearColor(0x000000,0);
+  renderer.setClearAlpha(0);
   document.body.classList.add('ar-mode');
-  // Raise canvas above video
-  document.getElementById('canvas3d').style.zIndex='1';
+  // canvas3d sits above video (z-index 0 = auto stacking above z-index -1)
+  document.getElementById('canvas3d').style.zIndex='0';
 
   // Hide terrain (real world is the background)
   if(terrainMesh) terrainMesh.visible=false;
 
-  // Widen FOV to match phone camera (~65°)
-  camera.fov=65; camera.updateProjectionMatrix();
+  // FOV: typical phone rear camera ~60-70°
+  camera.fov=67; camera.updateProjectionMatrix();
 
-  // GPS for position tracking
+  // GPS for position tracking — snap to terrain (GPS altitude unreliable)
   if(navigator.geolocation){
     arGpsWid=navigator.geolocation.watchPosition(function(pos){
-      arPos=gpsToScene(pos.coords.latitude, pos.coords.longitude, pos.coords.altitude);
+      var s=gpsToScene(pos.coords.latitude, pos.coords.longitude, null);
+      if(terrainMesh){
+        var tr=new THREE.Raycaster(new THREE.Vector3(s.x,500,s.z),new THREE.Vector3(0,-1,0));
+        var th=tr.intersectObject(terrainMesh);
+        if(th.length) s.y=th[0].point.y; // terrain height (eye offset +1.6m added in animate)
+      }
+      arPos=s;
       var acc=Math.round(pos.coords.accuracy);
       document.getElementById('arGpsInfo').textContent='GPS ±'+acc+'m';
     },function(err){
@@ -685,6 +700,9 @@ function stopAR(){
   window.removeEventListener('deviceorientation',onAROrientation,true);
 
   controls.enabled=true;
+  // Reset internal OrbitControls state to match current camera
+  controls.target.copy(camT1);
+  controls.update();
   arActive=false; arPos=null;
   document.getElementById('btnAR').classList.remove('active');
   document.getElementById('arOverlay').style.display='none';
@@ -752,18 +770,24 @@ function animate(){
     if(flyT>=1) flyDone=true;
   }
 
-  // AR camera: position from GPS, rotation from device orientation
+  // AR camera: position from GPS (snapped to terrain), rotation from device orientation
   if(arActive){
     if(arPos){
-      camera.position.copy(arPos);
-      camera.position.y+=1.6; // eye height above ground
+      camera.position.set(arPos.x, arPos.y+1.6, arPos.z);
+    } else {
+      // No GPS yet — stay at scene center at terrain level, show hint
+      if(terrainMesh && frameN%90===0){
+        document.getElementById('arGpsInfo').textContent='GPS: warte auf Signal …';
+      }
     }
-    // Standard DeviceOrientationControls quaternion formula (Three.js)
+    // DeviceOrientationControls quaternion formula (Three.js standard)
     var _a=THREE.MathUtils.degToRad(arOri.alpha);
     var _b=THREE.MathUtils.degToRad(arOri.beta);
     var _g=THREE.MathUtils.degToRad(arOri.gamma);
     var _o=THREE.MathUtils.degToRad(
-      window.screen&&window.screen.orientation ? window.screen.orientation.angle : (window.orientation||0)
+      window.screen&&window.screen.orientation
+        ? window.screen.orientation.angle
+        : (window.orientation||0)
     );
     arEul.set(_b,_a,-_g,'YXZ');
     camera.quaternion.setFromEuler(arEul);
@@ -772,7 +796,8 @@ function animate(){
     camera.quaternion.multiply(arQ0);
   }
 
-  controls.update();
+  // OrbitControls must NOT run in AR (would override camera position/rotation)
+  if(!arActive) controls.update();
   updateCompass();
 
   // Elevation at target
