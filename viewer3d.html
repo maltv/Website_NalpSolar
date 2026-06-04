@@ -58,6 +58,7 @@ html, body { width:100%; height:100%; overflow:hidden; background:#0d1117;
   border:1px solid rgba(255,255,255,.2);
 }
 .lbl-gps { background:rgba(33,150,243,.9); border-color:#2196F3; font-size:11px; }
+.lbl-tisch { background:rgba(255,220,0,.85); color:#111; border-color:#ffd700; font-size:9px; padding:1px 4px; }
 
 /* ── Status bar ─────────────────────────────────────────── */
 #statusBar {
@@ -148,6 +149,7 @@ body.ar-mode { background:transparent!important; }
   <button class="tb-btn active" id="btnSat"     onclick="toggleSat()">🛰 Satellit</button>
   <button class="tb-btn active" id="btnWL"      onclick="toggleLayer('wl')">🔵 WL</button>
   <button class="tb-btn active" id="btnErdung"  onclick="toggleLayer('erdung')">🟠 Erdung</button>
+  <button class="tb-btn active" id="btnTische"  onclick="toggleTische()">🟨 Tische</button>
   <div class="sep"></div>
   <button class="tb-btn"        id="btnLabels"  onclick="toggleLabels()">🏷 Labels</button>
   <button class="tb-btn"        id="btnGps"     onclick="toggleGps()">📍 GPS</button>
@@ -170,6 +172,7 @@ body.ar-mode { background:transparent!important; }
   <div class="leg"><div class="leg-dot" style="background:#00aaff"></div>Werkleitungen</div>
   <div class="leg"><div class="leg-dot" style="background:#FF9800"></div>Erdung</div>
   <div class="leg"><div class="leg-dot" style="background:rgba(140,210,140,.7)"></div>Terrain</div>
+  <div class="leg"><div class="leg-dot" style="background:rgba(80,160,255,.7);border:1px solid #ffd700"></div>Modultische</div>
 </div>
 
 <div id="orbitHint">📍 Orbit-Punkt gesetzt</div>
@@ -222,6 +225,7 @@ var scene, camera, renderer, controls, lblRenderer, clock;
 var layers={}, allLbls=[], labelsOn=false;
 var terrainMesh=null, satTex=null, terrainOn=true, satOn=true;
 var gpsGroup=null, gpsWid=null, gpsOn=false;
+var tischeGroup=null, tischeLbls=[], tischeOn=true;
 var flyDone=false, flyT=0;
 var camP0=new THREE.Vector3(), camT0=new THREE.Vector3();
 var camP1=new THREE.Vector3(), camT1=new THREE.Vector3();
@@ -358,6 +362,63 @@ async function loadLayer(cfg){
   console.info(cfg.slot+': '+meta.vCount+'v '+meta.fCount+'f '+(meta.labels||[]).length+'lbl');
   return mesh;
 }
+
+/* ── Modultische ─────────────────────────────────────────── */
+async function loadTische(){
+  txt('Lade Modultische …');
+  var r=await fetch('uploads/tables/modultische.json');
+  if(!r.ok) return;
+  var data=await r.json();
+
+  // Two shared geometries (two standard lengths)
+  var geomA=new THREE.BoxGeometry(10.007,0.25,3);  // 8er
+  var geomB=new THREE.BoxGeometry(12.394,0.25,3);  // 10er
+
+  var mat=new THREE.MeshPhongMaterial({
+    color:0x3377dd,
+    emissive:0x001144,
+    specular:0x4499ff,
+    shininess:60,
+    transparent:true,
+    opacity:0.50,
+    side:THREE.DoubleSide,
+    depthWrite:true
+  });
+
+  tischeGroup=new THREE.Group();
+  tischeGroup.renderOrder=5;
+  tischeLbls=[];
+
+  data.forEach(function(t){
+    var id=t[0], E=t[1], N=t[2], Z=t[3], az=t[4], len=t[5];
+    var x=E-OE, y=Z-OZ+0.3, z=-(N-ON);
+
+    var mesh=new THREE.Mesh(len<11?geomA:geomB, mat);
+    mesh.position.set(x,y,z);
+    // tisch_ausrichtung is the bearing of the table's long axis
+    mesh.rotation.y=(90-az)*Math.PI/180;
+    tischeGroup.add(mesh);
+
+    // ID label
+    var div=document.createElement('div');
+    div.className='lbl lbl-tisch';
+    div.textContent=id;
+    var lbl=new THREE.CSS2DObject(div);
+    lbl.position.set(x,y+2.5,z);
+    scene.add(lbl);
+    tischeLbls.push(lbl);
+  });
+
+  scene.add(tischeGroup);
+  console.info('Modultische: '+data.length);
+}
+
+window.toggleTische=function(){
+  tischeOn=!tischeOn;
+  if(tischeGroup) tischeGroup.visible=tischeOn;
+  tischeLbls.forEach(function(l){l.visible=tischeOn;});
+  document.getElementById('btnTische').classList.toggle('active',tischeOn);
+};
 
 /* ── GPS marker ──────────────────────────────────────────── */
 function mkGps(){
@@ -745,8 +806,9 @@ async function init(){
     for(var i=0;i<IFC.length;i++){
       try{ if(await loadLayer(IFC[i])) loaded++; }
       catch(e){ console.error(IFC[i].slot,e); }
-      pct(50+(i+1)*22);
+      pct(50+(i+1)*20);
     }
+    try{ await loadTische(); }catch(e){ console.warn('Tische:',e); }
     pct(100);
 
     // Bounding box of IFC geometry

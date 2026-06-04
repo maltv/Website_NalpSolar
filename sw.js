@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v1';
+var CACHE = 'nalpsolar-v2';
 var PRECACHE = [
   './viewer3d.html',
   './assets/js/three/three.min.js',
@@ -11,7 +11,8 @@ var PRECACHE = [
   './uploads/ifc/werkleitungen.f.bin',
   './uploads/ifc/erdung.meta.json',
   './uploads/ifc/erdung.v.bin',
-  './uploads/ifc/erdung.f.bin'
+  './uploads/ifc/erdung.f.bin',
+  './uploads/tables/modultische.json'
 ];
 
 self.addEventListener('install', function(e) {
