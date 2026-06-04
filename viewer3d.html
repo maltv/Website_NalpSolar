@@ -95,6 +95,36 @@ html, body { width:100%; height:100%; overflow:hidden; background:#0d1117;
   pointer-events:none; opacity:0; transition:opacity .3s;
 }
 #orbitHint.show { opacity:1; }
+
+/* ── AR Mode ─────────────────────────────────────────────── */
+#arOverlay {
+  display:none; position:fixed; inset:0; z-index:150; pointer-events:none;
+}
+#arExitBtn {
+  position:absolute; top:52px; right:8px; pointer-events:auto;
+  background:rgba(180,0,0,.85); color:#fff; border:none; border-radius:20px;
+  padding:8px 18px; font-size:13px; font-weight:800; cursor:pointer;
+  backdrop-filter:blur(8px); -webkit-tap-highlight-color:transparent;
+}
+#arInfo {
+  position:absolute; bottom:72px; left:0; right:0;
+  display:flex; justify-content:center;
+}
+#arInfo span {
+  background:rgba(0,0,0,.72); color:#fff; padding:7px 16px;
+  border-radius:20px; font-size:12px; text-align:center; line-height:1.5;
+  backdrop-filter:blur(6px);
+}
+#arGpsInfo {
+  position:absolute; top:52px; left:8px; pointer-events:none;
+  background:rgba(0,0,0,.65); color:#2196F3; padding:5px 10px;
+  border-radius:10px; font-size:11px; font-weight:700;
+  backdrop-filter:blur(6px);
+}
+/* Canvas transparent in AR mode */
+body.ar-mode #canvas3d { background:transparent!important; }
+body.ar-mode #canvas3d canvas { background:transparent!important; }
+body.ar-mode { background:transparent!important; }
 </style>
 </head>
 <body>
@@ -121,6 +151,7 @@ html, body { width:100%; height:100%; overflow:hidden; background:#0d1117;
   <div class="sep"></div>
   <button class="tb-btn"        id="btnLabels"  onclick="toggleLabels()">🏷 Labels</button>
   <button class="tb-btn"        id="btnGps"     onclick="toggleGps()">📍 GPS</button>
+  <button class="tb-btn"        id="btnAR"      onclick="toggleAR()">📷 AR</button>
   <button class="tb-btn"                        onclick="resetCam()">↺ Ansicht</button>
 </div>
 
@@ -142,6 +173,15 @@ html, body { width:100%; height:100%; overflow:hidden; background:#0d1117;
 </div>
 
 <div id="orbitHint">📍 Orbit-Punkt gesetzt</div>
+
+<div id="arOverlay">
+  <button id="arExitBtn" onclick="stopAR()">✕ AR beenden</button>
+  <div id="arGpsInfo">GPS: warte …</div>
+  <div id="arInfo">
+    <span>📡 AR Modus aktiv · Richte Kamera auf den Boden<br>
+    Werkleitungen werden im Untergrund eingeblendet</span>
+  </div>
+</div>
 
 <div id="statusBar">
   <span id="sLoad">–</span>
@@ -187,6 +227,15 @@ var camP0=new THREE.Vector3(), camT0=new THREE.Vector3();
 var camP1=new THREE.Vector3(), camT1=new THREE.Vector3();
 var frameN=0, raycaster=new THREE.Raycaster();
 var orbitMarker=null, longTimer=null, longPos=null;
+
+/* AR state */
+var arActive=false, arStream=null, arGpsWid=null, arVideo=null;
+var arPos=null, arHasAbsOri=false;
+var arOri={alpha:0,beta:0,gamma:0};
+var arQ1=new THREE.Quaternion(-Math.sqrt(0.5),0,0,Math.sqrt(0.5));
+var arZee=new THREE.Vector3(0,0,1);
+var arQ0=new THREE.Quaternion();
+var arEul=new THREE.Euler();
 
 /* ── DOM ─────────────────────────────────────────────────── */
 function pct(p){ document.getElementById('progress').style.width=p+'%'; }
@@ -420,6 +469,129 @@ function bindLongPress(el){
   el.addEventListener('touchcancel',function(){clearTimeout(longTimer);longPos=null;},{passive:true});
 }
 
+/* ── AR Mode ─────────────────────────────────────────────── */
+function onAROrientation(e){
+  // Prefer absolute orientation (Android); fall back to deviceorientation with iOS webkitCompassHeading
+  if(e.type==='deviceorientationabsolute') arHasAbsOri=true;
+  else if(arHasAbsOri) return;
+
+  if(!arHasAbsOri && e.webkitCompassHeading!=null){
+    // iOS: webkitCompassHeading = clockwise from north; alpha is also clockwise in absolute mode
+    arOri.alpha = e.webkitCompassHeading;
+  } else {
+    arOri.alpha = e.alpha||0;
+  }
+  arOri.beta  = e.beta||0;
+  arOri.gamma = e.gamma||0;
+}
+
+window.toggleAR=function(){
+  if(arActive) stopAR(); else startAR();
+};
+
+async function startAR(){
+  // iOS 13+ requires explicit permission for DeviceOrientationEvent
+  if(typeof DeviceOrientationEvent!=='undefined' &&
+     typeof DeviceOrientationEvent.requestPermission==='function'){
+    try{
+      var p=await DeviceOrientationEvent.requestPermission();
+      if(p!=='granted'){ alert('AR benötigt Zugriff auf Geräteausrichtung (Einstellungen → Safari → Bewegung & Ausrichtung).'); return; }
+    }catch(e){ console.warn('DeviceOrientation permission error',e); }
+  }
+
+  // Rear camera
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+    alert('Kamerazugriff wird von diesem Browser nicht unterstützt.'); return;
+  }
+  try{
+    arStream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:'environment', width:{ideal:1920}, height:{ideal:1080}},
+      audio:false
+    });
+  }catch(e){
+    alert('Kamerazugriff verweigert. AR benötigt die hintere Kamera.'); return;
+  }
+
+  // Video element behind the canvas
+  if(!arVideo){
+    arVideo=document.createElement('video');
+    arVideo.autoplay=true; arVideo.muted=true; arVideo.playsInline=true;
+    arVideo.setAttribute('playsinline','');
+    arVideo.style.cssText='position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;pointer-events:none;';
+    document.body.insertBefore(arVideo, document.getElementById('canvas3d'));
+  }
+  arVideo.srcObject=arStream;
+  arVideo.style.display='block';
+  try{ await arVideo.play(); }catch(e){}
+
+  // Transparent Three.js background
+  scene.background=null;
+  scene.fog=null;
+  renderer.setClearColor(0x000000,0);
+  document.body.classList.add('ar-mode');
+  // Raise canvas above video
+  document.getElementById('canvas3d').style.zIndex='1';
+
+  // Hide terrain (real world is the background)
+  if(terrainMesh) terrainMesh.visible=false;
+
+  // Widen FOV to match phone camera (~65°)
+  camera.fov=65; camera.updateProjectionMatrix();
+
+  // GPS for position tracking
+  if(navigator.geolocation){
+    arGpsWid=navigator.geolocation.watchPosition(function(pos){
+      arPos=gpsToScene(pos.coords.latitude, pos.coords.longitude, pos.coords.altitude);
+      var acc=Math.round(pos.coords.accuracy);
+      document.getElementById('arGpsInfo').textContent='GPS ±'+acc+'m';
+    },function(err){
+      document.getElementById('arGpsInfo').textContent='GPS: '+err.message;
+    },{enableHighAccuracy:true,timeout:30000,maximumAge:2000});
+  }
+
+  // Device orientation listeners
+  arHasAbsOri=false;
+  window.addEventListener('deviceorientationabsolute',onAROrientation,true);
+  window.addEventListener('deviceorientation',onAROrientation,true);
+
+  // Disable orbit controls; stop fly-in
+  controls.enabled=false;
+  flyDone=true;
+
+  arActive=true;
+  document.getElementById('btnAR').classList.add('active');
+  document.getElementById('arOverlay').style.display='block';
+}
+
+function stopAR(){
+  if(!arActive) return;
+
+  // Stop camera stream
+  if(arStream){ arStream.getTracks().forEach(function(t){t.stop();}); arStream=null; }
+  if(arVideo){ arVideo.srcObject=null; arVideo.style.display='none'; }
+
+  // Restore Three.js scene
+  scene.background=new THREE.Color(0x0d1525);
+  scene.fog=new THREE.Fog(0x0d1525,600,3500);
+  renderer.setClearColor(0x0d1525,1);
+  document.body.classList.remove('ar-mode');
+  document.getElementById('canvas3d').style.zIndex='';
+  if(terrainMesh) terrainMesh.visible=terrainOn;
+
+  camera.fov=50; camera.updateProjectionMatrix();
+
+  if(arGpsWid!==null){ navigator.geolocation.clearWatch(arGpsWid); arGpsWid=null; }
+
+  window.removeEventListener('deviceorientationabsolute',onAROrientation,true);
+  window.removeEventListener('deviceorientation',onAROrientation,true);
+
+  controls.enabled=true;
+  arActive=false; arPos=null;
+  document.getElementById('btnAR').classList.remove('active');
+  document.getElementById('arOverlay').style.display='none';
+  resetCam();
+}
+
 /* ── Resize ──────────────────────────────────────────────── */
 function resize(){
   var c=document.getElementById('canvas3d');
@@ -481,6 +653,26 @@ function animate(){
     if(flyT>=1) flyDone=true;
   }
 
+  // AR camera: position from GPS, rotation from device orientation
+  if(arActive){
+    if(arPos){
+      camera.position.copy(arPos);
+      camera.position.y+=1.6; // eye height above ground
+    }
+    // Standard DeviceOrientationControls quaternion formula (Three.js)
+    var _a=THREE.MathUtils.degToRad(arOri.alpha);
+    var _b=THREE.MathUtils.degToRad(arOri.beta);
+    var _g=THREE.MathUtils.degToRad(arOri.gamma);
+    var _o=THREE.MathUtils.degToRad(
+      window.screen&&window.screen.orientation ? window.screen.orientation.angle : (window.orientation||0)
+    );
+    arEul.set(_b,_a,-_g,'YXZ');
+    camera.quaternion.setFromEuler(arEul);
+    camera.quaternion.multiply(arQ1);
+    arQ0.setFromAxisAngle(arZee,-_o);
+    camera.quaternion.multiply(arQ0);
+  }
+
   controls.update();
   updateCompass();
 
@@ -501,7 +693,7 @@ async function init(){
     txt('Szene aufbauen …'); pct(5);
 
     var container=document.getElementById('canvas3d');
-    renderer=new THREE.WebGLRenderer({antialias:true});
+    renderer=new THREE.WebGLRenderer({antialias:true, alpha:true});
     renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
     renderer.sortObjects=true;
     container.appendChild(renderer.domElement);
