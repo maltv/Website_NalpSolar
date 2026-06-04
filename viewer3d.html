@@ -370,47 +370,85 @@ async function loadTische(){
   if(!r.ok) return;
   var data=await r.json();
 
-  // Two shared geometries (two standard lengths)
-  var geomA=new THREE.BoxGeometry(10.007,0.25,3);  // 8er
-  var geomB=new THREE.BoxGeometry(12.394,0.25,3);  // 10er
+  var geomA=new THREE.BoxGeometry(10.007,0.25,3);
+  var geomB=new THREE.BoxGeometry(12.394,0.25,3);
 
-  var mat=new THREE.MeshPhongMaterial({
-    color:0x3377dd,
-    emissive:0x001144,
-    specular:0x4499ff,
-    shininess:60,
-    transparent:true,
-    opacity:0.50,
-    side:THREE.DoubleSide,
-    depthWrite:true
+  var panelMat=new THREE.MeshPhongMaterial({
+    color:0x2266cc, emissive:0x001144, specular:0x5599ff, shininess:80,
+    transparent:true, opacity:0.50, side:THREE.DoubleSide, depthWrite:true
   });
+  var legMat=new THREE.MeshPhongMaterial({color:0x777777, emissive:0x222222, shininess:30});
+  var legGeom=new THREE.CylinderGeometry(0.07,0.07,1,6);  // unit-length, scaled per leg
 
   tischeGroup=new THREE.Group();
   tischeGroup.renderOrder=5;
   tischeLbls=[];
 
-  data.forEach(function(t){
-    var id=t[0], E=t[1], N=t[2], Z=t[3], az=t[4], len=t[5];
-    var x=E-OE, y=Z-OZ+0.3, z=-(N-ON);
+  // Rotation: Ry(-az) * Rx(-60°)
+  // Panel normal faces az-direction (tilted 60° from horizontal)
+  // Front (lower) edge = local -Z side
+  var TILT=60*Math.PI/180;
+  var ct=Math.cos(TILT), st=Math.sin(TILT);  // ct=0.5, st=0.866
+  var rotM=new THREE.Matrix4();
+  var tmpQ=new THREE.Quaternion();
+  var downDir=new THREE.Vector3(0,-1,0);
 
-    var mesh=new THREE.Mesh(len<11?geomA:geomB, mat);
-    mesh.position.set(x,y,z);
-    // tisch_ausrichtung is the bearing of the table's long axis
-    mesh.rotation.y=-az*Math.PI/180;
+  data.forEach(function(t){
+    var id=t[0],E=t[1],N=t[2],Z=t[3],az=t[4],len=t[5];
+    var azR=az*Math.PI/180;
+    var ca=Math.cos(azR), sa=Math.sin(azR);
+    // Lift center +2m so lower edge clears terrain (~0.65m stub legs)
+    var px=E-OE, py=Z-OZ+2.0, pz=-(N-ON);
+
+    // Rotation matrix M = Ry(-az)*Rx(-60°)
+    // Col X (long axis):   (ca, 0, sa)
+    // Col Y (panel normal):(sa*st, ct, -ca*st)
+    // Col Z (upper/back):  (-sa*ct, st, ca*ct)
+    rotM.set(
+      ca,   sa*st, -sa*ct, 0,
+      0,    ct,     st,    0,
+      sa,  -ca*st,  ca*ct, 0,
+      0,    0,      0,     1
+    );
+    tmpQ.setFromRotationMatrix(rotM);
+
+    var mesh=new THREE.Mesh(len<11?geomA:geomB, panelMat);
+    mesh.position.set(px,py,pz);
+    mesh.quaternion.copy(tmpQ);
     tischeGroup.add(mesh);
 
-    // ID label
+    // Two legs at front (lower) edge corners: local (±len/2, -0.125, -1.5)
+    var half=len/2;
+    [[half,-0.125,-1.5],[-half,-0.125,-1.5]].forEach(function(lc){
+      // Transform corner to world space
+      var wc=new THREE.Vector3(lc[0],lc[1],lc[2]).applyMatrix4(rotM)
+              .add(new THREE.Vector3(px,py,pz));
+      if(!terrainMesh) return;
+      // Raycast down to terrain
+      var orig=new THREE.Vector3(wc.x, wc.y+15, wc.z);
+      var ray=new THREE.Raycaster(orig, downDir);
+      var hits=ray.intersectObject(terrainMesh);
+      if(!hits.length) return;
+      var gY=hits[0].point.y;
+      var legLen=wc.y-gY;
+      if(legLen<0.1||legLen>25) return;
+      // Scaled cylinder
+      var leg=new THREE.Mesh(legGeom, legMat);
+      leg.position.set(wc.x, gY+legLen/2, wc.z);
+      leg.scale.y=legLen;
+      tischeGroup.add(leg);
+    });
+
+    // ID label above panel center
     var div=document.createElement('div');
-    div.className='lbl lbl-tisch';
-    div.textContent=id;
+    div.className='lbl lbl-tisch'; div.textContent=id;
     var lbl=new THREE.CSS2DObject(div);
-    lbl.position.set(x,y+2.5,z);
-    scene.add(lbl);
-    tischeLbls.push(lbl);
+    lbl.position.set(px, py+2, pz);
+    scene.add(lbl); tischeLbls.push(lbl);
   });
 
   scene.add(tischeGroup);
-  console.info('Modultische: '+data.length);
+  console.info('Modultische: '+data.length+' (mit Beinen)');
 }
 
 window.toggleTische=function(){
