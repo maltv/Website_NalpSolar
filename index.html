@@ -322,6 +322,29 @@
     }
   }
 
+
+  /* ── Messwerkzeug ────────────────────────────────────── */
+  .m-btn {
+    border: 1px solid rgba(0,0,0,.18); border-radius: 8px;
+    padding: 6px 10px; font-size: 12px; font-weight: 700;
+    cursor: pointer; background: #f5f5f5; white-space: nowrap;
+    touch-action: manipulation;
+  }
+  .m-btn.m-active { background: #d40000; color: #fff; border-color: #d40000; }
+  .m-btn:active { transform: translateY(1px); }
+  #mControls { display:none; align-items:center; gap:5px; flex-wrap:wrap; }
+  #mControls.open { display:flex; }
+  #mResult {
+    font-size: 12px; font-weight: 800; color: #d40000;
+    min-width: 60px; padding: 0 2px;
+  }
+  .measure-label {
+    background: rgba(200,0,0,.88); color: #fff;
+    border-radius: 6px; padding: 3px 9px;
+    font-size: 12px; font-weight: 700; white-space: nowrap;
+    pointer-events: none; line-height: 1.6;
+    box-shadow: 0 2px 6px rgba(0,0,0,.35);
+  }
 </style>
 </head>
 
@@ -335,6 +358,15 @@
   <button id="plansBtn" type="button" onclick="openPlansPage()">Plaene</button>
   <button id="viewer3dBtn" type="button" onclick="window.location.href='viewer3d.html'">3D</button>
   <button id="adminBtn" type="button" onclick="openAdminPanel()">Admin</button>
+  <button id="measBtn" type="button" onclick="toggleMeasureBar()" title="Messen">📏</button>
+  <span id="mControls">
+    <button class="m-btn" id="mLinBtn" onclick="startMeasure('line')">📐 Linie</button>
+    <button class="m-btn" id="mAreaBtn" onclick="startMeasure('area')">⬡ Fläche</button>
+    <button class="m-btn" id="mFinBtn" onclick="finishMeasure()" style="display:none">✓ Fertig</button>
+    <span id="mResult">–</span>
+    <button class="m-btn" onclick="clearMeasure()" title="Alle Messungen löschen">🗑</button>
+    <button class="m-btn" onclick="toggleMeasureBar()" title="Schliessen">✕</button>
+  </span>
   <form id="searchForm" class="searchbox" onsubmit="searchTableId(); return false;">
     <input id="tableSearch" type="search" inputmode="numeric" placeholder="Tisch-ID suchen" autocomplete="off">
     <button id="searchBtn" type="submit">Suchen</button>
@@ -1319,6 +1351,169 @@ setStatus(
     });
     document.getElementById('lastPush').textContent = 'Aktualisiert: ' + fmt;
   } catch (e) {}
+})();
+</script>
+
+<script>
+/* ═══ MESSWERKZEUG ══════════════════════════════════════ */
+(function(){
+  var mMode=null, mPoints=[], mActiveLayers=[], mFinishedLayers=[], mRubber=null;
+
+  window.toggleMeasureBar=function(){
+    var c=document.getElementById('mControls');
+    var open=c.classList.toggle('open');
+    if(!open) stopMeasure(false);
+  };
+
+  window.startMeasure=function(mode){
+    cancelActive();
+    mMode=mode; mPoints=[];
+    map.doubleClickZoom.disable();
+    map.getContainer().style.cursor='crosshair';
+    document.getElementById('mLinBtn').classList.toggle('m-active',mode==='line');
+    document.getElementById('mAreaBtn').classList.toggle('m-active',mode==='area');
+    document.getElementById('mFinBtn').style.display='';
+    document.getElementById('mResult').textContent=mode==='line'?'0 m':'0 m²';
+  };
+
+  window.finishMeasure=function(){
+    if(!mMode||mPoints.length<2){cancelActive();return;}
+    var pts=mPoints.slice();
+    if(mMode==='line'){
+      var pl=L.polyline(pts,{color:'#d40000',weight:2.5}).addTo(map);
+      mFinishedLayers.push(pl);
+      showLabel(pts[pts.length-1], fmtLen(calcLen(pts)));
+    } else if(pts.length>=3){
+      var pg=L.polygon(pts,{color:'#d40000',weight:2,fillColor:'#d40000',fillOpacity:.1}).addTo(map);
+      mFinishedLayers.push(pg);
+      var peri=calcLen(pts)+pts[pts.length-1].distanceTo(pts[0]);
+      showLabel(centroid(pts), fmtArea(calcArea(pts))+'\n'+fmtLen(peri)+' Umfang');
+    }
+    cancelActive();
+  };
+
+  window.clearMeasure=function(){
+    cancelActive();
+    mFinishedLayers.forEach(function(l){map.removeLayer(l);});
+    mFinishedLayers=[];
+    document.getElementById('mResult').textContent='–';
+  };
+
+  function stopMeasure(clearAll){
+    cancelActive();
+    if(clearAll) window.clearMeasure();
+    document.getElementById('mLinBtn').classList.remove('m-active');
+    document.getElementById('mAreaBtn').classList.remove('m-active');
+    document.getElementById('mFinBtn').style.display='none';
+  }
+
+  function cancelActive(){
+    mMode=null;
+    mPoints=[];
+    map.doubleClickZoom.enable();
+    map.getContainer().style.cursor='';
+    mActiveLayers.forEach(function(l){map.removeLayer(l);});
+    mActiveLayers=[];
+    if(mRubber){map.removeLayer(mRubber);mRubber=null;}
+    document.getElementById('mFinBtn').style.display='none';
+    document.getElementById('mLinBtn').classList.remove('m-active');
+    document.getElementById('mAreaBtn').classList.remove('m-active');
+  }
+
+  function showLabel(latlng,text){
+    var lines=text.split('\n').map(function(l){return '<div>'+l+'</div>';}).join('');
+    var icon=L.divIcon({className:'',html:'<div class="measure-label">'+lines+'</div>',iconAnchor:[0,24]});
+    var m=L.marker(latlng,{icon:icon,interactive:false}).addTo(map);
+    mFinishedLayers.push(m);
+  }
+
+  function redrawActive(){
+    // Remove old temp lines/dots
+    mActiveLayers.forEach(function(l){map.removeLayer(l);});
+    mActiveLayers=[];
+    // Dots
+    mPoints.forEach(function(p){
+      var d=L.circleMarker(p,{radius:4,color:'#d40000',fillColor:'#fff',fillOpacity:1,weight:2,interactive:false}).addTo(map);
+      mActiveLayers.push(d);
+    });
+    // Solid line so far
+    if(mPoints.length>1){
+      var pts=mMode==='area'&&mPoints.length>2?mPoints.concat([mPoints[0]]):mPoints;
+      var pl=L.polyline(pts,{color:'#d40000',weight:2.5,interactive:false}).addTo(map);
+      mActiveLayers.push(pl);
+    }
+  }
+
+  function updateResult(){
+    var el=document.getElementById('mResult');
+    if(!mMode||!mPoints.length){el.textContent='–';return;}
+    if(mMode==='line'){
+      el.textContent=fmtLen(calcLen(mPoints));
+    } else {
+      el.textContent=mPoints.length>=3?fmtArea(calcArea(mPoints)):fmtLen(calcLen(mPoints));
+    }
+  }
+
+  /* ── Karte-Events ─── */
+  map.on('click',function(e){
+    if(!mMode) return;
+    mPoints.push(e.latlng);
+    redrawActive();
+    updateResult();
+  });
+
+  map.on('dblclick',function(e){
+    if(!mMode) return;
+    // click×2 fired before dblclick → remove the last duplicate point
+    if(mPoints.length>1){
+      mPoints.pop();
+    } else {
+      cancelActive(); return;
+    }
+    window.finishMeasure();
+  });
+
+  map.on('mousemove',function(e){
+    if(!mMode||!mPoints.length) return;
+    var pts=mPoints.concat([e.latlng]);
+    if(mMode==='area'&&pts.length>2) pts=pts.concat([pts[0]]);
+    if(mRubber) mRubber.setLatLngs(pts);
+    else mRubber=L.polyline(pts,{color:'#d40000',weight:1.5,dashArray:'6 5',opacity:.65,interactive:false}).addTo(map);
+  });
+
+  /* ── Rechenformeln ─── */
+  function calcLen(pts){
+    var d=0;
+    for(var i=0;i<pts.length-1;i++) d+=pts[i].distanceTo(pts[i+1]);
+    return d;
+  }
+
+  function calcArea(pts){
+    var n=pts.length; if(n<3) return 0;
+    var lat0=pts[0].lat,lon0=pts[0].lng;
+    var R=6371000,cos0=Math.cos(lat0*Math.PI/180);
+    var xy=pts.map(function(p){return[
+      (p.lng-lon0)*Math.PI/180*R*cos0,
+      (p.lat-lat0)*Math.PI/180*R
+    ];});
+    var a=0;
+    for(var i=0;i<n;i++){var j=(i+1)%n;a+=xy[i][0]*xy[j][1]-xy[j][0]*xy[i][1];}
+    return Math.abs(a/2);
+  }
+
+  function centroid(pts){
+    var la=0,ln=0;
+    pts.forEach(function(p){la+=p.lat;ln+=p.lng;});
+    return L.latLng(la/pts.length,ln/pts.length);
+  }
+
+  function fmtLen(m){
+    return m<1000?Math.round(m)+' m':(m/1000).toFixed(3)+' km';
+  }
+  function fmtArea(m2){
+    if(m2<10000) return Math.round(m2)+' m²';
+    return (m2/10000).toFixed(2)+' ha';
+  }
 })();
 </script>
 </body>
