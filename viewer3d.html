@@ -122,6 +122,18 @@ html, body { width:100%; height:100%; overflow:hidden; background:#0d1117;
   border-radius:10px; font-size:11px; font-weight:700;
   backdrop-filter:blur(6px);
 }
+#arResetBtn {
+  position:absolute; top:90px; left:8px; pointer-events:auto;
+  background:rgba(0,0,0,.7); color:#ffd700; border:1px solid rgba(255,215,0,.4);
+  border-radius:14px; padding:6px 12px; font-size:11px; font-weight:700;
+  cursor:pointer; backdrop-filter:blur(6px); -webkit-tap-highlight-color:transparent;
+}
+#arAdjust {
+  position:absolute; top:90px; right:8px; pointer-events:none;
+  background:rgba(0,0,0,.7); color:#ffd700; padding:6px 11px;
+  border-radius:14px; font-size:12px; font-weight:800; letter-spacing:.02em;
+  backdrop-filter:blur(6px); font-variant-numeric:tabular-nums;
+}
 /* Canvas transparent in AR mode */
 body.ar-mode #canvas3d { background:transparent!important; }
 body.ar-mode #canvas3d canvas { background:transparent!important; }
@@ -181,9 +193,11 @@ body.ar-mode { background:transparent!important; }
 <div id="arOverlay">
   <button id="arExitBtn" onclick="stopAR()">✕ AR beenden</button>
   <div id="arGpsInfo">GPS: warte …</div>
+  <button id="arResetBtn" onclick="arResetCalib()">⟳ Ausrichtung zurücksetzen</button>
+  <div id="arAdjust">↻ 0°   ⇄ 0.0 m</div>
   <div id="arInfo">
-    <span>📡 AR Modus aktiv · Richte Kamera auf den Boden<br>
-    Werkleitungen werden im Untergrund eingeblendet</span>
+    <span>📡 AR aktiv · Kamera auf den Boden richten<br>
+    ☝️ 1 Finger ziehen = drehen · ✌️ 2 Finger = verschieben</span>
   </div>
 </div>
 
@@ -241,6 +255,13 @@ var arQ1=new THREE.Quaternion(-Math.sqrt(0.5),0,0,Math.sqrt(0.5));
 var arZee=new THREE.Vector3(0,0,1);
 var arQ0=new THREE.Quaternion();
 var arEul=new THREE.Euler();
+
+/* AR manual calibration (PeakFinder-style finger alignment) */
+var arYawOffset=0;                          // rad, heading correction (1-finger drag)
+var arPosOffset=new THREE.Vector3(0,0,0);   // scene shift in m (2-finger drag)
+var arUp=new THREE.Vector3(0,1,0);
+var arYawQuat=new THREE.Quaternion();
+var arDrag=null;                            // active touch gesture state
 
 /* ── DOM ─────────────────────────────────────────────────── */
 function pct(p){ document.getElementById('progress').style.width=p+'%'; }
@@ -560,6 +581,7 @@ function setOrbitTarget(clientX,clientY){
 
 function bindLongPress(el){
   el.addEventListener('touchstart',function(e){
+    if(arActive){clearTimeout(longTimer);return;}   // AR uses finger drag for alignment
     if(e.touches.length!==1){clearTimeout(longTimer);return;}
     var t=e.touches[0]; longPos={x:t.clientX,y:t.clientY};
     longTimer=setTimeout(function(){if(longPos) setOrbitTarget(longPos.x,longPos.y);},550);
@@ -589,6 +611,70 @@ function onAROrientation(e){
   }
   arOri.beta  = e.beta||0;
   arOri.gamma = e.gamma||0;
+}
+
+/* ── AR manual alignment (finger drag, PeakFinder-style) ─── */
+function arMid(t){ return {x:(t[0].clientX+t[1].clientX)/2, y:(t[0].clientY+t[1].clientY)/2}; }
+
+function arShowAdjust(){
+  var deg=(arYawOffset*180/Math.PI)%360;
+  if(deg>180) deg-=360; if(deg<-180) deg+=360;
+  var d=Math.hypot(arPosOffset.x,arPosOffset.z);
+  var el=document.getElementById('arAdjust');
+  if(el) el.textContent='↻ '+deg.toFixed(0)+'°   ⇄ '+d.toFixed(1)+' m';
+}
+
+function arSaveCalib(){
+  try{ localStorage.setItem('arCalib',
+    JSON.stringify({y:arYawOffset,px:arPosOffset.x,py:arPosOffset.y,pz:arPosOffset.z})); }catch(e){}
+}
+function arLoadCalib(){
+  try{
+    var s=JSON.parse(localStorage.getItem('arCalib'));
+    if(s){ arYawOffset=s.y||0; arPosOffset.set(s.px||0,s.py||0,s.pz||0); }
+  }catch(e){}
+}
+window.arResetCalib=function(){
+  arYawOffset=0; arPosOffset.set(0,0,0); arSaveCalib(); arShowAdjust();
+  if(navigator.vibrate) navigator.vibrate(40);
+};
+
+function arTouchStart(e){
+  if(!arActive) return;
+  if(e.touches.length===1){
+    arDrag={mode:'yaw', x:e.touches[0].clientX, y:e.touches[0].clientY};
+  } else if(e.touches.length>=2){
+    var m=arMid(e.touches);
+    arDrag={mode:'pan', x:m.x, y:m.y};
+  } else { arDrag=null; }
+}
+function arTouchMove(e){
+  if(!arActive||!arDrag) return;
+  if(arDrag.mode==='yaw' && e.touches.length===1){
+    e.preventDefault();
+    var dx=e.touches[0].clientX-arDrag.x;
+    arDrag.x=e.touches[0].clientX; arDrag.y=e.touches[0].clientY;
+    arYawOffset += dx*0.0040;                 // ~0.23°/px heading correction
+    arSaveCalib(); arShowAdjust();
+  } else if(arDrag.mode==='pan' && e.touches.length>=2){
+    e.preventDefault();
+    var m=arMid(e.touches);
+    var dx=m.x-arDrag.x, dy=m.y-arDrag.y;
+    arDrag.x=m.x; arDrag.y=m.y;
+    // Move the model with the finger (grab-world): camera shifts opposite
+    var fwd=new THREE.Vector3(); camera.getWorldDirection(fwd); fwd.y=0;
+    if(fwd.lengthSq()<1e-6) fwd.set(0,0,-1);
+    fwd.normalize();
+    var right=new THREE.Vector3().crossVectors(fwd,arUp).normalize();
+    var k=0.06;                               // m per pixel
+    arPosOffset.addScaledVector(right, -dx*k);
+    arPosOffset.addScaledVector(fwd,    dy*k);
+    arSaveCalib(); arShowAdjust();
+  }
+}
+function arTouchEnd(e){
+  if(!e.touches || e.touches.length===0){ arDrag=null; return; }
+  if(e.touches.length===1) arDrag={mode:'yaw', x:e.touches[0].clientX, y:e.touches[0].clientY};
 }
 
 window.toggleAR=function(){
@@ -674,6 +760,7 @@ async function startAR(){
   flyDone=true;
 
   arActive=true;
+  arLoadCalib(); arShowAdjust();
   document.getElementById('btnAR').classList.add('active');
   document.getElementById('arOverlay').style.display='block';
 }
@@ -790,7 +877,7 @@ function animate(){
   // AR camera: position from GPS (snapped to terrain), rotation from device orientation
   if(arActive){
     if(arPos){
-      camera.position.set(arPos.x, arPos.y+1.6, arPos.z);
+      camera.position.set(arPos.x+arPosOffset.x, arPos.y+1.6+arPosOffset.y, arPos.z+arPosOffset.z);
     } else {
       // No GPS yet — stay at scene center at terrain level, show hint
       if(terrainMesh && frameN%90===0){
@@ -811,6 +898,11 @@ function animate(){
     camera.quaternion.multiply(arQ1);
     arQ0.setFromAxisAngle(arZee,-_o);
     camera.quaternion.multiply(arQ0);
+    // Manual heading correction (compass often unreliable) — world-space yaw
+    if(arYawOffset!==0){
+      arYawQuat.setFromAxisAngle(arUp,arYawOffset);
+      camera.quaternion.premultiply(arYawQuat);
+    }
   }
 
   // OrbitControls must NOT run in AR (would override camera position/rotation)
@@ -899,6 +991,12 @@ async function init(){
 
     // Bind long-press on canvas
     bindLongPress(renderer.domElement);
+
+    // Bind AR finger-alignment gestures (active only while AR is on)
+    renderer.domElement.addEventListener('touchstart', arTouchStart, {passive:false});
+    renderer.domElement.addEventListener('touchmove',  arTouchMove,  {passive:false});
+    renderer.domElement.addEventListener('touchend',   arTouchEnd,   {passive:false});
+    renderer.domElement.addEventListener('touchcancel',arTouchEnd,   {passive:false});
 
     // Fade loading
     setTimeout(function(){
