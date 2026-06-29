@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v3';
+var CACHE = 'nalpsolar-v4';
 var PRECACHE = [
   './viewer3d.html',
   './assets/js/three/three.min.js',
@@ -12,6 +12,10 @@ var PRECACHE = [
   './uploads/ifc/erdung.meta.json',
   './uploads/ifc/erdung.v.bin',
   './uploads/ifc/erdung.f.bin',
+  './uploads/ifc/leitungen26.meta.json',
+  './uploads/ifc/leitungen26.v.bin',
+  './uploads/ifc/leitungen26.f.bin',
+  './uploads/ifc/leitungen26.c.bin',
   './uploads/tables/modultische.json'
 ];
 

@@ -161,6 +161,7 @@ body.ar-mode { background:transparent!important; }
   <button class="tb-btn active" id="btnSat"     onclick="toggleSat()">🛰 Satellit</button>
   <button class="tb-btn active" id="btnWL"      onclick="toggleLayer('wl')">🔵 WL</button>
   <button class="tb-btn active" id="btnErdung"  onclick="toggleLayer('erdung')">🟠 Erdung</button>
+  <button class="tb-btn active" id="btnL26"     onclick="toggleLayer('leitungen26')">🟩 Leitungen 26/27</button>
   <button class="tb-btn active" id="btnTische"  onclick="toggleTische()">🟨 Tische</button>
   <div class="sep"></div>
   <button class="tb-btn"        id="btnGps"     onclick="toggleGps()">📍 GPS</button>
@@ -180,8 +181,12 @@ body.ar-mode { background:transparent!important; }
 </div>
 
 <div id="legend">
-  <div class="leg"><div class="leg-dot" style="background:#00aaff"></div>Werkleitungen</div>
+  <div class="leg"><div class="leg-dot" style="background:#00aaff"></div>Werkleitungen (alt)</div>
   <div class="leg"><div class="leg-dot" style="background:#FF9800"></div>Erdung</div>
+  <div class="leg"><div class="leg-dot" style="background:#29cc73"></div>Leitung 60</div>
+  <div class="leg"><div class="leg-dot" style="background:#ff4d4d"></div>Leitung 120</div>
+  <div class="leg"><div class="leg-dot" style="background:#1e94f2"></div>HRB (Hauptrohr)</div>
+  <div class="leg"><div class="leg-dot" style="background:#cccccc"></div>Schacht</div>
   <div class="leg"><div class="leg-dot" style="background:rgba(140,210,140,.7)"></div>Terrain</div>
   <div class="leg"><div class="leg-dot" style="background:rgba(80,160,255,.7);border:1px solid #ffd700"></div>Modultische</div>
 </div>
@@ -224,7 +229,9 @@ var IFC = [
   { slot:'wl',    base:'uploads/ifc/werkleitungen',
     col:[0,0.6,1], emissive:[0,0.2,0.5] },       // electric blue
   { slot:'erdung', base:'uploads/ifc/erdung',
-    col:[1,0.55,0], emissive:[0.4,0.15,0] }       // glowing orange
+    col:[1,0.55,0], emissive:[0.4,0.15,0] },      // glowing orange
+  { slot:'leitungen26', base:'uploads/ifc/leitungen26',
+    emissive:[0.05,0.05,0.05] }                   // vertex-coloured: 60/120/HRB/Schacht
 ];
 
 // WMS BBOX for satellite texture
@@ -343,10 +350,14 @@ async function loadLayer(cfg){
   if(!mr.ok) return null;
   var meta=await mr.json();
 
-  var bufs=await Promise.all([
+  var fetchJobs=[
     fetch(cfg.base+'.v.bin').then(function(r){ if(!r.ok) throw new Error(r.status); return r.arrayBuffer(); }),
     fetch(cfg.base+'.f.bin').then(function(r){ if(!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
-  ]);
+  ];
+  if(meta.vertexColors){
+    fetchJobs.push(fetch(cfg.base+'.c.bin').then(function(r){ if(!r.ok) throw new Error(r.status); return r.arrayBuffer(); }));
+  }
+  var bufs=await Promise.all(fetchJobs);
 
   // Raw: [East-OE, North-ON, Elev-OZ]  →  Y-up: [East-OE, Elev-OZ, -(North-ON)]
   var raw=new Float32Array(bufs[0]);
@@ -360,10 +371,14 @@ async function loadLayer(cfg){
   var geom=new THREE.BufferGeometry();
   geom.setAttribute('position',new THREE.BufferAttribute(verts,3));
   geom.setIndex(new THREE.BufferAttribute(idxs,1));
+  if(meta.vertexColors){
+    geom.setAttribute('color',new THREE.BufferAttribute(new Float32Array(bufs[2]),3));
+  }
 
-  var c=meta.color||cfg.col, e=cfg.emissive||[0,0,0];
+  var c=meta.color||cfg.col||[1,1,1], e=cfg.emissive||[0,0,0];
   var mat=new THREE.MeshPhongMaterial({
-    color:    new THREE.Color(c[0],c[1],c[2]),
+    color:    meta.vertexColors? new THREE.Color(1,1,1) : new THREE.Color(c[0],c[1],c[2]),
+    vertexColors: !!meta.vertexColors,
     emissive: new THREE.Color(e[0],e[1],e[2]),
     flatShading:true, specular:0x333333, shininess:40,
     side:THREE.DoubleSide
@@ -506,10 +521,12 @@ window.toggleSat=function(){
   }
   document.getElementById('btnSat').classList.toggle('active',satOn);
 };
+var SLOT_BTN={wl:'btnWL',erdung:'btnErdung',leitungen26:'btnL26'};
 window.toggleLayer=function(slot){
   var m=layers[slot]; if(!m) return;
   m.visible=!m.visible;
-  document.getElementById(slot==='wl'?'btnWL':'btnErdung').classList.toggle('active',m.visible);
+  var b=document.getElementById(SLOT_BTN[slot]);
+  if(b) b.classList.toggle('active',m.visible);
 };
 window.toggleGps=function(){
   var btn=document.getElementById('btnGps');
