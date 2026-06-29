@@ -163,10 +163,8 @@ body.ar-mode { background:transparent!important; }
   <button class="tb-btn active" id="btnErdung"  onclick="toggleLayer('erdung')">🟠 Erdung</button>
   <button class="tb-btn active" id="btnTische"  onclick="toggleTische()">🟨 Tische</button>
   <div class="sep"></div>
-  <button class="tb-btn"        id="btnLabels"  onclick="toggleLabels()">🏷 Labels</button>
   <button class="tb-btn"        id="btnGps"     onclick="toggleGps()">📍 GPS</button>
   <button class="tb-btn"        id="btnAR"      onclick="toggleAR()">📷 AR</button>
-  <button class="tb-btn"        id="btnARTest"  onclick="startARTest()" style="border-color:rgba(255,200,0,.5);color:#ffd700">🧪 AR Test</button>
   <button class="tb-btn"                        onclick="resetCam()">↺ Ansicht</button>
 </div>
 
@@ -513,10 +511,6 @@ window.toggleLayer=function(slot){
   m.visible=!m.visible;
   document.getElementById(slot==='wl'?'btnWL':'btnErdung').classList.toggle('active',m.visible);
 };
-window.toggleLabels=function(){
-  labelsOn=!labelsOn; allLbls.forEach(function(l){l.visible=labelsOn;});
-  document.getElementById('btnLabels').classList.toggle('active',labelsOn);
-};
 window.toggleGps=function(){
   var btn=document.getElementById('btnGps');
   if(gpsOn){
@@ -796,22 +790,6 @@ function stopAR(){
   document.getElementById('arOverlay').style.display='none';
   resetCam();
 }
-
-/* ── AR Test (fixer Standort im Perimeter) ───────────────── */
-window.startARTest=async function(){
-  await startAR();
-  // Test-Position: Mitte der Modultische-Zone
-  // LV95 E=2701700, N=1166000 → scene x=145, z=-359
-  var tx=2701700-OE, tz=-(1166000-ON), ty=0;
-  if(terrainMesh){
-    var tr=new THREE.Raycaster(new THREE.Vector3(tx,500,tz),new THREE.Vector3(0,-1,0));
-    var th=tr.intersectObject(terrainMesh);
-    if(th.length) ty=th[0].point.y;
-  }
-  arPos=new THREE.Vector3(tx,ty,tz);
-  document.getElementById('arGpsInfo').textContent=
-    '🧪 Test: E 2701700 / N 1166000';
-};
 
 /* ── Resize ──────────────────────────────────────────────── */
 function resize(){
