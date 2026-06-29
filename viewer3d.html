@@ -954,8 +954,9 @@ async function init(){
     controls.minDistance=5;
     controls.maxDistance=4000;
     controls.screenSpacePanning=false;
-    // 1 finger = rotate, 2 finger = dolly+pan (standard mobile map controls)
-    controls.touches={ONE:THREE.TOUCH.ROTATE, TWO:THREE.TOUCH.DOLLY_PAN};
+    // Strava-Style: 1 Finger = Karte verschieben (Auge vor/zurück/links/rechts),
+    // 2 Finger = um den Orbit drehen (+ Pinch-Zoom)
+    controls.touches={ONE:THREE.TOUCH.PAN, TWO:THREE.TOUCH.DOLLY_ROTATE};
     controls.update();
 
     // Lighting — warm sun from south-west at 40° altitude
