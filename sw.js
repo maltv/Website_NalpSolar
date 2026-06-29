@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v2';
+var CACHE = 'nalpsolar-v3';
 var PRECACHE = [
   './viewer3d.html',
   './assets/js/three/three.min.js',
@@ -34,10 +34,10 @@ self.addEventListener('activate', function(e) {
 });
 
 self.addEventListener('fetch', function(e) {
-  // Network first for WMS (satellite/terrain images), cache first for assets
   var url = e.request.url;
   var isExternal = url.includes('geo.admin.ch') || url.includes('api3.geo.admin.ch');
 
+  // External map tiles/images: network first, fall back to cache (offline)
   if (isExternal) {
     e.respondWith(
       fetch(e.request).catch(function() { return caches.match(e.request); })
@@ -45,6 +45,24 @@ self.addEventListener('fetch', function(e) {
     return;
   }
 
+  // App pages + data (HTML/JSON): network first so deploys show immediately,
+  // fall back to cache when offline.
+  var isFresh = e.request.mode === 'navigate'
+    || url.endsWith('.html') || url.endsWith('.json');
+  if (isFresh) {
+    e.respondWith(
+      fetch(e.request).then(function(resp) {
+        if (resp.ok) {
+          var clone = resp.clone();
+          caches.open(CACHE).then(function(c){ c.put(e.request, clone); });
+        }
+        return resp;
+      }).catch(function() { return caches.match(e.request); })
+    );
+    return;
+  }
+
+  // Static heavy assets (js/wasm/bins): cache first, fetch + store on miss
   e.respondWith(
     caches.match(e.request).then(function(cached) {
       if (cached) return cached;
