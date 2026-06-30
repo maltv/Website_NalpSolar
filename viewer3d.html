@@ -1277,16 +1277,31 @@ window.startBirdAR=async function(){
   if(arPos){ spawnBirdAR(); }
   else { birdARpending=true; document.getElementById('arGpsInfo').textContent='🐦 warte auf GPS …'; }
 };
+// Terrain als unsichtbarer Tiefen-Occluder (Vögel verschwinden hinter Kuppen)
+function setTerrainOccluder(on){
+  if(!terrainMesh) return;
+  var mat=terrainMesh.material;
+  if(on){
+    if(!mat._arSaved) mat._arSaved={cw:mat.colorWrite, dw:mat.depthWrite, tr:mat.transparent};
+    terrainMesh.visible=true;
+    mat.colorWrite=false; mat.depthWrite=true; mat.transparent=false; mat.needsUpdate=true;
+  } else if(mat._arSaved){
+    mat.colorWrite=mat._arSaved.cw; mat.depthWrite=mat._arSaved.dw; mat.transparent=mat._arSaved.tr;
+    mat.needsUpdate=true; mat._arSaved=null;
+  }
+}
 function spawnBirdAR(){
   if(!arPos) return;
   birdARpending=false; birdBaseY=arPos.y;
   perimeter.cx=arPos.x; perimeter.cz=arPos.z; perimeter.hx=18; perimeter.hz=18;  // Vögel ±18m um dich
   birdARon=true;
-  resetBirdsForGame(8);
+  resetBirdsForGame(4);                 // weniger Vögel
+  setTerrainOccluder(true);             // Gelände verdeckt Vögel dahinter
   updateArCatchHud();
 }
 function exitBirdAR(keepAR){
   birdARon=false; birdARpending=false;
+  setTerrainOccluder(false);
   if(birdGroup){ scene.remove(birdGroup); birdGroup=null; birds=[]; }
   birdsOn=false;
   if(savedPerimeter){ perimeter.cx=savedPerimeter.cx; perimeter.cz=savedPerimeter.cz;
@@ -2375,8 +2390,10 @@ async function init(){
     controls.minDistance=5;
     controls.maxDistance=4000;
     controls.screenSpacePanning=false;
-    // 1 finger = rotate, 2 finger = dolly+pan (standard mobile map controls)
-    controls.touches={ONE:THREE.TOUCH.ROTATE, TWO:THREE.TOUCH.DOLLY_PAN};
+    // Strava-Stil: 1 Finger = schieben (Pan), 2 Finger = drehen + zoomen
+    controls.touches={ONE:THREE.TOUCH.PAN, TWO:THREE.TOUCH.DOLLY_ROTATE};
+    // Maus: links = schieben, rechts = drehen, Rad = zoomen
+    controls.mouseButtons={LEFT:THREE.MOUSE.PAN, MIDDLE:THREE.MOUSE.DOLLY, RIGHT:THREE.MOUSE.ROTATE};
     controls.update();
 
     // Lighting — warm sun from south-west at 40° altitude
