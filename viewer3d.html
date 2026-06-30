@@ -138,6 +138,7 @@ html, body { width:100%; height:100%; overflow:hidden; background:#0d1117;
 #bgTimer.low { color:#ff5a5a; }
 #bgScore { color:#ffd700; }
 #bgHud button { background:none; border:none; color:rgba(255,255,255,.6); font-size:16px; cursor:pointer; padding:0 2px; }
+body.game-on #toolbar, body.game-on #legend { display:none; }
 .bg-best { font-size:13px; font-weight:700; color:#ffd700; margin-bottom:14px; }
 #bgNameRow { display:flex; gap:8px; justify-content:center; margin-bottom:14px; }
 #bgNameRow .tb-input { width:140px; text-align:center; }
@@ -775,8 +776,8 @@ function addBird(gameScale){
   var px=perimeter.cx+(Math.random()*2-1)*perimeter.hx*0.8;
   var pz=perimeter.cz+(Math.random()*2-1)*perimeter.hz*0.8;
   var b={ group:mesh, pos:new THREE.Vector3(px,0,pz),
-          heading:Math.random()*Math.PI*2, speed:0.35+Math.random()*0.35,
-          turnRate:(Math.random()-0.5)*0.3, mode:'walk',
+          heading:Math.random()*Math.PI*2, speed:0.9+Math.random()*0.9,
+          turnRate:(Math.random()-0.5)*0.4, mode:'walk',
           timer:1+Math.random()*4, legPhase:Math.random()*6,
           callCool:2+Math.random()*8, displayT:0,
           caught:false, caughtT:0, dead:false };
@@ -1209,6 +1210,7 @@ window.birdGameStart=function(){
   hideTischeLabels(true);
   var bt=document.getElementById('btnTische');
   bt.classList.add('active','locked');           // can't toggle tables off mid-game
+  document.body.classList.add('game-on');        // hide toolbar + legend during play
   document.getElementById('birdGame').style.display='none';
   document.getElementById('bgHud').style.display='flex';
   updateGameHud();
@@ -1219,6 +1221,7 @@ function birdGameEnd(timeUp){
   gamePlaying=false; gameState='over';
   stopGameMusic();
   document.getElementById('btnTische').classList.remove('locked');
+  document.body.classList.remove('game-on');
   document.getElementById('bgHud').style.display='none';
   document.getElementById('bgResultTitle').textContent='⏱ Zeit um!';
   var prevBest=hsBest();
@@ -1242,6 +1245,7 @@ window.birdGameClose=function(){
   gamePlaying=false; gameState='idle';
   stopGameMusic();
   document.getElementById('btnTische').classList.remove('locked');
+  document.body.classList.remove('game-on');
   document.getElementById('birdGame').style.display='none';
   document.getElementById('bgHud').style.display='none';
   if(birdGroup){ scene.remove(birdGroup); birdGroup=null; birds=[]; }
