@@ -189,8 +189,10 @@ body.game-on #toolbar, body.game-on #legend, body.game-on #measPanel { display:n
 #measList { list-style:none; margin:0; padding:0; overflow-y:auto; max-height:34vh; display:flex; flex-direction:column; gap:4px; }
 #measList li { display:flex; align-items:center; gap:5px; background:rgba(255,255,255,.05);
   border-radius:7px; padding:4px 6px; }
+#measList .ml-nr { width:26px; font-weight:800; color:#7fd6ff; font-variant-numeric:tabular-nums; }
 #measList .ml-t { width:16px; }
-#measList .ml-v { width:78px; font-weight:800; color:#fff; font-variant-numeric:tabular-nums; }
+#measList .ml-v { width:72px; font-weight:800; color:#fff; font-variant-numeric:tabular-nums; }
+#measSnapBtn.active { background:#c026d3; border-color:#e040fb; }
 #measList select { flex:1; min-width:50px; background:rgba(255,255,255,.1);
   border:1px solid rgba(255,255,255,.2); color:#fff; border-radius:6px; padding:3px 4px; font-size:11px; }
 #measList .ml-del { background:none; border:none; cursor:pointer; font-size:13px; }
@@ -349,9 +351,11 @@ body.ar-mode { background:transparent!important; }
   <div class="meas-modes">
     <button class="meas-mode" id="measLenBtn"  onclick="measSetMode('len')">📏 Länge</button>
     <button class="meas-mode" id="measAreaBtn" onclick="measSetMode('area')">⬟ Fläche</button>
+    <button class="meas-mode" id="measSnapBtn" onclick="measToggleSnap()" title="An Werkleitungen einrasten">🧲 Magnet</button>
   </div>
   <div class="meas-active" id="measActiveRow" style="display:none">
     <span id="measLive">–</span>
+    <button onclick="measFitToLine()" title="Punkte auf Werkleitung ziehen (anpassen)">🧲</button>
     <button onclick="measUndoPoint()" title="Letzten Punkt zurück">↶</button>
     <button class="meas-ok" onclick="finishMeasure()">✓ Fertig</button>
     <button onclick="measCancel()" title="Abbrechen">✕</button>
@@ -1358,11 +1362,14 @@ window.birdGameClose=function(){
    MESS- & AUSMASS-TOOLS  (Länge / Polygon / Fläche + Layer + Bericht)
 ═══════════════════════════════════════════════════════════ */
 var measureActive=false, measureMode=null;          // 'len' | 'area'
-var measurePts=[], measureTmp=null, measureGroup=null;
-var measurements=[], measureSeq=1;
+var measurePts=[], measureSnapped=[], measureTmp=null, measureGroup=null;
+var measurements=[], measureSeq=1, measureNr=0;      // measureNr = durchgehende Mess-Nr.
 var measureLayers=['Allgemein','Graben','Leitung','Fundament','Fläche A','Fläche B'];
 var measureLayer='Allgemein';
 var measLastTapT=0, measLastTapXY={x:0,y:0};
+/* Magnet-Fang an sichtbare Werkleitungen */
+var measSnapOn=false, snapIndex=null;
+var SNAP_CELL=1.5, SNAP_R=1.5, FIT_R=6.0, SNAP_COLOR=0xff3bd0;
 
 function ensureMeasureScene(){
   if(!measureGroup){ measureGroup=new THREE.Group(); measureGroup.renderOrder=20; scene.add(measureGroup); }
@@ -1394,6 +1401,51 @@ function makeMeasLabel(text,pos,cls){
   var d=document.createElement('div'); d.className='lbl lbl-measure '+(cls||''); d.textContent=text;
   var o=new THREE.CSS2DObject(d); o.position.copy(pos); return o;
 }
+// markers honouring per-point snap flag (snapped → magenta)
+function addMarkers(group,pts,snapped,baseColor){
+  pts.forEach(function(p,i){ group.add(makeMarker(p,(snapped&&snapped[i])?SNAP_COLOR:baseColor)); });
+}
+// remove a finished measurement group incl. its CSS2D label DOM elements
+function disposeMeasGroup(g){
+  if(!g) return;
+  g.traverse(function(o){
+    if(o.element && o.element.parentNode) o.element.parentNode.removeChild(o.element); // CSS2DObject label
+    if(o.geometry && o.geometry.dispose) o.geometry.dispose();
+  });
+}
+
+/* ── Magnet: snap to visible Werkleitungen (IFC mesh vertices) ── */
+function snapKey(ix,iy,iz){ return ix+'|'+iy+'|'+iz; }
+function buildSnapIndex(){
+  if(snapIndex) return;
+  var cells=new Map(), pts=[];
+  ['wl','leitungen26'].forEach(function(slot){
+    var mesh=layers[slot]; if(!mesh||!mesh.geometry) return;
+    var pos=mesh.geometry.attributes.position; if(!pos) return;
+    for(var i=0;i<pos.count;i++){
+      var x=pos.getX(i), y=pos.getY(i), z=pos.getZ(i);
+      var idx=pts.length; pts.push(x,y,z);
+      var k=snapKey(Math.floor(x/SNAP_CELL),Math.floor(y/SNAP_CELL),Math.floor(z/SNAP_CELL));
+      var a=cells.get(k); if(a) a.push(idx); else cells.set(k,[idx]);
+    }
+  });
+  snapIndex={cells:cells, pts:pts};
+  console.info('Snap-Index: '+(pts.length/3)+' Werkleitungs-Vertices');
+}
+function snapToLine(p,r){
+  if(!snapIndex) return null;
+  var cx=Math.floor(p.x/SNAP_CELL), cy=Math.floor(p.y/SNAP_CELL), cz=Math.floor(p.z/SNAP_CELL);
+  var best=null, bestD=r*r, pts=snapIndex.pts;
+  for(var dx=-1;dx<=1;dx++) for(var dy=-1;dy<=1;dy++) for(var dz=-1;dz<=1;dz++){
+    var arr=snapIndex.cells.get(snapKey(cx+dx,cy+dy,cz+dz)); if(!arr) continue;
+    for(var i=0;i<arr.length;i++){
+      var j=arr[i], ex=pts[j]-p.x, ey=pts[j+1]-p.y, ez=pts[j+2]-p.z;
+      var d=ex*ex+ey*ey+ez*ez;
+      if(d<bestD){ bestD=d; best=new THREE.Vector3(pts[j],pts[j+1],pts[j+2]); }
+    }
+  }
+  return best;
+}
 
 function measureRaycast(cx,cy){
   var rect=renderer.domElement.getBoundingClientRect();
@@ -1407,10 +1459,10 @@ function measureRaycast(cx,cy){
 
 function rebuildTmp(){
   ensureMeasureScene();
-  while(measureTmp.children.length) measureTmp.remove(measureTmp.children[0]);
+  while(measureTmp.children.length){ var c0=measureTmp.children[0]; if(c0.geometry&&c0.geometry.dispose) c0.geometry.dispose(); measureTmp.remove(c0); }
   if(measurePts.length){
     var color=measureMode==='area'?0xffb300:0x00e5ff;
-    measurePts.forEach(function(p){ measureTmp.add(makeMarker(p,color)); });
+    addMarkers(measureTmp,measurePts,measureSnapped,color);
     if(measurePts.length>=2) measureTmp.add(makeLine(measurePts,color,false));
   }
   updateMeasLive();
@@ -1429,7 +1481,9 @@ function measureTapAt(cx,cy){
   if(isDouble){ finishMeasure(); return; }
   var p=measureRaycast(cx,cy);
   if(!p){ flashMsg('Kein Punkt auf der Oberfläche'); return; }
-  measurePts.push(p); rebuildTmp();
+  var snapped=false;
+  if(measSnapOn){ var s=snapToLine(p,SNAP_R); if(s){ p=s; snapped=true; if(navigator.vibrate) navigator.vibrate(30); } }
+  measurePts.push(p); measureSnapped.push(snapped); rebuildTmp();
 }
 
 window.finishMeasure=function(){
@@ -1439,18 +1493,40 @@ window.finishMeasure=function(){
   ensureMeasureScene();
   var color=measureMode==='area'?0xffb300:0x00e5ff;
   var value=measureMode==='area'?polygonArea(measurePts):polylineLength(measurePts);
+  var nr=++measureNr;
   var g=new THREE.Group();
-  measurePts.forEach(function(p){ g.add(makeMarker(p,color)); });
+  addMarkers(g,measurePts,measureSnapped,color);
   g.add(makeLine(measurePts,color,measureMode==='area'));
   var c=measCentroid(measurePts); c.y+=2;
   var unit=measureMode==='area'?'m²':'m';
-  g.add(makeMeasLabel(value.toFixed(2)+' '+unit, c, measureMode==='area'?'meas-area':'meas-len'));
+  g.add(makeMeasLabel('#'+nr+' · '+value.toFixed(2)+' '+unit, c, measureMode==='area'?'meas-area':'meas-len'));
   measureGroup.add(g);
-  measurements.push({ id:measureSeq++, type:measureMode, value:value, layer:measureLayer, group:g });
-  measurePts=[]; rebuildTmp(); refreshMeasList();
+  measurements.push({ id:measureSeq++, nr:nr, type:measureMode, value:value, layer:measureLayer, group:g });
+  measurePts=[]; measureSnapped=[]; rebuildTmp(); refreshMeasList();
 };
-window.measUndoPoint=function(){ if(measurePts.length){ measurePts.pop(); rebuildTmp(); } };
-window.measCancel=function(){ measurePts=[]; rebuildTmp(); };
+window.measUndoPoint=function(){ if(measurePts.length){ measurePts.pop(); measureSnapped.pop(); rebuildTmp(); } };
+window.measCancel=function(){ measurePts=[]; measureSnapped=[]; rebuildTmp(); };
+
+window.measToggleSnap=function(){
+  measSnapOn=!measSnapOn;
+  if(measSnapOn){
+    buildSnapIndex();
+    if(!snapIndex || snapIndex.pts.length===0){ measSnapOn=false; flashMsg('Keine Werkleitungen geladen'); }
+  }
+  document.getElementById('measSnapBtn').classList.toggle('active',measSnapOn);
+};
+window.measFitToLine=function(){
+  if(!measurePts.length){ flashMsg('Erst Punkte setzen'); return; }
+  buildSnapIndex();
+  if(!snapIndex || !snapIndex.pts.length){ flashMsg('Keine Werkleitungen geladen'); return; }
+  var hit=0;
+  for(var i=0;i<measurePts.length;i++){
+    var s=snapToLine(measurePts[i],FIT_R);
+    if(s){ measurePts[i]=s; measureSnapped[i]=true; hit++; }
+  }
+  rebuildTmp();
+  flashMsg(hit?('🧲 '+hit+'/'+measurePts.length+' Punkte angepasst'):'Keine Leitung in Reichweite');
+};
 
 window.measSetMode=function(m){
   measCancel(); measureMode=m;
@@ -1472,12 +1548,14 @@ window.measReassign=function(id,val){
 };
 window.measDelete=function(id){
   for(var i=0;i<measurements.length;i++){ if(measurements[i].id===id){
+    disposeMeasGroup(measurements[i].group);                 // remove 3D label DOM too
     if(measureGroup) measureGroup.remove(measurements[i].group);
     measurements.splice(i,1); break; } }
   refreshMeasList();
 };
 window.measClearAll=function(){
   if(!measurements.length) return;
+  measurements.forEach(function(m){ disposeMeasGroup(m.group); });
   if(measureGroup){ while(measureGroup.children.length) measureGroup.remove(measureGroup.children[0]); }
   measurements=[]; refreshMeasList();
 };
@@ -1494,7 +1572,7 @@ function refreshMeasList(){
     var sel='<select onchange="measReassign('+m.id+',this.value)">'+
       measureLayers.map(function(L){ return '<option'+(L===m.layer?' selected':'')+'>'+hsEscape(L)+'</option>'; }).join('')+'</select>';
     var li=document.createElement('li');
-    li.innerHTML='<span class="ml-t">'+(m.type==='area'?'⬟':'📏')+'</span>'+
+    li.innerHTML='<span class="ml-nr">#'+m.nr+'</span><span class="ml-t">'+(m.type==='area'?'⬟':'📏')+'</span>'+
                  '<span class="ml-v">'+m.value.toFixed(2)+' '+unit+'</span>'+sel+
                  '<button class="ml-del" onclick="measDelete('+m.id+')">🗑</button>';
     ol.appendChild(li);
@@ -1513,10 +1591,10 @@ window.measPrint=function(){
   measurements.forEach(function(m){ (byLayer[m.layer]=byLayer[m.layer]||[]).push(m); });
   var gLen=0,gArea=0, body='';
   Object.keys(byLayer).sort().forEach(function(lay){
-    var sLen=0,sArea=0,rows='',i=1;
-    byLayer[lay].forEach(function(m){
+    var sLen=0,sArea=0,rows='';
+    byLayer[lay].sort(function(a,b){return a.nr-b.nr;}).forEach(function(m){
       var unit=m.type==='area'?'m²':'m';
-      rows+='<tr><td>'+(i++)+'</td><td>'+(m.type==='area'?'Fläche':'Länge')+'</td><td class="r">'+m.value.toFixed(2)+' '+unit+'</td></tr>';
+      rows+='<tr><td>#'+m.nr+'</td><td>'+(m.type==='area'?'Fläche':'Länge')+'</td><td class="r">'+m.value.toFixed(2)+' '+unit+'</td></tr>';
       if(m.type==='area') sArea+=m.value; else sLen+=m.value;
     });
     gLen+=sLen; gArea+=sArea;
@@ -1675,6 +1753,24 @@ function bindLongPress(el){
   },{passive:true});
   el.addEventListener('touchend',function(){clearTimeout(longTimer);longPos=null;},{passive:true});
   el.addEventListener('touchcancel',function(){clearTimeout(longTimer);longPos=null;},{passive:true});
+}
+
+// Laptop: linke Maustaste ~0,5 s ruhig halten setzt den Orbit-Drehpunkt
+function bindMouseLongPress(el){
+  var mTimer=null, mPos=null;
+  function cancel(){ if(mTimer){clearTimeout(mTimer);mTimer=null;} mPos=null; }
+  el.addEventListener('pointerdown',function(e){
+    if(e.pointerType!=='mouse' || e.button!==0) return;
+    if(arActive || measurePlacing() || gamePlaying) return;
+    mPos={x:e.clientX,y:e.clientY};
+    mTimer=setTimeout(function(){ if(mPos) setOrbitTarget(mPos.x,mPos.y); cancel(); },500);
+  });
+  el.addEventListener('pointermove',function(e){
+    if(mPos && Math.hypot(e.clientX-mPos.x,e.clientY-mPos.y)>8) cancel();   // it's a rotate drag
+  });
+  el.addEventListener('pointerup',cancel);
+  el.addEventListener('pointercancel',cancel);
+  el.addEventListener('pointerleave',cancel);
 }
 
 /* ── AR Mode ─────────────────────────────────────────────── */
@@ -2079,8 +2175,9 @@ async function init(){
     perimeter.hx=Math.max(pS.x/2,80); perimeter.hz=Math.max(pS.z/2,80);
     startFlyIn(box);
 
-    // Bind long-press on canvas
+    // Bind long-press on canvas (touch) + mouse long-press (laptop)
     bindLongPress(renderer.domElement);
+    bindMouseLongPress(renderer.domElement);
 
     // Bind AR finger-alignment gestures (active only while AR is on)
     renderer.domElement.addEventListener('touchstart', arTouchStart, {passive:false});
