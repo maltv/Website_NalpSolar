@@ -193,6 +193,8 @@ body.game-on #toolbar, body.game-on #legend, body.game-on #measPanel { display:n
 #measList .ml-t { width:16px; }
 #measList .ml-v { width:72px; font-weight:800; color:#fff; font-variant-numeric:tabular-nums; }
 #measSnapBtn.active { background:#c026d3; border-color:#e040fb; }
+#measEditBtn.active { background:#16a34a; border-color:#22c55e; }
+.meas-active #measEditInfo { flex:1; font-weight:700; color:#bff4ff; }
 #measList select { flex:1; min-width:50px; background:rgba(255,255,255,.1);
   border:1px solid rgba(255,255,255,.2); color:#fff; border-radius:6px; padding:3px 4px; font-size:11px; }
 #measList .ml-del { background:none; border:none; cursor:pointer; font-size:13px; }
@@ -351,7 +353,10 @@ body.ar-mode { background:transparent!important; }
   <div class="meas-modes">
     <button class="meas-mode" id="measLenBtn"  onclick="measSetMode('len')">📏 Länge</button>
     <button class="meas-mode" id="measAreaBtn" onclick="measSetMode('area')">⬟ Fläche</button>
+  </div>
+  <div class="meas-modes">
     <button class="meas-mode" id="measSnapBtn" onclick="measToggleSnap()" title="An Werkleitungen einrasten">🧲 Magnet</button>
+    <button class="meas-mode" id="measEditBtn" onclick="measToggleEdit()" title="Eckpunkte bestehender Messungen verschieben">✏️ Punkte</button>
   </div>
   <div class="meas-active" id="measActiveRow" style="display:none">
     <span id="measLive">–</span>
@@ -359,6 +364,10 @@ body.ar-mode { background:transparent!important; }
     <button onclick="measUndoPoint()" title="Letzten Punkt zurück">↶</button>
     <button class="meas-ok" onclick="finishMeasure()">✓ Fertig</button>
     <button onclick="measCancel()" title="Abbrechen">✕</button>
+  </div>
+  <div class="meas-active" id="measEditRow" style="display:none">
+    <span id="measEditInfo">Eckpunkt antippen, dann Zielposition</span>
+    <button class="meas-ok" onclick="measToggleEdit()">Fertig</button>
   </div>
   <div class="meas-layersel">
     <label>Layer:</label>
@@ -382,10 +391,12 @@ body.ar-mode { background:transparent!important; }
       3D-Modell <b>tippen</b>, um Punkte zu setzen (Polygonzug bzw. Polygon).<br><br>
       • <b>Doppeltippen</b> oder <b>✓ Fertig</b> schliesst die Messung ab.<br>
       • <b>↶</b> nimmt den letzten Punkt zurück.<br>
-      • Jede Messung kannst du einem <b>Layer</b> zuweisen (z.&nbsp;B. Graben, Leitung) –
-        eigene Layer mit <b>+</b> anlegen.<br>
-      • <b>🖨 Bericht drucken</b> erstellt einen Ausmassbericht, gruppiert nach Layer
-        mit Summen.
+      • <b>🧲 Magnet</b>: Punkte rasten auf die Werkleitungen ein (auch durch das
+        Gelände hindurch); <b>🧲</b> in der Messzeile zieht alle Punkte auf die Leitung.<br>
+      • <b>✏️ Punkte</b>: bestehende Messung anpassen – Eckpunkt antippen, dann neue
+        Position antippen.<br>
+      • Jede Messung einem <b>Layer</b> zuweisen (eigene mit <b>+</b>).<br>
+      • <b>🖨 Bericht drucken</b> erstellt einen Ausmassbericht (nach Layer, mit Summen).
     </p>
     <div class="bg-row">
       <button class="bg-btn primary" onclick="measHelpClose()">Verstanden</button>
@@ -1190,7 +1201,7 @@ function catchBird(b){
 
 /* ── Tap detection (distinguish tap from orbit drag) ─────── */
 function onTapDown(e){
-  if(!gamePlaying && !measurePlacing()) return;
+  if(!gamePlaying && !measurePlacing() && !measEditOn) return;
   tapStart={x:e.clientX, y:e.clientY, t:performance.now()};
 }
 function onTapUp(e){
@@ -1200,7 +1211,8 @@ function onTapUp(e){
   tapStart=null;
   if(moved>12||held>400) return;     // was a drag / orbit, not a tap
   if(gamePlaying){ pickBird(e.clientX, e.clientY); return; }
-  if(measurePlacing()){ measureTapAt(e.clientX, e.clientY); }
+  if(measurePlacing()){ measureTapAt(e.clientX, e.clientY); return; }
+  if(measEditOn){ measEditTap(e.clientX, e.clientY); }
 }
 function pickBird(cx,cy){
   if(!birdGroup) return;
@@ -1369,7 +1381,9 @@ var measureLayer='Allgemein';
 var measLastTapT=0, measLastTapXY={x:0,y:0};
 /* Magnet-Fang an sichtbare Werkleitungen */
 var measSnapOn=false, snapIndex=null;
-var SNAP_CELL=1.5, SNAP_R=1.5, FIT_R=6.0, SNAP_COLOR=0xff3bd0;
+var SNAP_CELL=2.0, SNAP_R=3.0, FIT_R=6.0, SNAP_COLOR=0xff3bd0;
+/* Punkt-Bearbeitung bestehender Messungen */
+var measEditOn=false, measEditSel=null, editHighlight=null;
 
 function ensureMeasureScene(){
   if(!measureGroup){ measureGroup=new THREE.Group(); measureGroup.renderOrder=20; scene.add(measureGroup); }
@@ -1414,8 +1428,12 @@ function disposeMeasGroup(g){
   });
 }
 
-/* ── Magnet: snap to visible Werkleitungen (IFC mesh vertices) ── */
-function snapKey(ix,iy,iz){ return ix+'|'+iy+'|'+iz; }
+/* ── Magnet: snap to visible Werkleitungen ───────────────────
+   Leitungen liegen unter dem (transparenten) Terrain. Daher:
+   1) Strahl direkt auf die Leitungs-Meshes (durch das Gelände hindurch).
+   2) Fallback: horizontaler (XZ) Nächster-Vertex-Fang am Bodenpunkt –
+      übernimmt die echte Verlegetiefe (y) des Leitungs-Vertex. */
+function wlMeshes(){ var a=[]; if(layers['wl'])a.push(layers['wl']); if(layers['leitungen26'])a.push(layers['leitungen26']); return a; }
 function buildSnapIndex(){
   if(snapIndex) return;
   var cells=new Map(), pts=[];
@@ -1425,26 +1443,44 @@ function buildSnapIndex(){
     for(var i=0;i<pos.count;i++){
       var x=pos.getX(i), y=pos.getY(i), z=pos.getZ(i);
       var idx=pts.length; pts.push(x,y,z);
-      var k=snapKey(Math.floor(x/SNAP_CELL),Math.floor(y/SNAP_CELL),Math.floor(z/SNAP_CELL));
+      var k=Math.floor(x/SNAP_CELL)+'|'+Math.floor(z/SNAP_CELL);   // 2D XZ-Raster
       var a=cells.get(k); if(a) a.push(idx); else cells.set(k,[idx]);
     }
   });
   snapIndex={cells:cells, pts:pts};
   console.info('Snap-Index: '+(pts.length/3)+' Werkleitungs-Vertices');
 }
-function snapToLine(p,r){
+function snapToLineXZ(p,r){
   if(!snapIndex) return null;
-  var cx=Math.floor(p.x/SNAP_CELL), cy=Math.floor(p.y/SNAP_CELL), cz=Math.floor(p.z/SNAP_CELL);
-  var best=null, bestD=r*r, pts=snapIndex.pts;
-  for(var dx=-1;dx<=1;dx++) for(var dy=-1;dy<=1;dy++) for(var dz=-1;dz<=1;dz++){
-    var arr=snapIndex.cells.get(snapKey(cx+dx,cy+dy,cz+dz)); if(!arr) continue;
+  var cx=Math.floor(p.x/SNAP_CELL), cz=Math.floor(p.z/SNAP_CELL), rc=Math.ceil(r/SNAP_CELL);
+  var best=-1, bestD=r*r, pts=snapIndex.pts;
+  for(var dx=-rc;dx<=rc;dx++) for(var dz=-rc;dz<=rc;dz++){
+    var arr=snapIndex.cells.get((cx+dx)+'|'+(cz+dz)); if(!arr) continue;
     for(var i=0;i<arr.length;i++){
-      var j=arr[i], ex=pts[j]-p.x, ey=pts[j+1]-p.y, ez=pts[j+2]-p.z;
-      var d=ex*ex+ey*ey+ez*ez;
-      if(d<bestD){ bestD=d; best=new THREE.Vector3(pts[j],pts[j+1],pts[j+2]); }
+      var j=arr[i], ex=pts[j]-p.x, ez=pts[j+2]-p.z, d=ex*ex+ez*ez;
+      if(d<bestD){ bestD=d; best=j; }
     }
   }
-  return best;
+  return best>=0 ? new THREE.Vector3(pts[best],pts[best+1],pts[best+2]) : null;
+}
+// raycast for measuring: honours magnet (direct line hit, then XZ fallback)
+function measureRaycastSnap(cx,cy){
+  var rect=renderer.domElement.getBoundingClientRect();
+  var m=new THREE.Vector2(((cx-rect.left)/rect.width)*2-1, -((cy-rect.top)/rect.height)*2+1);
+  raycaster.setFromCamera(m,camera);
+  if(measSnapOn){
+    var wl=wlMeshes();
+    if(wl.length){
+      var wlHits=raycaster.intersectObjects(wl,true);
+      if(wlHits.length) return {point:wlHits[0].point.clone(), snapped:true};
+    }
+  }
+  var objs=[]; if(terrainMesh) objs.push(terrainMesh); if(tischeGroup) objs.push(tischeGroup);
+  Object.keys(layers).forEach(function(k){ if(layers[k]) objs.push(layers[k]); });
+  var hits=raycaster.intersectObjects(objs,true);
+  if(!hits.length) return null;
+  if(measSnapOn){ var s=snapToLineXZ(hits[0].point, SNAP_R); if(s) return {point:s, snapped:true}; }
+  return {point:hits[0].point.clone(), snapped:false};
 }
 
 function measureRaycast(cx,cy){
@@ -1479,29 +1515,35 @@ function measureTapAt(cx,cy){
   var isDouble=(now-measLastTapT<350)&&Math.hypot(cx-measLastTapXY.x,cy-measLastTapXY.y)<25;
   measLastTapT=now; measLastTapXY={x:cx,y:cy};
   if(isDouble){ finishMeasure(); return; }
-  var p=measureRaycast(cx,cy);
-  if(!p){ flashMsg('Kein Punkt auf der Oberfläche'); return; }
-  var snapped=false;
-  if(measSnapOn){ var s=snapToLine(p,SNAP_R); if(s){ p=s; snapped=true; if(navigator.vibrate) navigator.vibrate(30); } }
-  measurePts.push(p); measureSnapped.push(snapped); rebuildTmp();
+  var r=measureRaycastSnap(cx,cy);
+  if(!r){ flashMsg('Kein Punkt auf der Oberfläche'); return; }
+  if(r.snapped && navigator.vibrate) navigator.vibrate(30);
+  measurePts.push(r.point); measureSnapped.push(r.snapped); rebuildTmp();
 }
 
+// (re)build the drawing of a finished measurement from its points
+function rebuildMeasurement(m){
+  disposeMeasGroup(m.group);
+  while(m.group.children.length) m.group.remove(m.group.children[0]);
+  var color=m.type==='area'?0xffb300:0x00e5ff;
+  addMarkers(m.group, m.pts, m.snapped, color);
+  m.group.add(makeLine(m.pts, color, m.type==='area'));
+  m.value=m.type==='area'?polygonArea(m.pts):polylineLength(m.pts);
+  var c=measCentroid(m.pts); c.y+=2;
+  var unit=m.type==='area'?'m²':'m';
+  m.group.add(makeMeasLabel('#'+m.nr+' · '+m.value.toFixed(2)+' '+unit, c, m.type==='area'?'meas-area':'meas-len'));
+}
 window.finishMeasure=function(){
   if(!measureMode) return;
   var need=measureMode==='area'?3:2;
   if(measurePts.length<need){ flashMsg('Mind. '+need+' Punkte setzen'); return; }
   ensureMeasureScene();
-  var color=measureMode==='area'?0xffb300:0x00e5ff;
-  var value=measureMode==='area'?polygonArea(measurePts):polylineLength(measurePts);
-  var nr=++measureNr;
-  var g=new THREE.Group();
-  addMarkers(g,measurePts,measureSnapped,color);
-  g.add(makeLine(measurePts,color,measureMode==='area'));
-  var c=measCentroid(measurePts); c.y+=2;
-  var unit=measureMode==='area'?'m²':'m';
-  g.add(makeMeasLabel('#'+nr+' · '+value.toFixed(2)+' '+unit, c, measureMode==='area'?'meas-area':'meas-len'));
-  measureGroup.add(g);
-  measurements.push({ id:measureSeq++, nr:nr, type:measureMode, value:value, layer:measureLayer, group:g });
+  var m={ id:measureSeq++, nr:++measureNr, type:measureMode, layer:measureLayer,
+          pts:measurePts.map(function(p){return p.clone();}), snapped:measureSnapped.slice(),
+          value:0, group:new THREE.Group() };
+  measureGroup.add(m.group);
+  rebuildMeasurement(m);
+  measurements.push(m);
   measurePts=[]; measureSnapped=[]; rebuildTmp(); refreshMeasList();
 };
 window.measUndoPoint=function(){ if(measurePts.length){ measurePts.pop(); measureSnapped.pop(); rebuildTmp(); } };
@@ -1521,7 +1563,7 @@ window.measFitToLine=function(){
   if(!snapIndex || !snapIndex.pts.length){ flashMsg('Keine Werkleitungen geladen'); return; }
   var hit=0;
   for(var i=0;i<measurePts.length;i++){
-    var s=snapToLine(measurePts[i],FIT_R);
+    var s=snapToLineXZ(measurePts[i],FIT_R);
     if(s){ measurePts[i]=s; measureSnapped[i]=true; hit++; }
   }
   rebuildTmp();
@@ -1529,11 +1571,64 @@ window.measFitToLine=function(){
 };
 
 window.measSetMode=function(m){
+  if(measEditOn) measEditExit();           // placing and editing are exclusive
   measCancel(); measureMode=m;
   document.getElementById('measLenBtn').classList.toggle('active',m==='len');
   document.getElementById('measAreaBtn').classList.toggle('active',m==='area');
   document.getElementById('measActiveRow').style.display=m?'flex':'none';
   updateMeasLive();
+};
+
+/* ── Punkte bestehender Messungen bearbeiten ─────────────── */
+function showEditHighlight(p){
+  ensureMeasureScene();
+  if(!editHighlight){
+    editHighlight=new THREE.Mesh(new THREE.SphereGeometry(1.0,12,10),
+      new THREE.MeshBasicMaterial({color:0x00ff88,transparent:true,opacity:0.9}));
+    editHighlight.renderOrder=23; scene.add(editHighlight);
+  }
+  editHighlight.position.copy(p); editHighlight.visible=true;
+}
+function hideEditHighlight(){ if(editHighlight) editHighlight.visible=false; }
+function pickVertex(cx,cy){
+  var rect=renderer.domElement.getBoundingClientRect();
+  var best=null, bestD=28*28, t=new THREE.Vector3();
+  measurements.forEach(function(m){
+    m.pts.forEach(function(p,idx){
+      t.copy(p).project(camera); if(t.z>1) return;
+      var sx=(t.x*0.5+0.5)*rect.width, sy=(-t.y*0.5+0.5)*rect.height;
+      var ddx=sx-(cx-rect.left), ddy=sy-(cy-rect.top), dd=ddx*ddx+ddy*ddy;
+      if(dd<bestD){ bestD=dd; best={m:m,idx:idx}; }
+    });
+  });
+  return best;
+}
+function measEditTap(cx,cy){
+  var near=pickVertex(cx,cy);
+  if(near){ measEditSel=near; showEditHighlight(near.m.pts[near.idx]);
+            flashMsg('Punkt #'+near.m.nr+' gewählt – tippe Zielposition'); return; }
+  if(!measEditSel){ flashMsg('Erst einen Eckpunkt antippen'); return; }
+  var r=measureRaycastSnap(cx,cy);
+  if(!r){ flashMsg('Kein Zielpunkt'); return; }
+  measEditSel.m.pts[measEditSel.idx]=r.point;
+  measEditSel.m.snapped[measEditSel.idx]=r.snapped;
+  rebuildMeasurement(measEditSel.m);
+  refreshMeasList();
+  showEditHighlight(r.point);
+  if(r.snapped && navigator.vibrate) navigator.vibrate(30);
+}
+function measEditExit(){
+  measEditOn=false; measEditSel=null; hideEditHighlight();
+  document.getElementById('measEditBtn').classList.remove('active');
+  document.getElementById('measEditRow').style.display='none';
+}
+window.measToggleEdit=function(){
+  if(measEditOn){ measEditExit(); return; }
+  measSetMode(null);                       // stop placing
+  measEditOn=true; measEditSel=null;
+  document.getElementById('measEditBtn').classList.add('active');
+  document.getElementById('measEditRow').style.display='flex';
+  if(!measurements.length) flashMsg('Noch keine Messungen zum Bearbeiten');
 };
 window.measSetLayer=function(v){ measureLayer=v; };
 window.measAddLayer=function(){
@@ -1548,6 +1643,7 @@ window.measReassign=function(id,val){
 };
 window.measDelete=function(id){
   for(var i=0;i<measurements.length;i++){ if(measurements[i].id===id){
+    if(measEditSel && measEditSel.m===measurements[i]){ measEditSel=null; hideEditHighlight(); }
     disposeMeasGroup(measurements[i].group);                 // remove 3D label DOM too
     if(measureGroup) measureGroup.remove(measurements[i].group);
     measurements.splice(i,1); break; } }
@@ -1555,6 +1651,7 @@ window.measDelete=function(id){
 };
 window.measClearAll=function(){
   if(!measurements.length) return;
+  measEditSel=null; hideEditHighlight();
   measurements.forEach(function(m){ disposeMeasGroup(m.group); });
   if(measureGroup){ while(measureGroup.children.length) measureGroup.remove(measureGroup.children[0]); }
   measurements=[]; refreshMeasList();
@@ -1739,7 +1836,7 @@ function setOrbitTarget(clientX,clientY){
 function bindLongPress(el){
   el.addEventListener('touchstart',function(e){
     if(arActive){clearTimeout(longTimer);return;}   // AR uses finger drag for alignment
-    if(measurePlacing()){clearTimeout(longTimer);return;}  // measuring places points by tap
+    if(measurePlacing()||measEditOn){clearTimeout(longTimer);return;}  // measuring/editing place points by tap
     if(e.touches.length!==1){clearTimeout(longTimer);return;}
     var t=e.touches[0]; longPos={x:t.clientX,y:t.clientY};
     longTimer=setTimeout(function(){if(longPos) setOrbitTarget(longPos.x,longPos.y);},550);
@@ -1761,7 +1858,7 @@ function bindMouseLongPress(el){
   function cancel(){ if(mTimer){clearTimeout(mTimer);mTimer=null;} mPos=null; }
   el.addEventListener('pointerdown',function(e){
     if(e.pointerType!=='mouse' || e.button!==0) return;
-    if(arActive || measurePlacing() || gamePlaying) return;
+    if(arActive || measurePlacing() || measEditOn || gamePlaying) return;
     mPos={x:e.clientX,y:e.clientY};
     mTimer=setTimeout(function(){ if(mPos) setOrbitTarget(mPos.x,mPos.y); cancel(); },500);
   });
