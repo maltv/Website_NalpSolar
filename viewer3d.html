@@ -138,6 +138,14 @@ html, body { width:100%; height:100%; overflow:hidden; background:#0d1117;
 #bgTimer.low { color:#ff5a5a; }
 #bgScore { color:#ffd700; }
 #bgHud button { background:none; border:none; color:rgba(255,255,255,.6); font-size:16px; cursor:pointer; padding:0 2px; }
+#arCatchHud {
+  display:none; position:fixed; top:96px; left:50%; transform:translateX(-50%); z-index:160;
+  gap:12px; align-items:center; background:rgba(5,10,20,.85);
+  border:1px solid rgba(120,220,120,.5); border-radius:20px; padding:6px 14px;
+  backdrop-filter:blur(10px); font-weight:800; font-size:15px; color:#bff4bf;
+}
+#arCatchHud b { color:#ffd700; }
+#arCatchHud button { background:none; border:none; color:rgba(255,255,255,.6); font-size:16px; cursor:pointer; padding:0 2px; }
 body.game-on #toolbar, body.game-on #legend, body.game-on #measPanel { display:none; }
 .bg-best { font-size:13px; font-weight:700; color:#ffd700; margin-bottom:14px; }
 #bgNameRow { display:flex; gap:8px; justify-content:center; margin-bottom:14px; }
@@ -279,8 +287,10 @@ body.ar-mode { background:transparent!important; }
   <div class="sep"></div>
   <button class="tb-btn"        id="btnGps"     onclick="toggleGps()">📍 GPS</button>
   <button class="tb-btn"        id="btnAR"      onclick="toggleAR()">📷 AR</button>
+  <button class="tb-btn"        id="btnShot"    onclick="captureScreenshot()" title="Screenshot">📸</button>
   <button class="tb-btn"        id="btnMeasure" onclick="toggleMeasure()" style="border-color:rgba(0,200,255,.5)">📐 Messen</button>
   <button class="tb-btn"        id="btnBirds"   onclick="birdGame()" style="border-color:rgba(120,220,120,.5)">🐦 Birkhuhn-Jagd</button>
+  <button class="tb-btn"        id="btnBirdAR"  onclick="startBirdAR()" style="border-color:rgba(120,220,120,.5)">🐦 AR-Fang</button>
   <button class="tb-btn"                        onclick="resetCam()">↺ Ansicht</button>
 </div>
 
@@ -307,6 +317,11 @@ body.ar-mode { background:transparent!important; }
 </div>
 
 <div id="orbitHint">📍 Orbit-Punkt gesetzt</div>
+
+<div id="arCatchHud">
+  <span>🐦 gefangen: <b id="arCatchScore">0</b></span>
+  <button onclick="exitBirdARBtn()" title="AR-Fang beenden">✕</button>
+</div>
 
 <div id="bgHud">
   <span id="bgTimer">2:00</span>
@@ -457,6 +472,8 @@ var layers={}, allLbls=[], labelsOn=false;
 var terrainMesh=null, satTex=null, terrainOn=true, satOn=true;
 var gpsGroup=null, gpsWid=null, gpsOn=false;
 var tischeGroup=null, tischeLbls=[], tischeOn=true;
+var tischeItems=[];                 // {mesh, legs[], lbl, x, z} pro Tisch (für AR-Cull)
+var AR_TISCH_HIDE_R=10;             // Tische im 10m-Umkreis im AR ausblenden
 var tischeIndex={}, searchMarker=null, searchMarkerT=0;
 
 /* Birkhühner (black grouse) wildlife */
@@ -471,6 +488,8 @@ var MAX_CATCH_DIST=100;   // m — must be zoomed in close enough to catch a bir
 var musicOn=false, musicGain=null, musicTimer=null;
 var music={step:0, nextTime:0, bpm:128};
 var tapStart=null;
+/* AR-Birkhuhn-Fang (Pokémon-Go-Stil) */
+var birdARon=false, birdARpending=false, birdBaseY=0, savedPerimeter=null;
 var perimeter={cx:95,cz:-409,hx:250,hz:250};
 var _birdRay=new THREE.Raycaster(), _birdOrig=new THREE.Vector3(), _birdDown=new THREE.Vector3(0,-1,0);
 var _v1=new THREE.Vector3(), _v2=new THREE.Vector3(), _v3=new THREE.Vector3();
@@ -647,6 +666,7 @@ async function loadTische(){
   tischeGroup=new THREE.Group();
   tischeGroup.renderOrder=5;
   tischeLbls=[];
+  tischeItems=[];
   tischeIndex={};
 
   // Rotation: Ry(-az) * Rx(-60°)
@@ -682,6 +702,7 @@ async function loadTische(){
     mesh.quaternion.copy(tmpQ);
     tischeGroup.add(mesh);
 
+    var legsForItem=[];
     // Two legs at front (lower) edge corners: local (±len/2, -0.125, -1.5)
     var half=len/2;
     [[half,-0.125,-1.5],[-half,-0.125,-1.5]].forEach(function(lc){
@@ -701,7 +722,7 @@ async function loadTische(){
       var leg=new THREE.Mesh(legGeom, legMat);
       leg.position.set(wc.x, gY+legLen/2, wc.z);
       leg.scale.y=legLen;
-      tischeGroup.add(leg);
+      tischeGroup.add(leg); legsForItem.push(leg);
     });
 
     // ID label above panel center
@@ -713,6 +734,7 @@ async function loadTische(){
 
     // Index for ID search (camera position = table centre)
     tischeIndex[String(id).trim()]={ pos:new THREE.Vector3(px,py,pz), lbl:lbl };
+    tischeItems.push({ mesh:mesh, legs:legsForItem, lbl:lbl, x:px, z:pz });
   });
 
   scene.add(tischeGroup);
@@ -731,6 +753,19 @@ function hideTischeLabels(hide){
   for(var i=0;i<tischeLbls.length;i++) tischeLbls[i].visible=!hide;
 }
 
+// AR: hide Modultische (+ legs + labels) within AR_TISCH_HIDE_R around the user
+function updateArTischeCull(){
+  var on = arActive && arPos;
+  for(var i=0;i<tischeItems.length;i++){
+    var it=tischeItems[i];
+    var near = on && ((it.x-arPos.x)*(it.x-arPos.x)+(it.z-arPos.z)*(it.z-arPos.z) < AR_TISCH_HIDE_R*AR_TISCH_HIDE_R);
+    it.mesh.visible = !near;
+    for(var j=0;j<it.legs.length;j++) it.legs[j].visible = !near;
+    it.lbl.userData.arCulled = near;
+    if(near) it.lbl.visible=false;
+  }
+}
+
 /* ── Tisch-Label: distance-based fade (far = transparent, near = 1) ── */
 var LBL_NEAR=80, LBL_FAR=360;   // metres
 function updateTischeLabels(){
@@ -739,6 +774,7 @@ function updateTischeLabels(){
   var camP=camera.position;
   for(var i=0;i<tischeLbls.length;i++){
     var l=tischeLbls[i];
+    if(l.userData.arCulled){ l.visible=false; continue; }   // AR: near user → hidden
     var d=camP.distanceTo(l.position);
     var op = d<=LBL_NEAR ? 1 : (d>=LBL_FAR ? 0 : 1-(d-LBL_NEAR)/(LBL_FAR-LBL_NEAR));
     if(op<=0.02){
@@ -873,6 +909,7 @@ function makeBirkhuhn(){
 }
 
 function placeBirdOnTerrain(b){
+  if(birdARon){ b.group.position.set(b.pos.x, birdBaseY+0.09, b.pos.z); return; } // AR: flat at user height
   var y=0;
   if(terrainMesh){
     _birdOrig.set(b.pos.x,500,b.pos.z);
@@ -1194,14 +1231,71 @@ function playCatch(){
 function catchBird(b){
   if(b.caught) return;
   b.caught=true; b.caughtT=0;
-  gameFound++; updateGameHud(); playCatch();
+  gameFound++; updateGameHud(); if(birdARon) updateArCatchHud(); playCatch();
   if(navigator.vibrate) navigator.vibrate(45);
   addBird(true);                 // respawn → no upper limit on the score
 }
 
+/* ═══════════════════════════════════════════════════════════
+   AR-BIRKHUHN-FANG (Pokémon-Go-Stil) — Vögel im Kamerabild fangen
+═══════════════════════════════════════════════════════════ */
+function updateArCatchHud(){ var el=document.getElementById('arCatchScore'); if(el) el.textContent=gameFound; }
+window.startBirdAR=async function(){
+  if(!arActive){ await startAR(); }       // enter AR (camera + orientation + GPS)
+  if(!arActive) return;                    // permission denied etc.
+  savedPerimeter={cx:perimeter.cx,cz:perimeter.cz,hx:perimeter.hx,hz:perimeter.hz};
+  gameFound=0; initBirdAudio();
+  document.getElementById('arCatchHud').style.display='flex';
+  updateArCatchHud();
+  if(arPos){ spawnBirdAR(); }
+  else { birdARpending=true; document.getElementById('arGpsInfo').textContent='🐦 warte auf GPS …'; }
+};
+function spawnBirdAR(){
+  if(!arPos) return;
+  birdARpending=false; birdBaseY=arPos.y;
+  perimeter.cx=arPos.x; perimeter.cz=arPos.z; perimeter.hx=18; perimeter.hz=18;  // Vögel ±18m um dich
+  birdARon=true;
+  resetBirdsForGame(8);
+  updateArCatchHud();
+}
+function exitBirdAR(keepAR){
+  birdARon=false; birdARpending=false;
+  if(birdGroup){ scene.remove(birdGroup); birdGroup=null; birds=[]; }
+  birdsOn=false;
+  if(savedPerimeter){ perimeter.cx=savedPerimeter.cx; perimeter.cz=savedPerimeter.cz;
+                      perimeter.hx=savedPerimeter.hx; perimeter.hz=savedPerimeter.hz; savedPerimeter=null; }
+  var hud=document.getElementById('arCatchHud'); if(hud) hud.style.display='none';
+  if(!keepAR && arActive) stopAR();
+}
+window.exitBirdARBtn=function(){ exitBirdAR(false); };
+
+/* ── Screenshot (3D, im AR inkl. Kamerabild) ─────────────── */
+window.captureScreenshot=function(){
+  try{
+    renderer.render(scene,camera); lblRenderer.render(scene,camera);
+    var src=renderer.domElement, w=src.width, h=src.height;
+    var out=document.createElement('canvas'); out.width=w; out.height=h;
+    var ctx=out.getContext('2d');
+    if(arActive && arVideo && arVideo.videoWidth){      // AR: Kamerabild als Hintergrund (cover)
+      var vw=arVideo.videoWidth, vh=arVideo.videoHeight;
+      var sc=Math.max(w/vw,h/vh), dw=vw*sc, dh=vh*sc;
+      ctx.drawImage(arVideo,(w-dw)/2,(h-dh)/2,dw,dh);
+    } else { ctx.fillStyle='#0d1525'; ctx.fillRect(0,0,w,h); }
+    ctx.drawImage(src,0,0,w,h);
+    out.toBlob(function(blob){
+      if(!blob){ flashMsg('Screenshot fehlgeschlagen'); return; }
+      var url=URL.createObjectURL(blob), a=document.createElement('a');
+      a.href=url; a.download='nalpsolar_'+Date.now()+'.png';
+      document.body.appendChild(a); a.click();
+      setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); },1500);
+      flashMsg('📸 Screenshot gespeichert');
+    },'image/png');
+  }catch(e){ console.warn('screenshot',e); flashMsg('Screenshot fehlgeschlagen'); }
+};
+
 /* ── Tap detection (distinguish tap from orbit drag) ─────── */
 function onTapDown(e){
-  if(!gamePlaying && !measurePlacing() && !measEditOn) return;
+  if(!gamePlaying && !birdARon && !measurePlacing() && !measEditOn) return;
   tapStart={x:e.clientX, y:e.clientY, t:performance.now()};
 }
 function onTapUp(e){
@@ -1210,7 +1304,7 @@ function onTapUp(e){
   var held=performance.now()-tapStart.t;
   tapStart=null;
   if(moved>12||held>400) return;     // was a drag / orbit, not a tap
-  if(gamePlaying){ pickBird(e.clientX, e.clientY); return; }
+  if(gamePlaying || birdARon){ pickBird(e.clientX, e.clientY); return; }
   if(measurePlacing()){ measureTapAt(e.clientX, e.clientY); return; }
   if(measEditOn){ measEditTap(e.clientX, e.clientY); }
 }
@@ -2016,6 +2110,8 @@ async function startAR(){
         if(th.length) s.y=th[0].point.y; // terrain height (eye offset +1.6m added in animate)
       }
       arPos=s;
+      updateArTischeCull();                 // hide tables within 10m of the user
+      if(birdARpending) spawnBirdAR();       // start the AR catch game once we have a fix
       var acc=Math.round(pos.coords.accuracy);
       document.getElementById('arGpsInfo').textContent='GPS ±'+acc+'m';
     },function(err){
@@ -2065,6 +2161,8 @@ function stopAR(){
   controls.target.copy(camT1);
   controls.update();
   arActive=false; arPos=null;
+  if(birdARon || birdARpending) exitBirdAR(true);   // tear down AR catch game if running
+  updateArTischeCull();                              // restore all tables
   document.getElementById('btnAR').classList.remove('active');
   document.getElementById('arOverlay').style.display='none';
   resetCam();
@@ -2205,7 +2303,7 @@ async function init(){
     txt('Szene aufbauen …'); pct(5);
 
     var container=document.getElementById('canvas3d');
-    renderer=new THREE.WebGLRenderer({antialias:true, alpha:true});
+    renderer=new THREE.WebGLRenderer({antialias:true, alpha:true, preserveDrawingBuffer:true});
     renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
     renderer.sortObjects=true;
     container.appendChild(renderer.domElement);
