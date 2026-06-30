@@ -138,7 +138,7 @@ html, body { width:100%; height:100%; overflow:hidden; background:#0d1117;
 #bgTimer.low { color:#ff5a5a; }
 #bgScore { color:#ffd700; }
 #bgHud button { background:none; border:none; color:rgba(255,255,255,.6); font-size:16px; cursor:pointer; padding:0 2px; }
-body.game-on #toolbar, body.game-on #legend { display:none; }
+body.game-on #toolbar, body.game-on #legend, body.game-on #measPanel { display:none; }
 .bg-best { font-size:13px; font-weight:700; color:#ffd700; margin-bottom:14px; }
 #bgNameRow { display:flex; gap:8px; justify-content:center; margin-bottom:14px; }
 #bgNameRow .tb-input { width:140px; text-align:center; }
@@ -154,6 +154,54 @@ body.game-on #toolbar, body.game-on #legend { display:none; }
 #bgBoard li.bg-empty::before { content:''; width:0; }
 .bm-name { flex:1; text-align:left; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .bm-score { font-weight:800; color:#ffd700; font-variant-numeric:tabular-nums; }
+
+/* ── Mess- & Ausmass-Panel ───────────────────────────────── */
+.lbl-measure { background:rgba(0,30,45,.9); border-color:#00e5ff; color:#bff4ff; font-size:11px; font-weight:800; }
+.lbl-measure.meas-area { background:rgba(50,35,0,.9); border-color:#ffb300; color:#ffe9b0; }
+#measPanel {
+  display:none; position:fixed; top:46px; right:8px; z-index:160; width:248px;
+  max-height:calc(100vh - 84px); flex-direction:column;
+  background:rgba(5,10,20,.92); border:1px solid rgba(0,200,255,.3); border-radius:12px;
+  backdrop-filter:blur(12px); padding:10px; gap:8px; font-size:12px;
+}
+.meas-head { display:flex; align-items:center; gap:6px; font-weight:800; font-size:13px; }
+.meas-x { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.2); color:#fff;
+  border-radius:7px; width:26px; height:26px; cursor:pointer; font-weight:700; }
+.meas-modes { display:flex; gap:6px; }
+.meas-mode { flex:1; border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.07); color:#fff;
+  border-radius:8px; padding:8px 4px; font-size:12px; font-weight:700; cursor:pointer; }
+.meas-mode.active { background:#0b5fff; border-color:#2979ff; }
+.meas-active { display:flex; align-items:center; gap:5px; background:rgba(0,200,255,.08);
+  border:1px solid rgba(0,200,255,.25); border-radius:8px; padding:6px 8px; }
+.meas-active #measLive { flex:1; font-weight:700; color:#bff4ff; }
+.meas-active button { background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2);
+  color:#fff; border-radius:7px; padding:5px 7px; cursor:pointer; font-size:12px; font-weight:700; }
+.meas-active button.meas-ok { background:#16a34a; border-color:#22c55e; }
+.meas-layersel { display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
+.meas-layersel label { opacity:.7; }
+.meas-layersel select, .meas-layersel input {
+  background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); color:#fff;
+  border-radius:7px; padding:4px 6px; font-size:12px; outline:none; }
+.meas-layersel select { flex:1; min-width:70px; }
+.meas-layersel input { width:80px; }
+.meas-layersel button { background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.25);
+  color:#fff; border-radius:7px; width:26px; height:26px; cursor:pointer; font-weight:800; }
+#measList { list-style:none; margin:0; padding:0; overflow-y:auto; max-height:34vh; display:flex; flex-direction:column; gap:4px; }
+#measList li { display:flex; align-items:center; gap:5px; background:rgba(255,255,255,.05);
+  border-radius:7px; padding:4px 6px; }
+#measList .ml-t { width:16px; }
+#measList .ml-v { width:78px; font-weight:800; color:#fff; font-variant-numeric:tabular-nums; }
+#measList select { flex:1; min-width:50px; background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.2); color:#fff; border-radius:6px; padding:3px 4px; font-size:11px; }
+#measList .ml-del { background:none; border:none; cursor:pointer; font-size:13px; }
+.meas-totals { font-size:11px; color:rgba(255,255,255,.8); border-top:1px solid rgba(255,255,255,.12); padding-top:6px; }
+.meas-foot { display:flex; gap:6px; }
+.meas-foot button { flex:1; border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.08);
+  color:#fff; border-radius:8px; padding:7px 6px; font-size:12px; font-weight:700; cursor:pointer; }
+.meas-foot .meas-print { background:#0b5fff; border-color:#2979ff; }
+#measHelp { display:none; position:fixed; inset:0; z-index:320; align-items:center; justify-content:center;
+  padding:20px; background:rgba(3,7,15,.72); backdrop-filter:blur(6px); }
+#measHelp p { font-size:13px; line-height:1.6; }
 
 /* ── AR Mode ─────────────────────────────────────────────── */
 #arOverlay {
@@ -227,6 +275,7 @@ body.ar-mode { background:transparent!important; }
   <div class="sep"></div>
   <button class="tb-btn"        id="btnGps"     onclick="toggleGps()">📍 GPS</button>
   <button class="tb-btn"        id="btnAR"      onclick="toggleAR()">📷 AR</button>
+  <button class="tb-btn"        id="btnMeasure" onclick="toggleMeasure()" style="border-color:rgba(0,200,255,.5)">📐 Messen</button>
   <button class="tb-btn"        id="btnBirds"   onclick="birdGame()" style="border-color:rgba(120,220,120,.5)">🐦 Birkhuhn-Jagd</button>
   <button class="tb-btn"                        onclick="resetCam()">↺ Ansicht</button>
 </div>
@@ -286,6 +335,56 @@ body.ar-mode { background:transparent!important; }
     <div class="bg-row">
       <button class="bg-btn primary" onclick="birdGameStart()">↻ Nochmal</button>
       <button class="bg-btn" onclick="birdGameClose()">Schliessen</button>
+    </div>
+  </div>
+</div>
+
+<div id="measPanel">
+  <div class="meas-head">
+    <span>📐 Messungen</span>
+    <span style="flex:1"></span>
+    <button class="meas-x" onclick="measHelpShow()" title="Anleitung">?</button>
+    <button class="meas-x" onclick="toggleMeasure()" title="Schliessen">✕</button>
+  </div>
+  <div class="meas-modes">
+    <button class="meas-mode" id="measLenBtn"  onclick="measSetMode('len')">📏 Länge</button>
+    <button class="meas-mode" id="measAreaBtn" onclick="measSetMode('area')">⬟ Fläche</button>
+  </div>
+  <div class="meas-active" id="measActiveRow" style="display:none">
+    <span id="measLive">–</span>
+    <button onclick="measUndoPoint()" title="Letzten Punkt zurück">↶</button>
+    <button class="meas-ok" onclick="finishMeasure()">✓ Fertig</button>
+    <button onclick="measCancel()" title="Abbrechen">✕</button>
+  </div>
+  <div class="meas-layersel">
+    <label>Layer:</label>
+    <select id="measLayerSel" onchange="measSetLayer(this.value)"></select>
+    <input id="measNewLayer" placeholder="neuer Layer" onkeydown="if(event.key==='Enter'){measAddLayer();}">
+    <button onclick="measAddLayer()">+</button>
+  </div>
+  <ol id="measList"></ol>
+  <div class="meas-totals" id="measTotals"></div>
+  <div class="meas-foot">
+    <button class="meas-print" onclick="measPrint()">🖨 Bericht drucken</button>
+    <button onclick="measClearAll()">Alle löschen</button>
+  </div>
+</div>
+
+<div id="measHelp">
+  <div class="bg-card" style="max-width:380px;text-align:left">
+    <h2 style="text-align:center">📐 Messen &amp; Ausmass</h2>
+    <p style="text-align:left">
+      <b>📏 Länge</b> oder <b>⬟ Fläche</b> wählen, dann nacheinander auf das
+      3D-Modell <b>tippen</b>, um Punkte zu setzen (Polygonzug bzw. Polygon).<br><br>
+      • <b>Doppeltippen</b> oder <b>✓ Fertig</b> schliesst die Messung ab.<br>
+      • <b>↶</b> nimmt den letzten Punkt zurück.<br>
+      • Jede Messung kannst du einem <b>Layer</b> zuweisen (z.&nbsp;B. Graben, Leitung) –
+        eigene Layer mit <b>+</b> anlegen.<br>
+      • <b>🖨 Bericht drucken</b> erstellt einen Ausmassbericht, gruppiert nach Layer
+        mit Summen.
+    </p>
+    <div class="bg-row">
+      <button class="bg-btn primary" onclick="measHelpClose()">Verstanden</button>
     </div>
   </div>
 </div>
@@ -1087,16 +1186,17 @@ function catchBird(b){
 
 /* ── Tap detection (distinguish tap from orbit drag) ─────── */
 function onTapDown(e){
-  if(!gamePlaying) return;
+  if(!gamePlaying && !measurePlacing()) return;
   tapStart={x:e.clientX, y:e.clientY, t:performance.now()};
 }
 function onTapUp(e){
-  if(!gamePlaying||!tapStart) return;
+  if(!tapStart) return;
   var moved=Math.hypot(e.clientX-tapStart.x, e.clientY-tapStart.y);
   var held=performance.now()-tapStart.t;
   tapStart=null;
   if(moved>12||held>400) return;     // was a drag / orbit, not a tap
-  pickBird(e.clientX, e.clientY);
+  if(gamePlaying){ pickBird(e.clientX, e.clientY); return; }
+  if(measurePlacing()){ measureTapAt(e.clientX, e.clientY); }
 }
 function pickBird(cx,cy){
   if(!birdGroup) return;
@@ -1254,6 +1354,213 @@ window.birdGameClose=function(){
   document.getElementById('btnBirds').classList.remove('active');
 };
 
+/* ═══════════════════════════════════════════════════════════
+   MESS- & AUSMASS-TOOLS  (Länge / Polygon / Fläche + Layer + Bericht)
+═══════════════════════════════════════════════════════════ */
+var measureActive=false, measureMode=null;          // 'len' | 'area'
+var measurePts=[], measureTmp=null, measureGroup=null;
+var measurements=[], measureSeq=1;
+var measureLayers=['Allgemein','Graben','Leitung','Fundament','Fläche A','Fläche B'];
+var measureLayer='Allgemein';
+var measLastTapT=0, measLastTapXY={x:0,y:0};
+
+function ensureMeasureScene(){
+  if(!measureGroup){ measureGroup=new THREE.Group(); measureGroup.renderOrder=20; scene.add(measureGroup); }
+  if(!measureTmp){ measureTmp=new THREE.Group(); measureTmp.renderOrder=21; scene.add(measureTmp); }
+}
+function measurePlacing(){ return measureActive && !!measureMode; }
+
+/* ── geometry ────────────────────────────────────────────── */
+function polylineLength(pts){ var s=0; for(var i=1;i<pts.length;i++) s+=pts[i].distanceTo(pts[i-1]); return s; }
+function polygonArea(pts){          // Newell's method → planar polygon area in 3D
+  var n=pts.length, nx=0,ny=0,nz=0;
+  for(var i=0;i<n;i++){ var a=pts[i], b=pts[(i+1)%n];
+    nx+=(a.y-b.y)*(a.z+b.z); ny+=(a.z-b.z)*(a.x+b.x); nz+=(a.x-b.x)*(a.y+b.y); }
+  return Math.sqrt(nx*nx+ny*ny+nz*nz)/2;
+}
+function measCentroid(pts){ var c=new THREE.Vector3(); pts.forEach(function(p){c.add(p);}); return c.multiplyScalar(1/pts.length); }
+
+/* ── drawing helpers ─────────────────────────────────────── */
+function makeMarker(p,color){
+  var s=new THREE.Mesh(new THREE.SphereGeometry(0.5,10,8), new THREE.MeshBasicMaterial({color:color}));
+  s.position.copy(p); s.renderOrder=22; return s;
+}
+function makeLine(pts,color,closed){
+  var arr=pts.slice(); if(closed && pts.length>2) arr=arr.concat([pts[0]]);
+  var g=new THREE.BufferGeometry().setFromPoints(arr);
+  var l=new THREE.Line(g, new THREE.LineBasicMaterial({color:color})); l.renderOrder=22; return l;
+}
+function makeMeasLabel(text,pos,cls){
+  var d=document.createElement('div'); d.className='lbl lbl-measure '+(cls||''); d.textContent=text;
+  var o=new THREE.CSS2DObject(d); o.position.copy(pos); return o;
+}
+
+function measureRaycast(cx,cy){
+  var rect=renderer.domElement.getBoundingClientRect();
+  var m=new THREE.Vector2(((cx-rect.left)/rect.width)*2-1, -((cy-rect.top)/rect.height)*2+1);
+  raycaster.setFromCamera(m,camera);
+  var objs=[]; if(terrainMesh) objs.push(terrainMesh); if(tischeGroup) objs.push(tischeGroup);
+  Object.keys(layers).forEach(function(k){ if(layers[k]) objs.push(layers[k]); });
+  var hits=raycaster.intersectObjects(objs,true);
+  return hits.length ? hits[0].point.clone() : null;
+}
+
+function rebuildTmp(){
+  ensureMeasureScene();
+  while(measureTmp.children.length) measureTmp.remove(measureTmp.children[0]);
+  if(measurePts.length){
+    var color=measureMode==='area'?0xffb300:0x00e5ff;
+    measurePts.forEach(function(p){ measureTmp.add(makeMarker(p,color)); });
+    if(measurePts.length>=2) measureTmp.add(makeLine(measurePts,color,false));
+  }
+  updateMeasLive();
+}
+function updateMeasLive(){
+  var el=document.getElementById('measLive'); if(!el) return;
+  if(!measureMode){ el.textContent='Modus wählen'; return; }
+  if(measureMode==='len') el.textContent='Länge: '+polylineLength(measurePts).toFixed(2)+' m  ('+measurePts.length+' Pkt)';
+  else el.textContent='Fläche: '+(measurePts.length>=3?polygonArea(measurePts).toFixed(2)+' m²':'–')+'  ('+measurePts.length+' Pkt)';
+}
+
+function measureTapAt(cx,cy){
+  var now=performance.now();
+  var isDouble=(now-measLastTapT<350)&&Math.hypot(cx-measLastTapXY.x,cy-measLastTapXY.y)<25;
+  measLastTapT=now; measLastTapXY={x:cx,y:cy};
+  if(isDouble){ finishMeasure(); return; }
+  var p=measureRaycast(cx,cy);
+  if(!p){ flashMsg('Kein Punkt auf der Oberfläche'); return; }
+  measurePts.push(p); rebuildTmp();
+}
+
+window.finishMeasure=function(){
+  if(!measureMode) return;
+  var need=measureMode==='area'?3:2;
+  if(measurePts.length<need){ flashMsg('Mind. '+need+' Punkte setzen'); return; }
+  ensureMeasureScene();
+  var color=measureMode==='area'?0xffb300:0x00e5ff;
+  var value=measureMode==='area'?polygonArea(measurePts):polylineLength(measurePts);
+  var g=new THREE.Group();
+  measurePts.forEach(function(p){ g.add(makeMarker(p,color)); });
+  g.add(makeLine(measurePts,color,measureMode==='area'));
+  var c=measCentroid(measurePts); c.y+=2;
+  var unit=measureMode==='area'?'m²':'m';
+  g.add(makeMeasLabel(value.toFixed(2)+' '+unit, c, measureMode==='area'?'meas-area':'meas-len'));
+  measureGroup.add(g);
+  measurements.push({ id:measureSeq++, type:measureMode, value:value, layer:measureLayer, group:g });
+  measurePts=[]; rebuildTmp(); refreshMeasList();
+};
+window.measUndoPoint=function(){ if(measurePts.length){ measurePts.pop(); rebuildTmp(); } };
+window.measCancel=function(){ measurePts=[]; rebuildTmp(); };
+
+window.measSetMode=function(m){
+  measCancel(); measureMode=m;
+  document.getElementById('measLenBtn').classList.toggle('active',m==='len');
+  document.getElementById('measAreaBtn').classList.toggle('active',m==='area');
+  document.getElementById('measActiveRow').style.display=m?'flex':'none';
+  updateMeasLive();
+};
+window.measSetLayer=function(v){ measureLayer=v; };
+window.measAddLayer=function(){
+  var inp=document.getElementById('measNewLayer'); var v=(inp.value||'').trim();
+  if(!v) return;
+  if(measureLayers.indexOf(v)<0) measureLayers.push(v);
+  measureLayer=v; inp.value=''; refreshLayerSel(); refreshMeasList();
+};
+window.measReassign=function(id,val){
+  for(var i=0;i<measurements.length;i++) if(measurements[i].id===id){ measurements[i].layer=val; break; }
+  refreshTotals();
+};
+window.measDelete=function(id){
+  for(var i=0;i<measurements.length;i++){ if(measurements[i].id===id){
+    if(measureGroup) measureGroup.remove(measurements[i].group);
+    measurements.splice(i,1); break; } }
+  refreshMeasList();
+};
+window.measClearAll=function(){
+  if(!measurements.length) return;
+  if(measureGroup){ while(measureGroup.children.length) measureGroup.remove(measureGroup.children[0]); }
+  measurements=[]; refreshMeasList();
+};
+
+function refreshLayerSel(){
+  var s=document.getElementById('measLayerSel'); if(!s) return;
+  s.innerHTML=measureLayers.map(function(L){ return '<option'+(L===measureLayer?' selected':'')+'>'+hsEscape(L)+'</option>'; }).join('');
+}
+function refreshMeasList(){
+  var ol=document.getElementById('measList'); if(!ol) return;
+  ol.innerHTML='';
+  measurements.forEach(function(m){
+    var unit=m.type==='area'?'m²':'m';
+    var sel='<select onchange="measReassign('+m.id+',this.value)">'+
+      measureLayers.map(function(L){ return '<option'+(L===m.layer?' selected':'')+'>'+hsEscape(L)+'</option>'; }).join('')+'</select>';
+    var li=document.createElement('li');
+    li.innerHTML='<span class="ml-t">'+(m.type==='area'?'⬟':'📏')+'</span>'+
+                 '<span class="ml-v">'+m.value.toFixed(2)+' '+unit+'</span>'+sel+
+                 '<button class="ml-del" onclick="measDelete('+m.id+')">🗑</button>';
+    ol.appendChild(li);
+  });
+  refreshTotals();
+}
+function refreshTotals(){
+  var el=document.getElementById('measTotals'); if(!el) return;
+  var len=0,area=0; measurements.forEach(function(m){ if(m.type==='area') area+=m.value; else len+=m.value; });
+  el.innerHTML='Σ Länge: <b>'+len.toFixed(2)+' m</b> &nbsp;·&nbsp; Σ Fläche: <b>'+area.toFixed(2)+' m²</b> &nbsp;·&nbsp; '+measurements.length+' Messungen';
+}
+
+window.measPrint=function(){
+  if(!measurements.length){ flashMsg('Noch keine Messungen'); return; }
+  var byLayer={};
+  measurements.forEach(function(m){ (byLayer[m.layer]=byLayer[m.layer]||[]).push(m); });
+  var gLen=0,gArea=0, body='';
+  Object.keys(byLayer).sort().forEach(function(lay){
+    var sLen=0,sArea=0,rows='',i=1;
+    byLayer[lay].forEach(function(m){
+      var unit=m.type==='area'?'m²':'m';
+      rows+='<tr><td>'+(i++)+'</td><td>'+(m.type==='area'?'Fläche':'Länge')+'</td><td class="r">'+m.value.toFixed(2)+' '+unit+'</td></tr>';
+      if(m.type==='area') sArea+=m.value; else sLen+=m.value;
+    });
+    gLen+=sLen; gArea+=sArea;
+    body+='<h2>'+hsEscape(lay)+'</h2><table><thead><tr><th>Nr</th><th>Typ</th><th class="r">Wert</th></tr></thead><tbody>'+rows+'</tbody>'+
+          '<tfoot><tr><td colspan="2">Summe</td><td class="r">'+sLen.toFixed(2)+' m / '+sArea.toFixed(2)+' m²</td></tr></tfoot></table>';
+  });
+  var css='body{font-family:-apple-system,Arial,sans-serif;margin:30px;color:#111}'+
+    'h1{font-size:22px;margin:0 0 4px}h2{font-size:15px;margin:18px 0 6px;color:#0b5fff}'+
+    '.date{color:#666;font-size:13px;margin-bottom:10px}'+
+    'table{border-collapse:collapse;width:100%;font-size:13px;margin-bottom:6px}'+
+    'th,td{border:1px solid #ccc;padding:5px 8px;text-align:left}.r{text-align:right}'+
+    'tfoot td{font-weight:700;background:#f3f3f3}'+
+    '.grand{margin-top:16px;font-size:15px;font-weight:800;border-top:2px solid #111;padding-top:8px}'+
+    '@media print{button{display:none}}';
+  var html='<!doctype html><html><head><meta charset="utf-8"><title>Ausmassbericht NalpSolar</title><style>'+css+'</style></head><body>'+
+    '<h1>Ausmassbericht – NalpSolar</h1><div class="date">'+(new Date()).toLocaleString('de-CH')+'</div>'+body+
+    '<div class="grand">Gesamt: '+gLen.toFixed(2)+' m Länge &nbsp;·&nbsp; '+gArea.toFixed(2)+' m² Fläche</div>'+
+    '<button onclick="window.print()" style="margin-top:18px;padding:8px 16px;font-size:14px">🖨 Drucken</button>'+
+    '</body></html>';
+  var w=window.open('','_blank');
+  if(!w){ alert('Bitte Pop-ups erlauben, um den Bericht zu öffnen.'); return; }
+  w.document.write(html); w.document.close(); w.focus();
+};
+
+/* ── Help (shown once, remembered in localStorage) ───────── */
+window.measHelpShow=function(){ document.getElementById('measHelp').style.display='flex'; };
+window.measHelpClose=function(){
+  document.getElementById('measHelp').style.display='none';
+  try{ localStorage.setItem('measureHelpSeen','1'); }catch(e){}
+};
+
+window.toggleMeasure=function(){
+  measureActive=!measureActive;
+  document.getElementById('measPanel').style.display=measureActive?'flex':'none';
+  document.getElementById('btnMeasure').classList.toggle('active',measureActive);
+  if(measureActive){
+    ensureMeasureScene(); refreshLayerSel(); refreshMeasList(); updateMeasLive();
+    var seen; try{ seen=localStorage.getItem('measureHelpSeen'); }catch(e){}
+    if(!seen) measHelpShow();
+  } else {
+    measSetMode(null); measCancel();
+  }
+};
+
 /* ── GPS marker ──────────────────────────────────────────── */
 function mkGps(){
   var g=new THREE.Group();
@@ -1354,6 +1661,7 @@ function setOrbitTarget(clientX,clientY){
 function bindLongPress(el){
   el.addEventListener('touchstart',function(e){
     if(arActive){clearTimeout(longTimer);return;}   // AR uses finger drag for alignment
+    if(measurePlacing()){clearTimeout(longTimer);return;}  // measuring places points by tap
     if(e.touches.length!==1){clearTimeout(longTimer);return;}
     var t=e.touches[0]; longPos={x:t.clientX,y:t.clientY};
     longTimer=setTimeout(function(){if(longPos) setOrbitTarget(longPos.x,longPos.y);},550);
