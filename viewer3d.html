@@ -138,6 +138,21 @@ html, body { width:100%; height:100%; overflow:hidden; background:#0d1117;
 #bgTimer.low { color:#ff5a5a; }
 #bgScore { color:#ffd700; }
 #bgHud button { background:none; border:none; color:rgba(255,255,255,.6); font-size:16px; cursor:pointer; padding:0 2px; }
+.bg-best { font-size:13px; font-weight:700; color:#ffd700; margin-bottom:14px; }
+#bgNameRow { display:flex; gap:8px; justify-content:center; margin-bottom:14px; }
+#bgNameRow .tb-input { width:140px; text-align:center; }
+.bg-board-title { font-size:13px; font-weight:800; color:#ffd700; margin-bottom:6px; letter-spacing:.04em; }
+#bgBoard { list-style:none; margin:0 0 16px; padding:0; max-height:170px; overflow-y:auto; }
+#bgBoard li { display:flex; justify-content:space-between; gap:10px; align-items:center;
+  padding:5px 10px; border-radius:8px; font-size:13px; background:rgba(255,255,255,.05);
+  margin-bottom:4px; counter-increment:rank; }
+#bgBoard li::before { content:counter(rank)'.'; color:rgba(255,255,255,.45); font-weight:700; width:20px; text-align:right; }
+#bgBoard { counter-reset:rank; }
+#bgBoard li.me { background:rgba(34,197,94,.25); border:1px solid rgba(34,197,94,.6); }
+#bgBoard li.bg-empty { justify-content:center; color:rgba(255,255,255,.5); background:none; }
+#bgBoard li.bg-empty::before { content:''; width:0; }
+.bm-name { flex:1; text-align:left; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.bm-score { font-weight:800; color:#ffd700; font-variant-numeric:tabular-nums; }
 
 /* ── AR Mode ─────────────────────────────────────────────── */
 #arOverlay {
@@ -241,7 +256,7 @@ body.ar-mode { background:transparent!important; }
 
 <div id="bgHud">
   <span id="bgTimer">2:00</span>
-  <span id="bgScore">🐦 0 / 0</span>
+  <span id="bgScore">🐦 0</span>
   <button onclick="birdGameClose()" title="Beenden">✕</button>
 </div>
 
@@ -249,8 +264,9 @@ body.ar-mode { background:transparent!important; }
   <div id="bgIntro" class="bg-card">
     <h2>🐦 Birkhuhn-Jagd</h2>
     <p>Im Perimeter laufen <b>Birkhühner</b> herum.<br>
-       Finde in <b>2&nbsp;Minuten</b> so viele wie möglich –
-       dreh &amp; zoom die Ansicht und <b>tippe</b> jedes Birkhuhn an, das du entdeckst!</p>
+       Fange in <b>2&nbsp;Minuten</b> so viele wie möglich –
+       dreh &amp; zoom die Ansicht und <b>tippe</b> jedes Birkhuhn an. Gefangene werden sofort ersetzt!</p>
+    <div id="bgBest" class="bg-best">🏆 —</div>
     <div class="bg-row">
       <button class="bg-btn primary" onclick="birdGameStart()">▶ Los geht's!</button>
       <button class="bg-btn" onclick="birdGameClose()">Abbrechen</button>
@@ -259,6 +275,13 @@ body.ar-mode { background:transparent!important; }
   <div id="bgResult" class="bg-card" style="display:none">
     <h2 id="bgResultTitle">Zeit um!</h2>
     <p id="bgResultTxt"></p>
+    <div id="bgNameRow">
+      <input id="bgName" class="tb-input" placeholder="Dein Name" maxlength="14"
+             onkeydown="if(event.key==='Enter'){bgSaveScore();}">
+      <button class="bg-btn primary" onclick="bgSaveScore()">Eintragen</button>
+    </div>
+    <div class="bg-board-title">🏆 Highscore</div>
+    <ol id="bgBoard"></ol>
     <div class="bg-row">
       <button class="bg-btn primary" onclick="birdGameStart()">↻ Nochmal</button>
       <button class="bg-btn" onclick="birdGameClose()">Schliessen</button>
@@ -745,22 +768,28 @@ function placeBirdOnTerrain(b){
   b.group.position.set(b.pos.x, y+0.09, b.pos.z);
 }
 
+// Add one bird to the existing birdGroup (used for spawn + respawn)
+function addBird(gameScale){
+  if(!birdGroup) return null;
+  var mesh=makeBirkhuhn();
+  var px=perimeter.cx+(Math.random()*2-1)*perimeter.hx*0.8;
+  var pz=perimeter.cz+(Math.random()*2-1)*perimeter.hz*0.8;
+  var b={ group:mesh, pos:new THREE.Vector3(px,0,pz),
+          heading:Math.random()*Math.PI*2, speed:0.35+Math.random()*0.35,
+          turnRate:(Math.random()-0.5)*0.3, mode:'walk',
+          timer:1+Math.random()*4, legPhase:Math.random()*6,
+          callCool:2+Math.random()*8, displayT:0,
+          caught:false, caughtT:0, dead:false };
+  placeBirdOnTerrain(b);
+  mesh.rotation.y=b.heading;
+  if(gameScale) mesh.scale.setScalar(1.6);
+  birdGroup.add(mesh); birds.push(b);
+  return b;
+}
+
 function spawnBirds(n){
   birdGroup=new THREE.Group(); birdGroup.renderOrder=6;
-  for(var i=0;i<n;i++){
-    var mesh=makeBirkhuhn();
-    var px=perimeter.cx+(Math.random()*2-1)*perimeter.hx*0.8;
-    var pz=perimeter.cz+(Math.random()*2-1)*perimeter.hz*0.8;
-    var b={ group:mesh, pos:new THREE.Vector3(px,0,pz),
-            heading:Math.random()*Math.PI*2, speed:0.35+Math.random()*0.35,
-            turnRate:(Math.random()-0.5)*0.3, mode:'walk',
-            timer:1+Math.random()*4, legPhase:Math.random()*6,
-            callCool:2+Math.random()*8, displayT:0,
-            caught:false, caughtT:0 };
-    placeBirdOnTerrain(b);
-    mesh.rotation.y=b.heading;
-    birdGroup.add(mesh); birds.push(b);
-  }
+  for(var i=0;i<n;i++) addBird(false);
   scene.add(birdGroup);
   console.info('Birkhühner: '+n+' im Perimeter');
 }
@@ -777,7 +806,7 @@ function updateBirds(dt){
       b.group.rotation.z += dt*9;
       var sc=Math.max(0,1.6*(1-b.caughtT/1.3));
       b.group.scale.setScalar(sc);
-      if(b.caughtT>1.3) b.group.visible=false;
+      if(b.caughtT>1.3){ b.group.visible=false; b.dead=true; }
       continue;
     }
 
@@ -830,6 +859,10 @@ function updateBirds(dt){
     if(birdAudio && !musicOn && b.callCool<=0 && b.mode!=='walk'){
       maybeCall(b); b.callCool=4+Math.random()*8;
     }
+  }
+  // remove fully-flushed birds
+  for(var k=birds.length-1;k>=0;k--){
+    if(birds[k].dead){ if(birdGroup) birdGroup.remove(birds[k].group); birds.splice(k,1); }
   }
 }
 
@@ -1048,7 +1081,7 @@ function catchBird(b){
   b.caught=true; b.caughtT=0;
   gameFound++; updateGameHud(); playCatch();
   if(navigator.vibrate) navigator.vibrate(45);
-  if(gameFound>=gameTotal) setTimeout(function(){ birdGameEnd(false); },650);
+  addBird(true);                 // respawn → no upper limit on the score
 }
 
 /* ── Tap detection (distinguish tap from orbit drag) ─────── */
@@ -1102,14 +1135,14 @@ function pickBird(cx,cy){
 /* ── Game flow ───────────────────────────────────────────── */
 function resetBirdsForGame(n){
   if(birdGroup){ scene.remove(birdGroup); }
-  birds=[]; birdGroup=null;
-  spawnBirds(n);
-  for(var i=0;i<birds.length;i++) birds[i].group.scale.setScalar(1.6);  // a touch bigger → findable
+  birds=[]; birdGroup=new THREE.Group(); birdGroup.renderOrder=6;
+  for(var i=0;i<n;i++) addBird(true);
+  scene.add(birdGroup);
   birdsOn=true; birdLastT=performance.now();
 }
 function updateGameHud(){
   var s=document.getElementById('bgScore');
-  if(s) s.textContent='🐦 '+gameFound+' / '+gameTotal;
+  if(s) s.textContent='🐦 '+gameFound;     // no upper limit
 }
 function updateGameTimer(){
   if(gameState!=='playing') return;
@@ -1119,12 +1152,46 @@ function updateGameTimer(){
   if(rem<=0) birdGameEnd(true);
 }
 
+/* ── Highscore (localStorage) ────────────────────────────── */
+function hsLoad(){ try{ return JSON.parse(localStorage.getItem('birkhuhnHighscores'))||[]; }catch(e){ return []; } }
+function hsSave(a){ try{ localStorage.setItem('birkhuhnHighscores',JSON.stringify(a)); }catch(e){} }
+function hsEscape(s){ return String(s).replace(/[<>&"]/g,function(c){ return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]; }); }
+function hsBest(){ var a=hsLoad(); return a.length?a.reduce(function(m,e){return e.score>m.score?e:m;}):null; }
+
+function renderBoard(highlight){
+  var ol=document.getElementById('bgBoard'); if(!ol) return;
+  var a=hsLoad().slice().sort(function(x,y){return y.score-x.score;}).slice(0,8);
+  ol.innerHTML='';
+  if(!a.length){ ol.innerHTML='<li class="bg-empty">Noch keine Einträge — sei die/der Erste!</li>'; return; }
+  a.forEach(function(e){
+    var li=document.createElement('li');
+    li.innerHTML='<span class="bm-name">'+hsEscape(e.name)+'</span><span class="bm-score">'+e.score+'</span>';
+    if(highlight && e.t===highlight.t && e.name===highlight.name && e.score===highlight.score) li.className='me';
+    ol.appendChild(li);
+  });
+}
+
+window.bgSaveScore=function(){
+  var inp=document.getElementById('bgName');
+  var name=((inp&&inp.value)||'').trim().slice(0,14) || 'Anonym';
+  try{ localStorage.setItem('birkhuhnName',name); }catch(e){}
+  var list=hsLoad();
+  var entry={name:name, score:gameFound, t:(new Date()).getTime()};
+  list.push(entry); hsSave(list);
+  renderBoard(entry);
+  document.getElementById('bgNameRow').style.display='none';
+};
+
 window.birdGame=function(){
   if(gameState==='idle') birdGameOpen(); else birdGameClose();
 };
 function birdGameOpen(){
   initBirdAudio();
   gameState='intro';
+  var best=hsBest();
+  document.getElementById('bgBest').innerHTML = best
+    ? '🏆 Rekord: <b>'+best.score+'</b> ('+hsEscape(best.name)+')'
+    : '🏆 Noch kein Rekord — leg vor!';
   document.getElementById('bgIntro').style.display='block';
   document.getElementById('bgResult').style.display='none';
   document.getElementById('birdGame').style.display='flex';
@@ -1153,13 +1220,20 @@ function birdGameEnd(timeUp){
   stopGameMusic();
   document.getElementById('btnTische').classList.remove('locked');
   document.getElementById('bgHud').style.display='none';
-  document.getElementById('bgResultTitle').textContent=timeUp?'⏱ Zeit um!':'🎉 Alle gefunden!';
-  var msg='Du hast <b>'+gameFound+'</b> von '+gameTotal+' Birkhühnern gefunden.';
-  if(gameFound>=gameTotal)            msg+='<br>Perfekt! 🐦👑';
-  else if(gameFound>=gameTotal*0.7)   msg+='<br>Stark! 💪';
-  else if(gameFound>=gameTotal*0.4)   msg+='<br>Nicht schlecht! 🙂';
-  else                                msg+='<br>Die Birkhühner waren schneller … 😄';
+  document.getElementById('bgResultTitle').textContent='⏱ Zeit um!';
+  var prevBest=hsBest();
+  var msg='Du hast <b>'+gameFound+'</b> Birkhuhn'+(gameFound===1?'':'er')+' gefangen.';
+  if(prevBest && gameFound>prevBest.score) msg+='<br>🏆 Neuer Rekord!';
+  else if(gameFound>=20) msg+='<br>Stark! 💪';
+  else if(gameFound>=10) msg+='<br>Nicht schlecht! 🙂';
+  else if(gameFound>0)   msg+='<br>Die Birkhühner waren flink … 😄';
+  else                   msg+='<br>Kein einziges? Nächstes Mal! 🐦';
   document.getElementById('bgResultTxt').innerHTML=msg;
+  // Name entry (prefilled with last used name) + leaderboard
+  var nameInp=document.getElementById('bgName');
+  try{ nameInp.value=localStorage.getItem('birkhuhnName')||''; }catch(e){}
+  document.getElementById('bgNameRow').style.display='flex';
+  renderBoard(null);
   document.getElementById('bgResult').style.display='block';
   document.getElementById('bgIntro').style.display='none';
   document.getElementById('birdGame').style.display='flex';
