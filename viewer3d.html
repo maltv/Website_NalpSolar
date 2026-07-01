@@ -309,6 +309,7 @@ body.ar-mode { background:transparent!important; }
   <button class="tb-btn active" id="btnErdung"  onclick="toggleLayer('erdung')">🟠 Erdung</button>
   <button class="tb-btn active" id="btnL26"     onclick="toggleLayer('leitungen26')">🟩 Leitungen 26/27</button>
   <button class="tb-btn active" id="btnTische"  onclick="toggleTische()">🟨 Modultische</button>
+  <button class="tb-btn active" id="btnWorkers" onclick="toggleWorkers()">👷 Bauarbeiter</button>
 </div>
 
 <div id="menuMore" class="tb-menu">
@@ -524,7 +525,7 @@ var _v1=new THREE.Vector3(), _v2=new THREE.Vector3(), _v3=new THREE.Vector3();
 var flyDone=false, flyT=0;
 var camP0=new THREE.Vector3(), camT0=new THREE.Vector3();
 var camP1=new THREE.Vector3(), camT1=new THREE.Vector3();
-var frameN=0, raycaster=new THREE.Raycaster();
+var frameN=0, raycaster=new THREE.Raycaster(), _lastFrameT=0;
 var orbitMarker=null, longTimer=null, longPos=null;
 
 /* AR state */
@@ -1264,6 +1265,174 @@ function catchBird(b){
 }
 
 /* ═══════════════════════════════════════════════════════════
+   MURMELTIER — seltener 5-Punkte-Bonus im normalen Spiel
+═══════════════════════════════════════════════════════════ */
+var marmotObj=null, marmotMode='off', marmotT=0, marmotNext=8, marmotGY=0;
+function panVolAt(p){
+  var d=camera.position.distanceTo(p), vol=Math.max(0,1-d/300); vol=vol*vol*0.5;
+  _v1.subVectors(p,camera.position); var len=_v1.length(); if(len>0)_v1.multiplyScalar(1/len);
+  _v2.setFromMatrixColumn(camera.matrixWorld,0).normalize();
+  var pan=Math.max(-1,Math.min(1,_v1.dot(_v2)));
+  camera.getWorldDirection(_v3); if(_v1.dot(_v3)<0) vol*=0.35;
+  return {pan:pan,vol:vol};
+}
+function makeMurmeltier(){
+  var g=new THREE.Group();
+  var fur=new THREE.MeshPhongMaterial({color:0x8a5a2b,emissive:0x241505,shininess:12});
+  var belly=new THREE.MeshPhongMaterial({color:0xcaa06a});
+  var dark=new THREE.MeshPhongMaterial({color:0x241606});
+  var body=new THREE.Mesh(new THREE.SphereGeometry(0.22,14,12),fur); body.scale.set(1,1.5,0.95); body.position.y=0.33; g.add(body);
+  var bel=new THREE.Mesh(new THREE.SphereGeometry(0.16,12,10),belly); bel.scale.set(1,1.3,0.6); bel.position.set(0,0.30,0.13); g.add(bel);
+  var head=new THREE.Mesh(new THREE.SphereGeometry(0.15,14,12),fur); head.position.y=0.62; g.add(head);
+  var snout=new THREE.Mesh(new THREE.SphereGeometry(0.07,10,8),belly); snout.position.set(0,0.58,0.14); g.add(snout);
+  [0.06,-0.06].forEach(function(x){
+    var e=new THREE.Mesh(new THREE.SphereGeometry(0.04,8,6),fur); e.position.set(x,0.74,0); g.add(e);
+    var eye=new THREE.Mesh(new THREE.SphereGeometry(0.02,6,6),dark); eye.position.set(x*1.4,0.64,0.11); g.add(eye);
+  });
+  [0.09,-0.09].forEach(function(x){ var p=new THREE.Mesh(new THREE.SphereGeometry(0.04,8,6),belly); p.scale.set(1,1.6,1); p.position.set(x,0.34,0.16); g.add(p); });
+  return g;
+}
+function playMarmotWhistle(){
+  if(!birdAudio||!marmotObj) return;
+  var pv=panVolAt(marmotObj.position); if(pv.vol<0.05) pv.vol=0.25;
+  var t=birdAudio.currentTime+0.02;
+  function wh(t0){
+    var o=birdAudio.createOscillator(); o.type='triangle';
+    o.frequency.setValueAtTime(2200,t0); o.frequency.exponentialRampToValueAtTime(2900,t0+0.05); o.frequency.exponentialRampToValueAtTime(2400,t0+0.22);
+    var g=birdAudio.createGain(); g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(pv.vol,t0+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t0+0.24);
+    var out=birdOut(pv.pan); o.connect(g); g.connect(out); o.start(t0); o.stop(t0+0.26);
+  }
+  wh(t); wh(t+0.30);
+}
+function playMarmotCatch(){
+  if(!birdAudio) return; var t=birdAudio.currentTime+0.01, notes=[880,1174,1568,2093];
+  notes.forEach(function(f,i){
+    var o=birdAudio.createOscillator(); o.type='square'; o.frequency.setValueAtTime(f,t+i*0.08);
+    var g=birdAudio.createGain(); g.gain.setValueAtTime(0.0001,t+i*0.08); g.gain.exponentialRampToValueAtTime(0.25,t+i*0.08+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+i*0.08+0.16);
+    o.connect(g); g.connect(birdMaster); o.start(t+i*0.08); o.stop(t+i*0.08+0.18);
+  });
+}
+function spawnMarmot(){
+  if(!marmotObj){ marmotObj=makeMurmeltier(); marmotObj.visible=false; scene.add(marmotObj); }
+  var px=perimeter.cx+(Math.random()*2-1)*perimeter.hx*0.75;
+  var pz=perimeter.cz+(Math.random()*2-1)*perimeter.hz*0.75;
+  var gy=0;
+  if(terrainMesh){ _birdOrig.set(px,500,pz); _birdRay.set(_birdOrig,_birdDown); var h=_birdRay.intersectObject(terrainMesh); if(h.length) gy=h[0].point.y; }
+  marmotGY=gy; marmotObj.position.set(px,gy,pz); marmotObj.rotation.y=Math.random()*6.28;
+  marmotObj.scale.set(1,0.06,1); marmotObj.visible=true; marmotMode='alive'; marmotT=0;
+  playMarmotWhistle();
+}
+function updateMarmot(dt){
+  if(marmotMode==='off'){ marmotMode='hidden'; marmotNext=6+Math.random()*10; return; }
+  if(marmotMode==='hidden'){ marmotNext-=dt; if(marmotNext<=0) spawnMarmot(); return; }
+  marmotT+=dt;
+  var UP=0.4, STAY=2.4, DOWN=0.4, TOT=UP+STAY+DOWN, s;
+  if(marmotT<UP) s=marmotT/UP;
+  else if(marmotT<UP+STAY) s=1;
+  else if(marmotT<TOT) s=1-(marmotT-UP-STAY)/DOWN;
+  else { marmotObj.visible=false; marmotMode='hidden'; marmotNext=12+Math.random()*16; return; }
+  marmotObj.scale.set(1,Math.max(0.06,s),1);
+  marmotObj.rotation.y += dt*0.6;
+}
+function resetMarmot(){ if(marmotObj) marmotObj.visible=false; marmotMode='off'; }
+function tryCatchMarmot(cx,cy){
+  if(marmotMode!=='alive'||!marmotObj) return false;
+  var rect=renderer.domElement.getBoundingClientRect();
+  var m=new THREE.Vector2(((cx-rect.left)/rect.width)*2-1,-((cy-rect.top)/rect.height)*2+1);
+  raycaster.setFromCamera(m,camera);
+  var got=false, hit=raycaster.intersectObject(marmotObj,true);
+  if(hit.length && hit[0].distance<=MAX_CATCH_DIST) got=true;
+  else {
+    var v=marmotObj.position.clone(); v.y+=0.4; v.project(camera);
+    if(v.z<=1){ var sx=(v.x*0.5+0.5)*rect.width+rect.left, sy=(-v.y*0.5+0.5)*rect.height+rect.top;
+      if(Math.hypot(sx-cx,sy-cy)<40 && camera.position.distanceTo(marmotObj.position)<=MAX_CATCH_DIST) got=true; }
+  }
+  if(!got) return false;
+  gameFound+=5; updateGameHud(); playMarmotCatch();
+  if(navigator.vibrate) navigator.vibrate([40,40,90]);
+  flashMsg('🐹 Murmeltier +5!');
+  marmotObj.visible=false; marmotMode='hidden'; marmotNext=14+Math.random()*16;
+  return true;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BAUARBEITER — laufen um die Modultische und arbeiten
+═══════════════════════════════════════════════════════════ */
+var workerGroup=null, workers=[], workersOn=true, workerArea={cx:95,cz:-409,hx:250,hz:250};
+function makeWorker(){
+  var g=new THREE.Group();
+  var vest=new THREE.MeshPhongMaterial({color:0xff7300,emissive:0x351400,shininess:30});
+  var skin=new THREE.MeshPhongMaterial({color:0xe0ac69});
+  var pants=new THREE.MeshPhongMaterial({color:0x223a66});
+  var hat =new THREE.MeshPhongMaterial({color:0xffd400,emissive:0x4a3d00});
+  function limb(hipY,x,len,rad,mat){
+    var grp=new THREE.Group(); grp.position.set(x,hipY,0);
+    var m=new THREE.Mesh(new THREE.CylinderGeometry(rad,rad*0.9,len,8),mat); m.position.y=-len/2; grp.add(m); return grp;
+  }
+  var legL=limb(0.85,0.11,0.85,0.09,pants), legR=limb(0.85,-0.11,0.85,0.09,pants);
+  var torso=new THREE.Mesh(new THREE.BoxGeometry(0.46,0.6,0.28),vest); torso.position.y=1.15;
+  var armL=limb(1.42,0.30,0.62,0.06,vest), armR=limb(1.42,-0.30,0.62,0.06,vest);
+  var head=new THREE.Mesh(new THREE.SphereGeometry(0.15,12,10),skin); head.position.y=1.62;
+  var helm=new THREE.Mesh(new THREE.SphereGeometry(0.175,14,8,0,Math.PI*2,0,Math.PI/2),hat); helm.position.y=1.66;
+  var brim=new THREE.Mesh(new THREE.CylinderGeometry(0.20,0.20,0.03,14),hat); brim.position.set(0,1.66,0.02);
+  g.add(legL,legR,torso,armL,armR,head,helm,brim);
+  g.userData={legL:legL,legR:legR,armL:armL,armR:armR,torso:torso,ph2:Math.random()*6};
+  return g;
+}
+function placeWorker(w){
+  var y=0;
+  if(terrainMesh){ _birdOrig.set(w.pos.x,500,w.pos.z); _birdRay.set(_birdOrig,_birdDown); var h=_birdRay.intersectObject(terrainMesh); if(h.length) y=h[0].point.y; }
+  w.group.position.set(w.pos.x, y, w.pos.z);
+}
+function spawnWorkers(n){
+  workerGroup=new THREE.Group(); workerGroup.renderOrder=5;
+  for(var i=0;i<n;i++){
+    var mesh=makeWorker();
+    var px=workerArea.cx+(Math.random()*2-1)*workerArea.hx*0.7;
+    var pz=workerArea.cz+(Math.random()*2-1)*workerArea.hz*0.7;
+    var w={ group:mesh, pos:new THREE.Vector3(px,0,pz), heading:Math.random()*6.28,
+            speed:0.3+Math.random()*0.35, turnRate:(Math.random()-0.5)*0.3,
+            mode:'walk', timer:1+Math.random()*4, phase:Math.random()*6 };
+    placeWorker(w); mesh.rotation.y=w.heading; workerGroup.add(mesh); workers.push(w);
+  }
+  scene.add(workerGroup);
+  console.info('Bauarbeiter: '+n);
+}
+function updateWorkers(dt){
+  if(!workerGroup) return;
+  if(arActive){ workerGroup.visible=false; return; }   // nicht im AR
+  workerGroup.visible=workersOn;
+  if(!workersOn) return;
+  for(var i=0;i<workers.length;i++){
+    var w=workers[i]; w.timer-=dt;
+    if(w.timer<=0){ var r=Math.random();
+      if(r<0.4){ w.mode='walk'; w.timer=3+Math.random()*4; w.turnRate=(Math.random()-0.5)*0.35; }
+      else if(r<0.75){ w.mode='work'; w.timer=2+Math.random()*4; }
+      else { w.mode='turn'; w.timer=0.5+Math.random()*1.0; w.turnRate=(Math.random()-0.5)*2.0; }
+    }
+    if(w.mode==='walk'){ w.heading+=w.turnRate*dt; w.pos.x+=Math.cos(w.heading)*w.speed*dt; w.pos.z+=-Math.sin(w.heading)*w.speed*dt; w.phase+=dt*w.speed*8; }
+    else if(w.mode==='turn'){ w.heading+=w.turnRate*dt; }
+    if(Math.abs(w.pos.x-workerArea.cx)>workerArea.hx || Math.abs(w.pos.z-workerArea.cz)>workerArea.hz){
+      w.heading=Math.atan2(-(workerArea.cz-w.pos.z),(workerArea.cx-w.pos.x)); w.mode='walk'; w.timer=3;
+    }
+    placeWorker(w); w.group.rotation.y=w.heading;
+    var u=w.group.userData;
+    if(w.mode==='walk'){ var s=Math.sin(w.phase)*0.5;
+      u.legL.rotation.x=s; u.legR.rotation.x=-s; u.armL.rotation.x=-s*0.7; u.armR.rotation.x=s*0.7; u.torso.rotation.x*=0.8; }
+    else if(w.mode==='work'){ u.ph2+=dt*9;
+      u.legL.rotation.x*=0.8; u.legR.rotation.x*=0.8; u.torso.rotation.x=0.35;
+      u.armR.rotation.x=-1.0+Math.sin(u.ph2)*0.7; u.armL.rotation.x=-0.4; }
+    else { u.legL.rotation.x*=0.8; u.legR.rotation.x*=0.8; u.torso.rotation.x*=0.8; }
+  }
+}
+window.toggleWorkers=function(){
+  workersOn=!workersOn;
+  if(workersOn && !workerGroup) spawnWorkers(5);
+  if(workerGroup) workerGroup.visible=workersOn && !arActive;
+  var b=document.getElementById('btnWorkers'); if(b) b.classList.toggle('active',workersOn);
+};
+
+/* ═══════════════════════════════════════════════════════════
    AR-BIRKHUHN-FANG (Pokémon-Go-Stil) — Vögel im Kamerabild fangen
 ═══════════════════════════════════════════════════════════ */
 function updateArCatchHud(){ var el=document.getElementById('arCatchScore'); if(el) el.textContent=gameFound; }
@@ -1363,7 +1532,10 @@ function onTapUp(e){
   var held=performance.now()-tapStart.t;
   tapStart=null;
   if(moved>12||held>400) return;     // was a drag / orbit, not a tap
-  if(gamePlaying || birdARon){ pickBird(e.clientX, e.clientY); return; }
+  if(gamePlaying || birdARon){
+    if(gamePlaying && tryCatchMarmot(e.clientX, e.clientY)) return;   // 5-Punkte-Murmeltier
+    pickBird(e.clientX, e.clientY); return;
+  }
   if(measurePlacing()){ measureTapAt(e.clientX, e.clientY); return; }
   if(measEditOn){ measEditTap(e.clientX, e.clientY); }
 }
@@ -2270,6 +2442,13 @@ function animate(){
   requestAnimationFrame(animate);
   frameN++;
 
+  // General frame delta (workers, marmot)
+  var _fnow=performance.now();
+  var gdt=_lastFrameT?Math.min(0.05,(_fnow-_lastFrameT)/1000):0.016;
+  _lastFrameT=_fnow;
+  updateWorkers(gdt);
+  if(gamePlaying) updateMarmot(gdt); else if(marmotMode!=='off') resetMarmot();
+
   // Birkhühner update (own delta clock)
   if(birdsOn){
     var now=performance.now();
@@ -2429,6 +2608,9 @@ async function init(){
     var pC=box.getCenter(new THREE.Vector3()), pS=box.getSize(new THREE.Vector3());
     perimeter.cx=pC.x; perimeter.cz=pC.z;
     perimeter.hx=Math.max(pS.x/2,80); perimeter.hz=Math.max(pS.z/2,80);
+    // Bauarbeiter laufen im gleichen Projektgebiet
+    workerArea={cx:pC.x, cz:pC.z, hx:Math.max(pS.x/2,80), hz:Math.max(pS.z/2,80)};
+    spawnWorkers(5);
     startFlyIn(box);
 
     // Bind long-press on canvas (touch) + mouse long-press (laptop)
