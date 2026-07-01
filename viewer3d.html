@@ -1603,26 +1603,26 @@ function hsSave(a){ try{ localStorage.setItem('birkhuhnHighscores',JSON.stringif
 function hsEscape(s){ return String(s).replace(/[<>&"]/g,function(c){ return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]; }); }
 function hsBest(){ var a=hsLoad(); return a.length?a.reduce(function(m,e){return e.score>m.score?e:m;}):null; }
 
-/* ── Globale Rangliste (kvdb.io, anmeldefrei für Spieler) ── */
-var LB_BUCKET='';   // kvdb.io Bucket-Token hier eintragen → aktiviert die globale Liste
-function lbEnabled(){ return !!LB_BUCKET; }
-function lbBase(){ return 'https://kvdb.io/'+LB_BUCKET+'/'; }
+/* ── Globale Rangliste (Firebase Realtime DB, anmeldefrei für Spieler) ──
+   LB_URL = Realtime-Database-URL ohne / am Ende, z.B.
+   https://nalpsolar-xxxx-default-rtdb.europe-west1.firebasedatabase.app  */
+var LB_URL='';
+function lbEnabled(){ return !!LB_URL; }
 function lbSubmit(name,score){
   if(!lbEnabled()) return Promise.resolve(false);
-  var key='s_'+Date.now()+'_'+Math.floor(Math.random()*1e6);
-  return fetch(lbBase()+key,{method:'PUT',body:JSON.stringify({n:String(name).slice(0,14),s:score|0})})
+  return fetch(LB_URL+'/scores.json',{method:'POST',
+      body:JSON.stringify({n:String(name).slice(0,14), s:score|0, t:Date.now()})})
     .then(function(r){return r.ok;}).catch(function(){return false;});
 }
 function lbFetch(){
   if(!lbEnabled()) return Promise.resolve(null);
-  return fetch(lbBase()+'?prefix=s_&values=true&format=json')
-    .then(function(r){ return r.ok?r.json():[]; })
-    .then(function(rows){
+  return fetch(LB_URL+'/scores.json')
+    .then(function(r){ return r.ok?r.json():null; })
+    .then(function(obj){
+      if(!obj) return [];
       var list=[];
-      (rows||[]).forEach(function(row){
-        try{ var raw=Array.isArray(row)?row[1]:row; var v=(typeof raw==='string')?JSON.parse(raw):raw;
-             if(v && typeof v.s==='number') list.push({name:String(v.n||'?').slice(0,14), score:v.s}); }catch(e){}
-      });
+      Object.keys(obj).forEach(function(k){ var v=obj[k];
+        if(v && typeof v.s==='number') list.push({name:String(v.n||'?').slice(0,14), score:v.s}); });
       list.sort(function(a,b){return b.score-a.score;});
       return list.slice(0,20);
     }).catch(function(){ return null; });
