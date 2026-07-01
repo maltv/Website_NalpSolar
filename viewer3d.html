@@ -169,15 +169,14 @@ body.game-on #menuLayers, body.game-on #menuMore { display:none; }
 #bgNameRow { display:flex; gap:8px; justify-content:center; margin-bottom:14px; }
 #bgNameRow .tb-input { width:140px; text-align:center; }
 .bg-board-title { font-size:13px; font-weight:800; color:#ffd700; margin-bottom:6px; letter-spacing:.04em; }
-#bgBoard { list-style:none; margin:0 0 16px; padding:0; max-height:170px; overflow-y:auto; }
-#bgBoard li { display:flex; justify-content:space-between; gap:10px; align-items:center;
+#bgBoard, #bgGlobalBoard { list-style:none; margin:0 0 16px; padding:0; max-height:170px; overflow-y:auto; counter-reset:rank; }
+#bgBoard li, #bgGlobalBoard li { display:flex; justify-content:space-between; gap:10px; align-items:center;
   padding:5px 10px; border-radius:8px; font-size:13px; background:rgba(255,255,255,.05);
   margin-bottom:4px; counter-increment:rank; }
-#bgBoard li::before { content:counter(rank)'.'; color:rgba(255,255,255,.45); font-weight:700; width:20px; text-align:right; }
-#bgBoard { counter-reset:rank; }
-#bgBoard li.me { background:rgba(34,197,94,.25); border:1px solid rgba(34,197,94,.6); }
-#bgBoard li.bg-empty { justify-content:center; color:rgba(255,255,255,.5); background:none; }
-#bgBoard li.bg-empty::before { content:''; width:0; }
+#bgBoard li::before, #bgGlobalBoard li::before { content:counter(rank)'.'; color:rgba(255,255,255,.45); font-weight:700; width:20px; text-align:right; }
+#bgBoard li.me, #bgGlobalBoard li.me { background:rgba(34,197,94,.25); border:1px solid rgba(34,197,94,.6); }
+#bgBoard li.bg-empty, #bgGlobalBoard li.bg-empty { justify-content:center; color:rgba(255,255,255,.5); background:none; }
+#bgBoard li.bg-empty::before, #bgGlobalBoard li.bg-empty::before { content:''; width:0; }
 .bm-name { flex:1; text-align:left; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .bm-score { font-weight:800; color:#ffd700; font-variant-numeric:tabular-nums; }
 
@@ -377,8 +376,12 @@ body.ar-mode { background:transparent!important; }
              onkeydown="if(event.key==='Enter'){bgSaveScore();}">
       <button class="bg-btn primary" onclick="bgSaveScore()">Eintragen</button>
     </div>
-    <div class="bg-board-title">🏆 Highscore</div>
+    <div class="bg-board-title">🏆 Highscore (dieses Gerät)</div>
     <ol id="bgBoard"></ol>
+    <div id="bgGlobalWrap" style="display:none">
+      <div class="bg-board-title">🌍 Global</div>
+      <ol id="bgGlobalBoard"><li class="bg-empty">lädt …</li></ol>
+    </div>
     <div class="bg-row">
       <button class="bg-btn primary" onclick="birdGameStart()">↻ Nochmal</button>
       <button class="bg-btn" onclick="birdGameClose()">Schliessen</button>
@@ -1600,6 +1603,50 @@ function hsSave(a){ try{ localStorage.setItem('birkhuhnHighscores',JSON.stringif
 function hsEscape(s){ return String(s).replace(/[<>&"]/g,function(c){ return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]; }); }
 function hsBest(){ var a=hsLoad(); return a.length?a.reduce(function(m,e){return e.score>m.score?e:m;}):null; }
 
+/* ── Globale Rangliste (kvdb.io, anmeldefrei für Spieler) ── */
+var LB_BUCKET='';   // kvdb.io Bucket-Token hier eintragen → aktiviert die globale Liste
+function lbEnabled(){ return !!LB_BUCKET; }
+function lbBase(){ return 'https://kvdb.io/'+LB_BUCKET+'/'; }
+function lbSubmit(name,score){
+  if(!lbEnabled()) return Promise.resolve(false);
+  var key='s_'+Date.now()+'_'+Math.floor(Math.random()*1e6);
+  return fetch(lbBase()+key,{method:'PUT',body:JSON.stringify({n:String(name).slice(0,14),s:score|0})})
+    .then(function(r){return r.ok;}).catch(function(){return false;});
+}
+function lbFetch(){
+  if(!lbEnabled()) return Promise.resolve(null);
+  return fetch(lbBase()+'?prefix=s_&values=true&format=json')
+    .then(function(r){ return r.ok?r.json():[]; })
+    .then(function(rows){
+      var list=[];
+      (rows||[]).forEach(function(row){
+        try{ var raw=Array.isArray(row)?row[1]:row; var v=(typeof raw==='string')?JSON.parse(raw):raw;
+             if(v && typeof v.s==='number') list.push({name:String(v.n||'?').slice(0,14), score:v.s}); }catch(e){}
+      });
+      list.sort(function(a,b){return b.score-a.score;});
+      return list.slice(0,20);
+    }).catch(function(){ return null; });
+}
+function lbRender(highlight){
+  var wrap=document.getElementById('bgGlobalWrap'); if(!wrap) return;
+  if(!lbEnabled()){ wrap.style.display='none'; return; }
+  wrap.style.display='block';
+  var ol=document.getElementById('bgGlobalBoard'); if(!ol) return;
+  ol.innerHTML='<li class="bg-empty">lädt …</li>';
+  lbFetch().then(function(list){
+    if(!list){ ol.innerHTML='<li class="bg-empty">offline</li>'; return; }
+    if(!list.length){ ol.innerHTML='<li class="bg-empty">Noch keine Einträge</li>'; return; }
+    ol.innerHTML='';
+    var hl=highlight, done=false;
+    list.slice(0,10).forEach(function(e){
+      var li=document.createElement('li');
+      li.innerHTML='<span class="bm-name">'+hsEscape(e.name)+'</span><span class="bm-score">'+e.score+'</span>';
+      if(!done && hl && e.name===hl.name && e.score===hl.score){ li.className='me'; done=true; }
+      ol.appendChild(li);
+    });
+  });
+}
+
 function renderBoard(highlight){
   var ol=document.getElementById('bgBoard'); if(!ol) return;
   var a=hsLoad().slice().sort(function(x,y){return y.score-x.score;}).slice(0,8);
@@ -1622,6 +1669,7 @@ window.bgSaveScore=function(){
   list.push(entry); hsSave(list);
   renderBoard(entry);
   document.getElementById('bgNameRow').style.display='none';
+  if(lbEnabled()){ lbSubmit(name,gameFound).then(function(){ lbRender({name:name,score:gameFound}); }); }
 };
 
 window.birdGame=function(){
@@ -1666,7 +1714,7 @@ function birdGameEnd(timeUp){
   document.getElementById('bgHud').style.display='none';
   document.getElementById('bgResultTitle').textContent='⏱ Zeit um!';
   var prevBest=hsBest();
-  var msg='Du hast <b>'+gameFound+'</b> Birkhuhn'+(gameFound===1?'':'er')+' gefangen.';
+  var msg='Du hast <b>'+gameFound+'</b> Punkte erreicht.';
   if(prevBest && gameFound>prevBest.score) msg+='<br>🏆 Neuer Rekord!';
   else if(gameFound>=20) msg+='<br>Stark! 💪';
   else if(gameFound>=10) msg+='<br>Nicht schlecht! 🙂';
@@ -1678,6 +1726,7 @@ function birdGameEnd(timeUp){
   try{ nameInp.value=localStorage.getItem('birkhuhnName')||''; }catch(e){}
   document.getElementById('bgNameRow').style.display='flex';
   renderBoard(null);
+  lbRender(null);
   document.getElementById('bgResult').style.display='block';
   document.getElementById('bgIntro').style.display='none';
   document.getElementById('birdGame').style.display='flex';
