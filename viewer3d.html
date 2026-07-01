@@ -1606,7 +1606,7 @@ function hsBest(){ var a=hsLoad(); return a.length?a.reduce(function(m,e){return
 /* ── Globale Rangliste (Firebase Realtime DB, anmeldefrei für Spieler) ──
    LB_URL = Realtime-Database-URL ohne / am Ende, z.B.
    https://nalpsolar-xxxx-default-rtdb.europe-west1.firebasedatabase.app  */
-var LB_URL='';
+var LB_URL='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app';
 function lbEnabled(){ return !!LB_URL; }
 function lbSubmit(name,score){
   if(!lbEnabled()) return Promise.resolve(false);
