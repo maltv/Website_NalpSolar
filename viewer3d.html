@@ -521,7 +521,7 @@ var gameFound=0, gameTotal=0, gameEndTime=0;
 var GAME_BIRDS=14, GAME_SECONDS=120;
 var MAX_CATCH_DIST=100;   // m — must be zoomed in close enough to catch a bird
 var musicOn=false, musicGain=null, musicTimer=null;
-var music={step:0, nextTime:0, bpm:128};
+var music={step:0, nextTime:0, bpm:108};
 var tapStart=null;
 /* AR-Birkhuhn-Fang (Pokémon-Go-Stil) */
 var birdARon=false, birdARpending=false, birdBaseY=0, savedPerimeter=null;
@@ -1161,69 +1161,85 @@ window.toggleBirds=function(){
 /* ── Music synth voices (all route to musicGain) ─────────── */
 function kick(t){
   var ctx=birdAudio, o=ctx.createOscillator(); o.type='sine';
-  o.frequency.setValueAtTime(120,t); o.frequency.exponentialRampToValueAtTime(40,t+0.12);
-  var g=ctx.createGain(); g.gain.setValueAtTime(0.9,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.18);
-  o.connect(g); g.connect(musicGain); o.start(t); o.stop(t+0.2);
+  o.frequency.setValueAtTime(110,t); o.frequency.exponentialRampToValueAtTime(45,t+0.11);
+  var g=ctx.createGain(); g.gain.setValueAtTime(0.62,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.16);
+  o.connect(g); g.connect(musicGain); o.start(t); o.stop(t+0.18);
 }
 function hat(t,v){
-  var ctx=birdAudio, n=Math.floor(ctx.sampleRate*0.05);
+  var ctx=birdAudio, n=Math.floor(ctx.sampleRate*0.04);
   var buf=ctx.createBuffer(1,n,ctx.sampleRate), d=buf.getChannelData(0);
   for(var i=0;i<n;i++) d[i]=Math.random()*2-1;
   var s=ctx.createBufferSource(); s.buffer=buf;
-  var hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=7000;
-  var g=ctx.createGain(); g.gain.setValueAtTime(v||0.3,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.04);
-  s.connect(hp); hp.connect(g); g.connect(musicGain); s.start(t); s.stop(t+0.06);
+  var hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=8500;
+  var g=ctx.createGain(); g.gain.setValueAtTime(v||0.12,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.035);
+  s.connect(hp); hp.connect(g); g.connect(musicGain); s.start(t); s.stop(t+0.05);
 }
-function clap(t){
-  var ctx=birdAudio, n=Math.floor(ctx.sampleRate*0.2);
+function clap(t){   // soft funk snare/clap on the backbeat
+  var ctx=birdAudio, n=Math.floor(ctx.sampleRate*0.18);
   var buf=ctx.createBuffer(1,n,ctx.sampleRate), d=buf.getChannelData(0);
   for(var i=0;i<n;i++) d[i]=Math.random()*2-1;
   var s=ctx.createBufferSource(); s.buffer=buf;
-  var bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=1800; bp.Q.value=1.2;
+  var bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=2000; bp.Q.value=1.0;
   var g=ctx.createGain(); g.gain.setValueAtTime(0.0001,t);
-  g.gain.linearRampToValueAtTime(0.5,t+0.005); g.gain.exponentialRampToValueAtTime(0.001,t+0.16);
-  s.connect(bp); bp.connect(g); g.connect(musicGain); s.start(t); s.stop(t+0.2);
+  g.gain.linearRampToValueAtTime(0.32,t+0.005); g.gain.exponentialRampToValueAtTime(0.001,t+0.14);
+  s.connect(bp); bp.connect(g); g.connect(musicGain); s.start(t); s.stop(t+0.18);
 }
+// funky slap-ish bass with a plucky filter sweep
 function bass(t,freq){
   var ctx=birdAudio, o=ctx.createOscillator(); o.type='sawtooth'; o.frequency.value=freq;
-  var lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=420; lp.Q.value=6;
-  var dur=60/music.bpm/4*0.9, g=ctx.createGain();
-  g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.28,t+0.01); g.gain.exponentialRampToValueAtTime(0.001,t+dur);
-  o.connect(lp); lp.connect(g); g.connect(musicGain); o.start(t); o.stop(t+dur+0.02);
+  var o2=ctx.createOscillator(); o2.type='square'; o2.frequency.value=freq;
+  var o2g=ctx.createGain(); o2g.gain.value=0.14;
+  var lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.Q.value=9;
+  lp.frequency.setValueAtTime(1500,t); lp.frequency.exponentialRampToValueAtTime(300,t+0.16);
+  var dur=0.22, g=ctx.createGain();
+  g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.34,t+0.008); g.gain.exponentialRampToValueAtTime(0.001,t+dur);
+  o.connect(lp); o2.connect(o2g); o2g.connect(lp); lp.connect(g); g.connect(musicGain);
+  o.start(t); o2.start(t); o.stop(t+dur+0.02); o2.stop(t+dur+0.02);
 }
-// short stuttering grouse cackle as a rhythmic element
+// clavinet-style "chank" stab
+function clav(t,freq,vol){
+  var ctx=birdAudio, o=ctx.createOscillator(); o.type='sawtooth'; o.frequency.value=freq;
+  var lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.Q.value=7;
+  lp.frequency.setValueAtTime(2800,t); lp.frequency.exponentialRampToValueAtTime(650,t+0.11);
+  var g=ctx.createGain(); g.gain.setValueAtTime(0.0001,t);
+  g.gain.linearRampToValueAtTime(vol||0.09,t+0.004); g.gain.exponentialRampToValueAtTime(0.0001,t+0.15);
+  o.connect(lp); lp.connect(g); g.connect(musicGain); o.start(t); o.stop(t+0.17);
+}
+function stab(t){ clav(t,220,0.09); clav(t,261.63,0.08); clav(t,329.63,0.07); }  // Am7-Chank
+// subtle grouse cackle (sparingly used)
 function gacker(t,out){
   var ctx=birdAudio; if(!ctx) return; out=out||musicGain||birdMaster;
   var dur=0.22, o=ctx.createOscillator(); o.type='sawtooth';
   o.frequency.value=420+Math.random()*140;
   var lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=1600;
   var amp=ctx.createGain(); amp.gain.setValueAtTime(0,t);
-  amp.gain.linearRampToValueAtTime(0.22,t+0.02); amp.gain.linearRampToValueAtTime(0,t+dur);
+  amp.gain.linearRampToValueAtTime(0.13,t+0.02); amp.gain.linearRampToValueAtTime(0,t+dur);
   var trem=ctx.createOscillator(); trem.type='square'; trem.frequency.value=40+Math.random()*12;
-  var tg=ctx.createGain(); tg.gain.value=0.18; trem.connect(tg); tg.connect(amp.gain);
+  var tg=ctx.createGain(); tg.gain.value=0.14; trem.connect(tg); tg.connect(amp.gain);
   o.connect(lp); lp.connect(amp); amp.connect(out);
   o.start(t); trem.start(t); o.stop(t+dur+0.02); trem.stop(t+dur+0.02);
 }
-// short melodic bubbling coo on the downbeat
+// short melodic bubbling coo (sparse)
 function miniRookoo(t){
   var ctx=birdAudio, o=ctx.createOscillator(); o.type='sine';
   o.frequency.setValueAtTime(520,t); o.frequency.linearRampToValueAtTime(575,t+0.4);
   var amp=ctx.createGain(); amp.gain.setValueAtTime(0,t);
-  amp.gain.linearRampToValueAtTime(0.18,t+0.05); amp.gain.linearRampToValueAtTime(0,t+0.5);
+  amp.gain.linearRampToValueAtTime(0.11,t+0.05); amp.gain.linearRampToValueAtTime(0,t+0.5);
   var trem=ctx.createOscillator(); trem.type='sine'; trem.frequency.value=22;
-  var tg=ctx.createGain(); tg.gain.value=0.12; trem.connect(tg); tg.connect(amp.gain);
+  var tg=ctx.createGain(); tg.gain.value=0.10; trem.connect(tg); tg.connect(amp.gain);
   o.connect(amp); amp.connect(musicGain); o.start(t); trem.start(t); o.stop(t+0.55); trem.stop(t+0.55);
 }
 
-/* ── 16-step sequencer (four-on-the-floor + grouse) ──────── */
-var BASS_RIFF=[55,0,82.41,55, 110,0,82.41,55, 55,0,98,82.41, 110,98,82.41,73.42];
+/* ── 16-step funk groove (Jamiroquai-Feeling) ────────────── */
+var BASS_FUNK=[55,0,0,110, 0,0,98,55, 0,0,65.41,73.42, 0,82.41,55,0];
 function scheduleStep(step,t){
-  if(step%4===0) kick(t);
-  if(step%2===0) hat(t,(step%4===2)?0.45:0.28);
-  if(step===4||step===12) clap(t);
-  var bf=BASS_RIFF[step]; if(bf>0) bass(t,bf);
-  if(step===2||step===10||step===14) gacker(t);
-  if(step===0) miniRookoo(t);
+  if(step===0||step===6||step===10) kick(t);            // synkopierte Kick
+  if(step===4||step===12) clap(t);                       // Backbeat
+  if(step%2===0 && step!==4 && step!==12) hat(t,(step%4===2)?0.14:0.10);
+  var bf=BASS_FUNK[step]; if(bf>0) bass(t,bf);            // funky Slap-Bass
+  if(step===2||step===7||step===11||step===14) stab(t);  // Clavinet-Chank
+  if(step===8 && Math.random()<0.22) gacker(t);          // seltener Vogel-Einwurf
+  if(step===0 && Math.random()<0.18) miniRookoo(t);
 }
 function musicTick(){
   var ctx=birdAudio; if(!ctx||!musicOn) return;
@@ -1238,7 +1254,7 @@ function startGameMusic(){
   if(!birdAudio) return;
   musicGain=birdAudio.createGain(); musicGain.gain.value=0.0;
   musicGain.connect(birdAudio.destination);
-  musicGain.gain.linearRampToValueAtTime(0.55, birdAudio.currentTime+0.5);
+  musicGain.gain.linearRampToValueAtTime(0.4, birdAudio.currentTime+0.5);
   music.step=0; music.nextTime=birdAudio.currentTime+0.1;
   musicOn=true; musicTimer=setInterval(musicTick,25);
 }
