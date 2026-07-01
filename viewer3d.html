@@ -317,7 +317,6 @@ body.ar-mode { background:transparent!important; }
   <div class="tb-menu-h">Werkzeuge</div>
   <button class="tb-btn" id="btnMeasure" onclick="toggleMeasure()">📐 Messen &amp; Ausmass</button>
   <button class="tb-btn" id="btnShot"    onclick="captureScreenshot()">📸 Screenshot</button>
-  <button class="tb-btn" id="btnWeather" onclick="cycleWeather()">☀️ Sonne</button>
   <button class="tb-btn"                  onclick="resetCam()">↺ Ansicht zurücksetzen</button>
   <div class="tb-menu-h" style="margin-top:6px">Spiele</div>
   <button class="tb-btn" id="btnBirds"  onclick="birdGame()">🐦 Birkhuhn-Jagd</button>
@@ -1450,6 +1449,8 @@ var craneGroup=null, cranePath=null, craneCum=null, craneTotal=0, craneD=0, cran
 var climbers=[], climbersGroup=null;
 var weatherMode='sonne';
 var rainPts=null, rainVel=null, RAIN_N=4000;
+var cloudGroup=null, cloudMat=null;
+var gameWeatherT=0, gameWeatherI=0, weatherSeq=['sonne','wolken','regen','wolken','nebel'];
 var _shTerra=new THREE.Vector3(); // scratch
 
 function setCast(o){ o.traverse(function(c){ if(c.isMesh) c.castShadow=true; }); }
@@ -1489,25 +1490,64 @@ function updateRain(dt){
   }
   p.needsUpdate=true;
 }
+/* ── Quellwolken (ziehen von Süden nach Norden) ─────────── */
+function makeCloud(){
+  var g=new THREE.Group();
+  var n=5+((Math.random()*4)|0);
+  for(var i=0;i<n;i++){
+    var r=9+Math.random()*11;
+    var pf=new THREE.Mesh(new THREE.IcosahedronGeometry(r,1), cloudMat);
+    pf.position.set((Math.random()-0.5)*34, Math.random()*0.35*r, (Math.random()-0.5)*20);
+    pf.scale.y=0.55;               // flacher Boden → Quellwolken-Look
+    g.add(pf);
+  }
+  return g;
+}
+function spawnClouds(n){
+  cloudMat=new THREE.MeshLambertMaterial({color:0xffffff, transparent:true, opacity:0.4, depthWrite:false, fog:false});
+  cloudGroup=new THREE.Group(); cloudGroup.visible=false;
+  for(var i=0;i<n;i++){
+    var c=makeCloud();
+    c.position.set(perimeter.cx+(Math.random()*2-1)*perimeter.hx*1.1,
+                   150+Math.random()*90,
+                   perimeter.cz+(Math.random()*2-1)*perimeter.hz*1.2);
+    cloudGroup.add(c);
+  }
+  scene.add(cloudGroup);
+}
+function updateClouds(dt){
+  if(!cloudGroup||!cloudGroup.visible) return;
+  var sp=7, northEdge=perimeter.cz-perimeter.hz-140, southEdge=perimeter.cz+perimeter.hz+140;
+  for(var i=0;i<cloudGroup.children.length;i++){
+    var c=cloudGroup.children[i];
+    c.position.z -= sp*dt;                                   // +Z (Süd) → -Z (Nord)
+    if(c.position.z < northEdge){
+      c.position.z = southEdge;
+      c.position.x = perimeter.cx+(Math.random()*2-1)*perimeter.hx*1.1;
+      c.position.y = 150+Math.random()*90;
+    }
+  }
+}
+
 window.setWeather=function(mode){
   weatherMode=mode;
-  var f=scene.fog, rain=false;
+  var f=scene.fog, rain=false, clouds=false, cloudCol=0xffffff, cloudOp=0.4;
   if(mode==='sonne'){ setSky(0x2a6fd6,0xdcecff); if(f){f.color.set(0xc4dbf5); f.near=800; f.far=4200;}
     if(sunLight){sunLight.intensity=1.55; sunLight.color.set(0xfff2d6);} if(hemiLight) hemiLight.intensity=0.6;
     if(renderer) renderer.toneMappingExposure=1.05; }
-  else if(mode==='wolken'){ setSky(0x8ea6bd,0xcbd6e0); if(f){f.color.set(0xc2ccd6); f.near=500; f.far=3000;}
-    if(sunLight){sunLight.intensity=0.65; sunLight.color.set(0xdfe6ee);} if(hemiLight) hemiLight.intensity=0.8;
-    if(renderer) renderer.toneMappingExposure=1.0; }
+  else if(mode==='wolken'){ setSky(0x5a86c8,0xc7dcf1); if(f){f.color.set(0xcadcef); f.near=650; f.far=3600;}  // heiter-blau
+    if(sunLight){sunLight.intensity=1.05; sunLight.color.set(0xf4efe2);} if(hemiLight) hemiLight.intensity=0.7;
+    if(renderer) renderer.toneMappingExposure=1.02; clouds=true; cloudCol=0xffffff; cloudOp=0.4; }
   else if(mode==='nebel'){ setSky(0xb7c2cc,0xdfe6ea); if(f){f.color.set(0xd2d9de); f.near=25; f.far=260;}
     if(sunLight){sunLight.intensity=0.4; sunLight.color.set(0xe8ecef);} if(hemiLight) hemiLight.intensity=0.85;
     if(renderer) renderer.toneMappingExposure=1.0; }
   else if(mode==='regen'){ setSky(0x54606b,0x8b97a2); if(f){f.color.set(0x8b97a2); f.near=120; f.far=1400;}
     if(sunLight){sunLight.intensity=0.45; sunLight.color.set(0xb9c2cc);} if(hemiLight) hemiLight.intensity=0.6;
-    if(renderer) renderer.toneMappingExposure=0.9; rain=true; }
+    if(renderer) renderer.toneMappingExposure=0.9; rain=true; clouds=true; cloudCol=0xb9c0c8; cloudOp=0.55; }
   if(!rainPts) makeRain();
   if(rainPts) rainPts.visible=rain && !arActive;
-  var el=document.getElementById('btnWeather');
-  if(el) el.textContent=({sonne:'☀️ Sonne',wolken:'⛅ Wolken',nebel:'🌫 Nebel',regen:'🌧 Regen'})[mode];
+  if(cloudMat){ cloudMat.color.set(cloudCol); cloudMat.opacity=cloudOp; }
+  if(cloudGroup) cloudGroup.visible=clouds && !arActive;
 };
 window.cycleWeather=function(){
   var order=['sonne','wolken','nebel','regen'], i=order.indexOf(weatherMode);
@@ -1907,6 +1947,7 @@ window.birdGameStart=function(){
   if(tischeGroup) tischeGroup.visible=true;
   hideTischeLabels(true);
   setTerrainGameMode(true);                       // undurchsichtiges Terrain im Spiel
+  gameWeatherI=0; gameWeatherT=20; setWeather(weatherSeq[0]);   // Wetter wechselt alle 20s
   var bt=document.getElementById('btnTische');
   bt.classList.add('active','locked');           // can't toggle tables off mid-game
   document.body.classList.add('game-on');        // hide toolbar + legend during play
@@ -1920,6 +1961,7 @@ function birdGameEnd(timeUp){
   gamePlaying=false; gameState='over';
   stopGameMusic();
   setTerrainGameMode(false);
+  setWeather('sonne');                             // Normalansicht: kein Wetter
   document.getElementById('btnTische').classList.remove('locked');
   document.body.classList.remove('game-on');
   document.getElementById('bgHud').style.display='none';
@@ -1946,6 +1988,7 @@ window.birdGameClose=function(){
   gamePlaying=false; gameState='idle';
   stopGameMusic();
   setTerrainGameMode(false);
+  setWeather('sonne');                             // Normalansicht: kein Wetter
   document.getElementById('btnTische').classList.remove('locked');
   document.body.classList.remove('game-on');
   document.getElementById('birdGame').style.display='none';
@@ -2711,7 +2754,10 @@ function animate(){
   updateClimbers(gdt);
   updateCrane(gdt);
   updateRain(gdt);
+  if(!arActive) updateClouds(gdt);
   if(gamePlaying) updateMarmot(gdt); else if(marmotMode!=='off') resetMarmot();
+  // Spiel-Wetter: alle 20 s wechseln (nur im Spiel)
+  if(gamePlaying){ gameWeatherT-=gdt; if(gameWeatherT<=0){ gameWeatherT=20; gameWeatherI=(gameWeatherI+1)%weatherSeq.length; setWeather(weatherSeq[gameWeatherI]); } }
   // Wind (Gräser/Büsche)
   if(swayUniforms.length){ var _te=clock.getElapsedTime(); for(var _si=0;_si<swayUniforms.length;_si++) swayUniforms[_si].value=_te; }
   // Himmel folgt Kamera; Sonne/Schatten folgen dem Blickziel
@@ -2902,7 +2948,8 @@ async function init(){
     try{ spawnVegetation(workerArea); }catch(e){ console.warn('veg',e); }
     try{ spawnClimbers(3); }catch(e){ console.warn('climbers',e); }
     try{ loadRoad(); }catch(e){ console.warn('road',e); }
-    setWeather('sonne');
+    try{ spawnClouds(10); }catch(e){ console.warn('clouds',e); }
+    setWeather('sonne');   // Normalansicht: klar, kein Wetter
     startFlyIn(box);
 
     // Bind long-press on canvas (touch) + mouse long-press (laptop)
