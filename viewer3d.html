@@ -309,16 +309,21 @@ body.ar-mode { background:transparent!important; }
   <button class="tb-btn active" id="btnL26"     onclick="toggleLayer('leitungen26')">🟩 Leitungen 26/27</button>
   <button class="tb-btn active" id="btnTische"  onclick="toggleTische()">🟨 Modultische</button>
   <button class="tb-btn active" id="btnWorkers" onclick="toggleWorkers()">👷 Bauarbeiter</button>
+  <button class="tb-btn active" id="btnVeg"     onclick="toggleVegetation()">🌿 Vegetation</button>
+  <button class="tb-btn active" id="btnCrane"   onclick="toggleCrane()">🏗 Pneukran</button>
 </div>
 
 <div id="menuMore" class="tb-menu">
   <div class="tb-menu-h">Werkzeuge</div>
   <button class="tb-btn" id="btnMeasure" onclick="toggleMeasure()">📐 Messen &amp; Ausmass</button>
   <button class="tb-btn" id="btnShot"    onclick="captureScreenshot()">📸 Screenshot</button>
+  <button class="tb-btn" id="btnWeather" onclick="cycleWeather()">☀️ Sonne</button>
   <button class="tb-btn"                  onclick="resetCam()">↺ Ansicht zurücksetzen</button>
   <div class="tb-menu-h" style="margin-top:6px">Spiele</div>
   <button class="tb-btn" id="btnBirds"  onclick="birdGame()">🐦 Birkhuhn-Jagd</button>
+  <!-- AR-Fang vorerst deaktiviert (Funktion bleibt im Code, startBirdAR)
   <button class="tb-btn" id="btnBirdAR" onclick="startBirdAR()">🐦 AR-Fang (Pokémon-Go)</button>
+  -->
 </div>
 
 <div id="canvas3d"></div>
@@ -613,6 +618,7 @@ async function loadTerrain(){
     function(tex){
       satTex=tex;
       tex.wrapS=tex.wrapT=THREE.ClampToEdgeWrapping;
+      tex.encoding=THREE.sRGBEncoding;
       terrainMesh.material.map=tex;
       terrainMesh.material.color.set(0xffffff);
       terrainMesh.material.needsUpdate=true;
@@ -1436,6 +1442,209 @@ window.toggleWorkers=function(){
 };
 
 /* ═══════════════════════════════════════════════════════════
+   UMGEBUNG — Himmel, Wetter, Vegetation, Pneukran, Kletterer
+═══════════════════════════════════════════════════════════ */
+var sunLight=null, hemiLight=null, skyMesh=null, swayUniforms=[];
+var vegGroup=null, vegetationOn=true;
+var craneGroup=null, cranePath=null, craneCum=null, craneTotal=0, craneD=0, craneDir=1, craneWheels=[], craneTurret=null, craneRoll=0, craneOn=true;
+var climbers=[], climbersGroup=null;
+var weatherMode='sonne';
+var rainPts=null, rainVel=null, RAIN_N=4000;
+var _shTerra=new THREE.Vector3(); // scratch
+
+function setCast(o){ o.traverse(function(c){ if(c.isMesh) c.castShadow=true; }); }
+function terraY(x,z){
+  if(!terrainMesh) return 0;
+  _birdOrig.set(x,500,z); _birdRay.set(_birdOrig,_birdDown);
+  var h=_birdRay.intersectObject(terrainMesh); return h.length?h[0].point.y:0;
+}
+
+/* ── Himmel (Gradient-Dome) ─────────────────────────────── */
+function makeSky(){
+  var geo=new THREE.SphereGeometry(4200,24,16);
+  var mat=new THREE.ShaderMaterial({ side:THREE.BackSide, depthWrite:false,
+    uniforms:{ top:{value:new THREE.Color(0x2a6fd6)}, bot:{value:new THREE.Color(0xd6e9ff)} },
+    vertexShader:'varying vec3 vP; void main(){ vP=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);} ',
+    fragmentShader:'varying vec3 vP; uniform vec3 top; uniform vec3 bot; void main(){ float h=clamp(normalize(vP).y*0.5+0.5,0.0,1.0); gl_FragColor=vec4(mix(bot,top,h),1.0);} '
+  });
+  skyMesh=new THREE.Mesh(geo,mat); skyMesh.renderOrder=-1; scene.add(skyMesh);
+}
+function setSky(topHex,botHex){ if(skyMesh){ skyMesh.material.uniforms.top.value.set(topHex); skyMesh.material.uniforms.bot.value.set(botHex); } }
+
+/* ── Wetter ─────────────────────────────────────────────── */
+function makeRain(){
+  var g=new THREE.BufferGeometry(), pos=new Float32Array(RAIN_N*3); rainVel=new Float32Array(RAIN_N);
+  for(var i=0;i<RAIN_N;i++){ pos[i*3]=(Math.random()-0.5)*500; pos[i*3+1]=Math.random()*300; pos[i*3+2]=(Math.random()-0.5)*500; rainVel[i]=120+Math.random()*90; }
+  g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  rainPts=new THREE.Points(g,new THREE.PointsMaterial({color:0xaecbe6,size:1.3,transparent:true,opacity:0.55,depthWrite:false}));
+  rainPts.visible=false; rainPts.frustumCulled=false; scene.add(rainPts);
+}
+function updateRain(dt){
+  if(!rainPts||!rainPts.visible) return;
+  var p=rainPts.geometry.attributes.position, cx=camera.position.x, cz=camera.position.z, cy=camera.position.y;
+  for(var i=0;i<RAIN_N;i++){
+    var y=p.getY(i)-rainVel[i]*dt;
+    if(y<cy-60){ y=cy+180+Math.random()*100; p.setX(i,cx+(Math.random()-0.5)*500); p.setZ(i,cz+(Math.random()-0.5)*500); }
+    p.setY(i,y);
+  }
+  p.needsUpdate=true;
+}
+window.setWeather=function(mode){
+  weatherMode=mode;
+  var f=scene.fog, rain=false;
+  if(mode==='sonne'){ setSky(0x2a6fd6,0xdcecff); if(f){f.color.set(0xc4dbf5); f.near=800; f.far=4200;}
+    if(sunLight){sunLight.intensity=1.55; sunLight.color.set(0xfff2d6);} if(hemiLight) hemiLight.intensity=0.6;
+    if(renderer) renderer.toneMappingExposure=1.05; }
+  else if(mode==='wolken'){ setSky(0x8ea6bd,0xcbd6e0); if(f){f.color.set(0xc2ccd6); f.near=500; f.far=3000;}
+    if(sunLight){sunLight.intensity=0.65; sunLight.color.set(0xdfe6ee);} if(hemiLight) hemiLight.intensity=0.8;
+    if(renderer) renderer.toneMappingExposure=1.0; }
+  else if(mode==='nebel'){ setSky(0xb7c2cc,0xdfe6ea); if(f){f.color.set(0xd2d9de); f.near=25; f.far=260;}
+    if(sunLight){sunLight.intensity=0.4; sunLight.color.set(0xe8ecef);} if(hemiLight) hemiLight.intensity=0.85;
+    if(renderer) renderer.toneMappingExposure=1.0; }
+  else if(mode==='regen'){ setSky(0x54606b,0x8b97a2); if(f){f.color.set(0x8b97a2); f.near=120; f.far=1400;}
+    if(sunLight){sunLight.intensity=0.45; sunLight.color.set(0xb9c2cc);} if(hemiLight) hemiLight.intensity=0.6;
+    if(renderer) renderer.toneMappingExposure=0.9; rain=true; }
+  if(!rainPts) makeRain();
+  if(rainPts) rainPts.visible=rain && !arActive;
+  var el=document.getElementById('btnWeather');
+  if(el) el.textContent=({sonne:'☀️ Sonne',wolken:'⛅ Wolken',nebel:'🌫 Nebel',regen:'🌧 Regen'})[mode];
+};
+window.cycleWeather=function(){
+  var order=['sonne','wolken','nebel','regen'], i=order.indexOf(weatherMode);
+  setWeather(order[(i+1)%order.length]);
+};
+
+/* ── Vegetation: Gräser + Büsche (im Wind wogend) ────────── */
+function addSway(mat,ax,az){
+  mat.onBeforeCompile=function(sh){
+    sh.uniforms.uTime={value:0}; swayUniforms.push(sh.uniforms.uTime);
+    sh.vertexShader='uniform float uTime;\n'+sh.vertexShader.replace('#include <begin_vertex>',
+      '#include <begin_vertex>\n'+
+      'float ph=instanceMatrix[3].x*0.12+instanceMatrix[3].z*0.12;\n'+
+      'transformed.x += sin(uTime*1.6+ph)*'+ax.toFixed(3)+'*position.y;\n'+
+      'transformed.z += cos(uTime*1.25+ph)*'+az.toFixed(3)+'*position.y;\n');
+  };
+}
+function fillInstances(im,area,count,scaleFn,clump){
+  var mtx=new THREE.Matrix4(), q=new THREE.Quaternion(), s=new THREE.Vector3(), pos=new THREE.Vector3(), up=new THREE.Vector3(0,1,0);
+  var placed=0, cx=0, cz=0, cluster=0;
+  for(var i=0;i<count;i++){
+    if(clump){ if(cluster<=0){ cx=area.cx+(Math.random()*2-1)*area.hx*0.92; cz=area.cz+(Math.random()*2-1)*area.hz*0.92; cluster=8+((Math.random()*10)|0); }
+      cluster--; var x=cx+(Math.random()*2-1)*1.6, z=cz+(Math.random()*2-1)*1.6; }
+    else { var x=area.cx+(Math.random()*2-1)*area.hx*0.92, z=area.cz+(Math.random()*2-1)*area.hz*0.92; }
+    var y=terraY(x,z);
+    q.setFromAxisAngle(up,Math.random()*6.28); var sc=scaleFn(); s.set(sc,sc*(0.8+Math.random()*0.5),sc);
+    pos.set(x,y,z); mtx.compose(pos,q,s); im.setMatrixAt(placed++,mtx);
+  }
+  im.count=placed; im.instanceMatrix.needsUpdate=true;
+}
+function spawnVegetation(area){
+  vegGroup=new THREE.Group();
+  var gg=new THREE.ConeGeometry(0.05,0.6,4); gg.translate(0,0.3,0);
+  var gm=new THREE.MeshLambertMaterial({color:0x5f8f31}); addSway(gm,0.22,0.14);
+  var grass=new THREE.InstancedMesh(gg,gm,6000); fillInstances(grass,area,6000,function(){return 0.7+Math.random()*0.9;},true);
+  vegGroup.add(grass);
+  var bg=new THREE.IcosahedronGeometry(0.8,1); bg.translate(0,0.6,0);
+  var bm=new THREE.MeshLambertMaterial({color:0x3f6b2a,flatShading:true}); addSway(bm,0.06,0.05);
+  var bush=new THREE.InstancedMesh(bg,bm,80); fillInstances(bush,area,80,function(){return 0.8+Math.random()*1.4;},false);
+  vegGroup.add(bush);
+  scene.add(vegGroup);
+}
+window.toggleVegetation=function(){
+  vegetationOn=!vegetationOn;
+  if(vegGroup) vegGroup.visible=vegetationOn;
+  var b=document.getElementById('btnVeg'); if(b) b.classList.toggle('active',vegetationOn);
+};
+
+/* ── Pneukran (fährt entlang der Baustraße) ──────────────── */
+function makeCrane(){
+  var g=new THREE.Group();
+  var yellow=new THREE.MeshPhongMaterial({color:0xf4c20d,emissive:0x3a2c00,shininess:60});
+  var dark=new THREE.MeshPhongMaterial({color:0x1c1c1c});
+  var steel=new THREE.MeshPhongMaterial({color:0x9a9a9a,shininess:90});
+  var chassis=new THREE.Mesh(new THREE.BoxGeometry(11,1.1,3),yellow); chassis.position.y=1.35; g.add(chassis);
+  var deck=new THREE.Mesh(new THREE.BoxGeometry(11,0.2,3.2),dark); deck.position.y=1.95; g.add(deck);
+  var cab=new THREE.Mesh(new THREE.BoxGeometry(2,1.5,2.7),yellow); cab.position.set(4.2,2.6,0); g.add(cab);
+  craneWheels=[];
+  var wgeo=new THREE.CylinderGeometry(0.75,0.75,0.55,16); wgeo.rotateX(Math.PI/2);
+  [-3.6,-1.7,1.7,3.6].forEach(function(wx){ [1.45,-1.45].forEach(function(wz){
+    var w=new THREE.Mesh(wgeo,dark); w.position.set(wx,0.75,wz); g.add(w); craneWheels.push(w); }); });
+  craneTurret=new THREE.Group(); craneTurret.position.set(-1.6,2.1,0);
+  var house=new THREE.Mesh(new THREE.BoxGeometry(3.4,1.7,2.7),yellow); house.position.y=0.85; craneTurret.add(house);
+  var boom=new THREE.Group(); boom.position.set(0.6,1.3,0); boom.rotation.z=0.32;
+  var b1=new THREE.Mesh(new THREE.BoxGeometry(17,0.7,0.7),steel); b1.position.x=8; boom.add(b1);
+  var b2=new THREE.Mesh(new THREE.BoxGeometry(9,0.5,0.5),steel); b2.position.x=15; boom.add(b2);
+  craneTurret.add(boom); g.add(craneTurret);
+  setCast(g);
+  return g;
+}
+function loadRoad(){
+  return fetch('uploads/road.json').then(function(r){return r.ok?r.json():null;}).then(function(d){
+    if(!d||!d.route||d.route.length<2) return;
+    cranePath=d.route.map(function(p){return new THREE.Vector2(p[0],p[1]);});
+    craneCum=[0]; craneTotal=0;
+    for(var i=1;i<cranePath.length;i++){ craneTotal+=cranePath[i].distanceTo(cranePath[i-1]); craneCum.push(craneTotal); }
+    craneGroup=makeCrane(); scene.add(craneGroup); craneD=craneTotal*0.3;
+  }).catch(function(){});
+}
+function craneAt(d){
+  var i=1; while(i<craneCum.length && craneCum[i]<d) i++; if(i>=craneCum.length) i=craneCum.length-1;
+  var a=cranePath[i-1], b=cranePath[i], seg=craneCum[i]-craneCum[i-1], t=seg>0?(d-craneCum[i-1])/seg:0;
+  var tx=b.x-a.x, tz=b.y-a.y, L=Math.hypot(tx,tz)||1;
+  return {x:a.x+tx*t, z:a.y+tz*t, tx:tx/L, tz:tz/L};
+}
+function updateCrane(dt){
+  if(!craneGroup) return;
+  craneGroup.visible=craneOn && !arActive;
+  if(!craneGroup.visible) return;
+  var spd=5; craneD+=craneDir*spd*dt;
+  if(craneD>=craneTotal){ craneD=craneTotal; craneDir=-1; } else if(craneD<=0){ craneD=0; craneDir=1; }
+  var p=craneAt(craneD);
+  craneGroup.position.set(p.x, terraY(p.x,p.z), p.z);
+  craneGroup.rotation.y=Math.atan2(-p.tz*craneDir, p.tx*craneDir);
+  craneRoll+=spd*dt/0.75; for(var i=0;i<craneWheels.length;i++) craneWheels[i].rotation.z=-craneRoll*craneDir;
+  if(craneTurret) craneTurret.rotation.y=Math.sin(craneD*0.02)*0.5;
+}
+window.toggleCrane=function(){
+  craneOn=!craneOn;
+  if(craneGroup) craneGroup.visible=craneOn && !arActive;
+  var b=document.getElementById('btnCrane'); if(b) b.classList.toggle('active',craneOn);
+};
+
+/* ── Kletterer auf den Modultischen ─────────────────────── */
+function spawnClimbers(n){
+  climbersGroup=new THREE.Group(); scene.add(climbersGroup);
+  for(var i=0;i<n;i++){ var m=makeWorker(); m.scale.setScalar(0.95); setCast(m); climbersGroup.add(m);
+    var c={group:m, timer:0, ph:Math.random()*6}; assignClimber(c); climbers.push(c); }
+}
+function assignClimber(c){
+  if(!tischeItems.length){ c.timer=5; return; }
+  var it=tischeItems[(Math.random()*tischeItems.length)|0];
+  c.group.position.set(it.x, it.mesh.position.y-0.3, it.z);
+  c.group.rotation.y=Math.random()*6.28;
+  var u=c.group.userData;
+  u.legL.rotation.x=0.95; u.legR.rotation.x=0.7; u.torso.rotation.x=0.45;
+  c.timer=8+Math.random()*10;
+}
+function updateClimbers(dt){
+  if(!climbersGroup) return;
+  climbersGroup.visible=workersOn && !arActive;
+  if(!climbersGroup.visible) return;
+  for(var i=0;i<climbers.length;i++){ var c=climbers[i]; c.timer-=dt; c.ph+=dt*8;
+    var u=c.group.userData; u.armR.rotation.x=-1.0+Math.sin(c.ph)*0.7; u.armL.rotation.x=-0.5;
+    if(c.timer<=0) assignClimber(c);
+  }
+}
+
+/* ── Terrain im Spiel undurchsichtig (realistischer) ─────── */
+function setTerrainGameMode(on){
+  if(!terrainMesh) return; var m=terrainMesh.material;
+  if(on){ if(!m._gm) m._gm={o:m.opacity,dw:m.depthWrite,tr:m.transparent}; m.opacity=1.0; m.transparent=false; m.depthWrite=true; }
+  else if(m._gm){ m.opacity=m._gm.o; m.transparent=m._gm.tr; m.depthWrite=m._gm.dw; m._gm=null; }
+  m.needsUpdate=true;
+}
+
+/* ═══════════════════════════════════════════════════════════
    AR-BIRKHUHN-FANG (Pokémon-Go-Stil) — Vögel im Kamerabild fangen
 ═══════════════════════════════════════════════════════════ */
 function updateArCatchHud(){ var el=document.getElementById('arCatchScore'); if(el) el.textContent=gameFound; }
@@ -1697,6 +1906,7 @@ window.birdGameStart=function(){
   tischeOn=true;
   if(tischeGroup) tischeGroup.visible=true;
   hideTischeLabels(true);
+  setTerrainGameMode(true);                       // undurchsichtiges Terrain im Spiel
   var bt=document.getElementById('btnTische');
   bt.classList.add('active','locked');           // can't toggle tables off mid-game
   document.body.classList.add('game-on');        // hide toolbar + legend during play
@@ -1709,6 +1919,7 @@ function birdGameEnd(timeUp){
   if(gameState!=='playing') return;
   gamePlaying=false; gameState='over';
   stopGameMusic();
+  setTerrainGameMode(false);
   document.getElementById('btnTische').classList.remove('locked');
   document.body.classList.remove('game-on');
   document.getElementById('bgHud').style.display='none';
@@ -1734,6 +1945,7 @@ function birdGameEnd(timeUp){
 window.birdGameClose=function(){
   gamePlaying=false; gameState='idle';
   stopGameMusic();
+  setTerrainGameMode(false);
   document.getElementById('btnTische').classList.remove('locked');
   document.body.classList.remove('game-on');
   document.getElementById('birdGame').style.display='none';
@@ -2496,7 +2708,21 @@ function animate(){
   var gdt=_lastFrameT?Math.min(0.05,(_fnow-_lastFrameT)/1000):0.016;
   _lastFrameT=_fnow;
   updateWorkers(gdt);
+  updateClimbers(gdt);
+  updateCrane(gdt);
+  updateRain(gdt);
   if(gamePlaying) updateMarmot(gdt); else if(marmotMode!=='off') resetMarmot();
+  // Wind (Gräser/Büsche)
+  if(swayUniforms.length){ var _te=clock.getElapsedTime(); for(var _si=0;_si<swayUniforms.length;_si++) swayUniforms[_si].value=_te; }
+  // Himmel folgt Kamera; Sonne/Schatten folgen dem Blickziel
+  if(skyMesh){ skyMesh.position.copy(camera.position); skyMesh.visible=!arActive; }
+  if(rainPts) rainPts.visible=(weatherMode==='regen') && !arActive;
+  if(vegGroup) vegGroup.visible=vegetationOn && !arActive;
+  if(sunLight && !arActive){
+    var _tg=controls.target;
+    sunLight.target.position.copy(_tg);
+    sunLight.position.set(_tg.x-200, _tg.y+430, _tg.z-260);
+  }
 
   // Birkhühner update (own delta clock)
   if(birdsOn){
@@ -2593,6 +2819,12 @@ async function init(){
     renderer=new THREE.WebGLRenderer({antialias:true, alpha:true, preserveDrawingBuffer:true});
     renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
     renderer.sortObjects=true;
+    // Realistischeres Rendering
+    renderer.outputEncoding=THREE.sRGBEncoding;
+    renderer.toneMapping=THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure=1.05;
+    renderer.shadowMap.enabled=true;
+    renderer.shadowMap.type=THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
 
     lblRenderer=new THREE.CSS2DRenderer();
@@ -2624,20 +2856,26 @@ async function init(){
     controls.mouseButtons={LEFT:THREE.MOUSE.PAN, MIDDLE:THREE.MOUSE.DOLLY, RIGHT:THREE.MOUSE.ROTATE};
     controls.update();
 
-    // Lighting — warm sun from south-west at 40° altitude
-    scene.add(new THREE.HemisphereLight(0x87ceeb, 0x5a3e28, 0.55));
-    var sun=new THREE.DirectionalLight(0xfff0dd,1.3);
-    sun.position.set(-200,500,-300); scene.add(sun);
-    scene.add(new THREE.AmbientLight(0x203050,0.45));
-    // Fill from east
-    var fill=new THREE.DirectionalLight(0xaaccff,0.35);
-    fill.position.set(400,200,0); scene.add(fill);
+    // Lighting — warm sun + sky; sun casts soft shadows near the view target
+    hemiLight=new THREE.HemisphereLight(0x9cc4ff, 0x5a3e28, 0.6); scene.add(hemiLight);
+    sunLight=new THREE.DirectionalLight(0xfff2d6,1.55);
+    sunLight.position.set(-200,500,-300);
+    sunLight.castShadow=true;
+    sunLight.shadow.mapSize.set(2048,2048);
+    sunLight.shadow.camera.near=1; sunLight.shadow.camera.far=900;
+    sunLight.shadow.camera.left=-120; sunLight.shadow.camera.right=120;
+    sunLight.shadow.camera.top=120; sunLight.shadow.camera.bottom=-120;
+    sunLight.shadow.bias=-0.0005;
+    scene.add(sunLight); scene.add(sunLight.target);
+    scene.add(new THREE.AmbientLight(0x2a3550,0.35));
+    makeSky();
 
     resize();
     window.addEventListener('resize',resize);
     pct(10);
 
     await loadTerrain();
+    if(terrainMesh) terrainMesh.receiveShadow=true;
     pct(50);
 
     var loaded=0;
@@ -2659,7 +2897,12 @@ async function init(){
     perimeter.hx=Math.max(pS.x/2,80); perimeter.hz=Math.max(pS.z/2,80);
     // Bauarbeiter laufen im gleichen Projektgebiet
     workerArea={cx:pC.x, cz:pC.z, hx:Math.max(pS.x/2,80), hz:Math.max(pS.z/2,80)};
-    spawnWorkers(5);
+    spawnWorkers(5); if(workerGroup) setCast(workerGroup);
+    // Umgebung: Vegetation, Kletterer, Pneukran-Strasse, Wetter
+    try{ spawnVegetation(workerArea); }catch(e){ console.warn('veg',e); }
+    try{ spawnClimbers(3); }catch(e){ console.warn('climbers',e); }
+    try{ loadRoad(); }catch(e){ console.warn('road',e); }
+    setWeather('sonne');
     startFlyIn(box);
 
     // Bind long-press on canvas (touch) + mouse long-press (laptop)
@@ -2672,7 +2915,7 @@ async function init(){
       tbCloseMenus();
     });
     var mm=document.getElementById('menuMore');
-    if(mm) mm.addEventListener('click', function(e){ if(e.target.closest('.tb-btn')) tbCloseMenus(); });
+    if(mm) mm.addEventListener('click', function(e){ if(e.target.closest('.tb-btn') && !e.target.closest('#btnWeather')) tbCloseMenus(); });
 
     // Bind AR finger-alignment gestures (active only while AR is on)
     renderer.domElement.addEventListener('touchstart', arTouchStart, {passive:false});
