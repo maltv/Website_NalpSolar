@@ -1449,7 +1449,7 @@ var craneGroup=null, cranePath=null, craneCum=null, craneTotal=0, craneD=0, cran
 var climbers=[], climbersGroup=null;
 var weatherMode='sonne';
 var rainPts=null, rainVel=null, RAIN_N=4000;
-var cloudGroup=null, cloudMat=null;
+var cloudGroup=null, cloudMat=null, skyOn=false;
 var gameWeatherT=0, gameWeatherI=0, weatherSeq=['sonne','wolken','regen','wolken','nebel'];
 var _shTerra=new THREE.Vector3(); // scratch
 
@@ -1529,8 +1529,22 @@ function updateClouds(dt){
   }
 }
 
+// Normalansicht: kein Himmel/Wetter → dunkler Hintergrund, scharfes Bild (wie urspruenglich)
+function applyNormalSky(){
+  skyOn=false;
+  if(skyMesh) skyMesh.visible=false;
+  scene.background=new THREE.Color(0x0d1525);
+  if(scene.fog){ scene.fog.color.set(0x0d1525); scene.fog.near=600; scene.fog.far=3500; }
+  if(sunLight){ sunLight.intensity=1.3; sunLight.color.set(0xfff0dd); }
+  if(hemiLight) hemiLight.intensity=0.6;
+  if(renderer) renderer.toneMappingExposure=1.0;
+  if(rainPts) rainPts.visible=false;
+  if(cloudGroup) cloudGroup.visible=false;
+  weatherMode='sonne';
+}
+
 window.setWeather=function(mode){
-  weatherMode=mode;
+  weatherMode=mode; skyOn=true;
   var f=scene.fog, rain=false, clouds=false, cloudCol=0xffffff, cloudOp=0.4;
   if(mode==='sonne'){ setSky(0x2a6fd6,0xdcecff); if(f){f.color.set(0xc4dbf5); f.near=800; f.far=4200;}
     if(sunLight){sunLight.intensity=1.55; sunLight.color.set(0xfff2d6);} if(hemiLight) hemiLight.intensity=0.6;
@@ -1851,6 +1865,12 @@ function hsLoad(){ try{ return JSON.parse(localStorage.getItem('birkhuhnHighscor
 function hsSave(a){ try{ localStorage.setItem('birkhuhnHighscores',JSON.stringify(a)); }catch(e){} }
 function hsEscape(s){ return String(s).replace(/[<>&"]/g,function(c){ return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]; }); }
 function hsBest(){ var a=hsLoad(); return a.length?a.reduce(function(m,e){return e.score>m.score?e:m;}):null; }
+// gleiche Namen zusammenfassen → nur der höchste Score je Name
+function dedupeMaxByName(list){
+  var best={}, order=[];
+  (list||[]).forEach(function(e){ var k=String(e.name||'?'); if(!(k in best)){ best[k]=e.score; order.push(k); } else if(e.score>best[k]) best[k]=e.score; });
+  return order.map(function(k){ return {name:k, score:best[k]}; }).sort(function(a,b){ return b.score-a.score; });
+}
 
 /* ── Globale Rangliste (Firebase Realtime DB, anmeldefrei für Spieler) ──
    LB_URL = Realtime-Database-URL ohne / am Ende, z.B.
@@ -1872,8 +1892,7 @@ function lbFetch(){
       var list=[];
       Object.keys(obj).forEach(function(k){ var v=obj[k];
         if(v && typeof v.s==='number') list.push({name:String(v.n||'?').slice(0,14), score:v.s}); });
-      list.sort(function(a,b){return b.score-a.score;});
-      return list.slice(0,20);
+      return dedupeMaxByName(list).slice(0,20);
     }).catch(function(){ return null; });
 }
 function lbRender(highlight){
@@ -1898,13 +1917,13 @@ function lbRender(highlight){
 
 function renderBoard(highlight){
   var ol=document.getElementById('bgBoard'); if(!ol) return;
-  var a=hsLoad().slice().sort(function(x,y){return y.score-x.score;}).slice(0,8);
+  var a=dedupeMaxByName(hsLoad()).slice(0,8);
   ol.innerHTML='';
   if(!a.length){ ol.innerHTML='<li class="bg-empty">Noch keine Einträge — sei die/der Erste!</li>'; return; }
   a.forEach(function(e){
     var li=document.createElement('li');
     li.innerHTML='<span class="bm-name">'+hsEscape(e.name)+'</span><span class="bm-score">'+e.score+'</span>';
-    if(highlight && e.t===highlight.t && e.name===highlight.name && e.score===highlight.score) li.className='me';
+    if(highlight && e.name===highlight.name && e.score===highlight.score) li.className='me';
     ol.appendChild(li);
   });
 }
@@ -1961,7 +1980,7 @@ function birdGameEnd(timeUp){
   gamePlaying=false; gameState='over';
   stopGameMusic();
   setTerrainGameMode(false);
-  setWeather('sonne');                             // Normalansicht: kein Wetter
+  applyNormalSky();                                // Normalansicht: kein Wetter, scharf
   document.getElementById('btnTische').classList.remove('locked');
   document.body.classList.remove('game-on');
   document.getElementById('bgHud').style.display='none';
@@ -1988,7 +2007,7 @@ window.birdGameClose=function(){
   gamePlaying=false; gameState='idle';
   stopGameMusic();
   setTerrainGameMode(false);
-  setWeather('sonne');                             // Normalansicht: kein Wetter
+  applyNormalSky();                                // Normalansicht: kein Wetter, scharf
   document.getElementById('btnTische').classList.remove('locked');
   document.body.classList.remove('game-on');
   document.getElementById('birdGame').style.display='none';
@@ -2761,7 +2780,7 @@ function animate(){
   // Wind (Gräser/Büsche)
   if(swayUniforms.length){ var _te=clock.getElapsedTime(); for(var _si=0;_si<swayUniforms.length;_si++) swayUniforms[_si].value=_te; }
   // Himmel folgt Kamera; Sonne/Schatten folgen dem Blickziel
-  if(skyMesh){ skyMesh.position.copy(camera.position); skyMesh.visible=!arActive; }
+  if(skyMesh){ skyMesh.position.copy(camera.position); skyMesh.visible=skyOn && !arActive; }
   if(rainPts) rainPts.visible=(weatherMode==='regen') && !arActive;
   if(vegGroup) vegGroup.visible=vegetationOn && !arActive;
   if(sunLight && !arActive){
@@ -2949,7 +2968,7 @@ async function init(){
     try{ spawnClimbers(3); }catch(e){ console.warn('climbers',e); }
     try{ loadRoad(); }catch(e){ console.warn('road',e); }
     try{ spawnClouds(10); }catch(e){ console.warn('clouds',e); }
-    setWeather('sonne');   // Normalansicht: klar, kein Wetter
+    applyNormalSky();   // Normalansicht: kein Wetter, scharf
     startFlyIn(box);
 
     // Bind long-press on canvas (touch) + mouse long-press (laptop)
