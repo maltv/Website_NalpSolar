@@ -384,6 +384,7 @@ body.ar-mode { background:transparent!important; }
   <button class="tb-btn active" id="btnWorkers" onclick="toggleWorkers()">👷 Bauarbeiter</button>
   <button class="tb-btn active" id="btnVeg"     onclick="toggleVegetation()">🌿 Vegetation</button>
   <button class="tb-btn active" id="btnCrane"   onclick="toggleCrane()">🏗 Pneukran</button>
+  <button class="tb-btn active" id="btnPG"      onclick="togglePG()">🪂 Gleitschirm</button>
 </div>
 
 <div id="menuMore" class="tb-menu">
@@ -2024,6 +2025,72 @@ window.toggleCrane=function(){
   var b=document.getElementById('btnCrane'); if(b) b.classList.toggle('active',craneOn);
 };
 
+/* ── Gleitschirmpilot vom Vanatsch ───────────────────────── */
+var pgGroup=null, pgLbl=null, pgOn=true;
+var pg={mode:'wait', waitT:4, pos:new THREE.Vector3(), heading:0, phase:0};
+function makeParaglider(){
+  var g=new THREE.Group();
+  // Schirmkappe: Bogen aus rot/weissen Zellen (Anhedral)
+  var seg=9, span=10.5;
+  for(var i=0;i<seg;i++){
+    var t=(i/(seg-1))*2-1;
+    var mat=new THREE.MeshPhongMaterial({color:(i%2)?0xffffff:0xff3b1f, side:THREE.DoubleSide, shininess:25});
+    var cell=new THREE.Mesh(new THREE.BoxGeometry(2.6,0.16,span/seg*1.08),mat);
+    cell.position.set(0, 7.2-Math.abs(t)*1.9, t*span*0.46);
+    cell.rotation.x=t*0.55;
+    g.add(cell);
+  }
+  // Leinen
+  var lineMat=new THREE.LineBasicMaterial({color:0x222222,transparent:true,opacity:0.7});
+  [[-4.6,5.4],[-1.6,6.9],[1.6,6.9],[4.6,5.4]].forEach(function(p){
+    var geo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,1.0,0), new THREE.Vector3(0.2,p[1],p[0])]);
+    g.add(new THREE.Line(geo,lineMat));
+  });
+  // Pilot im Gurtzeug
+  var body=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.9,0.45), new THREE.MeshPhongMaterial({color:0x2244aa})); body.position.y=0.55; g.add(body);
+  var helmet=new THREE.Mesh(new THREE.SphereGeometry(0.2,10,8), new THREE.MeshPhongMaterial({color:0xf2f2f2})); helmet.position.y=1.15; g.add(helmet);
+  var legs=new THREE.Mesh(new THREE.BoxGeometry(0.7,0.28,0.3), new THREE.MeshPhongMaterial({color:0x333333})); legs.position.set(0.35,0.15,0); g.add(legs);
+  setCast(g);
+  var d=document.createElement('div'); d.className='lbl'; d.textContent='🪂 Vanatsch-Pilot';
+  pgLbl=new THREE.CSS2DObject(d); pgLbl.position.set(0,9,0); g.add(pgLbl);
+  return g;
+}
+function spawnPG(){
+  if(!pgGroup){ pgGroup=makeParaglider(); scene.add(pgGroup); }
+  // Start hoch über dem Nordrand (Richtung Piz Vanatsch/Sedrun)
+  var sx=perimeter.cx+(Math.random()*2-1)*perimeter.hx*0.6;
+  var sz=perimeter.cz-perimeter.hz-120;
+  pg.pos.set(sx, terraY(sx,sz)+220+Math.random()*70, sz);
+  pg.heading=-Math.PI/2+(Math.random()-0.5)*0.7;      // grob südwärts über den Perimeter
+  pg.mode='fly'; pg.phase=Math.random()*6;
+  pgGroup.visible=pgOn && !arActive;
+}
+function updatePG(dt){
+  if(pgGroup) pgGroup.visible=pgOn && !arActive && pg.mode==='fly';
+  if(pgLbl) pgLbl.visible=!!(pgGroup && pgGroup.visible && !gamePlaying);
+  if(!pgOn || arActive) return;
+  if(pg.mode==='wait'){ pg.waitT-=dt; if(pg.waitT<=0) spawnPG(); return; }
+  pg.phase+=dt;
+  var h=pg.heading+Math.sin(pg.phase*0.45)*0.38;      // sanfte S-Schleifen
+  pg.pos.x+=Math.cos(h)*8.5*dt;
+  pg.pos.z+=-Math.sin(h)*8.5*dt;
+  pg.pos.y-=1.15*dt;                                   // Gleit-Sinken
+  pgGroup.position.copy(pg.pos);
+  pgGroup.rotation.y=h;
+  pgGroup.rotation.z=-Math.cos(pg.phase*0.45)*0.20;   // Schräglage in der Kurve
+  var gy=terraY(pg.pos.x,pg.pos.z);
+  if(pg.pos.y<gy+12 ||
+     Math.abs(pg.pos.x-perimeter.cx)>perimeter.hx+280 ||
+     Math.abs(pg.pos.z-perimeter.cz)>perimeter.hz+280){
+    pg.mode='wait'; pg.waitT=14+Math.random()*20;      // gelandet → neuer Start am Vanatsch
+  }
+}
+window.togglePG=function(){
+  pgOn=!pgOn;
+  if(pgGroup) pgGroup.visible=pgOn && !arActive && pg.mode==='fly';
+  var b=document.getElementById('btnPG'); if(b) b.classList.toggle('active',pgOn);
+};
+
 /* ── Kletterer auf den Modultischen ─────────────────────── */
 function spawnClimbers(n){
   climbersGroup=new THREE.Group(); scene.add(climbersGroup);
@@ -3166,6 +3233,7 @@ function animate(){
   updateWorkers(gdt);
   updateClimbers(gdt);
   updateCrane(gdt);
+  updatePG(gdt);
   updateRain(gdt);
   if(!arActive) updateClouds(gdt);
   if(bursts.length) updateBursts(gdt);
