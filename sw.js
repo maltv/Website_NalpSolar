@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v14';
+var CACHE = 'nalpsolar-v15';
 var PRECACHE = [
   './viewer3d.html',
   './assets/js/three/three.min.js',
