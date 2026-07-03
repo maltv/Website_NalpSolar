@@ -548,6 +548,7 @@ body.ar-mode { background:transparent!important; }
 </div>
 
 <div id="statusBar">
+  <span id="sVer" style="color:#7fd6ff;font-weight:700">v21</span>
   <span id="sLoad">–</span>
   <span id="sAlt"></span>
   <span style="flex:1"></span>
@@ -3599,7 +3600,11 @@ async function init(){
 }
 
 window.addEventListener('load',function(){
-  if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(function(){});
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'})
+      .then(function(reg){ if(reg && reg.update) reg.update(); })
+      .catch(function(){});
+  }
   init();
 });
 </script>
