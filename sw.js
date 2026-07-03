@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v23';
+var CACHE = 'nalpsolar-v24';
 var PRECACHE = [
   './viewer3d.html',
   './assets/js/three/three.min.js',
@@ -41,6 +41,7 @@ self.addEventListener('activate', function(e) {
 });
 
 self.addEventListener('fetch', function(e) {
+  if (e.request.method !== 'GET') return;   // POSTs (z.B. Firebase-Scores) nie cachen
   var url = e.request.url;
   var isExternal = url.includes('geo.admin.ch') || url.includes('api3.geo.admin.ch');
 

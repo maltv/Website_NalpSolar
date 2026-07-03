@@ -405,6 +405,7 @@ body.ar-mode { background:transparent!important; }
   <button class="tb-btn"                  onclick="resetCam()">↺ Ansicht zurücksetzen</button>
   <div class="tb-menu-h" style="margin-top:6px">Spiele</div>
   <button class="tb-btn" id="btnBirds"  onclick="birdGame()">🐦 Birkhuhn-Jagd</button>
+  <button class="tb-btn" id="btnCreep"  onclick="creeperGame()">👾 Creeper-Nacht</button>
   <!-- AR-Fang vorerst deaktiviert (Funktion bleibt im Code, startBirdAR)
   <button class="tb-btn" id="btnBirdAR" onclick="startBirdAR()">🐦 AR-Fang (Pokémon-Go)</button>
   -->
@@ -442,7 +443,8 @@ body.ar-mode { background:transparent!important; }
 <div id="bgHud">
   <span id="bgTimer">2:00</span>
   <span id="bgScore">🐦 0</span>
-  <button onclick="birdGameClose()" title="Beenden">✕</button>
+  <span id="bgTables" style="display:none;color:#ffb0b0"></span>
+  <button onclick="gameCloseDispatch()" title="Beenden">✕</button>
   <div id="bgProg"><div id="bgProgFill"></div></div>
 </div>
 <div id="bgCombo"></div>
@@ -461,8 +463,8 @@ body.ar-mode { background:transparent!important; }
        Achtung: Wetterumschwünge und Gewitter!</p>
     <div id="bgBest" class="bg-best">🏆 —</div>
     <div class="bg-row">
-      <button class="bg-btn primary" onclick="birdGameStart()">▶ Los geht's!</button>
-      <button class="bg-btn" onclick="birdGameClose()">Abbrechen</button>
+      <button class="bg-btn primary" onclick="gameStartDispatch()">▶ Los geht's!</button>
+      <button class="bg-btn" onclick="gameCloseDispatch()">Abbrechen</button>
     </div>
   </div>
   <div id="bgResult" class="bg-card" style="display:none">
@@ -481,8 +483,8 @@ body.ar-mode { background:transparent!important; }
       <ol id="bgGlobalBoard"><li class="bg-empty">lädt …</li></ol>
     </div>
     <div class="bg-row">
-      <button class="bg-btn primary" onclick="birdGameStart()">↻ Nochmal</button>
-      <button class="bg-btn" onclick="birdGameClose()">Schliessen</button>
+      <button class="bg-btn primary" onclick="gameStartDispatch()">↻ Nochmal</button>
+      <button class="bg-btn" onclick="gameCloseDispatch()">Schliessen</button>
     </div>
   </div>
 </div>
@@ -621,6 +623,10 @@ var music={step:0, nextTime:0, bpm:108};
 var tapStart=null;
 /* AR-Birkhuhn-Fang (Pokémon-Go-Stil) */
 var birdARon=false, birdARpending=false, birdBaseY=0, savedPerimeter=null;
+/* Creeper-Nacht (2. Spiel) */
+var currentGame='birds', creepMode=false;
+var creeps=[], creepGroup=null, creepSpawnT=0, creepInterval=4.5, tablesLost=0, CREEP_MAX_LOST=8;
+var creepSkinTex=null, creepFaceTex=null, scorchGroup=null, musicStyle='funk';
 var perimeter={cx:95,cz:-409,hx:250,hz:250};
 var _birdRay=new THREE.Raycaster(), _birdOrig=new THREE.Vector3(), _birdDown=new THREE.Vector3(0,-1,0);
 var _v1=new THREE.Vector3(), _v2=new THREE.Vector3(), _v3=new THREE.Vector3();
@@ -1261,6 +1267,7 @@ function playRookoo(pan,vol){
 
 // "Tschuwää" — the explosive hissing sneeze
 function playHiss(pan,vol){
+  if(!birdAudio) return;
   var ctx=birdAudio, t=ctx.currentTime+0.02, dur=0.5;
   var out=birdOut(pan);
   var n=Math.floor(ctx.sampleRate*dur);
@@ -1372,6 +1379,7 @@ function miniRookoo(t){
 /* ── 16-step funk groove (Jamiroquai-Feeling) ────────────── */
 var BASS_FUNK=[55,0,0,110, 0,0,98,55, 0,0,65.41,73.42, 0,82.41,55,0];
 function scheduleStep(step,t){
+  if(musicStyle==='dark'){ darkStep(step,t); return; }
   if(step===0||step===6||step===10) kick(t);            // synkopierte Kick
   if(step===4||step===12) clap(t);                       // Backbeat
   if(step%2===0 && step!==4 && step!==12) hat(t,(step%4===2)?0.14:0.10);
@@ -1379,6 +1387,13 @@ function scheduleStep(step,t){
   if(step===2||step===7||step===11||step===14) stab(t);  // Clavinet-Chank
   if(step===8 && Math.random()<0.22) gacker(t);          // seltener Vogel-Einwurf
   if(step===0 && Math.random()<0.18) miniRookoo(t);
+}
+// Creeper-Nacht: langsamer, dunkler Puls in Moll
+function darkStep(step,t){
+  if(step===0||step===8) kick(t);
+  if(step===0||step===4||step===8||step===12) bass(t, step<8?55:51.91);   // A1 / G#1
+  if(step===2||step===6||step===10||step===14) hat(t,0.07);
+  if(step===12 && Math.random()<0.45){ clav(t,233.08,0.05); clav(t,246.94,0.045); }  // dissonanter Stich
 }
 function musicTick(){
   var ctx=birdAudio; if(!ctx||!musicOn) return;
@@ -1389,8 +1404,10 @@ function musicTick(){
     music.step=(music.step+1)%16;
   }
 }
-function startGameMusic(){
+function startGameMusic(style){
   if(!birdAudio) return;
+  musicStyle=style||'funk';
+  music.bpm=(musicStyle==='dark')?92:108;
   musicGain=birdAudio.createGain(); musicGain.gain.value=0.0;
   musicGain.connect(birdAudio.destination);
   musicGain.gain.linearRampToValueAtTime(0.4, birdAudio.currentTime+0.5);
@@ -2094,7 +2111,7 @@ function spawnPG(){
   pg.mode='fly'; pg.phase=Math.random()*6;
 }
 function updatePG(dt){
-  var active=gamePlaying && !arActive;
+  var active=gamePlaying && !arActive && !creepMode;   // kein Gleitschirm in der Nacht
   if(pgGroup) pgGroup.visible=active && pg.mode==='fly';
   if(!active) return;
   if(pg.mode==='wait'){ pg.waitT-=dt; if(pg.waitT<=0) spawnPG(); return; }
@@ -2415,6 +2432,7 @@ function onTapUp(e){
   tapStart=null;
   if(moved>12||held>400) return;     // was a drag / orbit, not a tap
   if(gamePlaying || birdARon){
+    if(creepMode){ pickCreep(e.clientX, e.clientY); return; }         // Creeper-Nacht
     if(gamePlaying && tryCatchMarmot(e.clientX, e.clientY)) return;   // 5-Punkte-Murmeltier
     pickBird(e.clientX, e.clientY); return;
   }
@@ -2466,7 +2484,7 @@ function resetBirdsForGame(n){
 }
 function updateGameHud(){
   var s=document.getElementById('bgScore');
-  if(s) s.textContent='🐦 '+gameFound;     // no upper limit
+  if(s) s.textContent=(creepMode?'👾 ':'🐦 ')+gameFound;     // no upper limit
 }
 function updateGameTimer(){
   if(gameState!=='playing') return;
@@ -2479,12 +2497,14 @@ function updateGameTimer(){
     pb.style.background=fr>0.5?'#39d353':(fr>0.22?'#f7c948':'#ff5a5a'); }
   // Combo verfallen lassen
   if(combo>0 && performance.now()-comboLastT>COMBO_WINDOW){ combo=0; comboHud(); }
-  if(remMs<=0) birdGameEnd(true);
+  if(remMs<=0){ if(creepMode) creepEnd(tablesLost<CREEP_MAX_LOST); else birdGameEnd(true); }
 }
 
 /* ── Highscore (localStorage) ────────────────────────────── */
-function hsLoad(){ try{ return JSON.parse(localStorage.getItem('birkhuhnHighscores'))||[]; }catch(e){ return []; } }
-function hsSave(a){ try{ localStorage.setItem('birkhuhnHighscores',JSON.stringify(a)); }catch(e){} }
+function hsKey(){ return currentGame==='creeper' ? 'creeperHighscores' : 'birkhuhnHighscores'; }
+function lbPath(){ return currentGame==='creeper' ? '/scores_creeper.json' : '/scores.json'; }
+function hsLoad(){ try{ return JSON.parse(localStorage.getItem(hsKey()))||[]; }catch(e){ return []; } }
+function hsSave(a){ try{ localStorage.setItem(hsKey(),JSON.stringify(a)); }catch(e){} }
 function hsEscape(s){ return String(s).replace(/[<>&"]/g,function(c){ return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]; }); }
 function hsBest(){ var a=hsLoad(); return a.length?a.reduce(function(m,e){return e.score>m.score?e:m;}):null; }
 // gleiche Namen zusammenfassen → nur der höchste Score je Name
@@ -2501,13 +2521,13 @@ var LB_URL='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatab
 function lbEnabled(){ return !!LB_URL; }
 function lbSubmit(name,score){
   if(!lbEnabled()) return Promise.resolve(false);
-  return fetch(LB_URL+'/scores.json',{method:'POST',
+  return fetch(LB_URL+lbPath(),{method:'POST',
       body:JSON.stringify({n:String(name).slice(0,14), s:score|0, t:Date.now()})})
     .then(function(r){return r.ok;}).catch(function(){return false;});
 }
 function lbFetch(){
   if(!lbEnabled()) return Promise.resolve(null);
-  return fetch(LB_URL+'/scores.json')
+  return fetch(LB_URL+lbPath())
     .then(function(r){ return r.ok?r.json():null; })
     .then(function(obj){
       if(!obj) return [];
@@ -2563,9 +2583,11 @@ window.bgSaveScore=function(){
 };
 
 window.birdGame=function(){
-  if(gameState==='idle') birdGameOpen(); else birdGameClose();
+  if(gameState==='idle') birdGameOpen(); else gameCloseDispatch();
 };
 function birdGameOpen(){
+  currentGame='birds';
+  setIntroTexts('birds');
   initBirdAudio();
   gameState='intro';
   var best=hsBest();
@@ -2668,6 +2690,334 @@ window.birdGameClose=function(){
   document.getElementById('btnBirds').classList.remove('active');
   if(GAME_APP) setTimeout(function(){ birdGameOpen(); },200);   // Spiel-App: zurück zum Startbildschirm
 };
+
+/* ═══════════════════════════════════════════════════════════
+   CREEPER-NACHT — 2. Spiel: Tische vor Creepern beschützen
+═══════════════════════════════════════════════════════════ */
+function pixelTex(draw){
+  var c=document.createElement('canvas'); c.width=64; c.height=64;
+  var x=c.getContext('2d'); x.imageSmoothingEnabled=false;
+  draw(x);
+  var t=new THREE.CanvasTexture(c);
+  t.magFilter=THREE.NearestFilter; t.minFilter=THREE.NearestFilter;
+  t.encoding=THREE.sRGBEncoding;
+  return t;
+}
+function creepTextures(){
+  if(creepSkinTex) return;
+  var greens=['#2f9e2f','#3fae3f','#279027','#4cbf4c','#1e7c1e','#37a437'];
+  creepSkinTex=pixelTex(function(x){
+    for(var i=0;i<8;i++) for(var j=0;j<8;j++){ x.fillStyle=greens[(Math.random()*greens.length)|0]; x.fillRect(i*8,j*8,8,8); }
+  });
+  creepFaceTex=pixelTex(function(x){
+    for(var i=0;i<8;i++) for(var j=0;j<8;j++){ x.fillStyle=greens[(Math.random()*greens.length)|0]; x.fillRect(i*8,j*8,8,8); }
+    x.fillStyle='#0a140a';
+    x.fillRect(8,16,16,16); x.fillRect(40,16,16,16);          // Augen
+    x.fillRect(24,32,16,16);                                   // Nase
+    x.fillRect(16,40,8,24); x.fillRect(40,40,8,24);            // Mundwinkel
+  });
+}
+function makeCreeper(){
+  creepTextures();
+  function mat(tex){ return new THREE.MeshLambertMaterial({map:tex, emissive:0x0d220d}); }
+  var skin=mat(creepSkinTex);
+  var g=new THREE.Group(), mats=[skin];
+  var headM=[skin,skin,skin,skin,skin,skin].slice(); headM[0]=mat(creepFaceTex); mats.push(headM[0]);
+  var head=new THREE.Mesh(new THREE.BoxGeometry(0.9,0.9,0.9), headM); head.position.y=1.95; g.add(head);
+  var body=new THREE.Mesh(new THREE.BoxGeometry(0.55,1.2,0.85), skin); body.position.y=1.0; g.add(body);
+  var legs=[];
+  [[0.32,0.24],[0.32,-0.24],[-0.32,0.24],[-0.32,-0.24]].forEach(function(p){
+    var l=new THREE.Mesh(new THREE.BoxGeometry(0.42,0.55,0.4), skin);
+    l.position.set(p[0],0.28,p[1]); g.add(l); legs.push(l);
+  });
+  g.userData={legs:legs, mats:mats, head:head};
+  setCast(g);
+  return g;
+}
+/* Sounds */
+function playBoom(){
+  if(!birdAudio) return;
+  var ctx=birdAudio, t=ctx.currentTime+0.01, dur=1.1;
+  var n=Math.floor(ctx.sampleRate*dur), buf=ctx.createBuffer(1,n,ctx.sampleRate), d=buf.getChannelData(0);
+  for(var i=0;i<n;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/n,2);
+  var s=ctx.createBufferSource(); s.buffer=buf;
+  var lp=ctx.createBiquadFilter(); lp.type='lowpass';
+  lp.frequency.setValueAtTime(600,t); lp.frequency.exponentialRampToValueAtTime(70,t+dur);
+  var g=ctx.createGain(); g.gain.setValueAtTime(0.0001,t);
+  g.gain.exponentialRampToValueAtTime(0.6,t+0.03); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  s.connect(lp); lp.connect(g); g.connect(birdMaster); s.start(t); s.stop(t+dur+0.05);
+  var o=ctx.createOscillator(); o.type='sine';
+  o.frequency.setValueAtTime(90,t); o.frequency.exponentialRampToValueAtTime(28,t+0.5);
+  var g2=ctx.createGain(); g2.gain.setValueAtTime(0.45,t); g2.gain.exponentialRampToValueAtTime(0.0001,t+0.55);
+  o.connect(g2); g2.connect(birdMaster); o.start(t); o.stop(t+0.6);
+}
+function playDing(ch){
+  if(!birdAudio) return;
+  var ctx=birdAudio, t=ctx.currentTime+0.01, base=880*Math.pow(1.06,Math.min(ch||0,10));
+  [0,0.07].forEach(function(dt2,i){
+    var o=ctx.createOscillator(); o.type='sine'; o.frequency.value=base*(i?1.5:1);
+    var g=ctx.createGain(); g.gain.setValueAtTime(0.0001,t+dt2);
+    g.gain.exponentialRampToValueAtTime(0.22,t+dt2+0.015); g.gain.exponentialRampToValueAtTime(0.0001,t+dt2+0.25);
+    o.connect(g); g.connect(birdMaster); o.start(t+dt2); o.stop(t+dt2+0.3);
+  });
+}
+/* Spawnen & Verhalten */
+function aliveTables(){ return tischeItems.filter(function(it){ return it.mesh.visible; }); }
+function spawnCreep(){
+  var pool=aliveTables(); if(!pool.length) return;
+  var tgt=pool[(Math.random()*pool.length)|0];
+  var ang=Math.random()*6.283, dist=70+Math.random()*60;
+  var sx=tgt.x+Math.cos(ang)*dist, sz=tgt.z+Math.sin(ang)*dist;
+  sx=Math.max(perimeter.cx-perimeter.hx,Math.min(perimeter.cx+perimeter.hx,sx));
+  sz=Math.max(perimeter.cz-perimeter.hz,Math.min(perimeter.cz+perimeter.hz,sz));
+  var mesh=makeCreeper(); mesh.scale.setScalar(1.5);
+  var c={ group:mesh, x:sx, z:sz, tgt:tgt, speed:4.5+Math.random()*2.2,
+          state:'walk', fuseT:0, ph:Math.random()*6, dead:false };
+  mesh.position.set(sx,terraY(sx,sz),sz);
+  creepGroup.add(mesh); creeps.push(c);
+}
+function explodeCreep(c){
+  var p=c.group.position;
+  playBoom(); screenShake();
+  featherBurst(p,0x555555); featherBurst(p,0xff9933);
+  if(navigator.vibrate) navigator.vibrate([60,40,120]);
+  // Tisch zerstören (Panel + Beine aus, Brandfleck) — nur nah und solange gespielt wird
+  var it=c.tgt;
+  if(it && it.mesh.visible && gamePlaying && Math.hypot(it.x-c.x,it.z-c.z)<4){
+    it.mesh.visible=false;
+    for(var j=0;j<it.legs.length;j++) it.legs[j].visible=false;
+    if(!scorchGroup){ scorchGroup=new THREE.Group(); scene.add(scorchGroup); }
+    var sc=new THREE.Mesh(new THREE.CylinderGeometry(3.2,3.2,0.12,14),
+      new THREE.MeshLambertMaterial({color:0x151210}));
+    sc.position.set(it.x, terraY(it.x,it.z)+0.1, it.z);
+    scorchGroup.add(sc);
+    tablesLost++; updateTablesHud();
+    flashMsg('💥 Modultisch zerstört!');
+    if(tablesLost>=CREEP_MAX_LOST){
+      gamePlaying=false;                                   // stoppt Timer/Spawns sofort (kein Renn-Ende)
+      setTimeout(function(){ creepEnd(false); },600);
+    }
+  }
+  c.dead=true;
+}
+function updateTablesHud(){
+  var el=document.getElementById('bgTables');
+  if(el) el.textContent='💥 '+tablesLost+'/'+CREEP_MAX_LOST;
+}
+function updateCreeps(dt){
+  if(!creepMode||!gamePlaying) return;
+  creepSpawnT-=dt;
+  if(creepSpawnT<=0){
+    spawnCreep();
+    creepInterval=Math.max(2.2,creepInterval*0.965);      // wird laufend hektischer
+    creepSpawnT=creepInterval;
+  }
+  for(var i=0;i<creeps.length;i++){
+    var c=creeps[i]; if(c.dead) continue;
+    if(!c.tgt || !c.tgt.mesh.visible){                     // Ziel weg → neues suchen
+      var pool=aliveTables(); if(!pool.length){ c.dead=true; c.group.visible=false; continue; }
+      c.tgt=pool[(Math.random()*pool.length)|0];
+      if(c.state==='fuse'){                                // Lunte abbrechen, neu hinlaufen
+        c.state='walk'; c.fuseT=0; c.group.scale.setScalar(1.5);
+        for(var m0=0;m0<c.group.userData.mats.length;m0++) c.group.userData.mats[m0].emissive.setHex(0x0d220d);
+      }
+    }
+    var dx=c.tgt.x-c.x, dz=c.tgt.z-c.z, d=Math.hypot(dx,dz);
+    if(c.state==='walk'){
+      if(d<2.6){ c.state='fuse'; c.fuseT=1.5;
+        var pv=panVolAt(c.group.position); playHiss(pv.pan,Math.max(pv.vol,0.18)); }
+      else {
+        c.ph+=dt*c.speed*3;
+        c.x+=dx/d*c.speed*dt; c.z+=dz/d*c.speed*dt;
+        c.group.position.set(c.x,terraY(c.x,c.z),c.z);
+        c.group.rotation.y=Math.atan2(-dz,dx);             // Gesicht (+x lokal) zeigt zum Ziel
+        var sw=Math.sin(c.ph)*0.5;
+        c.group.userData.legs[0].rotation.x=sw; c.group.userData.legs[3].rotation.x=sw;
+        c.group.userData.legs[1].rotation.x=-sw; c.group.userData.legs[2].rotation.x=-sw;
+      }
+    } else if(c.state==='fuse'){
+      c.fuseT-=dt;
+      var on=(Math.floor(c.fuseT*8)%2)===0;                // Blinken
+      for(var m2=0;m2<c.group.userData.mats.length;m2++)
+        c.group.userData.mats[m2].emissive.setHex(on?0xcccccc:0x0d220d);
+      var s=1.5*(1+0.18*(1-Math.max(0,c.fuseT)/1.5));
+      c.group.scale.setScalar(s);
+      if(c.fuseT<=0) explodeCreep(c);
+    }
+  }
+  for(var k=creeps.length-1;k>=0;k--){
+    if(creeps[k].dead){ creepGroup.remove(creeps[k].group); creeps.splice(k,1); }
+  }
+}
+function pickCreep(cx,cy){
+  if(!creepGroup) return;
+  var rect=renderer.domElement.getBoundingClientRect();
+  var m=new THREE.Vector2(((cx-rect.left)/rect.width)*2-1, -((cy-rect.top)/rect.height)*2+1);
+  raycaster.setFromCamera(m,camera);
+  var hits=raycaster.intersectObjects(creepGroup.children,true), target=null;
+  if(hits.length && hits[0].distance<=MAX_CATCH_DIST){
+    var o=hits[0].object;
+    while(o && o.parent && o.parent!==creepGroup) o=o.parent;
+    for(var i=0;i<creeps.length;i++) if(creeps[i].group===o && !creeps[i].dead){ target=creeps[i]; break; }
+  }
+  if(!target){                                            // grosszügiger Screen-Fallback
+    var best=null,bestD=34,v=_v1;
+    for(var j=0;j<creeps.length;j++){
+      if(creeps[j].dead) continue;
+      v.copy(creeps[j].group.position); v.y+=1.5; v.project(camera);
+      if(v.z>1) continue;
+      var sx=(v.x*0.5+0.5)*rect.width+rect.left, sy=(-v.y*0.5+0.5)*rect.height+rect.top;
+      var dd=Math.hypot(sx-cx,sy-cy);
+      if(dd<bestD){ bestD=dd; best=creeps[j]; }
+    }
+    if(best && camera.position.distanceTo(best.group.position)<=MAX_CATCH_DIST) target=best;
+    else if(best){ flashMsg('🔍 Näher heranzoomen!'); return; }
+  }
+  if(!target) return;
+  target.dead=true;
+  var now=performance.now();
+  combo=(now-comboLastT<COMBO_WINDOW)?combo+1:1;
+  comboLastT=now; if(combo>comboBest) comboBest=combo;
+  var pts=1+(combo>=8?2:(combo>=4?1:0));
+  gameFound+=pts;
+  updateGameHud(); scoreBounce(); comboHud();
+  playDing(combo);
+  featherBurst(target.group.position,0x44cc44);
+  scorePopup(cx,cy,'+'+pts+(combo>=4?'  🔥x'+combo:''), combo>=4?'hot':'');
+  screenShake();
+  if(navigator.vibrate) navigator.vibrate(40);
+}
+/* Spielfluss */
+function restoreTables(){
+  for(var i=0;i<tischeItems.length;i++){
+    tischeItems[i].mesh.visible=true;
+    for(var j=0;j<tischeItems[i].legs.length;j++) tischeItems[i].legs[j].visible=true;
+  }
+  if(scorchGroup){ scene.remove(scorchGroup); scorchGroup=null; }
+  updateArTischeCull();
+}
+function setIntroTexts(game){
+  var h=document.querySelector('#bgIntro h2'), p=document.querySelector('#bgIntro p');
+  if(game==='creeper'){
+    h.textContent='👾 Creeper-Nacht';
+    p.innerHTML='Es ist Nacht über Nalps. <b>Creeper</b> schleichen zu den '+
+      '<b>Modultischen</b> und sprengen sie!<br>Tippe die Creeper an, bevor die '+
+      'Lunte abbrennt — Serien geben <b>🔥 Combo-Bonus</b>.<br>'+
+      'Bei <b>'+CREEP_MAX_LOST+' zerstörten Tischen</b> ist die Nacht verloren!';
+  } else {
+    h.textContent='🐦 Birkhuhn-Jagd';
+    p.innerHTML='Fange in <b>2&nbsp;Minuten</b> (ein ganzer Tag bis in die Nacht!) so viele '+
+      '<b>Birkhühner</b> wie möglich – tippe sie an, Serien geben <b>🔥 Combo-Bonus</b>.<br>'+
+      '✨ <b>Goldenes Birkhuhn</b> = +10 &nbsp;·&nbsp; 🐹 <b>Murmeltier</b> = +5<br>'+
+      'Achtung: Wetterumschwünge und Gewitter!';
+  }
+}
+window.creeperGame=function(){
+  if(gameState!=='idle'){ gameCloseDispatch(); return; }
+  currentGame='creeper';
+  initBirdAudio();
+  gameState='intro';
+  setIntroTexts('creeper');
+  var best=hsBest();
+  document.getElementById('bgBest').innerHTML = best
+    ? '🏆 Rekord: <b>'+best.score+'</b> ('+hsEscape(best.name)+')'
+    : '🏆 Noch kein Rekord — leg vor!';
+  document.getElementById('bgIntro').style.display='block';
+  document.getElementById('bgResult').style.display='none';
+  document.getElementById('birdGame').style.display='flex';
+  document.getElementById('btnCreep').classList.add('active');
+};
+function creepStart(){
+  initBirdAudio();
+  restoreTables();
+  if(!creepGroup){ creepGroup=new THREE.Group(); scene.add(creepGroup); }
+  creeps.forEach(function(c){ creepGroup.remove(c.group); }); creeps=[];
+  gameFound=0; tablesLost=0; creepInterval=4.5; creepSpawnT=1.5;
+  combo=0; comboBest=0; comboLastT=0; comboHud();
+  creepMode=true;
+  tischeOn=true;
+  if(tischeGroup) tischeGroup.visible=true;
+  hideTischeLabels(true);
+  setTerrainGameMode(true);
+  setWeather('sonne');                                   // klare Nacht (Tag/Nacht-Regler steht auf Nacht)
+  var bt=document.getElementById('btnTische');
+  bt.classList.add('active','locked');
+  document.body.classList.add('game-on');
+  document.getElementById('birdGame').style.display='none';
+  document.getElementById('bgHud').style.display='flex';
+  document.getElementById('bgTables').style.display='inline';
+  updateGameHud(); updateTablesHud();
+  gameState='countdown'; gamePlaying=false;
+  var cd=document.getElementById('bgCountdown'), n=3;
+  function tick(){
+    cd.textContent=(n>0)?n:'LOS!';
+    cd.className='show'; void cd.offsetWidth; cd.classList.add('zoom');
+    if(birdAudio){ var t=birdAudio.currentTime+0.01, o=birdAudio.createOscillator(), g=birdAudio.createGain();
+      o.type='sine'; o.frequency.value=(n>0)?440:660;
+      g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.2,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+(n>0?0.18:0.4));
+      o.connect(g); g.connect(birdAudio.destination); o.start(t); o.stop(t+0.45); }
+    if(n>0){ n--; countdownTimer=setTimeout(tick,800); }
+    else {
+      countdownTimer=setTimeout(function(){ cd.className=''; },700);
+      gameEndTime=performance.now()+GAME_SECONDS*1000;
+      gameState='playing'; gamePlaying=true;
+      startGameMusic('dark');
+    }
+  }
+  tick();
+}
+function creepEnd(survived){
+  if(gameState!=='playing') return;
+  gamePlaying=false; gameState='over';
+  stopGameMusic();
+  setTerrainGameMode(false);
+  applyNormalSky();
+  document.getElementById('btnTische').classList.remove('locked');
+  document.body.classList.remove('game-on');
+  document.getElementById('bgHud').style.display='none';
+  document.getElementById('bgTables').style.display='none';
+  document.getElementById('bgResultTitle').textContent=survived?'🌅 Nacht überstanden!':'💥 Zu viele Tische verloren!';
+  var prevBest=hsBest();
+  var medal = gameFound>=35?'🏆':(gameFound>=24?'🥇':(gameFound>=14?'🥈':(gameFound>=7?'🥉':'👾')));
+  var mEl=document.getElementById('bgMedal');
+  if(mEl){ mEl.textContent=medal; mEl.classList.remove('pop'); void mEl.offsetWidth; mEl.classList.add('pop'); }
+  var msg='<b>'+gameFound+'</b> Punkte &nbsp;·&nbsp; '+tablesLost+' Tische zerstört';
+  if(comboBest>=2) msg+=' &nbsp;·&nbsp; beste Serie <b>x'+comboBest+'</b> 🔥';
+  if(prevBest && gameFound>prevBest.score) msg+='<br>🏆 Neuer persönlicher Rekord!';
+  document.getElementById('bgResultTxt').innerHTML=msg;
+  var nameInp=document.getElementById('bgName');
+  try{ nameInp.value=localStorage.getItem('birkhuhnName')||''; }catch(e){}
+  document.getElementById('bgNameRow').style.display='flex';
+  renderBoard(null); lbRender(null);
+  document.getElementById('bgResult').style.display='block';
+  document.getElementById('bgIntro').style.display='none';
+  document.getElementById('birdGame').style.display='flex';
+  restoreTables();
+  creeps.forEach(function(c){ creepGroup.remove(c.group); }); creeps=[];
+  creepMode=false;
+}
+function creepClose(){
+  gamePlaying=false; gameState='idle'; creepMode=false;
+  if(countdownTimer){ clearTimeout(countdownTimer); countdownTimer=null; }
+  var cdEl=document.getElementById('bgCountdown'); if(cdEl) cdEl.className='';
+  combo=0; comboHud();
+  stopGameMusic();
+  setTerrainGameMode(false);
+  applyNormalSky();
+  document.getElementById('btnTische').classList.remove('locked');
+  document.body.classList.remove('game-on');
+  document.getElementById('birdGame').style.display='none';
+  document.getElementById('bgHud').style.display='none';
+  document.getElementById('bgTables').style.display='none';
+  restoreTables();
+  if(creepGroup){ creeps.forEach(function(c){ creepGroup.remove(c.group); }); creeps=[]; }
+  if(birdAudio && birdAudio.suspend) birdAudio.suspend();
+  document.getElementById('btnCreep').classList.remove('active');
+  currentGame='birds';
+}
+/* Dispatcher (Intro-/Result-Buttons und HUD-✕ für beide Spiele) */
+window.gameStartDispatch=function(){ if(currentGame==='creeper') creepStart(); else birdGameStart(); };
+window.gameCloseDispatch=function(){ if(currentGame==='creeper') creepClose(); else birdGameClose(); };
 
 /* ═══════════════════════════════════════════════════════════
    MESS- & AUSMASS-TOOLS  (Länge / Polygon / Fläche + Layer + Bericht)
@@ -3427,9 +3777,10 @@ function animate(){
   updateRain(gdt);
   if(!arActive) updateClouds(gdt);
   if(bursts.length) updateBursts(gdt);
-  if(gamePlaying) updateMarmot(gdt); else if(marmotMode!=='off') resetMarmot();
-  // Spiel-Wetter: alle 20 s wechseln (nur im Spiel)
-  if(gamePlaying){ gameWeatherT-=gdt; if(gameWeatherT<=0){ gameWeatherT=20; gameWeatherI=(gameWeatherI+1)%weatherSeq.length; setWeather(weatherSeq[gameWeatherI]); } }
+  updateCreeps(gdt);
+  if(gamePlaying && !creepMode) updateMarmot(gdt); else if(marmotMode!=='off') resetMarmot();
+  // Spiel-Wetter: alle 20 s wechseln (nur Birkhuhn-Jagd; Creeper-Nacht bleibt klar)
+  if(gamePlaying && !creepMode){ gameWeatherT-=gdt; if(gameWeatherT<=0){ gameWeatherT=20; gameWeatherI=(gameWeatherI+1)%weatherSeq.length; setWeather(weatherSeq[gameWeatherI]); } }
   // Wind (Gräser/Büsche)
   if(swayUniforms.length){ var _te=clock.getElapsedTime(); for(var _si=0;_si<swayUniforms.length;_si++) swayUniforms[_si].value=_te; }
   // Himmel folgt Kamera; Sonne/Schatten folgen dem Blickziel
@@ -3439,8 +3790,8 @@ function animate(){
   if(waterMesh) waterMesh.visible=skyOn && !arActive;   // Wellen nur im Spielmodus
   // Tag/Nacht-Zyklus über die Spielrunde + Gewitter
   if(skyOn && !arActive){
-    var dnPh=(gameState==='playing')?(1-Math.max(0,gameEndTime-performance.now())/(GAME_SECONDS*1000)):0;
-    applyDayNight(dnPh);
+    var dnPh=creepMode?0.97:((gameState==='playing')?(1-Math.max(0,gameEndTime-performance.now())/(GAME_SECONDS*1000)):0);
+    applyDayNight(dnPh);   // Creeper-Nacht: fixe Nacht mit Mond & Sternen
     skyMesh.material.uniforms.uTime.value=clock.getElapsedTime();
     updateStorm(gdt);
   }
