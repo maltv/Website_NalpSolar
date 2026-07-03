@@ -1,0 +1,23 @@
+{
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "5W-Programm/**",
+      "Geodaten_Anzuzeigen/**",
+      "*.pdf",
+      "*.geojson",
+      "*.csv",
+      "*.md",
+      "index.html",
+      "admin.html",
+      "begleitplaene.html",
+      "5w-programm.html"
+    ],
+    "rewrites": [
+      { "source": "/", "destination": "/game.html" }
+    ]
+  }
+}
