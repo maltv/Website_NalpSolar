@@ -2167,6 +2167,41 @@ function initWater(){
   console.info('See erkannt: '+cnt+' Zellen @ '+lakeAbs.toFixed(1)+' m ü.M. — Wellen aktiv');
 }
 
+/* ── STRABAG-Fahne (Wegpunkt LV95 E 2701189.5 / N 1165854) ── */
+function initFlag(){
+  var fx=2701189.5-OE, fz=-(1165854-ON);
+  var fy=terraY(fx,fz);
+  var g=new THREE.Group();
+  var pole=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.13,9,10),
+    new THREE.MeshPhongMaterial({color:0xd9d9d9,shininess:90}));
+  pole.position.y=4.5; g.add(pole);
+  var ball=new THREE.Mesh(new THREE.SphereGeometry(0.18,10,8),
+    new THREE.MeshPhongMaterial({color:0xffd700,emissive:0x554400,shininess:80}));
+  ball.position.y=9.1; g.add(ball);
+  var base=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.7,0.5,12),
+    new THREE.MeshPhongMaterial({color:0x9a9a9a}));
+  base.position.y=0.25; g.add(base);
+  // Fahnentuch mit STRABAG-Logo — weht im Wind (an der Stange fixiert, aussen frei)
+  var fgeo=new THREE.PlaneGeometry(4.2,2.1,24,6);
+  fgeo.translate(2.1,0,0);
+  var fmat=new THREE.MeshPhongMaterial({map:strabagTexture(), side:THREE.DoubleSide, shininess:12});
+  fmat.onBeforeCompile=function(sh){
+    sh.uniforms.uTime={value:0}; swayUniforms.push(sh.uniforms.uTime);
+    sh.vertexShader='uniform float uTime;\n'+sh.vertexShader.replace('#include <begin_vertex>',
+      'vec3 transformed=vec3(position);\n'+
+      'float wgt=clamp(position.x/4.2,0.0,1.0);\n'+
+      'transformed.z+=sin(position.x*1.6-uTime*5.2)*0.38*wgt;\n'+
+      'transformed.y+=sin(position.x*2.2-uTime*4.1)*0.12*wgt;\n');
+  };
+  var flag=new THREE.Mesh(fgeo,fmat);
+  flag.position.y=7.7;
+  flag.rotation.y=Math.PI/2;              // Wind aus Süden → Tuch weht nach Norden
+  g.add(flag);
+  setCast(g);
+  g.position.set(fx,fy,fz);
+  scene.add(g);
+}
+
 /* ── Kletterer auf den Modultischen ─────────────────────── */
 function spawnClimbers(n){
   climbersGroup=new THREE.Group(); scene.add(climbersGroup);
@@ -3492,6 +3527,7 @@ async function init(){
     await loadTerrain();
     if(terrainMesh) terrainMesh.receiveShadow=true;
     try{ initWater(); }catch(e){ console.warn('water',e); }
+    try{ initFlag(); }catch(e){ console.warn('flag',e); }
     pct(50);
 
     var loaded=0;
