@@ -2140,8 +2140,9 @@ function initWater(){
   if(cnt<50) return;
   // Feines Gitter über der See-Box; nur Quads mit Wasser an allen 4 Ecken
   var N=88, dx=(maxX-minX)/N, dz=(maxZ-minZ)/N, pos=[], idx=[];
-  for(var j=0;j<=N;j++) for(i=0;i<=N;i++) pos.push(minX+i*dx, lakeY+0.35, minZ+j*dz);
-  function wet(ii,jj){ return hAt(minX+ii*dx, minZ+jj*dz) <= lakeAbs+0.6; }
+  for(var j=0;j<=N;j++) for(i=0;i<=N;i++) pos.push(minX+i*dx, lakeY-0.5, minZ+j*dz);
+  // nass = Gelände AUF Seespiegel-Niveau (nicht darunter → kein Schwebewasser hinter der Staumauer)
+  function wet(ii,jj){ return Math.abs(hAt(minX+ii*dx, minZ+jj*dz)-lakeAbs) <= 0.8; }
   for(var j2=0;j2<N;j2++) for(i=0;i<N;i++){
     if(wet(i,j2)&&wet(i+1,j2)&&wet(i,j2+1)&&wet(i+1,j2+1)){
       var a=j2*(N+1)+i, b2=a+1, c2=a+(N+1), d2=c2+1;
@@ -2157,15 +2158,77 @@ function initWater(){
     sh.uniforms.uTime={value:0}; swayUniforms.push(sh.uniforms.uTime);
     sh.vertexShader='uniform float uTime;\n'+sh.vertexShader
       .replace('#include <beginnormal_vertex>',
-        'vec3 objectNormal=normalize(vec3(-0.016*cos(position.x*0.13+uTime*0.9), 1.0, -0.088*cos(position.z*0.22+uTime*1.5)));\n')
+        'vec3 objectNormal=normalize(vec3(-0.033*cos(position.x*0.13+uTime*0.9), 1.0, -0.187*cos(position.z*0.22+uTime*1.5)));\n')
       .replace('#include <begin_vertex>',
         'vec3 transformed=vec3(position);\n'+
-        'transformed.y+=sin(position.z*0.22+uTime*1.5)*0.40+sin(position.x*0.13+uTime*0.9)*0.12;\n');
+        'transformed.y+=sin(position.z*0.22+uTime*1.5)*0.85+sin(position.x*0.13+uTime*0.9)*0.25;\n');
   };
   waterMesh=new THREE.Mesh(geo,mat);
   waterMesh.receiveShadow=true;
   scene.add(waterMesh);
   console.info('See erkannt: '+cnt+' Zellen @ '+lakeAbs.toFixed(1)+' m ü.M. — Wellen aktiv');
+}
+
+/* ── Staumauer Nalps (Bogen entlang der Wasserlinie, Krone ~1910 m) ── */
+function initDam(){
+  var yC=1910-OZ;                                   // Kronenhöhe
+  var ctrl=[[-436,-652],[-392,-612],[-354,-572],[-318,-538],[-282,-512],[-232,-498],[-158,-494],[-92,-491],[-28,-484]];
+  var pts=ctrl.map(function(p){ return new THREE.Vector3(p[0],0,p[1]); });
+  var curve=new THREE.CatmullRomCurve3(pts);
+  var M=30, up=[], dn=[], bot=[];
+  for(var i=0;i<=M;i++){
+    var t=i/M, p=curve.getPoint(t), tg=curve.getTangent(t);
+    var n1x=-tg.z, n1z=tg.x, n2x=tg.z, n2z=-tg.x;
+    var h1=terraY(p.x+n1x*22,p.z+n1z*22), h2=terraY(p.x+n2x*22,p.z+n2z*22);
+    var ndx=(h1<h2)?n1x:n2x, ndz=(h1<h2)?n1z:n2z;   // Talseite = tieferes Gelände
+    up.push([p.x,yC,p.z]);
+    dn.push([p.x+ndx*6,yC,p.z+ndz*6]);
+    bot.push([p.x+ndx*17, Math.min(h1,h2)-2, p.z+ndz*17]);
+  }
+  function strip(A,B,mat){
+    var pos=[],idx=[],i2;
+    for(i2=0;i2<=M;i2++){ pos.push(A[i2][0],A[i2][1],A[i2][2], B[i2][0],B[i2][1],B[i2][2]); }
+    for(i2=0;i2<M;i2++){ var k=i2*2; idx.push(k,k+1,k+2, k+1,k+3,k+2); }
+    var g2=new THREE.BufferGeometry();
+    g2.setAttribute('position',new THREE.BufferAttribute(new Float32Array(pos),3));
+    g2.setIndex(idx); g2.computeVertexNormals();
+    var m2=new THREE.Mesh(g2,mat); m2.castShadow=true; m2.receiveShadow=true;
+    scene.add(m2); return m2;
+  }
+  var conc=new THREE.MeshPhongMaterial({color:0xb9b5ad,side:THREE.DoubleSide,shininess:8});
+  var cap =new THREE.MeshPhongMaterial({color:0x8f8c86,side:THREE.DoubleSide,shininess:6});
+  strip(dn,bot,conc);                                // talseitige Mauerfläche
+  strip(up,dn,cap);                                  // Krone (Fahrbahn)
+}
+
+/* ── Gebäude aus dem GWR (swisstopo): Wärterhaus, Nebengebäude, Alp Mises ── */
+function initBuildings(){
+  function flatB(x,z,w,d,h,col){
+    var y=terraY(x,z), g=new THREE.Group();
+    var body=new THREE.Mesh(new THREE.BoxGeometry(w,h,d), new THREE.MeshPhongMaterial({color:col||0xd8d4cc}));
+    body.position.y=h/2; g.add(body);
+    var roof=new THREE.Mesh(new THREE.BoxGeometry(w+0.6,0.25,d+0.6), new THREE.MeshPhongMaterial({color:0x555555}));
+    roof.position.y=h+0.12; g.add(roof);
+    g.position.set(x,y,z); setCast(g); scene.add(g);
+  }
+  function alpHut(x,z,rot){
+    var y=terraY(x,z), g=new THREE.Group();
+    var stone=new THREE.Mesh(new THREE.BoxGeometry(10.5,1.1,8), new THREE.MeshPhongMaterial({color:0x9a938a}));
+    stone.position.y=0.55; g.add(stone);
+    var wood=new THREE.Mesh(new THREE.BoxGeometry(10.2,2.3,7.7), new THREE.MeshPhongMaterial({color:0x6b4a2f}));
+    wood.position.y=2.25; g.add(wood);
+    var gable=new THREE.Mesh(new THREE.CylinderGeometry(0.01,4.4,1.9,4,1), new THREE.MeshPhongMaterial({color:0x6b4a2f}));
+    gable.scale.set(1.35,1,0.94); gable.rotation.y=Math.PI/4; gable.position.y=4.35; g.add(gable);
+    var roofM=new THREE.MeshPhongMaterial({color:0x4a4a4a});
+    [1,-1].forEach(function(s){
+      var r=new THREE.Mesh(new THREE.BoxGeometry(11.6,0.18,4.7),roofM);
+      r.position.set(0,4.35,s*1.9); r.rotation.x=s*-0.44; g.add(r);
+    });
+    g.position.set(x,y,z); g.rotation.y=rot||0; setCast(g); scene.add(g);
+  }
+  flatB(67,-592,15,13,6.5);              // Wärterhaus Nalps (GWR)
+  flatB(100,-601,16,14,5.5,0xcfc9bd);    // Via Nalps 43 (GWR)
+  alpHut(364,-456,0.4);                  // Alp «Mises» — das Alpgebäude am Osthang (GWR)
 }
 
 /* ── STRABAG-Fahne (Wegpunkt LV95 E 2701189.5 / N 1165854) ── */
@@ -3528,6 +3591,8 @@ async function init(){
     await loadTerrain();
     if(terrainMesh) terrainMesh.receiveShadow=true;
     try{ initWater(); }catch(e){ console.warn('water',e); }
+    try{ initDam(); }catch(e){ console.warn('dam',e); }
+    try{ initBuildings(); }catch(e){ console.warn('buildings',e); }
     try{ initFlag(); }catch(e){ console.warn('flag',e); }
     pct(50);
 
