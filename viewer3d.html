@@ -627,6 +627,9 @@ var birdARon=false, birdARpending=false, birdBaseY=0, savedPerimeter=null;
 var currentGame='birds', creepMode=false;
 var creeps=[], creepGroup=null, creepSpawnT=0, creepInterval=4.5, tablesLost=0, CREEP_MAX_LOST=8;
 var creepSkinTex=null, creepFaceTex=null, scorchGroup=null, musicStyle='funk';
+/* First-Person-View für die Creeper-Nacht */
+var fpvOn=false, fpvPos=new THREE.Vector3(), fpvYawOff=0, fpvYaw=0, fpvPitch=-0.05;
+var fpvT1=null, fpvKeys={}, arOriSeen=false, _fpvEul=new THREE.Euler();
 var perimeter={cx:95,cz:-409,hx:250,hz:250};
 var _birdRay=new THREE.Raycaster(), _birdOrig=new THREE.Vector3(), _birdDown=new THREE.Vector3(0,-1,0);
 var _v1=new THREE.Vector3(), _v2=new THREE.Vector3(), _v3=new THREE.Vector3();
@@ -2765,6 +2768,11 @@ function playDing(ch){
 function aliveTables(){ return tischeItems.filter(function(it){ return it.mesh.visible; }); }
 function spawnCreep(){
   var pool=aliveTables(); if(!pool.length) return;
+  // FPV: bevorzugt Tische in Spielernähe (sonst passiert alles ausser Sicht)
+  if(fpvOn){
+    var near=pool.filter(function(it){ return Math.hypot(it.x-fpvPos.x,it.z-fpvPos.z)<130; });
+    if(near.length) pool=near;
+  }
   var tgt=pool[(Math.random()*pool.length)|0];
   var ang=Math.random()*6.283, dist=70+Math.random()*60;
   var sx=tgt.x+Math.cos(ang)*dist, sz=tgt.z+Math.sin(ang)*dist;
@@ -2887,6 +2895,74 @@ function pickCreep(cx,cy){
   screenShake();
   if(navigator.vibrate) navigator.vibrate(40);
 }
+/* ── First-Person-View (Creeper-Nacht): Neigen = umsehen, 2 Finger = gehen ── */
+function enterFPV(){
+  fpvOn=true; arOriSeen=false;
+  fpvPos.set(perimeter.cx, 0, perimeter.cz);       // Start mitten im Feld
+  fpvYawOff=0; fpvYaw=Math.PI/2; fpvPitch=-0.05;
+  controls.enabled=false; flyDone=true;
+  camera.fov=62; camera.updateProjectionMatrix();
+  arHasAbsOri=false;
+  window.addEventListener('deviceorientationabsolute',onAROrientation,true);
+  window.addEventListener('deviceorientation',onAROrientation,true);
+}
+function exitFPV(){
+  if(!fpvOn) return;
+  fpvOn=false;
+  window.removeEventListener('deviceorientationabsolute',onAROrientation,true);
+  window.removeEventListener('deviceorientation',onAROrientation,true);
+  camera.fov=50; camera.updateProjectionMatrix();
+  controls.enabled=true;
+  controls.target.copy(camT1); controls.update();
+  resetCam();
+}
+function clampFPV(){
+  fpvPos.x=Math.max(perimeter.cx-perimeter.hx-40,Math.min(perimeter.cx+perimeter.hx+40,fpvPos.x));
+  fpvPos.z=Math.max(perimeter.cz-perimeter.hz-40,Math.min(perimeter.cz+perimeter.hz+40,fpvPos.z));
+}
+function fpvMove(fwd,strafe){                       // blickrelativ auf der XZ-Ebene
+  camera.getWorldDirection(_v3); _v3.y=0;
+  if(_v3.lengthSq()<1e-4) _v3.set(1,0,0);
+  _v3.normalize();
+  var rx=-_v3.z, rz=_v3.x;                          // rechts vom Blick
+  fpvPos.x += _v3.x*fwd + rx*strafe;
+  fpvPos.z += _v3.z*fwd + rz*strafe;
+  clampFPV();
+}
+function fpvTouchStart(e){
+  if(!fpvOn||arActive) return;
+  if(e.touches.length>=2){ var m=arMid(e.touches); fpvT1={mode:'move',x:m.x,y:m.y}; }
+  else if(e.touches.length===1){ fpvT1={mode:'look',x:e.touches[0].clientX,y:e.touches[0].clientY}; }
+}
+function fpvTouchMove(e){
+  if(!fpvOn||arActive||!fpvT1) return;
+  if(fpvT1.mode==='move' && e.touches.length>=2){
+    e.preventDefault();
+    var m=arMid(e.touches), dx=m.x-fpvT1.x, dy=m.y-fpvT1.y;
+    fpvT1.x=m.x; fpvT1.y=m.y;
+    fpvMove(-dy*0.14, dx*0.14);                     // hochziehen = vorwärts, seitlich = strafen
+  } else if(fpvT1.mode==='look' && e.touches.length===1){
+    e.preventDefault();
+    var t=e.touches[0], dx=t.clientX-fpvT1.x, dy=t.clientY-fpvT1.y;
+    fpvT1.x=t.clientX; fpvT1.y=t.clientY;
+    if(arOriSeen){ fpvYawOff+=dx*0.004; }           // Gyro aktiv: nur Kompass-Korrektur
+    else { fpvYaw-=dx*0.005; fpvPitch=Math.max(-1.2,Math.min(1.2,fpvPitch-dy*0.004)); }
+  }
+}
+function fpvTouchEnd(e){
+  if(!e.touches || e.touches.length===0){ fpvT1=null; return; }
+  if(e.touches.length===1) fpvT1={mode:'look',x:e.touches[0].clientX,y:e.touches[0].clientY};
+}
+function fpvKeyTick(gdt){                            // Desktop: WASD/Pfeile
+  if(!fpvOn) return;
+  var f=0,s=0,v=12*gdt;
+  if(fpvKeys.w||fpvKeys.arrowup) f+=v;
+  if(fpvKeys.s||fpvKeys.arrowdown) f-=v;
+  if(fpvKeys.a||fpvKeys.arrowleft) s-=v;
+  if(fpvKeys.d||fpvKeys.arrowright) s+=v;
+  if(f||s) fpvMove(f,s);
+}
+
 /* Spielfluss */
 function restoreTables(){
   for(var i=0;i<tischeItems.length;i++){
@@ -2900,9 +2976,10 @@ function setIntroTexts(game){
   var h=document.querySelector('#bgIntro h2'), p=document.querySelector('#bgIntro p');
   if(game==='creeper'){
     h.textContent='👾 Creeper-Nacht';
-    p.innerHTML='Es ist Nacht über Nalps. <b>Creeper</b> schleichen zu den '+
-      '<b>Modultischen</b> und sprengen sie!<br>Tippe die Creeper an, bevor die '+
-      'Lunte abbrennt — Serien geben <b>🔥 Combo-Bonus</b>.<br>'+
+    p.innerHTML='Es ist Nacht über Nalps — und du stehst <b>mittendrin</b>. '+
+      '<b>Creeper</b> schleichen zu den <b>Modultischen</b> und sprengen sie!<br>'+
+      '📱 <b>Handy neigen</b> = umsehen &nbsp;·&nbsp; ✌️ <b>2 Finger ziehen</b> = gehen<br>'+
+      'Tippe die Creeper an, bevor die Lunte abbrennt — Serien geben <b>🔥 Combo-Bonus</b>.<br>'+
       'Bei <b>'+CREEP_MAX_LOST+' zerstörten Tischen</b> ist die Nacht verloren!';
   } else {
     h.textContent='🐦 Birkhuhn-Jagd';
@@ -2927,8 +3004,13 @@ window.creeperGame=function(){
   document.getElementById('birdGame').style.display='flex';
   document.getElementById('btnCreep').classList.add('active');
 };
-function creepStart(){
+async function creepStart(){
   initBirdAudio();
+  // iOS 13+: Freigabe für Geräteausrichtung (Blick per Neigen)
+  if(typeof DeviceOrientationEvent!=='undefined' &&
+     typeof DeviceOrientationEvent.requestPermission==='function'){
+    try{ await DeviceOrientationEvent.requestPermission(); }catch(e){}
+  }
   restoreTables();
   if(!creepGroup){ creepGroup=new THREE.Group(); scene.add(creepGroup); }
   creeps.forEach(function(c){ creepGroup.remove(c.group); }); creeps=[];
@@ -2947,6 +3029,7 @@ function creepStart(){
   document.getElementById('bgHud').style.display='flex';
   document.getElementById('bgTables').style.display='inline';
   updateGameHud(); updateTablesHud();
+  enterFPV();                                       // First-Person: Neigen = umsehen, 2 Finger = gehen
   gameState='countdown'; gamePlaying=false;
   var cd=document.getElementById('bgCountdown'), n=3;
   function tick(){
@@ -2970,6 +3053,7 @@ function creepEnd(survived){
   if(gameState!=='playing') return;
   gamePlaying=false; gameState='over';
   stopGameMusic();
+  exitFPV();
   setTerrainGameMode(false);
   applyNormalSky();
   document.getElementById('btnTische').classList.remove('locked');
@@ -3002,6 +3086,7 @@ function creepClose(){
   var cdEl=document.getElementById('bgCountdown'); if(cdEl) cdEl.className='';
   combo=0; comboHud();
   stopGameMusic();
+  exitFPV();
   setTerrainGameMode(false);
   applyNormalSky();
   document.getElementById('btnTische').classList.remove('locked');
@@ -3521,6 +3606,7 @@ function bindMouseLongPress(el){
 
 /* ── AR Mode ─────────────────────────────────────────────── */
 function onAROrientation(e){
+  if(e.alpha!=null || e.beta!=null) arOriSeen=true;   // Gyro liefert Daten (für FPV-Fallback)
   // Prefer absolute orientation (Android); fall back to deviceorientation with iOS webkitCompassHeading
   if(e.type==='deviceorientationabsolute') arHasAbsOri=true;
   else if(arHasAbsOri) return;
@@ -3860,8 +3946,30 @@ function animate(){
     }
   }
 
-  // OrbitControls must NOT run in AR (would override camera position/rotation)
-  if(!arActive) controls.update();
+  // First-Person-View (Creeper-Nacht): Kamera auf Augenhöhe, Blick per Gyro/Drag
+  if(fpvOn && !arActive){
+    fpvKeyTick(gdt);
+    camera.position.set(fpvPos.x, terraY(fpvPos.x,fpvPos.z)+1.7, fpvPos.z);
+    if(arOriSeen){                                   // Handy neigen = umsehen
+      var _fa=THREE.MathUtils.degToRad(arOri.alpha);
+      var _fb=THREE.MathUtils.degToRad(arOri.beta);
+      var _fg=THREE.MathUtils.degToRad(arOri.gamma);
+      var _fo=THREE.MathUtils.degToRad(
+        window.screen&&window.screen.orientation ? window.screen.orientation.angle : (window.orientation||0));
+      arEul.set(_fb,_fa,-_fg,'YXZ');
+      camera.quaternion.setFromEuler(arEul);
+      camera.quaternion.multiply(arQ1);
+      arQ0.setFromAxisAngle(arZee,-_fo);
+      camera.quaternion.multiply(arQ0);
+      if(fpvYawOff!==0){ arYawQuat.setFromAxisAngle(arUp,fpvYawOff); camera.quaternion.premultiply(arYawQuat); }
+    } else {                                         // Fallback ohne Gyro: Drag/Maus
+      _fpvEul.set(fpvPitch,fpvYaw,0,'YXZ');
+      camera.quaternion.setFromEuler(_fpvEul);
+    }
+  }
+
+  // OrbitControls must NOT run in AR/FPV (would override camera position/rotation)
+  if(!arActive && !fpvOn) controls.update();
   updateCompass();
 
   // Tisch-Label fade by distance (throttled)
@@ -4010,6 +4118,19 @@ async function init(){
     // Birkhuhn-Jagd: tap to catch a bird (pointer covers mouse + touch)
     renderer.domElement.addEventListener('pointerdown', onTapDown);
     renderer.domElement.addEventListener('pointerup',   onTapUp);
+
+    // Creeper-Nacht FPV: 2 Finger = gehen, 1 Finger = Blick/Kompass; Desktop: WASD
+    renderer.domElement.addEventListener('touchstart', fpvTouchStart, {passive:false});
+    renderer.domElement.addEventListener('touchmove',  fpvTouchMove,  {passive:false});
+    renderer.domElement.addEventListener('touchend',   fpvTouchEnd,   {passive:false});
+    renderer.domElement.addEventListener('touchcancel',fpvTouchEnd,   {passive:false});
+    window.addEventListener('keydown',function(e){ if(fpvOn) fpvKeys[e.key.toLowerCase()]=true; });
+    window.addEventListener('keyup',  function(e){ fpvKeys[e.key.toLowerCase()]=false; });
+    renderer.domElement.addEventListener('pointermove',function(e){
+      if(fpvOn && !arActive && e.pointerType==='mouse' && e.buttons===1 && !arOriSeen){
+        fpvYaw-=e.movementX*0.004; fpvPitch=Math.max(-1.2,Math.min(1.2,fpvPitch-e.movementY*0.003));
+      }
+    });
 
     // Fade loading
     setTimeout(function(){
