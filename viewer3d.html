@@ -562,7 +562,7 @@ body.ar-mode { background:transparent!important; }
 </div>
 
 <div id="statusBar">
-  <span id="sVer" style="color:#7fd6ff;font-weight:700">v21</span>
+  <span id="sVer" style="color:#7fd6ff;font-weight:700">v…</span>
   <span id="sLoad">–</span>
   <span id="sAlt"></span>
   <span style="flex:1"></span>
@@ -4037,6 +4037,11 @@ window.addEventListener('load',function(){
       .then(function(reg){ if(reg && reg.update) reg.update(); })
       .catch(function(){});
   }
+  // Versionsanzeige direkt aus sw.js lesen (immer die WIRKLICH geladene Version)
+  fetch('./sw.js',{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
+    var m=t.match(/nalpsolar-v(\d+)/);
+    if(m) document.getElementById('sVer').textContent='v'+m[1];
+  }).catch(function(){});
   init();
 });
 </script>
