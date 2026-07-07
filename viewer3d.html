@@ -244,6 +244,8 @@ body.game-on #gameVignette, body.game-on #gameGrain { display:block; }
 /* Gold-Popup + Gewitter */
 .score-pop.gold { font-size:32px; color:#ffe14d;
   text-shadow:0 2px 10px rgba(0,0,0,.85), 0 0 26px rgba(255,215,0,.9); }
+.score-pop.bad { font-size:27px; color:#ff4d4d;
+  text-shadow:0 2px 10px rgba(0,0,0,.85), 0 0 22px rgba(255,60,60,.8); }
 #lightningFlash { position:fixed; inset:0; z-index:106; pointer-events:none;
   background:#eaf2ff; opacity:0; }
 #lightningFlash.on { animation:lflash .55s ease-out; }
@@ -1649,10 +1651,11 @@ function tryCatchMarmot(cx,cy){
 var workerGroup=null, workers=[], workersOn=true, workerArea={cx:95,cz:-409,hx:250,hz:250};
 function makeWorker(){
   var g=new THREE.Group();
-  var vest=new THREE.MeshPhongMaterial({color:0xff7300,emissive:0x351400,shininess:30});
+  // STRABAG-konforme PSA: orange Warnkleidung + oranger Helm
+  var vest=new THREE.MeshPhongMaterial({color:0xff5f00,emissive:0x4a1c00,shininess:35});
   var skin=new THREE.MeshPhongMaterial({color:0xe0ac69});
-  var pants=new THREE.MeshPhongMaterial({color:0x223a66});
-  var hat =new THREE.MeshPhongMaterial({color:0xffd400,emissive:0x4a3d00});
+  var pants=new THREE.MeshPhongMaterial({color:0xe04f00,emissive:0x381400,shininess:25});
+  var hat =new THREE.MeshPhongMaterial({color:0xff6a00,emissive:0x552200,shininess:70});
   function limb(hipY,x,len,rad,mat){
     var grp=new THREE.Group(); grp.position.set(x,hipY,0);
     var m=new THREE.Mesh(new THREE.CylinderGeometry(rad,rad*0.9,len,8),mat); m.position.y=-len/2; grp.add(m); return grp;
@@ -1711,6 +1714,10 @@ function updateWorkers(dt){
       u.legL.rotation.x*=0.8; u.legR.rotation.x*=0.8; u.torso.rotation.x=0.35;
       u.armR.rotation.x=-1.0+Math.sin(u.ph2)*0.7; u.armL.rotation.x=-0.4; }
     else { u.legL.rotation.x*=0.8; u.legR.rotation.x*=0.8; u.torso.rotation.x*=0.8; }
+    if(w.protestT>0){ w.protestT-=dt;                  // Arme hoch: „He, lass das!“
+      u.armL.rotation.x=-2.7+Math.sin(w.protestT*22)*0.35;
+      u.armR.rotation.x=-2.7-Math.sin(w.protestT*22)*0.35;
+      u.torso.rotation.x=0; }
   }
 }
 window.toggleWorkers=function(){
@@ -1719,6 +1726,40 @@ window.toggleWorkers=function(){
   if(workerGroup) workerGroup.visible=workersOn && !arActive;
   var b=document.getElementById('btnWorkers'); if(b) b.classList.toggle('active',workersOn);
 };
+
+/* Im Spiel: Bauarbeiter antippen gibt Minuspunkte */
+function playBuzz(){
+  if(!birdAudio) return;
+  var ctx=birdAudio, t=ctx.currentTime+0.01;
+  var o=ctx.createOscillator(); o.type='sawtooth';
+  o.frequency.setValueAtTime(220,t); o.frequency.exponentialRampToValueAtTime(85,t+0.32);
+  var g=ctx.createGain(); g.gain.setValueAtTime(0.0001,t);
+  g.gain.exponentialRampToValueAtTime(0.3,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+0.38);
+  o.connect(g); g.connect(birdMaster); o.start(t); o.stop(t+0.42);
+}
+function tryHitWorker(cx,cy){
+  if(!gamePlaying) return false;
+  var objs=[];
+  if(workerGroup && workerGroup.visible) objs.push(workerGroup);
+  if(climbersGroup && climbersGroup.visible) objs.push(climbersGroup);
+  if(!objs.length) return false;
+  var rect=renderer.domElement.getBoundingClientRect();
+  var m=new THREE.Vector2(((cx-rect.left)/rect.width)*2-1, -((cy-rect.top)/rect.height)*2+1);
+  raycaster.setFromCamera(m,camera);
+  var hits=raycaster.intersectObjects(objs,true);
+  if(!hits.length || hits[0].distance>MAX_CATCH_DIST) return false;
+  var o=hits[0].object;
+  while(o && o.parent && o.parent!==workerGroup && o.parent!==climbersGroup) o=o.parent;
+  for(var i=0;i<workers.length;i++) if(workers[i].group===o) workers[i].protestT=1.4;
+  for(var j=0;j<climbers.length;j++) if(climbers[j].group===o) climbers[j].protestT=1.4;
+  gameFound-=5; combo=0; comboLastT=0; comboHud();
+  updateGameHud(); scoreBounce();
+  playBuzz(); screenShake();
+  scorePopup(cx,cy,'−5 👷','bad');
+  flashMsg('👷 Nicht die Bauarbeiter!');
+  if(navigator.vibrate) navigator.vibrate([80,50,80]);
+  return true;
+}
 
 /* ═══════════════════════════════════════════════════════════
    UMGEBUNG — Himmel, Wetter, Vegetation, Pneukran, Kletterer
@@ -2320,6 +2361,9 @@ function updateClimbers(dt){
   if(!climbersGroup.visible) return;
   for(var i=0;i<climbers.length;i++){ var c=climbers[i]; c.timer-=dt; c.ph+=dt*8;
     var u=c.group.userData; u.armR.rotation.x=-1.0+Math.sin(c.ph)*0.7; u.armL.rotation.x=-0.5;
+    if(c.protestT>0){ c.protestT-=dt;
+      u.armL.rotation.x=-2.7+Math.sin(c.protestT*22)*0.35;
+      u.armR.rotation.x=-2.7-Math.sin(c.protestT*22)*0.35; }
     if(c.timer<=0) assignClimber(c);
   }
 }
@@ -2435,8 +2479,9 @@ function onTapUp(e){
   tapStart=null;
   if(moved>12||held>400) return;     // was a drag / orbit, not a tap
   if(gamePlaying || birdARon){
+    if(gamePlaying && tryHitWorker(e.clientX, e.clientY)) return;     // Bauarbeiter = −5!
     if(creepMode){ pickCreep(e.clientX, e.clientY); return; }         // Creeper-Nacht
-    if(gamePlaying && tryCatchMarmot(e.clientX, e.clientY)) return;   // 5-Punkte-Murmeltier
+    if(gamePlaying && tryCatchMarmot(e.clientX, e.clientY)) return;   // Murmeltier-Bonus
     pickBird(e.clientX, e.clientY); return;
   }
   if(measurePlacing()){ measureTapAt(e.clientX, e.clientY); return; }
