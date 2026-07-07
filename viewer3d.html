@@ -459,7 +459,7 @@ body.ar-mode { background:transparent!important; }
     <h2>🐦 Birkhuhn-Jagd</h2>
     <p>Fange in <b>2&nbsp;Minuten</b> (ein ganzer Tag bis in die Nacht!) so viele
        <b>Birkhühner</b> wie möglich – tippe sie an, Serien geben <b>🔥 Combo-Bonus</b>.<br>
-       ✨ <b>Goldenes Birkhuhn</b> = +10 &nbsp;·&nbsp; 🐹 <b>Murmeltier</b> = +5<br>
+       ✨ <b>Goldenes Birkhuhn</b> = +5 &nbsp;·&nbsp; 🐹 <b>Murmeltier</b> = +15<br>
        Achtung: Wetterumschwünge und Gewitter!</p>
     <div id="bgBest" class="bg-best">🏆 —</div>
     <div class="bg-row">
@@ -1535,7 +1535,7 @@ function catchBird(b,cx,cy){
   var now=performance.now();
   combo=(now-comboLastT<COMBO_WINDOW)?combo+1:1;
   comboLastT=now; if(combo>comboBest) comboBest=combo;
-  var pts=(b.golden?10:1)+(combo>=8?2:(combo>=4?1:0));   // Gold = 10 + Combo-Bonus
+  var pts=(b.golden?5:1)+(combo>=8?2:(combo>=4?1:0));    // Gold = 5 + Combo-Bonus
   gameFound+=pts;
   updateGameHud(); scoreBounce(); comboHud();
   if(birdARon) updateArCatchHud();
@@ -1634,9 +1634,9 @@ function tryCatchMarmot(cx,cy){
       if(Math.hypot(sx-cx,sy-cy)<40 && camera.position.distanceTo(marmotObj.position)<=MAX_CATCH_DIST) got=true; }
   }
   if(!got) return false;
-  gameFound+=5; updateGameHud(); scoreBounce(); playMarmotCatch();
+  gameFound+=15; updateGameHud(); scoreBounce(); playMarmotCatch();
   featherBurst(marmotObj.position, 0x8a5a2b);            // brauner Staub statt Federn
-  scorePopup(cx,cy,'+5 🐹','hot');
+  scorePopup(cx,cy,'+15 🐹','hot');
   screenShake();
   if(navigator.vibrate) navigator.vibrate([40,40,90]);
   marmotObj.visible=false; marmotMode='hidden'; marmotNext=14+Math.random()*16;
@@ -2985,7 +2985,7 @@ function setIntroTexts(game){
     h.textContent='🐦 Birkhuhn-Jagd';
     p.innerHTML='Fange in <b>2&nbsp;Minuten</b> (ein ganzer Tag bis in die Nacht!) so viele '+
       '<b>Birkhühner</b> wie möglich – tippe sie an, Serien geben <b>🔥 Combo-Bonus</b>.<br>'+
-      '✨ <b>Goldenes Birkhuhn</b> = +10 &nbsp;·&nbsp; 🐹 <b>Murmeltier</b> = +5<br>'+
+      '✨ <b>Goldenes Birkhuhn</b> = +5 &nbsp;·&nbsp; 🐹 <b>Murmeltier</b> = +15<br>'+
       'Achtung: Wetterumschwünge und Gewitter!';
   }
 }
