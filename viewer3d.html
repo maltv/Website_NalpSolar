@@ -1979,21 +1979,37 @@ function makeSamuel(){
   var beard=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.42,0.2),
     new THREE.MeshLambertMaterial({color:0xcfcfcf}));
   beard.position.set(0.15,1.36,0); beard.rotation.z=-0.12; g.add(beard);
-  // Peitsche in der rechten Hand (drei Segmente, die nachschwingen)
-  var whip=new THREE.Group(); whip.position.set(0.05,-0.6,0);
-  var wMat=new THREE.MeshLambertMaterial({color:0x4a3320});
-  var handle=new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.03,0.45,6),wMat);
-  handle.rotation.z=-1.1; handle.position.set(0.18,0.08,0); whip.add(handle);
-  var segs=[], parent=whip, off=0.38;
-  for(var i=0;i<3;i++){
-    var seg=new THREE.Group(); seg.position.set(off,0.16*(i===0?1:0),0);
-    var m=new THREE.Mesh(new THREE.BoxGeometry(0.34,0.03-0.006*i,0.03-0.006*i),wMat);
-    m.position.x=0.17; seg.add(m);
-    parent.add(seg); segs.push(seg); parent=seg; off=0.34;
-  }
-  g.userData.armR.add(whip);
-  g.userData.whipSegs=segs;
+  // Schrotflinte (Doppellauf) in der rechten Hand
+  var gun=new THREE.Group(); gun.position.set(0.05,-0.62,0);
+  var metal=new THREE.MeshPhongMaterial({color:0x3a3a3a,shininess:90});
+  var wood=new THREE.MeshLambertMaterial({color:0x6a4526});
+  var barrel=new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.035,0.9,8),metal);
+  barrel.rotation.z=Math.PI/2; barrel.position.set(0.45,0.02,0); gun.add(barrel);
+  var barrel2=barrel.clone(); barrel2.position.set(0.45,-0.05,0); gun.add(barrel2);
+  var stock=new THREE.Mesh(new THREE.BoxGeometry(0.34,0.12,0.08),wood);
+  stock.position.set(-0.12,-0.02,0); stock.rotation.z=0.18; gun.add(stock);
+  var pump=new THREE.Mesh(new THREE.BoxGeometry(0.2,0.08,0.1),wood);
+  pump.position.set(0.35,-0.06,0); gun.add(pump);
+  var flash=new THREE.Mesh(new THREE.SphereGeometry(0.11,8,6),
+    new THREE.MeshBasicMaterial({color:0xffdd66}));
+  flash.position.set(0.98,-0.01,0); flash.visible=false; gun.add(flash);
+  g.userData.armR.add(gun);
+  g.userData.gunFlash=flash;
   return g;
+}
+// Schrotflinten-Warnschuss in die Luft
+function playBang(pos){
+  if(!birdAudio) return;
+  var pv=panVolAt(pos); if(pv.vol<0.05) pv.vol=0.25;
+  var ctx=birdAudio, t=ctx.currentTime+0.01, dur=0.45;
+  var n=Math.floor(ctx.sampleRate*dur), buf=ctx.createBuffer(1,n,ctx.sampleRate), d=buf.getChannelData(0);
+  for(var i=0;i<n;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/n,1.8);
+  var s=ctx.createBufferSource(); s.buffer=buf;
+  var lp=ctx.createBiquadFilter(); lp.type='lowpass';
+  lp.frequency.setValueAtTime(1400,t); lp.frequency.exponentialRampToValueAtTime(160,t+dur);
+  var g=ctx.createGain(); g.gain.setValueAtTime(pv.vol*1.4,t); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  var out=birdOut(pv.pan);
+  s.connect(lp); lp.connect(g); g.connect(out); s.start(t); s.stop(t+dur+0.05);
 }
 function spawnSamuel(){
   var mesh=makeSamuel();
@@ -2023,28 +2039,108 @@ function updateSamuel(dt){
     s.pos.x+=Math.cos(s.heading)*s.speed*dt;
     s.pos.z+=-Math.sin(s.heading)*s.speed*dt;
     var dist=Math.hypot(s.target.pos.x-s.pos.x,s.target.pos.z-s.pos.z);
-    if(dist<2.4 && s.crackT<=0){            // Peitschenknall → Arbeiter flieht
+    if(dist<2.6 && s.crackT<=0){            // Warnschuss in die Luft → Arbeiter flieht
       s.crackT=1.6;
-      playCrack(s.group.position);
-      s.target.fleeT=3; s.target.speed=2.4; s.target.protestT=1.0;
+      playBang(s.group.position);
+      s.target.fleeT=3; s.target.speed=2.6; s.target.protestT=1.0;
       s.target.mode='walk'; s.target.timer=3;
       s.target.heading=Math.atan2(-(s.target.pos.z-s.pos.z),(s.target.pos.x-s.pos.x));
       s.retargetT=4+Math.random()*4; s.target=null;
     }
   }
   if(s.crackT>0) s.crackT-=dt;
-  // Beine + Peitschen-Schwung
+  // Beine + Flinten-Haltung (beim Schuss reisst er die Waffe in die Luft)
   var sw=Math.sin(s.ph)*0.55;
   u.legL.rotation.x=sw; u.legR.rotation.x=-sw;
   u.armL.rotation.x=-sw*0.6;
-  u.armR.rotation.x=(s.crackT>1.2)?(-2.4+Math.sin(s.crackT*40)*0.5):(-0.9+Math.sin(s.ph*0.5)*0.25);
-  if(u.whipSegs){ for(var k=0;k<u.whipSegs.length;k++)
-    u.whipSegs[k].rotation.z=Math.sin(s.ph*1.3-k*0.9)*(0.35+(s.crackT>1.2?0.8:0)); }
+  u.armR.rotation.x=(s.crackT>1.1)?-2.6:(-1.25+Math.sin(s.ph*0.5)*0.12);
+  if(u.gunFlash) u.gunFlash.visible=(s.crackT>1.42);
   // im Feld bleiben
   s.pos.x=Math.max(workerArea.cx-workerArea.hx,Math.min(workerArea.cx+workerArea.hx,s.pos.x));
   s.pos.z=Math.max(workerArea.cz-workerArea.hz,Math.min(workerArea.cz+workerArea.hz,s.pos.z));
   s.group.position.set(s.pos.x, terraY(s.pos.x,s.pos.z), s.pos.z);
   s.group.rotation.y=s.heading;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FAULES STAHLBAUTEAM — 5 Mann, Liegestühle, Cocktails, am See
+═══════════════════════════════════════════════════════════ */
+var lazyTeam=[], lazyLbl=null;
+function makeLounger(chairCol){
+  var g=new THREE.Group();
+  // Liegestuhl: Gestell + gestreifte Liegefläche
+  var frame=new THREE.MeshLambertMaterial({color:0xdddddd});
+  var cloth=new THREE.MeshLambertMaterial({color:chairCol});
+  [[0.5,0.25],[0.5,-0.25],[-0.55,0.25],[-0.55,-0.25]].forEach(function(p){
+    var leg=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,0.45,6),frame);
+    leg.position.set(p[0],0.22,p[1]); g.add(leg);
+  });
+  var seat=new THREE.Mesh(new THREE.BoxGeometry(1.15,0.06,0.62),cloth);
+  seat.position.set(0.12,0.45,0); seat.rotation.z=0.12; g.add(seat);
+  var back=new THREE.Mesh(new THREE.BoxGeometry(0.75,0.06,0.62),cloth);
+  back.position.set(-0.72,0.72,0); back.rotation.z=0.85; g.add(back);
+  // Fauler Stahlbauer: zurückgelehnt, orange PSA, oranger Helm
+  var vest=new THREE.MeshPhongMaterial({color:0xff5f00,emissive:0x4a1c00});
+  var pants=new THREE.MeshLambertMaterial({color:0xe04f00});
+  var skin=new THREE.MeshLambertMaterial({color:0xe0ac69});
+  var hat=new THREE.MeshPhongMaterial({color:0xff6a00,emissive:0x552200,shininess:70});
+  var torso=new THREE.Mesh(new THREE.BoxGeometry(0.62,0.42,0.4),vest);
+  torso.position.set(-0.5,0.85,0); torso.rotation.z=0.85; g.add(torso);
+  var legTh=new THREE.Mesh(new THREE.BoxGeometry(0.75,0.16,0.34),pants);
+  legTh.position.set(0.12,0.58,0); legTh.rotation.z=0.12; g.add(legTh);
+  var shin=new THREE.Mesh(new THREE.BoxGeometry(0.55,0.13,0.3),pants);
+  shin.position.set(0.72,0.42,0); shin.rotation.z=-0.25; g.add(shin);
+  var head=new THREE.Mesh(new THREE.SphereGeometry(0.15,10,8),skin);
+  head.position.set(-0.82,1.15,0); g.add(head);
+  var helm=new THREE.Mesh(new THREE.SphereGeometry(0.17,12,8,0,Math.PI*2,0,Math.PI/2),hat);
+  helm.position.set(-0.84,1.18,0); helm.rotation.z=0.6; g.add(helm);
+  // Cocktail-Arm mit Glas + Schirmchen
+  var arm=new THREE.Group(); arm.position.set(-0.45,1.0,0.24);
+  var armM=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,0.42,6),vest);
+  armM.position.y=0.21; arm.add(armM);
+  var glass=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.03,0.16,8),
+    new THREE.MeshPhongMaterial({color:0x33ddaa,transparent:true,opacity:0.8,shininess:100}));
+  glass.position.y=0.5; arm.add(glass);
+  var schirm=new THREE.Mesh(new THREE.ConeGeometry(0.09,0.05,8),
+    new THREE.MeshLambertMaterial({color:0xff4d88}));
+  schirm.position.set(0.04,0.62,0); arm.add(schirm);
+  arm.rotation.x=-0.5;
+  g.add(arm); g.userData.arm=arm;
+  return g;
+}
+function spawnLazyTeam(){
+  var cols=[0xff5a5a,0x4da6ff,0xffd24d,0x66cc66,0xcc66ff];
+  var bx=-346, bz=-238;                              // am Seeufer bei der STRABAG-Fahne
+  var grp=new THREE.Group();
+  for(var i=0;i<5;i++){
+    var L=makeLounger(cols[i]);
+    var px=bx+(Math.random()*2-1)*2, pz=bz-i*6.5;
+    L.position.set(px, terraY(px,pz), pz);
+    L.rotation.y=Math.PI;                            // Blick auf den See (nach Westen)
+    setCast(L);
+    grp.add(L);
+    lazyTeam.push({group:L, sipT:2+Math.random()*6, sipping:0});
+  }
+  // Schild
+  var d=document.createElement('div'); d.className='lbl';
+  d.textContent='🏖 Faules Stahlbauteam'; d.style.fontSize='12px';
+  lazyLbl=new THREE.CSS2DObject(d);
+  lazyLbl.position.set(bx, terraY(bx,bz-13)+4, bz-13);
+  grp.add(lazyLbl);
+  workerGroup.add(grp);                              // erbt Sichtbarkeit + Minuspunkte im Spiel
+}
+function updateLazyTeam(dt){
+  if(lazyLbl) lazyLbl.visible=!!(workerGroup && workerGroup.visible && !gamePlaying);
+  for(var i=0;i<lazyTeam.length;i++){
+    var p=lazyTeam[i];
+    if(p.sipping>0){ p.sipping-=dt;                  // Schlückchen nehmen
+      p.group.userData.arm.rotation.x=-0.5-Math.sin(Math.min(1,1-p.sipping/1.2)*Math.PI)*0.9;
+      if(p.sipping<=0) p.group.userData.arm.rotation.x=-0.5;
+    } else {
+      p.sipT-=dt;
+      if(p.sipT<=0){ p.sipping=1.2; p.sipT=4+Math.random()*8; }
+    }
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -4191,6 +4287,7 @@ function animate(){
   updateClimbers(gdt);
   updateCows(gdt);
   updateSamuel(gdt);
+  updateLazyTeam(gdt);
   updateCrane(gdt);
   updatePG(gdt);
   updateRain(gdt);
@@ -4424,6 +4521,7 @@ async function init(){
     spawnWorkers(5); if(workerGroup) setCast(workerGroup);
     try{ spawnCows(4); }catch(e){ console.warn('cows',e); }
     try{ spawnSamuel(); }catch(e){ console.warn('samuel',e); }
+    try{ spawnLazyTeam(); }catch(e){ console.warn('lazyteam',e); }
     // Umgebung: Vegetation, Kletterer, Pneukran-Strasse, Wetter
     try{ spawnVegetation(workerArea); }catch(e){ console.warn('veg',e); }
     try{ spawnClimbers(3); }catch(e){ console.warn('climbers',e); }
