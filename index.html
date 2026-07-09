@@ -7,7 +7,10 @@
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="assets/js/nalp-gate.js"></script>
 <script src="assets/js/nalp-storage.js"></script>
+<script src="assets/js/nalp-status.js"></script>
+<script src="assets/js/nalp-status-ui.js"></script>
 
 <style>
   html, body, #map {
@@ -357,6 +360,7 @@
   <button id="progBtn" type="button" onclick="open5WProgram()">5W-Prog.</button>
   <button id="plansBtn" type="button" onclick="openPlansPage()">Plaene</button>
   <button id="viewer3dBtn" type="button" onclick="window.location.href='viewer3d.html'">3D</button>
+  <button id="statusToggleBtn" type="button" onclick="toggleStatusLayer()" title="Problem-Tische ein/aus">⚠ Probleme</button>
   <button id="adminBtn" type="button" onclick="openAdminPanel()">Admin</button>
   <button id="measBtn" type="button" onclick="toggleMeasureBar()" title="Messen">📏</button>
   <span id="mControls">
@@ -426,6 +430,8 @@ map.createPane('tablesLabelPane');
 map.getPane('tablesLabelPane').style.zIndex = 460;
 map.createPane('geodataPane');
 map.getPane('geodataPane').style.zIndex = 470;
+map.createPane('statusPane');
+map.getPane('statusPane').style.zIndex = 468;
 
 function syncLabelVisibilityByZoom() {
   const hidden = map.getZoom() < LABELS_MIN_ZOOM;
@@ -908,6 +914,23 @@ function addTableTypeVisuals(layer, typeText, thicknessMeters) {
   }
 }
 
+// ── Status-Ebene: farbige Ringe um Problem-Tische (Daten aus nalp-status.js) ──
+const nalpStatusLayer = L.layerGroup();
+function addStatusMarker(latlng, id, info) {
+  const m = L.circleMarker(latlng, {
+    pane: 'statusPane', radius: 9, color: info.color, weight: 3,
+    opacity: 0.95, fillColor: info.color, fillOpacity: 0.22
+  });
+  m.bindPopup(
+    '<div style="font:600 13px/1.45 Arial;min-width:180px">' +
+    '<b>' + info.icon + ' Tisch ' + id + '</b><br>' +
+    '<span style="color:' + info.color + '">' + info.label + '</span>' +
+    '<div style="font-weight:400;color:#444;margin-top:5px">' + info.kurz + '</div></div>'
+  );
+  m.bindTooltip(info.icon + ' ' + id, { direction: 'top', offset: [0, -6] });
+  m.addTo(nalpStatusLayer);
+}
+
 function addTableLayer(data, name) {
   return L.geoJSON(data, {
     style: tableStyle,
@@ -919,6 +942,10 @@ function addTableLayer(data, name) {
       const popupHtml = buildTablePopupHtml(name, label, p, target);
       layer.bindPopup(popupHtml);
       if (idKey) tableIndex.set(idKey, { layer, feature: f, name, label });
+      if (idKey && window.NALP_STATUS && target) {
+        const si = NALP_STATUS.tischInfo(idKey);
+        if (si) addStatusMarker(target, idKey, si);
+      }
       const line = lineEndpoints(layer);
       const labelBearing = line ? bearingDegrees(line.a, line.b) : 90;
       const labelAngle = normalizeLabelAngle(labelBearing - 90);
@@ -938,6 +965,15 @@ const pz2025Layer = addTableLayer(pz2025Data, 'PZ2025');
 tableTypeFillLayer.addTo(map);
 tableTypeHatchLayer.addTo(map);
 tableLabels.addTo(map);
+nalpStatusLayer.addTo(map);
+
+let nalpStatusOn = true;
+function toggleStatusLayer() {
+  nalpStatusOn = !nalpStatusOn;
+  if (nalpStatusOn) nalpStatusLayer.addTo(map); else map.removeLayer(nalpStatusLayer);
+  const b = document.getElementById('statusToggleBtn');
+  if (b) b.style.opacity = nalpStatusOn ? '1' : '0.45';
+}
 
 const werkleitungenLayer = L.layerGroup().addTo(map);
 const baupisteAchseLayer = L.layerGroup().addTo(map);
@@ -1237,6 +1273,13 @@ function searchTableId() {
   hit.layer.openPopup();
   setStatus('Gefunden: ' + hit.name + ' | ' + hit.label);
 }
+
+// Vom Status-Panel (nalp-status-ui.js) aufgerufen: Tisch auf der Karte anspringen
+window.nalpFocusTisch = function (id) {
+  const input = document.getElementById('tableSearch');
+  if (input) input.value = String(id);
+  searchTableId();
+};
 
 if (bounds.isValid()) map.fitBounds(bounds.pad(0.05));
 

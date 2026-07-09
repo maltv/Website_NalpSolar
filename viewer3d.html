@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0d1117">
 <title>NalpSolar 3D</title>
+<script src="assets/js/nalp-gate.js"></script>
+<script src="assets/js/nalp-status.js"></script>
+<script src="assets/js/nalp-status-ui.js"></script>
 <link rel="manifest" href="manifest.json" id="manifestLink">
 <script>
 // Game-App-Modus (?game=1): eigenes Manifest + reine Spiel-Oberfläche
@@ -92,6 +95,8 @@ html, body { width:100%; height:100%; overflow:hidden; background:#0d1117;
 .lbl-gps { background:rgba(33,150,243,.9); border-color:#2196F3; font-size:11px; }
 .lbl-tisch { background:rgba(255,220,0,.85); color:#111; border-color:#ffd700; font-size:9px; padding:1px 4px;
              transition:opacity .25s linear; will-change:opacity; }
+.lbl-status { font-size:10px; font-weight:800; padding:1px 5px;
+             box-shadow:0 0 0 1px rgba(0,0,0,.35), 0 2px 7px rgba(0,0,0,.45); }
 
 /* ── Status bar ─────────────────────────────────────────── */
 #statusBar {
@@ -808,6 +813,25 @@ async function loadTische(){
   var legMat=new THREE.MeshPhongMaterial({color:0x777777, emissive:0x222222, shininess:30});
   var legGeom=new THREE.CylinderGeometry(0.07,0.07,1,6);  // unit-length, scaled per leg
 
+  // ── Status-Einfaerbung: Problem-Tische (nalp-status.js) heben sich ab ──
+  var statusMatCache={};
+  function statusMat(hex){
+    if(statusMatCache[hex]) return statusMatCache[hex];
+    var c=new THREE.Color(hex);
+    var m=new THREE.MeshPhongMaterial({
+      color:c, emissive:c.clone().multiplyScalar(0.32), specular:0xffffff, shininess:70,
+      transparent:true, opacity:0.9, side:THREE.DoubleSide, depthWrite:true
+    });
+    statusMatCache[hex]=m; return m;
+  }
+  function tischStatusInfo(id){
+    return (window.NALP_STATUS && NALP_STATUS.tischInfo) ? NALP_STATUS.tischInfo(id) : null;
+  }
+  function statusDarkText(hex){
+    var c=new THREE.Color(hex);
+    return (0.299*c.r+0.587*c.g+0.114*c.b) > 0.6;   // helle Farbe -> dunkler Text
+  }
+
   tischeGroup=new THREE.Group();
   tischeGroup.renderOrder=5;
   tischeLbls=[];
@@ -842,7 +866,8 @@ async function loadTische(){
     );
     tmpQ.setFromRotationMatrix(rotM);
 
-    var mesh=new THREE.Mesh(len<11?geomA:geomB, panelMat);
+    var sInfo=tischStatusInfo(id);
+    var mesh=new THREE.Mesh(len<11?geomA:geomB, sInfo?statusMat(sInfo.color):panelMat);
     mesh.position.set(px,py,pz);
     mesh.quaternion.copy(tmpQ);
     tischeGroup.add(mesh);
@@ -873,17 +898,26 @@ async function loadTische(){
     // ID label above panel center
     var div=document.createElement('div');
     div.className='lbl lbl-tisch'; div.textContent=id;
+    if(sInfo){
+      div.classList.add('lbl-status');
+      div.style.background=sInfo.color;
+      div.style.borderColor=sInfo.color;
+      div.style.color=statusDarkText(sInfo.color)?'#111':'#fff';
+      div.title=sInfo.icon+' '+sInfo.label;
+      div.textContent=sInfo.icon+' '+id;
+    }
     var lbl=new THREE.CSS2DObject(div);
     lbl.position.set(px, py+2, pz);
     scene.add(lbl); tischeLbls.push(lbl);
 
     // Index for ID search (camera position = table centre)
     tischeIndex[String(id).trim()]={ pos:new THREE.Vector3(px,py,pz), lbl:lbl };
-    tischeItems.push({ mesh:mesh, legs:legsForItem, lbl:lbl, x:px, z:pz });
+    tischeItems.push({ mesh:mesh, legs:legsForItem, lbl:lbl, x:px, z:pz, status:sInfo?sInfo.key:null });
   });
 
   scene.add(tischeGroup);
-  console.info('Modultische: '+data.length+' (mit Beinen)');
+  var nStatus=tischeItems.filter(function(it){return it.status;}).length;
+  console.info('Modultische: '+data.length+' (mit Beinen), davon '+nStatus+' mit Status markiert');
 }
 
 window.toggleTische=function(){
@@ -969,9 +1003,17 @@ window.searchTisch=function(){
   searchMarker.visible=true; searchMarkerT=4.5;
 
   if(e.lbl){ e.lbl.visible=true; if(e.lbl.element) e.lbl.element.style.opacity='1'; }
-  flashMsg('🟨 Tisch '+q);
+  var info=(window.NALP_STATUS&&NALP_STATUS.tischInfo)?NALP_STATUS.tischInfo(q):null;
+  flashMsg(info ? (info.icon+' Tisch '+q+' – '+info.label) : ('🟨 Tisch '+q));
   if(navigator.vibrate) navigator.vibrate(50);
   if(inp) inp.blur();
+};
+
+// Vom Status-Panel aufgerufen: Tisch im 3D anfliegen (nutzt searchTisch)
+window.nalpFocusTisch=function(id){
+  var inp=document.getElementById('tischSearch');
+  if(inp) inp.value=String(id);
+  window.searchTisch();
 };
 
 /* ═══════════════════════════════════════════════════════════
