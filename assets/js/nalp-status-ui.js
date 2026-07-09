@@ -152,9 +152,9 @@
         '<div class="ns-sec">Offene Themen &amp; Probleme</div>' + themen +
         '<div class="ns-sec">Farb-Legende Tische (3D / Karte)</div>' +
         '<div class="ns-leg">' + leg + '</div>' +
-        '<div class="ns-legnote">Farbige Ringe erscheinen bei jedem Problem-Tisch auf der <b>2D-Karte</b>. ' +
-          'Das <b>3D-Modell</b> zeigt derzeit ein Ausschnitts-Fenster (452 Tische, Bereich PZ2); ' +
-          'nur dort modellierte Problem-Tische werden im 3D eingefärbt.</div>' +
+        '<div class="ns-legnote">Jeder Problem-Tisch ist farblich markiert – auf der <b>2D-Karte</b> als Ring, ' +
+          'im <b>3D-Modell</b> als eingefärbter Tisch (klick-/suchbar). ' +
+          'Für 2 Tische (390, 2178) fehlen Koordinaten in den Kartendaten – sie stehen nur oben im Text.</div>' +
         '<div class="ns-foot">' + esc(S.hinweis) + '</div>' +
       '</div>';
   }

@@ -803,6 +803,19 @@ async function loadTische(){
   if(!r.ok) return;
   var data=await r.json();
 
+  // Status-/Problem-Tische ergaenzen: dieselbe Quelle wie die 2D-Karte
+  // (LV95 zentrum_rechts/hoch/hoehe, tisch_ausrichtung, tisch_laenge – exakt
+  // deckungsgleich mit modultische.json). Separate Datei, damit der Original-
+  // Export unangetastet bleibt. Dedupe nach ID.
+  try {
+    var rs=await fetch('uploads/tables/modultische_status.json');
+    if(rs.ok){
+      var extra=await rs.json();
+      var have={}; data.forEach(function(t){ have[t[0]]=1; });
+      extra.forEach(function(t){ if(!have[t[0]]){ have[t[0]]=1; data.push(t); } });
+    }
+  } catch(e){ /* Status-Tische optional */ }
+
   var geomA=new THREE.BoxGeometry(10.007,0.25,3);
   var geomB=new THREE.BoxGeometry(12.394,0.25,3);
 

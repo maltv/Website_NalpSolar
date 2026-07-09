@@ -1,10 +1,11 @@
 'use strict';
-var CACHE = 'nalpsolar-v30';
+var CACHE = 'nalpsolar-v31';
 var PRECACHE = [
   './viewer3d.html',
   './assets/js/nalp-gate.js',
   './assets/js/nalp-status.js',
   './assets/js/nalp-status-ui.js',
+  './uploads/tables/modultische_status.json',
   './assets/js/three/three.min.js',
   './assets/js/three/OrbitControls.js',
   './assets/js/three/CSS2DRenderer.js',
