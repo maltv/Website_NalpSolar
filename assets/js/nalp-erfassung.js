@@ -98,6 +98,8 @@
     '#nePanel .ne-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-left:6px;vertical-align:middle;}' +
     '#nePanel .ne-dot.ok{background:#12a457;} #nePanel .ne-dot.off{background:#e8a012;}' +
     '#nePanel .ne-empty{font-size:12.5px;color:rgba(232,238,247,.4);padding:8px 0;}' +
+    '#nePanel .ne-all{display:block;text-align:center;margin-top:14px;padding:11px;border-radius:10px;background:rgba(255,255,255,.08);color:#dbe6f5;font-weight:800;font-size:13px;text-decoration:none;}' +
+    '#nePanel .ne-all:hover{background:rgba(255,255,255,.16);}' +
     '#neToast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);z-index:12050;background:#12a457;color:#fff;' +
       'font-weight:800;font-size:14px;padding:12px 20px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:all .25s;}' +
     '#neToast.on{opacity:1;transform:translateX(-50%) translateY(0);} #neToast.err{background:#d63a3f;}';
@@ -123,6 +125,7 @@
         '<div class="ne-status" id="neStatus"></div>' +
         '<div class="ne-sec">Letzte Einträge <button class="ne-refresh" id="neRefresh">⟳ laden</button></div>' +
         '<div id="neList"></div>' +
+        '<a class="ne-all" href="erfassungen.html">📋 Alle Erfassungen als Tabelle öffnen →</a>' +
       '</div>';
 
     // Tabs
