@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>NalpSolar · Stahlbaupläne</title>
+<meta name="theme-color" content="#0b1826">
+<script src="assets/js/nalp-gate.js"></script>
+<style>
+  :root {
+    --bg: #eef1f5;
+    --panel: #ffffff;
+    --line: rgba(0,0,0,.12);
+    --txt: #14202e;
+    --muted: #5b6b7c;
+    --accent: #0b5fff;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    color: var(--txt);
+    font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  /* Kopfleiste */
+  .top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 10px 14px calc(10px + env(safe-area-inset-top));
+    color: #e8eef7;
+    background: radial-gradient(120% 140% at 0% 0%, #173657, #0b1826);
+    box-shadow: 0 2px 12px rgba(0,0,0,.25);
+  }
+  .top .brand { font-size: 10.5px; letter-spacing: .22em; font-weight: 800; color: #ffc340; text-transform: uppercase; }
+  .top h1 { font-size: 17px; font-weight: 900; margin: 0; }
+  .top .sp { flex: 1; }
+  .btn {
+    border: 0; border-radius: 10px; padding: 9px 13px; font-weight: 700; font-size: 13px;
+    color: #e8eef7; background: rgba(255,255,255,.12); cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn:hover { background: rgba(255,255,255,.22); }
+  .btn.home { background: linear-gradient(135deg,#0b5fff,#2196F3); }
+  .zoom { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.10); border-radius: 10px; padding: 3px; }
+  .zoom button { border: 0; background: transparent; color: #e8eef7; font-weight: 800; font-size: 16px; width: 30px; height: 30px; border-radius: 8px; cursor: pointer; }
+  .zoom button:hover { background: rgba(255,255,255,.18); }
+  .zoom .lbl { min-width: 46px; text-align: center; font-size: 12px; font-weight: 700; }
+
+  /* Plan-Auswahl */
+  .picker {
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    padding: 10px 14px;
+    overflow-x: auto;
+  }
+  .groups { display: flex; gap: 18px; align-items: stretch; min-width: max-content; }
+  .group { display: flex; flex-direction: column; gap: 6px; }
+  .group-lbl { font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+  .group-row { display: flex; gap: 7px; }
+  .chip {
+    border: 1px solid var(--line); background: #f6f8fb; color: var(--txt);
+    border-radius: 10px; padding: 8px 12px; font-size: 13px; font-weight: 700; cursor: pointer;
+    white-space: nowrap; transition: all .12s;
+  }
+  .chip small { display: block; font-size: 10px; font-weight: 600; color: var(--muted); margin-top: 1px; }
+  .chip:hover { border-color: var(--accent); }
+  .chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chip.active small { color: rgba(255,255,255,.8); }
+  .chip.big { background: linear-gradient(135deg,#ff8a3d,#ff6b2c); color: #fff; border-color: transparent; }
+  .chip.big.active { box-shadow: 0 0 0 3px rgba(255,138,61,.35); }
+  .sepv { width: 1px; background: var(--line); align-self: stretch; }
+
+  /* Viewer */
+  .viewer { flex: 1; min-height: 0; position: relative; background: #dfe4ea; }
+  iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #dfe4ea; }
+  .hint {
+    padding: 6px 14px; font-size: 11px; color: var(--muted);
+    background: var(--panel); border-top: 1px solid var(--line);
+    display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  }
+  .hint b { color: var(--txt); }
+  @media (max-width: 600px) {
+    .top h1 { font-size: 15px; }
+    .hint .note { display: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="top">
+    <button class="btn home" onclick="location.href='index.html'" title="Zurück zur Startseite">🏠 Start</button>
+    <div>
+      <div class="brand">NalpSolar · STRABAG B8-13</div>
+      <h1>🏗️ Stahlbaupläne</h1>
+    </div>
+    <span class="sp"></span>
+    <div class="zoom">
+      <button onclick="zoomBy(-15)" title="Kleiner">−</button>
+      <span class="lbl" id="zoomLbl">100%</span>
+      <button onclick="zoomBy(15)" title="Grösser">+</button>
+    </div>
+    <button class="btn" onclick="openTab()">↗ Neuer Tab</button>
+  </div>
+
+  <div class="picker">
+    <div class="groups" id="groups"></div>
+  </div>
+
+  <div class="viewer">
+    <iframe id="frame" title="Stahlbauplan"></iframe>
+  </div>
+
+  <div class="hint">
+    <span id="srcLine">–</span>
+    <span class="note">„Standard" = Basisplan (ohne Jahr&#8209;Kennung) · „2026" = Ausführung Baujahr 2026 (Planvermerk „Typ 2026")</span>
+  </div>
+
+<script>
+const PLANS = {
+  montage: { label: 'Montagekonzept', sub: 'MT-Montage', file: 'stahlbau/Montagekonzept_MT-Montage.pdf', nr: 'NalpSolar_51_BE_0300 · Stand 26.06.2026' },
+  a_std:   { label: 'Typ A', sub: 'Standard', file: 'stahlbau/Primaerkonstruktion_TypA.pdf', nr: '24027-S-0-M-002 Rev B' },
+  a_26:    { label: 'Typ A', sub: '2026',     file: 'stahlbau/Primaerkonstruktion_TypA_2026.pdf', nr: '24027-S-0-M-008 Rev B · Typ 2026' },
+  b_std:   { label: 'Typ B', sub: 'Standard', file: 'stahlbau/Primaerkonstruktion_TypB.pdf', nr: '24027-S-0-M-001 Rev G' },
+  b_26:    { label: 'Typ B', sub: '2026',     file: 'stahlbau/Primaerkonstruktion_TypB_2026.pdf', nr: '24027-S-0-M-009 Rev B · Typ 2026' },
+  b_8er:   { label: 'Typ B', sub: '8er Modultisch', file: 'stahlbau/Primaerkonstruktion_TypB_8er.pdf', nr: '24027-S-0-P-005' },
+  c_26:    { label: 'Typ C', sub: '2026',     file: 'stahlbau/Primaerkonstruktion_TypC_2026.pdf', nr: '24027-S-0-M-010 Rev B · Typ 2026' },
+  d_std:   { label: 'Typ D', sub: 'Standard', file: 'stahlbau/Primaerkonstruktion_TypD.pdf', nr: 'Typ D' },
+  d_26:    { label: 'Typ D', sub: '2026',     file: 'stahlbau/Primaerkonstruktion_TypD_2026.pdf', nr: 'Typ D · 2026' },
+  e_std:   { label: 'Typ E', sub: 'Standard', file: 'stahlbau/Primaerkonstruktion_TypE.pdf', nr: 'Typ E' },
+  e_26:    { label: 'Typ E', sub: '2026',     file: 'stahlbau/Primaerkonstruktion_TypE_2026.pdf', nr: 'Typ E · 2026' },
+};
+
+// Gruppierung: Montagekonzept | Primärkonstruktion nach Typ & Baujahr
+const GROUPS = [
+  { title: 'Montagekonzept', keys: ['montage'], big: true },
+  { title: 'Primärkonstruktion · Typ A', keys: ['a_std', 'a_26'] },
+  { title: 'Typ B', keys: ['b_std', 'b_26', 'b_8er'] },
+  { title: 'Typ C', keys: ['c_26'] },
+  { title: 'Typ D', keys: ['d_std', 'd_26'] },
+  { title: 'Typ E', keys: ['e_std', 'e_26'] },
+];
+
+var state = { key: 'montage', zoom: 100 };
+var frame = document.getElementById('frame');
+var zoomLbl = document.getElementById('zoomLbl');
+var srcLine = document.getElementById('srcLine');
+
+function buildPicker() {
+  var host = document.getElementById('groups');
+  GROUPS.forEach(function (g, gi) {
+    if (gi > 0) { var s = document.createElement('div'); s.className = 'sepv'; host.appendChild(s); }
+    var wrap = document.createElement('div');
+    wrap.className = 'group';
+    var lbl = document.createElement('div');
+    lbl.className = 'group-lbl';
+    lbl.textContent = g.title;
+    wrap.appendChild(lbl);
+    var row = document.createElement('div');
+    row.className = 'group-row';
+    g.keys.forEach(function (k) {
+      var p = PLANS[k];
+      var b = document.createElement('button');
+      b.className = 'chip' + (g.big ? ' big' : '');
+      b.dataset.key = k;
+      b.innerHTML = p.label + (p.sub ? '<small>' + p.sub + '</small>' : '');
+      b.addEventListener('click', function () { select(k); });
+      row.appendChild(b);
+    });
+    wrap.appendChild(row);
+    host.appendChild(wrap);
+  });
+}
+
+function render() {
+  var p = PLANS[state.key];
+  frame.src = p.file + '#zoom=' + state.zoom + '&view=FitH';
+  zoomLbl.textContent = state.zoom + '%';
+  srcLine.innerHTML = '<b>' + p.label + (p.sub ? ' · ' + p.sub : '') + '</b> &nbsp;–&nbsp; Plan-Nr: ' + p.nr;
+  document.querySelectorAll('.chip').forEach(function (c) {
+    c.classList.toggle('active', c.dataset.key === state.key);
+  });
+}
+
+function select(key) {
+  if (!PLANS[key]) return;
+  state.key = key;
+  render();
+}
+
+function zoomBy(d) {
+  state.zoom = Math.max(40, Math.min(400, state.zoom + d));
+  render();
+}
+
+function openTab() {
+  window.open(PLANS[state.key].file, '_blank', 'noopener');
+}
+
+buildPicker();
+render();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+}
+</script>
+</body>
+</html>
