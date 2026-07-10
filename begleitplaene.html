@@ -107,7 +107,6 @@
   <div class="toolbar">
     <button type="button" id="backToMapBtn">Zur Karte</button>
     <button type="button" id="toMainBtn">5W-Programm Seite</button>
-    <button type="button" id="toAdminBtn">Admin</button>
 
     <button type="button" class="filter-btn" data-filter="bohren">Bohren</button>
     <button type="button" class="filter-btn" data-filter="stahlbau">Stahlbau</button>
@@ -392,13 +391,8 @@ function toMainPage() {
   window.location.href = '5w-programm.html';
 }
 
-function toAdminPage() {
-  window.location.href = 'admin.html';
-}
-
 document.getElementById('backToMapBtn').addEventListener('click', backToMap);
 document.getElementById('toMainBtn').addEventListener('click', toMainPage);
-document.getElementById('toAdminBtn').addEventListener('click', toAdminPage);
 document.getElementById('reloadBtn').addEventListener('click', loadPdf);
 document.getElementById('zoomOutBtn').addEventListener('click', () => setZoom(state.zoom - 20));
 document.getElementById('zoomInBtn').addEventListener('click', () => setZoom(state.zoom + 20));

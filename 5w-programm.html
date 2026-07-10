@@ -102,7 +102,6 @@
   <div class="toolbar">
     <button type="button" id="backToMapBtn">Zur Karte</button>
     <button type="button" id="toBegleitBtn">Begleitplaene Seite</button>
-    <button type="button" id="toAdminBtn">Admin</button>
     <button type="button" id="reloadBtn">Neu laden</button>
     <button type="button" id="zoomOutBtn">-</button>
     <span id="zoomLabel" class="zoom-chip">100%</span>
@@ -317,13 +316,8 @@ function toBegleitPage() {
   window.location.href = 'begleitplaene.html';
 }
 
-function toAdminPage() {
-  window.location.href = 'admin.html';
-}
-
 document.getElementById('backToMapBtn').addEventListener('click', backToMap);
 document.getElementById('toBegleitBtn').addEventListener('click', toBegleitPage);
-document.getElementById('toAdminBtn').addEventListener('click', toAdminPage);
 document.getElementById('reloadBtn').addEventListener('click', loadPdf);
 document.getElementById('zoomOutBtn').addEventListener('click', () => setZoom(state.zoom - 20));
 document.getElementById('zoomInBtn').addEventListener('click', () => setZoom(state.zoom + 20));

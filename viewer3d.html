@@ -7,7 +7,7 @@
 <title>NalpSolar 3D</title>
 <script src="assets/js/nalp-gate.js"></script>
 <script src="assets/js/nalp-status.js"></script>
-<script src="assets/js/nalp-status-ui.js"></script>
+<script src="assets/js/nalp-stahlteile.js"></script>
 <link rel="manifest" href="manifest.json" id="manifestLink">
 <script>
 // Game-App-Modus (?game=1): eigenes Manifest + reine Spiel-Oberfläche
@@ -93,6 +93,8 @@ html, body { width:100%; height:100%; overflow:hidden; background:#0d1117;
   border:1px solid rgba(255,255,255,.2);
 }
 .lbl-gps { background:rgba(33,150,243,.9); border-color:#2196F3; font-size:11px; }
+.lbl-stahl { background:rgba(255,138,61,.92); border-color:#ff8a3d; color:#111; font-size:10.5px; font-weight:800; }
+.lbl-stahl.pk { background:rgba(11,95,255,.92); border-color:#0b5fff; color:#fff; }
 .lbl-tisch { background:rgba(255,220,0,.85); color:#111; border-color:#ffd700; font-size:9px; padding:1px 4px;
              transition:opacity .25s linear; will-change:opacity; }
 .lbl-status { font-size:10px; font-weight:800; padding:1px 5px;
@@ -389,6 +391,7 @@ body.ar-mode { background:transparent!important; }
           onkeydown="if(event.key==='Enter'){searchTisch();}">
   <button class="tb-btn" id="btnSearch" onclick="searchTisch()">🔍</button>
   <button class="tb-btn" id="btnGps" onclick="toggleGps()">📍 GPS</button>
+  <button class="tb-btn" id="btnStahl" onclick="nalpStahlteileOpen()" title="Herumliegende Stahlteile mit GPS erfassen">🔩 Stahlteil</button>
   <button class="tb-btn" id="btnAR"  onclick="toggleAR()">📷 AR</button>
   <button class="tb-btn" id="btnMenuMore" onclick="tbMenu('menuMore')">⋯ Mehr ▾</button>
 </div>
@@ -2064,87 +2067,6 @@ function updateSamuel(dt){
 }
 
 /* ═══════════════════════════════════════════════════════════
-   FAULES STAHLBAUTEAM — 5 Mann, Liegestühle, Cocktails, am See
-═══════════════════════════════════════════════════════════ */
-var lazyTeam=[], lazyLbl=null;
-function makeLounger(chairCol){
-  var g=new THREE.Group();
-  // Liegestuhl: Gestell + gestreifte Liegefläche
-  var frame=new THREE.MeshLambertMaterial({color:0xdddddd});
-  var cloth=new THREE.MeshLambertMaterial({color:chairCol});
-  [[0.5,0.25],[0.5,-0.25],[-0.55,0.25],[-0.55,-0.25]].forEach(function(p){
-    var leg=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,0.45,6),frame);
-    leg.position.set(p[0],0.22,p[1]); g.add(leg);
-  });
-  var seat=new THREE.Mesh(new THREE.BoxGeometry(1.15,0.06,0.62),cloth);
-  seat.position.set(0.12,0.45,0); seat.rotation.z=0.12; g.add(seat);
-  var back=new THREE.Mesh(new THREE.BoxGeometry(0.75,0.06,0.62),cloth);
-  back.position.set(-0.72,0.72,0); back.rotation.z=0.85; g.add(back);
-  // Fauler Stahlbauer: zurückgelehnt, orange PSA, oranger Helm
-  var vest=new THREE.MeshPhongMaterial({color:0xff5f00,emissive:0x4a1c00});
-  var pants=new THREE.MeshLambertMaterial({color:0xe04f00});
-  var skin=new THREE.MeshLambertMaterial({color:0xe0ac69});
-  var hat=new THREE.MeshPhongMaterial({color:0xff6a00,emissive:0x552200,shininess:70});
-  var torso=new THREE.Mesh(new THREE.BoxGeometry(0.62,0.42,0.4),vest);
-  torso.position.set(-0.5,0.85,0); torso.rotation.z=0.85; g.add(torso);
-  var legTh=new THREE.Mesh(new THREE.BoxGeometry(0.75,0.16,0.34),pants);
-  legTh.position.set(0.12,0.58,0); legTh.rotation.z=0.12; g.add(legTh);
-  var shin=new THREE.Mesh(new THREE.BoxGeometry(0.55,0.13,0.3),pants);
-  shin.position.set(0.72,0.42,0); shin.rotation.z=-0.25; g.add(shin);
-  var head=new THREE.Mesh(new THREE.SphereGeometry(0.15,10,8),skin);
-  head.position.set(-0.82,1.15,0); g.add(head);
-  var helm=new THREE.Mesh(new THREE.SphereGeometry(0.17,12,8,0,Math.PI*2,0,Math.PI/2),hat);
-  helm.position.set(-0.84,1.18,0); helm.rotation.z=0.6; g.add(helm);
-  // Cocktail-Arm mit Glas + Schirmchen
-  var arm=new THREE.Group(); arm.position.set(-0.45,1.0,0.24);
-  var armM=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,0.42,6),vest);
-  armM.position.y=0.21; arm.add(armM);
-  var glass=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.03,0.16,8),
-    new THREE.MeshPhongMaterial({color:0x33ddaa,transparent:true,opacity:0.8,shininess:100}));
-  glass.position.y=0.5; arm.add(glass);
-  var schirm=new THREE.Mesh(new THREE.ConeGeometry(0.09,0.05,8),
-    new THREE.MeshLambertMaterial({color:0xff4d88}));
-  schirm.position.set(0.04,0.62,0); arm.add(schirm);
-  arm.rotation.x=-0.5;
-  g.add(arm); g.userData.arm=arm;
-  return g;
-}
-function spawnLazyTeam(){
-  var cols=[0xff5a5a,0x4da6ff,0xffd24d,0x66cc66,0xcc66ff];
-  var bx=-346, bz=-238;                              // am Seeufer bei der STRABAG-Fahne
-  var grp=new THREE.Group();
-  for(var i=0;i<5;i++){
-    var L=makeLounger(cols[i]);
-    var px=bx+(Math.random()*2-1)*2, pz=bz-i*6.5;
-    L.position.set(px, terraY(px,pz), pz);
-    L.rotation.y=Math.PI;                            // Blick auf den See (nach Westen)
-    setCast(L);
-    grp.add(L);
-    lazyTeam.push({group:L, sipT:2+Math.random()*6, sipping:0});
-  }
-  // Schild
-  var d=document.createElement('div'); d.className='lbl';
-  d.textContent='🏖 Faules Stahlbauteam'; d.style.fontSize='12px';
-  lazyLbl=new THREE.CSS2DObject(d);
-  lazyLbl.position.set(bx, terraY(bx,bz-13)+4, bz-13);
-  grp.add(lazyLbl);
-  workerGroup.add(grp);                              // erbt Sichtbarkeit + Minuspunkte im Spiel
-}
-function updateLazyTeam(dt){
-  if(lazyLbl) lazyLbl.visible=!!(workerGroup && workerGroup.visible && !gamePlaying);
-  for(var i=0;i<lazyTeam.length;i++){
-    var p=lazyTeam[i];
-    if(p.sipping>0){ p.sipping-=dt;                  // Schlückchen nehmen
-      p.group.userData.arm.rotation.x=-0.5-Math.sin(Math.min(1,1-p.sipping/1.2)*Math.PI)*0.9;
-      if(p.sipping<=0) p.group.userData.arm.rotation.x=-0.5;
-    } else {
-      p.sipT-=dt;
-      if(p.sipT<=0){ p.sipping=1.2; p.sipT=4+Math.random()*8; }
-    }
-  }
-}
-
-/* ═══════════════════════════════════════════════════════════
    UMGEBUNG — Himmel, Wetter, Vegetation, Pneukran, Kletterer
 ═══════════════════════════════════════════════════════════ */
 var sunLight=null, hemiLight=null, skyMesh=null, swayUniforms=[];
@@ -2852,7 +2774,8 @@ window.tbMenu=function(id){
 
 /* ── Tap detection (distinguish tap from orbit drag) ─────── */
 function onTapDown(e){
-  if(!gamePlaying && !birdARon && !measurePlacing() && !measEditOn) return;
+  if(!gamePlaying && !birdARon && !measurePlacing() && !measEditOn &&
+     !(stahlGroup && stahlGroup.children.length)) return;
   tapStart={x:e.clientX, y:e.clientY, t:performance.now()};
 }
 function onTapUp(e){
@@ -2868,7 +2791,8 @@ function onTapUp(e){
     pickBird(e.clientX, e.clientY); return;
   }
   if(measurePlacing()){ measureTapAt(e.clientX, e.clientY); return; }
-  if(measEditOn){ measEditTap(e.clientX, e.clientY); }
+  if(measEditOn){ measEditTap(e.clientX, e.clientY); return; }
+  pickStahl(e.clientX, e.clientY);   // Stahlteil-Marker antippen = löschen
 }
 function pickBird(cx,cy){
   if(!birdGroup) return;
@@ -3912,6 +3836,60 @@ function mkGps(){
   return g;
 }
 
+/* ── Stahlteile: per GPS erfasste Teile (nalp-stahlteile.js) ── */
+var stahlGroup=null, stahlPending=null;
+function renderStahlteile(items){
+  if(items) stahlPending=items;
+  if(!scene || !stahlPending) return;
+  if(stahlGroup) scene.remove(stahlGroup);
+  stahlGroup=new THREE.Group();
+  stahlPending.forEach(function(it){
+    if(typeof it.lat!=='number' || typeof it.lon!=='number') return;
+    var s=gpsToScene(it.lat,it.lon,null);
+    var y=terraY(s.x,s.z) || s.y;
+    var isPk=it.art==='primaer';
+    var col=isPk?0x0b5fff:0xff8a3d;
+    var g=new THREE.Group();
+    var pole=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,5,8),
+      new THREE.MeshBasicMaterial({color:0xffffff}));
+    pole.position.y=2.5; g.add(pole);
+    var head=new THREE.Mesh(new THREE.SphereGeometry(1.4,12,10),
+      new THREE.MeshBasicMaterial({color:col}));
+    head.position.y=5.6; g.add(head);
+    // unsichtbare grössere Trefferfläche fürs Antippen am Handy
+    var hit=new THREE.Mesh(new THREE.SphereGeometry(3.5,8,6),
+      new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}));
+    hit.position.y=5; g.add(hit);
+    var d=document.createElement('div');
+    d.className='lbl lbl-stahl'+(isPk?' pk':'');
+    d.textContent=isPk ? ('🏗 PK '+(it.tischId||'?')) : ('🔩 '+(it.teilTyp||'Stahlteil'));
+    var lbl=new THREE.CSS2DObject(d); lbl.position.set(0,8,0); g.add(lbl);
+    g.position.set(s.x,y,s.z);
+    g.userData.stahlItem=it;
+    stahlGroup.add(g);
+  });
+  scene.add(stahlGroup);
+}
+if(window.NalpStahlteile) NalpStahlteile.subscribe(function(items){ renderStahlteile(items); });
+
+// Tap auf einen Stahlteil-Marker → Eintrag löschen (aufgeräumt/verbaut)
+function pickStahl(cx,cy){
+  if(!stahlGroup || !stahlGroup.children.length) return false;
+  var rect=renderer.domElement.getBoundingClientRect();
+  var m=new THREE.Vector2(((cx-rect.left)/rect.width)*2-1, -((cy-rect.top)/rect.height)*2+1);
+  raycaster.setFromCamera(m,camera);
+  var hits=raycaster.intersectObjects(stahlGroup.children,true);
+  if(!hits.length) return false;
+  var o=hits[0].object;
+  while(o && o.parent && o.parent!==stahlGroup) o=o.parent;
+  var it=o && o.userData && o.userData.stahlItem;
+  if(!it) return false;
+  if(confirm('„'+NalpStahlteile.itemTitle(it)+'" löschen (aufgeräumt/verbaut)?')){
+    NalpStahlteile.remove(it, function(ok,msg){ if(!ok) alert(msg||'Löschen fehlgeschlagen – offline?'); });
+  }
+  return true;
+}
+
 /* ── Toggle UI ───────────────────────────────────────────── */
 window.toggleTerrain=function(){
   terrainOn=!terrainOn; if(terrainMesh) terrainMesh.visible=terrainOn;
@@ -4288,7 +4266,6 @@ function animate(){
   updateClimbers(gdt);
   updateCows(gdt);
   updateSamuel(gdt);
-  updateLazyTeam(gdt);
   updateCrane(gdt);
   updatePG(gdt);
   updateRain(gdt);
@@ -4522,7 +4499,7 @@ async function init(){
     spawnWorkers(5); if(workerGroup) setCast(workerGroup);
     try{ spawnCows(4); }catch(e){ console.warn('cows',e); }
     try{ spawnSamuel(); }catch(e){ console.warn('samuel',e); }
-    try{ spawnLazyTeam(); }catch(e){ console.warn('lazyteam',e); }
+    try{ renderStahlteile(); }catch(e){ console.warn('stahlteile',e); }   // jetzt mit Terrain-Höhe
     // Umgebung: Vegetation, Kletterer, Pneukran-Strasse, Wetter
     try{ spawnVegetation(workerArea); }catch(e){ console.warn('veg',e); }
     try{ spawnClimbers(3); }catch(e){ console.warn('climbers',e); }
