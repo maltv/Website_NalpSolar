@@ -3,210 +3,255 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>NalpSolar · Stahlbaupläne</title>
+<title>NalpSolar · Stahlbau – Schrauben & Drehmomente</title>
 <meta name="theme-color" content="#0b1826">
 <script src="assets/js/nalp-gate.js"></script>
 <style>
-  :root {
-    --bg: #eef1f5;
-    --panel: #ffffff;
-    --line: rgba(0,0,0,.12);
-    --txt: #14202e;
-    --muted: #5b6b7c;
-    --accent: #0b5fff;
+  :root{
+    --bg:#eef1f5; --card:#fff; --line:rgba(10,22,38,.12); --txt:#14202e; --muted:#5b6b7c;
+    --blue:#0b5fff; --blue-d:#12304f; --orange:#e0691b; --orange2:#ff8a3d; --red:#d63a3f; --green:#1c8a4a;
   }
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; height: 100%; }
-  body {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    background: var(--bg);
-    color: var(--txt);
-    font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
-  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;}
+  body{background:var(--bg);color:var(--txt);font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;line-height:1.45;}
+  .wrap{max-width:820px;margin:0 auto;padding:0 14px 60px;}
 
-  /* Kopfleiste */
-  .top {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-    padding: 10px 14px calc(10px + env(safe-area-inset-top));
-    color: #e8eef7;
-    background: radial-gradient(120% 140% at 0% 0%, #173657, #0b1826);
-    box-shadow: 0 2px 12px rgba(0,0,0,.25);
-  }
-  .top .brand { font-size: 10.5px; letter-spacing: .22em; font-weight: 800; color: #ffc340; text-transform: uppercase; }
-  .top h1 { font-size: 17px; font-weight: 900; margin: 0; }
-  .top .sp { flex: 1; }
-  .btn {
-    border: 0; border-radius: 10px; padding: 9px 13px; font-weight: 700; font-size: 13px;
-    color: #e8eef7; background: rgba(255,255,255,.12); cursor: pointer;
-    display: inline-flex; align-items: center; gap: 6px;
-  }
-  .btn:hover { background: rgba(255,255,255,.22); }
-  .btn.home { background: linear-gradient(135deg,#0b5fff,#2196F3); }
-  .zoom { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.10); border-radius: 10px; padding: 3px; }
-  .zoom button { border: 0; background: transparent; color: #e8eef7; font-weight: 800; font-size: 16px; width: 30px; height: 30px; border-radius: 8px; cursor: pointer; }
-  .zoom button:hover { background: rgba(255,255,255,.18); }
-  .zoom .lbl { min-width: 46px; text-align: center; font-size: 12px; font-weight: 700; }
+  /* Kopf */
+  .top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;
+    padding:10px 14px calc(10px + env(safe-area-inset-top));margin:0 -14px 14px;
+    color:#e8eef7;background:radial-gradient(120% 160% at 0 0,#173657,#0b1826);box-shadow:0 2px 14px rgba(0,0,0,.3);}
+  .top .brand{font-size:10px;letter-spacing:.22em;font-weight:800;color:#ffc340;text-transform:uppercase;}
+  .top h1{font-size:16px;font-weight:900;margin:1px 0 0;}
+  .top .sp{flex:1;}
+  .home{border:0;border-radius:11px;padding:10px 14px;font-weight:800;font-size:14px;color:#fff;cursor:pointer;
+    background:linear-gradient(135deg,#0b5fff,#2196F3);white-space:nowrap;}
 
-  /* Plan-Auswahl */
-  .picker {
-    background: var(--panel);
-    border-bottom: 1px solid var(--line);
-    padding: 10px 14px;
-    overflow-x: auto;
-  }
-  .groups { display: flex; gap: 18px; align-items: stretch; min-width: max-content; }
-  .group { display: flex; flex-direction: column; gap: 6px; }
-  .group-lbl { font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
-  .group-row { display: flex; gap: 7px; }
-  .chip {
-    border: 1px solid var(--line); background: #f6f8fb; color: var(--txt);
-    border-radius: 10px; padding: 8px 12px; font-size: 13px; font-weight: 700; cursor: pointer;
-    white-space: nowrap; transition: all .12s;
-  }
-  .chip small { display: block; font-size: 10px; font-weight: 600; color: var(--muted); margin-top: 1px; }
-  .chip:hover { border-color: var(--accent); }
-  .chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .chip.active small { color: rgba(255,255,255,.8); }
-  .chip.big { background: linear-gradient(135deg,#ff8a3d,#ff6b2c); color: #fff; border-color: transparent; }
-  .chip.big.active { box-shadow: 0 0 0 3px rgba(255,138,61,.35); }
-  .sepv { width: 1px; background: var(--line); align-self: stretch; }
+  h2{font-size:15px;font-weight:900;margin:26px 0 10px;display:flex;align-items:center;gap:8px;}
+  h2 .tag{font-size:10.5px;font-weight:800;color:#fff;border-radius:6px;padding:2px 8px;letter-spacing:.02em;}
+  .tag.b1{background:var(--blue);} .tag.b2{background:var(--orange2);}
+  .lead{font-size:13.5px;color:var(--muted);margin:-4px 0 12px;}
 
-  /* Viewer */
-  .viewer { flex: 1; min-height: 0; position: relative; background: #dfe4ea; }
-  iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #dfe4ea; }
-  .hint {
-    padding: 6px 14px; font-size: 11px; color: var(--muted);
-    background: var(--panel); border-top: 1px solid var(--line);
-    display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap;
-  }
-  .hint b { color: var(--txt); }
-  @media (max-width: 600px) {
-    .top h1 { font-size: 15px; }
-    .hint .note { display: none; }
+  /* Erkennungs-Banner */
+  .rule{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:6px;
+    box-shadow:0 6px 18px rgba(10,22,38,.06);}
+  .rule .rr{display:flex;gap:12px;align-items:flex-start;padding:9px 0;}
+  .rule .rr+.rr{border-top:1px dashed var(--line);}
+  .dot{flex:none;width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+    font-weight:900;color:#fff;font-size:13px;}
+  .dot.b{background:var(--blue);} .dot.o{background:var(--orange2);}
+  .rr .t{font-size:14px;font-weight:800;} .rr .s{font-size:12.5px;color:var(--muted);margin-top:2px;}
+
+  /* Drehmoment-Tabellen */
+  .torq{width:100%;border-collapse:separate;border-spacing:0;background:var(--card);border-radius:16px;overflow:hidden;
+    box-shadow:0 6px 18px rgba(10,22,38,.07);border:1px solid var(--line);}
+  .torq caption{caption-side:top;text-align:left;font-size:12px;color:var(--muted);padding:0 0 8px;}
+  .torq th,.torq td{padding:0;}
+  .torq .grid{display:grid;grid-template-columns:repeat(4,1fr);}
+  .cell{padding:12px 8px;text-align:center;border-top:1px solid var(--line);border-left:1px solid var(--line);}
+  .cell:nth-child(4n+1){border-left:0;}
+  .cell .sz{font-size:13px;font-weight:800;color:var(--muted);}
+  .cell .nm{font-size:20px;font-weight:900;margin-top:2px;line-height:1;}
+  .cell .u{font-size:11px;font-weight:700;color:var(--muted);}
+  .torq.t1 .nm{color:var(--blue);} .torq.t2 .nm{color:#e0691b;}
+  .torq .hd{grid-column:1/-1;padding:11px 14px;color:#fff;font-weight:800;font-size:13.5px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+  .torq.t1 .hd{background:linear-gradient(135deg,#0b5fff,#12304f);}
+  .torq.t2 .hd{background:linear-gradient(135deg,#ff8a3d,#c85a12);}
+  .torq .hd small{font-weight:700;opacity:.9;font-size:11.5px;}
+
+  /* Regeln */
+  .warn{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--red);border-radius:12px;
+    padding:12px 14px;margin-bottom:10px;box-shadow:0 4px 12px rgba(10,22,38,.05);}
+  .warn.amber{border-left-color:#e8a012;} .warn.green{border-left-color:var(--green);} .warn.blue{border-left-color:var(--blue);}
+  .warn .wt{font-size:14px;font-weight:900;display:flex;gap:8px;align-items:center;}
+  .warn .wb{font-size:13px;color:#2a3a49;margin-top:5px;}
+  .warn .wb b{color:var(--txt);}
+  .warn ul{margin:6px 0 0;padding-left:18px;} .warn li{font-size:13px;margin:3px 0;}
+  .big40{display:inline-block;background:#111c28;color:#ffd23f;font-weight:900;border-radius:7px;padding:1px 8px;}
+
+  /* Pläne */
+  .plans{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+  .pcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;
+    box-shadow:0 4px 12px rgba(10,22,38,.05);display:flex;flex-direction:column;gap:8px;}
+  .pcard .ph{display:flex;align-items:baseline;justify-content:space-between;gap:8px;}
+  .pcard .pt{font-size:16px;font-weight:900;}
+  .pcard .pj{font-size:11px;font-weight:800;color:#fff;background:#5b6b7c;border-radius:6px;padding:2px 7px;white-space:nowrap;}
+  .pcard.j2026 .pj{background:var(--orange2);} .pcard.jstd .pj{background:#3b7dd8;} .pcard.j8er .pj{background:#7a57c8;}
+  .pcard .pnr{font-size:10.5px;color:var(--muted);}
+  .chips{display:flex;flex-wrap:wrap;gap:4px;}
+  .chip{font-size:11px;font-weight:700;border-radius:6px;padding:2px 7px;border:1px solid var(--line);white-space:nowrap;}
+  .chip.i{background:#eef4ff;color:#0b3ea8;border-color:#cfe0ff;}
+  .chip.h{background:#fff1e6;color:#b5510f;border-color:#ffd9be;}
+  .clab{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-top:2px;}
+  .open{margin-top:auto;border:0;border-radius:10px;padding:10px;font-weight:800;font-size:13.5px;color:#fff;
+    background:linear-gradient(135deg,#233b54,#12304f);cursor:pointer;text-align:center;text-decoration:none;display:block;}
+  .pcard.montage{grid-column:1/-1;border-color:#ffb877;}
+  .pcard.montage .open{background:linear-gradient(135deg,#ff8a3d,#c85a12);}
+
+  .src{font-size:11px;color:var(--muted);margin-top:22px;line-height:1.6;border-top:1px solid var(--line);padding-top:12px;}
+  @media(max-width:560px){
+    .torq .grid{grid-template-columns:repeat(2,1fr);}
+    .cell:nth-child(4n+1){border-left:1px solid var(--line);}
+    .cell:nth-child(2n+1){border-left:0;}
+    .plans{grid-template-columns:1fr;}
+    .cell .nm{font-size:22px;}
   }
 </style>
 </head>
 <body>
-  <div class="top">
-    <button class="btn home" onclick="location.href='index.html'" title="Zurück zur Startseite">🏠 Start</button>
-    <div>
-      <div class="brand">NalpSolar · STRABAG B8-13</div>
-      <h1>🏗️ Stahlbaupläne</h1>
+<div class="top">
+  <button class="home" onclick="location.href='index.html'">🏠 Start</button>
+  <div>
+    <div class="brand">NalpSolar · STRABAG B8-13</div>
+    <h1>🔩 Stahlbau – Schrauben &amp; Drehmomente</h1>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- SCHRITT 1: Schraube erkennen -->
+  <h2>1 · Welche Schraube? → welche Tabelle?</h2>
+  <div class="rule">
+    <div class="rr">
+      <div class="dot b">8.8</div>
+      <div><div class="t">Normale 6-Kt-Schraube (DIN 933, Klasse 8.8)</div>
+        <div class="s">= Verbindung <b>innerhalb der Primärkonstruktion</b> (Stütze, Riegel, Aussteifung, Auflagerträger).
+          → <b>Tabelle 1</b>. Grundsätzlich vorspannen.</div></div>
     </div>
-    <span class="sp"></span>
-    <div class="zoom">
-      <button onclick="zoomBy(-15)" title="Kleiner">−</button>
-      <span class="lbl" id="zoomLbl">100%</span>
-      <button onclick="zoomBy(15)" title="Grösser">+</button>
+    <div class="rr">
+      <div class="dot o">HV</div>
+      <div><div class="t">HV-Schraube (EN 14399-4, Klasse 10.9)</div>
+        <div class="s">= sitzt an <b>Fussplatte Stütze</b> oder <b>Kopfplatte Mikropfahl</b> (dort mit Langlöchern).
+          → <b>Tabelle 2</b>. Immer vorspannen.</div></div>
     </div>
-    <button class="btn" onclick="openTab()">↗ Neuer Tab</button>
   </div>
 
-  <div class="picker">
-    <div class="groups" id="groups"></div>
+  <!-- TABELLE 1 -->
+  <h2><span class="tag b1">Tabelle 1</span> Innerhalb Primärkonstruktion · 8.8</h2>
+  <table class="torq t1">
+    <caption>Anziehdrehmoment M<sub>A</sub>, Festigkeitsklasse 8.8 (vorgespannt).</caption>
+    <tbody><tr><td colspan="4"><div class="grid">
+      <div class="hd"><span>Schraube 8.8 – vorspannen</span><small>Quelle: Montagekonzept, Tab. 1</small></div>
+      <div class="cell"><div class="sz">M10</div><div class="nm">48<span class="u"> Nm</span></div></div>
+      <div class="cell"><div class="sz">M12</div><div class="nm">84<span class="u"> Nm</span></div></div>
+      <div class="cell"><div class="sz">M16</div><div class="nm">206<span class="u"> Nm</span></div></div>
+      <div class="cell"><div class="sz">M20</div><div class="nm">415<span class="u"> Nm</span></div></div>
+      <div class="cell"><div class="sz">M24</div><div class="nm">714<span class="u"> Nm</span></div></div>
+      <div class="cell"><div class="sz">M27</div><div class="nm">1050<span class="u"> Nm</span></div></div>
+      <div class="cell"><div class="sz">M30</div><div class="nm">1420<span class="u"> Nm</span></div></div>
+      <div class="cell"><div class="sz">M36</div><div class="nm">2482<span class="u"> Nm</span></div></div>
+    </div></td></tr></tbody>
+  </table>
+
+  <!-- TABELLE 2 -->
+  <h2><span class="tag b2">Tabelle 2</span> Fussplatte &amp; Kopfplatte · HV 10.9</h2>
+  <table class="torq t2">
+    <caption>Anziehdrehmoment M<sub>A</sub>, HV-Schrauben Festigkeitsklasse 10.9 (Fussplatte Stütze / Kopfplatte Mikropfahl).</caption>
+    <tbody><tr><td colspan="4"><div class="grid">
+      <div class="hd"><span>HV 10.9 – vorspannen</span><small>Quelle: Montagekonzept, Tab. 2</small></div>
+      <div class="cell"><div class="sz">M12</div><div class="nm">100<span class="u"> Nm</span></div></div>
+      <div class="cell"><div class="sz">M16</div><div class="nm">250<span class="u"> Nm</span></div></div>
+      <div class="cell"><div class="sz">M20</div><div class="nm">450<span class="u"> Nm</span></div></div>
+      <div class="cell"><div class="sz">M24</div><div class="nm">800<span class="u"> Nm</span></div></div>
+      <div class="cell"><div class="sz">M27</div><div class="nm">1250<span class="u"> Nm</span></div></div>
+      <div class="cell"><div class="sz">M30</div><div class="nm">1600<span class="u"> Nm</span></div></div>
+    </div></td></tr></tbody>
+  </table>
+
+  <!-- REGELN -->
+  <h2>2 · Wichtig – nicht vergessen</h2>
+
+  <div class="warn">
+    <div class="wt">❗ Diese 2 Verbindungen NICHT vorspannen</div>
+    <div class="wb">Hier kein Drehmoment – stattdessen mit <b>Kontermutter</b> gegen Lösen sichern:</div>
+    <ul>
+      <li><b>Modulträger ↔ Auflagerträger</b> (Verschraubung durch die Langlöcher in den Pfetten).</li>
+      <li><b>Bergseitige Stütze ↔ Auflagerträger.</b></li>
+    </ul>
   </div>
 
-  <div class="viewer">
-    <iframe id="frame" title="Stahlbauplan"></iframe>
+  <div class="warn amber">
+    <div class="wt">🔩 Modulklemmen an den Pfetten</div>
+    <div class="wb">Gewindefurchende Schraube <b>SFS nonut TDBL-T 8.6×16</b>. Zuerst mit Schlagschrauber ansetzen (90° zur Pfette),
+      dann <b>zwingend mit dem Drehmomentschlüssel</b> auf <span class="big40">40 Nm</span> fertig anziehen.
+      <b>Nie</b> mit dem Schlagschrauber endanziehen – sonst reisst das Gewinde aus. Reisst es bei 40 Nm trotzdem → Wert in 5-Nm-Schritten reduzieren.</div>
   </div>
 
-  <div class="hint">
-    <span id="srcLine">–</span>
-    <span class="note">„Standard" = Basisplan (ohne Jahr&#8209;Kennung) · „2026" = Ausführung Baujahr 2026 (Planvermerk „Typ 2026")</span>
+  <div class="warn green">
+    <div class="wt">📌 PV-Modul in der Klemme fixieren</div>
+    <div class="wb">Pro Modul <b>2× Madenschraube M5×8</b> an derselben Klemme setzen und mit <b>Loctite</b> sichern.
+      Oben: Spaltmass <b>1–2 mm</b> zwischen Modulklemme und PV-Modul einhalten.</div>
   </div>
+
+  <div class="warn blue">
+    <div class="wt">🏗️ Modulträger heben / handhaben</div>
+    <div class="wb">Nur die <b>definierten Aufhängepunkte</b> (Ringschrauben) und Auflagerpunkte benutzen – sonst irreversible Verformung / Tragsicherheit gefährdet.
+      Ringschrauben nach der Montage auf der Primärkonstruktion wieder demontieren. Gewicht 10er-Tisch ≈ <b>955 kg</b>.</div>
+  </div>
+
+  <!-- PLÄNE -->
+  <h2>3 · Pläne – wo sitzt welche Schraube (nach Typ &amp; Baujahr)</h2>
+  <div class="lead">Chip <span class="chip i">blau = 8.8 innen</span> und <span class="chip h">orange = HV 10.9</span> zeigen die im Typ verbauten Schrauben. Plan öffnen für die genaue Lage.</div>
+  <div class="plans" id="plans"></div>
+
+  <div class="src" id="src"></div>
+</div>
 
 <script>
-const PLANS = {
-  montage: { label: 'Montagekonzept', sub: 'MT-Montage', file: 'stahlbau/Montagekonzept_MT-Montage.pdf', nr: 'NalpSolar_51_BE_0300 · Stand 26.06.2026' },
-  a_std:   { label: 'Typ A', sub: 'Standard', file: 'stahlbau/Primaerkonstruktion_TypA.pdf', nr: '24027-S-0-M-002 Rev B' },
-  a_26:    { label: 'Typ A', sub: '2026',     file: 'stahlbau/Primaerkonstruktion_TypA_2026.pdf', nr: '24027-S-0-M-008 Rev B · Typ 2026' },
-  b_std:   { label: 'Typ B', sub: 'Standard', file: 'stahlbau/Primaerkonstruktion_TypB.pdf', nr: '24027-S-0-M-001 Rev G' },
-  b_26:    { label: 'Typ B', sub: '2026',     file: 'stahlbau/Primaerkonstruktion_TypB_2026.pdf', nr: '24027-S-0-M-009 Rev B · Typ 2026' },
-  b_8er:   { label: 'Typ B', sub: '8er Modultisch', file: 'stahlbau/Primaerkonstruktion_TypB_8er.pdf', nr: '24027-S-0-P-005' },
-  c_26:    { label: 'Typ C', sub: '2026',     file: 'stahlbau/Primaerkonstruktion_TypC_2026.pdf', nr: '24027-S-0-M-010 Rev B · Typ 2026' },
-  d_std:   { label: 'Typ D', sub: 'Standard', file: 'stahlbau/Primaerkonstruktion_TypD.pdf', nr: 'Typ D' },
-  d_26:    { label: 'Typ D', sub: '2026',     file: 'stahlbau/Primaerkonstruktion_TypD_2026.pdf', nr: 'Typ D · 2026' },
-  e_std:   { label: 'Typ E', sub: 'Standard', file: 'stahlbau/Primaerkonstruktion_TypE.pdf', nr: 'Typ E' },
-  e_26:    { label: 'Typ E', sub: '2026',     file: 'stahlbau/Primaerkonstruktion_TypE_2026.pdf', nr: 'Typ E · 2026' },
-};
-
-// Gruppierung: Montagekonzept | Primärkonstruktion nach Typ & Baujahr
-const GROUPS = [
-  { title: 'Montagekonzept', keys: ['montage'], big: true },
-  { title: 'Primärkonstruktion · Typ A', keys: ['a_std', 'a_26'] },
-  { title: 'Typ B', keys: ['b_std', 'b_26', 'b_8er'] },
-  { title: 'Typ C', keys: ['c_26'] },
-  { title: 'Typ D', keys: ['d_std', 'd_26'] },
-  { title: 'Typ E', keys: ['e_std', 'e_26'] },
+const MONTAGE = { file:'stahlbau/Montagekonzept_MT-Montage.pdf', nr:'NalpSolar_51_BE_0300 · Rev A4 · 26.06.2025' };
+const TYPEN = [
+  {typ:'A', jahr:'Standard', cls:'jstd', nr:'24027-S-0-M-002 · Rev B', file:'stahlbau/Primaerkonstruktion_TypA.pdf',
+    innen:['M20×70','M20×90','M12×45','M10×35'], hv:['M20×75']},
+  {typ:'A', jahr:'2026', cls:'j2026', nr:'24027-S-0-M-008 · Rev B', file:'stahlbau/Primaerkonstruktion_TypA_2026.pdf',
+    innen:['M24×100','M24×75','M20×70','M12×50'], hv:['M20×75']},
+  {typ:'B', jahr:'Standard', cls:'jstd', nr:'24027-S-0-M-001 · Rev G', file:'stahlbau/Primaerkonstruktion_TypB.pdf',
+    innen:['M24×100','M24×90','M24×80','M24×75','M16×65','M16×55','M12×45','M10×40'], hv:['M20×90']},
+  {typ:'B', jahr:'2026', cls:'j2026', nr:'24027-S-0-M-009 · Rev B', file:'stahlbau/Primaerkonstruktion_TypB_2026.pdf',
+    innen:['M24×100','M16×65','M12×50'], hv:['M20×75']},
+  {typ:'B', jahr:'8er Modultisch', cls:'j8er', nr:'24027-S-0-P-005', file:'stahlbau/Primaerkonstruktion_TypB_8er.pdf',
+    innen:['M24×100','M24×90','M24×80','M24×75','M16×65','M16×55','M12×45','M10×40'], hv:['M20×90']},
+  {typ:'C', jahr:'2026', cls:'j2026', nr:'24027-S-0-M-010 · Rev B', file:'stahlbau/Primaerkonstruktion_TypC_2026.pdf',
+    innen:['M30×120','M24×110','M24×75','M20×80','M12×50'], hv:['M24×85']},
+  {typ:'D', jahr:'Standard', cls:'jstd', nr:'Plan Typ D', file:'stahlbau/Primaerkonstruktion_TypD.pdf',
+    innen:['M30×130','M30×120','M24×90','M12×45','M10×40'], hv:['M24×90']},
+  {typ:'D', jahr:'2026', cls:'j2026', nr:'Plan Typ D · 2026', file:'stahlbau/Primaerkonstruktion_TypD_2026.pdf',
+    innen:['M30×130','M24×90','M12×50'], hv:['M24×85']},
+  {typ:'E', jahr:'Standard', cls:'jstd', nr:'Plan Typ E', file:'stahlbau/Primaerkonstruktion_TypE.pdf',
+    innen:['M36×150','M27×120','M27×100','M12×45','M10×40'], hv:['M30×105']},
+  {typ:'E', jahr:'2026', cls:'j2026', nr:'Plan Typ E · 2026', file:'stahlbau/Primaerkonstruktion_TypE_2026.pdf',
+    innen:['M36×150','M30×130','M27×120','M12×55'], hv:['M27×100']},
 ];
 
-var state = { key: 'montage', zoom: 100 };
-var frame = document.getElementById('frame');
-var zoomLbl = document.getElementById('zoomLbl');
-var srcLine = document.getElementById('srcLine');
-
-function buildPicker() {
-  var host = document.getElementById('groups');
-  GROUPS.forEach(function (g, gi) {
-    if (gi > 0) { var s = document.createElement('div'); s.className = 'sepv'; host.appendChild(s); }
-    var wrap = document.createElement('div');
-    wrap.className = 'group';
-    var lbl = document.createElement('div');
-    lbl.className = 'group-lbl';
-    lbl.textContent = g.title;
-    wrap.appendChild(lbl);
-    var row = document.createElement('div');
-    row.className = 'group-row';
-    g.keys.forEach(function (k) {
-      var p = PLANS[k];
-      var b = document.createElement('button');
-      b.className = 'chip' + (g.big ? ' big' : '');
-      b.dataset.key = k;
-      b.innerHTML = p.label + (p.sub ? '<small>' + p.sub + '</small>' : '');
-      b.addEventListener('click', function () { select(k); });
-      row.appendChild(b);
-    });
-    wrap.appendChild(row);
-    host.appendChild(wrap);
-  });
+function chips(arr, kind){
+  if(!arr.length) return '<span class="chip" style="opacity:.6">– im Plan prüfen</span>';
+  return arr.map(function(x){ return '<span class="chip '+kind+'">'+x+'</span>'; }).join('');
 }
 
-function render() {
-  var p = PLANS[state.key];
-  frame.src = p.file + '#zoom=' + state.zoom + '&view=FitH';
-  zoomLbl.textContent = state.zoom + '%';
-  srcLine.innerHTML = '<b>' + p.label + (p.sub ? ' · ' + p.sub : '') + '</b> &nbsp;–&nbsp; Plan-Nr: ' + p.nr;
-  document.querySelectorAll('.chip').forEach(function (c) {
-    c.classList.toggle('active', c.dataset.key === state.key);
-  });
-}
+var host = document.getElementById('plans');
+// Montagekonzept zuerst, volle Breite
+host.insertAdjacentHTML('beforeend',
+  '<div class="pcard montage"><div class="ph"><div class="pt">📖 Montagekonzept</div>'+
+  '<span class="pj" style="background:#c85a12">Basis</span></div>'+
+  '<div class="pnr">'+MONTAGE.nr+' · enthält beide Drehmoment-Tabellen &amp; alle Montagehinweise</div>'+
+  '<a class="open" href="'+MONTAGE.file+'" target="_blank" rel="noopener">Montagekonzept öffnen (PDF)</a></div>');
 
-function select(key) {
-  if (!PLANS[key]) return;
-  state.key = key;
-  render();
-}
+TYPEN.forEach(function(p){
+  host.insertAdjacentHTML('beforeend',
+    '<div class="pcard '+p.cls+'">'+
+      '<div class="ph"><div class="pt">Typ '+p.typ+'</div><span class="pj">'+p.jahr+'</span></div>'+
+      '<div class="pnr">'+p.nr+'</div>'+
+      '<div class="clab">Innen (8.8 → Tab. 1)</div><div class="chips">'+chips(p.innen,'i')+'</div>'+
+      '<div class="clab">HV Fuss/Kopf (10.9 → Tab. 2)</div><div class="chips">'+chips(p.hv,'h')+'</div>'+
+      '<a class="open" href="'+p.file+'" target="_blank" rel="noopener">Plan öffnen (PDF)</a>'+
+    '</div>');
+});
 
-function zoomBy(d) {
-  state.zoom = Math.max(40, Math.min(400, state.zoom + d));
-  render();
-}
+document.getElementById('src').innerHTML =
+  '<b>Quellen (alle Angaben belegt, keine Schätzung):</b><br>'+
+  'Drehmomente &amp; Montageregeln: Montagekonzept „NalpSolar_51_BE_0300_A4_MT-Montage" Rev A4, 26.06.2025 (Tab. 1/2, Kap. 4–6). '+
+  'Schrauben je Typ: Primärkonstruktions-Pläne 24027-S-0-M-001/002/008/009/010, -P-005 sowie Pläne Typ D/E. '+
+  'Zusammenstellung Stand 10.07.2026. Bei Unklarheit oder Sonderfall (z. B. 10.9-Schraube ausserhalb Fuss-/Kopfplatte): Bauleitung / Statik fragen.';
 
-function openTab() {
-  window.open(PLANS[state.key].file, '_blank', 'noopener');
-}
-
-buildPicker();
-render();
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
-}
+if('serviceWorker' in navigator){ window.addEventListener('load',function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
 </body>
 </html>
