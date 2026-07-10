@@ -32,6 +32,8 @@ tr.fhrow{background:#f6eefa}tr.matrow{background:#f3f3f3;color:#555}tr.kaprow{ba
 .topbar .b-home{background:linear-gradient(135deg,#0b5fff,#2196F3);}
 .topbar .b-steel{background:rgba(255,255,255,.14);}
 .topbar .b-print{background:linear-gradient(135deg,#1c8a4a,#12a457);}
+.topbar .tb-sync{flex-basis:100%;font-size:11px;font-weight:700;color:rgba(232,238,247,.7);padding-top:1px;}
+@media print{ .topbar .tb-sync{display:none;} }
 @media screen{
   html{background:#e9edf2;}
   body{font-size:12px;max-width:1000px;margin:0 auto;padding:60px 12px 48px;}
@@ -54,7 +56,7 @@ tr.fhrow{background:#f6eefa}tr.matrow{background:#f3f3f3;color:#555}tr.kaprow{ba
 </style>
 </head>
 <body>
-<div class="topbar"><span class="tb-brand">NalpSolar · STRABAG B8-13</span><a class="b-home" href="index.html">🏠 Start</a><a class="b-steel" href="stahlbau.html">🔩 Stahlbau</a><a class="b-steel" href="stahlbau/Stellen_Uebersicht_1.1-1.6.pdf" target="_blank" rel="noopener">📄 PDF</a><button class="b-print" onclick="window.print()">🖨 Drucken</button></div>
+<div class="topbar"><span class="tb-brand">NalpSolar · STRABAG B8-13</span><a class="b-home" href="index.html">🏠 Start</a><a class="b-steel" href="stahlbau.html">🔩 Stahlbau</a><a class="b-steel" href="stahlbau/Stellen_Uebersicht_1.1-1.6.pdf" target="_blank" rel="noopener">📄 PDF</a><button class="b-print" onclick="window.print()">🖨 Drucken</button><span id="syncMsg" class="tb-sync">…</span></div>
 <div class="sheetwrap">
 <div class="head"><div><h1>Was müssen wir noch stellen? – Bereiche 1.1–1.6</h1><div class="sub">STRABAG B8–13 NalpSolar · Primärkonstruktion + Modulträger · V. Malt · Feldnotizen 09.07.</div></div><div class="meta"><b>Stand 09.07.2026</b><br>46 offen + 3 schräg</div></div>
 <div class="note"><b>Legende:</b> <span class="tag vm">vormontiert</span> · <span class="tag pr">prüfen</span> · <span class="tag fhx">Falsche Höhen</span> · <span class="tag kap">Lasche kaputt</span> · <span class="tag mat">Material fehlt</span>. <b>Stapel</b> = Modulträgerstapel; <b style="color:#2e7d32">&#10003;</b> = Stapel auf Berg (≥1 Konstr. gesetzt: 27,31,32,33,34,39,41). Stapel-Nr jetzt für alle Bereiche vorhanden (neuer Export 09.07.).</div>
@@ -139,20 +141,47 @@ tr.fhrow{background:#f6eefa}tr.matrow{background:#f3f3f3;color:#555}tr.kaprow{ba
 </div>
 
 <script>
-// Checkbox abhaken (nur lokal auf diesem Gerät gemerkt)
+// Checkbox "gestellt" abhaken -> speichert in Firebase (geraeteuebergreifend),
+// mit localStorage als Offline-Cache. Pfad: erfassung/stellen_status/<TischID> = true
 (function(){
-  var KEY='nalp_stellen_done_v1';
-  var done={}; try{ done=JSON.parse(localStorage.getItem(KEY)||'{}'); }catch(e){}
-  var boxes=document.querySelectorAll('.cb'); 
+  var DB='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app';
+  var PATH='/erfassung/stellen_status';
+  var LS='nalp_stellen_done_v1';
+  var local={}; try{ local=JSON.parse(localStorage.getItem(LS)||'{}'); }catch(e){}
+  function saveLocal(){ try{ localStorage.setItem(LS, JSON.stringify(local)); }catch(e){} }
+  var msg=document.getElementById('syncMsg');
+  function setMsg(t,c){ if(msg){ msg.textContent=t; msg.style.color=c||'rgba(232,238,247,.7)'; } }
+
+  var boxes=[].slice.call(document.querySelectorAll('.cb'));
+  function keyOf(cb,i){ var row=cb.closest('tr'); var id=row?((row.querySelector('.id')||{}).textContent||'').trim():''; return id||('r'+i); }
+
   boxes.forEach(function(cb,i){
-    var row=cb.closest('tr'); var id=row?(row.querySelector('.id')||{}).textContent:''; var k=(id||'')+'#'+i;
-    if(done[k]) cb.classList.add('done');
+    var k=keyOf(cb,i); cb.dataset.k=k;
+    if(local[k]) cb.classList.add('done');
     cb.addEventListener('click',function(){
-      cb.classList.toggle('done');
-      if(cb.classList.contains('done')) done[k]=1; else delete done[k];
-      try{ localStorage.setItem(KEY, JSON.stringify(done)); }catch(e){}
+      var on=!cb.classList.contains('done');
+      cb.classList.toggle('done', on);
+      if(on) local[k]=1; else delete local[k];
+      saveLocal();
+      setMsg('Speichere …','#ffd23f');
+      fetch(DB+PATH+'/'+encodeURIComponent(k)+'.json',{ method: on?'PUT':'DELETE', body: on?'true':undefined })
+        .then(function(r){ setMsg(r.ok?('✓ Tisch '+k+' in Firebase gespeichert'):'⚠ Firebase-Fehler – lokal gesichert', r.ok?'#7ce0a5':'#ffb3b3'); })
+        .catch(function(){ setMsg('⚠ offline – lokal gesichert, sync beim nächsten Klick','#ffb3b3'); });
     });
   });
+
+  // Beim Laden: aktuellen Stand aus Firebase holen (Firebase ist fuehrend -> echte Geraete-Synchronisation)
+  setMsg('Lade Stand aus Firebase …');
+  fetch(DB+PATH+'.json',{cache:'no-store'})
+    .then(function(r){ return r.ok? r.json() : (function(){throw 0;})(); })
+    .then(function(obj){
+      local={}; if(obj){ Object.keys(obj).forEach(function(k){ if(obj[k]) local[k]=1; }); }
+      saveLocal();
+      boxes.forEach(function(cb){ cb.classList.toggle('done', !!local[cb.dataset.k]); });
+      var n=Object.keys(local).length;
+      setMsg('✓ mit Firebase synchronisiert'+(n?' · '+n+' gestellt':''),'#7ce0a5');
+    })
+    .catch(function(){ setMsg('⚠ offline – zeige lokalen Stand','#ffb3b3'); });
 })();
 </script>
 </body>
