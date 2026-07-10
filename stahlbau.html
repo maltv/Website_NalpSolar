@@ -93,6 +93,12 @@
     background:linear-gradient(135deg,#233b54,#12304f);cursor:pointer;text-align:center;text-decoration:none;display:block;}
   .pcard.montage{grid-column:1/-1;border-color:#ffb877;}
   .pcard.montage .open{background:linear-gradient(135deg,#ff8a3d,#c85a12);}
+  .stellen-card{display:flex;align-items:center;gap:12px;text-decoration:none;color:#fff;border-radius:14px;padding:16px 18px;margin-bottom:6px;
+    background:linear-gradient(135deg,#e2001a,#a30016);box-shadow:0 6px 18px rgba(200,20,30,.25);}
+  .stellen-card .sc-l{flex:1;} .stellen-card .sc-t{font-size:17px;font-weight:900;}
+  .stellen-card .sc-s{font-size:12px;opacity:.92;margin-top:3px;line-height:1.4;}
+  .stellen-card .sc-go{font-weight:900;font-size:15px;white-space:nowrap;}
+  .stellen-card:active{transform:scale(.995);}
 
   .src{font-size:11px;color:var(--muted);margin-top:22px;line-height:1.6;border-top:1px solid var(--line);padding-top:12px;}
   @media(max-width:560px){
@@ -199,7 +205,16 @@
   </div>
 
   <!-- PLÄNE -->
-  <h2>3 · Pläne – wo sitzt welche Schraube (nach Typ &amp; Baujahr)</h2>
+  <h2>3 · Was müssen wir noch stellen? (Bereiche 1.1–1.6)</h2>
+  <a class="stellen-card" href="stellen.html">
+    <div class="sc-l">
+      <div class="sc-t">📋 Stell-Übersicht Bereiche 1.1–1.6</div>
+      <div class="sc-s">46 noch zu stellen + 3 schräg · Stand 09.07.2026 · vormontiert / prüfen / falsche Höhen / Lasche kaputt / Material fehlt · abhakbar &amp; druckbar</div>
+    </div>
+    <div class="sc-go">Öffnen →</div>
+  </a>
+
+  <h2>4 · Pläne – wo sitzt welche Schraube (nach Typ &amp; Baujahr)</h2>
   <div class="lead">Chip <span class="chip i">blau = 8.8 innen</span> und <span class="chip h">orange = HV 10.9</span> zeigen die im Typ verbauten Schrauben. Plan öffnen für die genaue Lage.</div>
   <div class="plans" id="plans"></div>
 

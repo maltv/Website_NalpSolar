@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>NalpSolar · Was noch zu stellen ist (1.1–1.6)</title>
+<meta name="theme-color" content="#0b1826">
+<script src="assets/js/nalp-gate.js"></script>
+<style>
+
+@page{size:A4 portrait;margin:9mm 9mm 7mm 9mm} *{box-sizing:border-box} body{font-family:"Segoe UI",Arial,sans-serif;color:#111;font-size:8.3pt;line-height:1.12;margin:0}
+.head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2.5pt solid #E2001A;padding-bottom:3px;margin-bottom:4px}
+.head h1{font-size:13.5pt;margin:0}.head .sub{font-size:7.6pt;color:#444}.head .meta{text-align:right;font-size:7.6pt}.head .meta b{font-size:9pt}
+.note{border:1pt solid #E2001A;background:#fdf0f0;border-radius:3px;padding:4px 6px;margin-bottom:5px;font-size:7.5pt}.note b{color:#c0281f}
+table{width:100%;border-collapse:collapse}th{background:#222;color:#fff;text-align:left;font-size:7.3pt;padding:2px 4px;border:.5pt solid #999}
+td{padding:2px 5px;border:.5pt solid #aaa;vertical-align:middle;height:18px}
+td.id{font-weight:bold;font-size:10.5pt;text-align:center;white-space:nowrap}
+td.st{text-align:center;font-weight:bold;font-size:9pt;white-space:nowrap}
+.sub-b td{background:#dfe7ef;font-weight:bold;font-size:8.7pt;color:#15406a}
+.cb{display:inline-block;width:3.8mm;height:3.8mm;border:1.1pt solid #333;border-radius:1px;vertical-align:middle}
+.tag{display:inline-block;font-size:6.5pt;padding:.3px 4px;border-radius:7px;color:#fff;white-space:nowrap;margin-right:3px}
+.vm{background:#2e7d32}.pr{background:#d47500}.fhx{background:#7a1fa2}.mat{background:#777}.dn{background:#2e7d32}.kap{background:#c0281f}.sg{background:#b8860b}
+tr.fhrow{background:#f6eefa}tr.matrow{background:#f3f3f3;color:#555}tr.kaprow{background:#fdeeee}tr.sgrow{background:#fff7e6}
+.foot{margin-top:5px;font-size:6.9pt;color:#666;border-top:.6pt solid #999;padding-top:3px}
+
+
+/* ===== Portal- / Screen-Anpassungen (überschreiben Print-Styles auf dem Bildschirm) ===== */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  padding:8px 12px calc(8px + env(safe-area-inset-top));background:#0b1826;color:#e8eef7;box-shadow:0 2px 12px rgba(0,0,0,.3);}
+.topbar .tb-brand{font-size:10px;letter-spacing:.2em;font-weight:800;color:#ffc340;text-transform:uppercase;margin-right:auto;}
+.topbar a,.topbar button{border:0;border-radius:10px;padding:9px 13px;font-weight:800;font-size:13px;cursor:pointer;text-decoration:none;color:#e8eef7;white-space:nowrap;}
+.topbar .b-home{background:linear-gradient(135deg,#0b5fff,#2196F3);}
+.topbar .b-steel{background:rgba(255,255,255,.14);}
+.topbar .b-print{background:linear-gradient(135deg,#1c8a4a,#12a457);}
+@media screen{
+  html{background:#e9edf2;}
+  body{font-size:12px;max-width:1000px;margin:0 auto;padding:60px 12px 48px;}
+  .sheetwrap{background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(10,22,38,.10);padding:16px 16px 10px;}
+  .head h1{font-size:19px;} .head .sub{font-size:12px;} .head .meta{font-size:12px;} .head .meta b{font-size:14px;}
+  .note{font-size:12px;padding:8px 10px;}
+  .tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:12px;}
+  table{margin-bottom:0;}
+  th{font-size:11px;padding:6px 6px;} td{font-size:12.5px;padding:6px 7px;height:auto;}
+  td.id{font-size:16px;} td.st{font-size:13px;}
+  .sub-b td{font-size:14px;padding:8px 9px;}
+  .tag{font-size:10px;padding:2px 7px;}
+  .cb{width:18px;height:18px;border-width:2px;cursor:pointer;}
+  .cb.done{background:#2e7d32;border-color:#2e7d32;position:relative;}
+  .cb.done::after{content:"¹3";color:#fff;font-size:13px;font-weight:900;position:absolute;left:2px;top:-2px;}
+  .foot{font-size:11px;}
+}
+@media print{ .topbar{display:none!important;} body{padding:0;} html{background:#fff;} .sheetwrap{padding:0;box-shadow:none;} }
+
+</style>
+</head>
+<body>
+<div class="topbar"><span class="tb-brand">NalpSolar · STRABAG B8-13</span><a class="b-home" href="index.html">🏠 Start</a><a class="b-steel" href="stahlbau.html">🔩 Stahlbau</a><a class="b-steel" href="stahlbau/Stellen_Uebersicht_1.1-1.6.pdf" target="_blank" rel="noopener">📄 PDF</a><button class="b-print" onclick="window.print()">🖨 Drucken</button></div>
+<div class="sheetwrap">
+<div class="head"><div><h1>Was müssen wir noch stellen? – Bereiche 1.1–1.6</h1><div class="sub">STRABAG B8–13 NalpSolar · Primärkonstruktion + Modulträger · V. Malt · Feldnotizen 09.07.</div></div><div class="meta"><b>Stand 09.07.2026</b><br>46 offen + 3 schräg</div></div>
+<div class="note"><b>Legende:</b> <span class="tag vm">vormontiert</span> · <span class="tag pr">prüfen</span> · <span class="tag fhx">Falsche Höhen</span> · <span class="tag kap">Lasche kaputt</span> · <span class="tag mat">Material fehlt</span>. <b>Stapel</b> = Modulträgerstapel; <b style="color:#2e7d32">&#10003;</b> = Stapel auf Berg (≥1 Konstr. gesetzt: 27,31,32,33,34,39,41). Stapel-Nr jetzt für alle Bereiche vorhanden (neuer Export 09.07.).</div>
+<div class="tblwrap"><table><colgroup><col style="width:13mm"><col style="width:8mm"><col style="width:13mm"><col><col style="width:8mm"></colgroup>
+<tr class="sub-b"><td colspan="5">Bereich 1.1 &nbsp;–&nbsp; 33 gestellt (fertig) · <b>5 noch zu stellen</b></td></tr>
+<tr><th style="text-align:center">Tisch</th><th>Batch</th><th style="text-align:center">Stapel</th><th>Zustand / Aktion</th><th style="text-align:center">gestellt</th></tr>
+<tr class=""><td class="id">412</td><td>B2</td><td class="st">31 <span style="color:#2e7d32;font-weight:bold">&#10003;</span></td><td><span class="tag vm">vormont.</span> vormontiert (Berg) → stellen · <b style="color:#c0281f">PRÜFEN welche Konstruktion</b> die richtige – laut Bestellbatches nur 1× bestellt (Batch 2), keine Doppelbestellung im System; falls 2 vor Ort mit Mike klären</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class=""><td class="id">485</td><td>B2</td><td class="st">32 <span style="color:#2e7d32;font-weight:bold">&#10003;</span></td><td><span class="tag vm">vormont.</span> vormontiert (Berg) · PRÜFEN ob Pfähle injiziert – Kristjan injiziert bei Baupiste B2 (Mail gesendet)</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class=""><td class="id">486</td><td>B2</td><td class="st">32 <span style="color:#2e7d32;font-weight:bold">&#10003;</span></td><td><span class="tag vm">vormont.</span> vormontiert (Berg) · <b style="color:#c0281f">LASCHE KAPUTT</b> · <b style="color:#c0281f">PRÜFEN ob injiziert</b> (Kristjan, s. 485)</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class=""><td class="id">1625</td><td>B2</td><td class="st">32 <span style="color:#2e7d32;font-weight:bold">&#10003;</span></td><td><span class="tag vm">vormont.</span> vormontiert (Berg) · <b style="color:#c0281f">LASCHE KAPUTT</b> · <b style="color:#c0281f">PRÜFEN ob injiziert</b> (Kristjan) · Bohrprotokoll 1623↔1625 klären</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class="kaprow"><td class="id">390</td><td>—</td><td class="st">30</td><td><span class="tag kap">LASCHE KAPUTT</span> demontiert für Durchfahrt – 2025er-Konstruktion wieder stellen · <b style="color:#c0281f">LASCHE KAPUTT</b> reparieren/tauschen</td><td style="text-align:center"><span class="cb"></span></td></tr>
+</table></div>
+<div class="tblwrap"><table><colgroup><col style="width:13mm"><col style="width:8mm"><col style="width:13mm"><col><col style="width:8mm"></colgroup>
+<tr class="sub-b"><td colspan="5">Bereich 1.2 &nbsp;–&nbsp; 36 gestellt (fertig) · <b>4 noch zu stellen</b></td></tr>
+<tr><th style="text-align:center">Tisch</th><th>Batch</th><th style="text-align:center">Stapel</th><th>Zustand / Aktion</th><th style="text-align:center">gestellt</th></tr>
+<tr class=""><td class="id">375</td><td>B1</td><td class="st">32 <span style="color:#2e7d32;font-weight:bold">&#10003;</span></td><td><span class="tag vm">vormont.</span> vormontiert (Berg) – Passstück da → stellen</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class=""><td class="id">2151</td><td>B2</td><td class="st">33 <span style="color:#2e7d32;font-weight:bold">&#10003;</span></td><td><span class="tag vm">vormont.</span> vormontiert (Berg) – Passstück da → stellen</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class="fhrow"><td class="id">326</td><td>B2</td><td class="st">33 <span style="color:#2e7d32;font-weight:bold">&#10003;</span></td><td><span class="tag fhx">FALSCHE HÖHEN</span> PRÜFEN – <b style="color:#c0281f">FALSCHE HÖHEN</b>: altes Passstück NICHT verbauen, neu bestellen</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class="fhrow"><td class="id">327</td><td>B2</td><td class="st">34 <span style="color:#2e7d32;font-weight:bold">&#10003;</span></td><td><span class="tag fhx">FALSCHE HÖHEN</span> PRÜFEN – <b style="color:#c0281f">FALSCHE HÖHEN</b>: altes Passstück NICHT verbauen, neu bestellen</td><td style="text-align:center"><span class="cb"></span></td></tr>
+</table></div>
+<div class="tblwrap"><table><colgroup><col style="width:13mm"><col style="width:8mm"><col style="width:13mm"><col><col style="width:8mm"></colgroup>
+<tr class="sub-b"><td colspan="5">Bereich 1.3 &nbsp;–&nbsp; 22 gestellt (fertig) · <b>7 noch zu stellen</b></td></tr>
+<tr><th style="text-align:center">Tisch</th><th>Batch</th><th style="text-align:center">Stapel</th><th>Zustand / Aktion</th><th style="text-align:center">gestellt</th></tr>
+<tr class=""><td class="id">1623</td><td>B3</td><td class="st">37</td><td><span class="tag vm">vormont.</span> vormontiert (Tal) – Passstück da → stellen</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class="fhrow"><td class="id">342</td><td>B1,3</td><td class="st">27 <span style="color:#2e7d32;font-weight:bold">&#10003;</span></td><td><span class="tag fhx">FALSCHE HÖHEN</span> vormontiert (Berg) – <b style="color:#c0281f">FALSCHE HÖHEN</b>: prüfen ob Höhe stimmt, ggf. Passstück neu</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class="fhrow"><td class="id">359</td><td>B3</td><td class="st">26</td><td><span class="tag fhx">FALSCHE HÖHEN</span> vormontiert (Tal) – <b style="color:#c0281f">FALSCHE HÖHEN</b>: prüfen ob Höhe stimmt, ggf. Passstück neu</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class="fhrow"><td class="id">361</td><td>B3</td><td class="st">27 <span style="color:#2e7d32;font-weight:bold">&#10003;</span></td><td><span class="tag fhx">FALSCHE HÖHEN</span> vormontiert (Tal) – <b style="color:#c0281f">FALSCHE HÖHEN</b>: prüfen ob Höhe stimmt, ggf. Passstück neu</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class="fhrow"><td class="id">362</td><td>B3</td><td class="st">27 <span style="color:#2e7d32;font-weight:bold">&#10003;</span></td><td><span class="tag fhx">FALSCHE HÖHEN</span> vormontiert (Tal) – <b style="color:#c0281f">FALSCHE HÖHEN</b>: prüfen ob Höhe stimmt, ggf. Passstück neu</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class="fhrow"><td class="id">381</td><td>B3</td><td class="st">26</td><td><span class="tag fhx">FALSCHE HÖHEN</span> PRÜFEN – <b style="color:#c0281f">FALSCHE HÖHEN</b>: altes Passstück NICHT verbauen, neu bestellen</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class="fhrow"><td class="id">383</td><td>B3</td><td class="st">27 <span style="color:#2e7d32;font-weight:bold">&#10003;</span></td><td><span class="tag fhx">FALSCHE HÖHEN</span> vormontiert (Tal) – <b style="color:#c0281f">FALSCHE HÖHEN</b>: prüfen ob Höhe stimmt, ggf. Passstück neu</td><td style="text-align:center"><span class="cb"></span></td></tr>
+</table></div>
+<div class="tblwrap"><table><colgroup><col style="width:13mm"><col style="width:8mm"><col style="width:13mm"><col><col style="width:8mm"></colgroup>
+<tr class="sub-b"><td colspan="5">Bereich 1.4 &nbsp;–&nbsp; 6 gestellt (fertig) · <b>11 noch zu stellen</b></td></tr>
+<tr><th style="text-align:center">Tisch</th><th>Batch</th><th style="text-align:center">Stapel</th><th>Zustand / Aktion</th><th style="text-align:center">gestellt</th></tr>
+<tr class=""><td class="id">431</td><td>B6</td><td class="st">42</td><td><span class="tag pr">prüfen</span> PRÜFEN: Passstück B6 im Tal suchen (zuerst Batch-6-Lieferung prüfen)</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class=""><td class="id">1654</td><td>B6</td><td class="st">42</td><td><span class="tag pr">prüfen</span> PRÜFEN: Passstück B6 im Tal suchen (zuerst Batch-6-Lieferung prüfen)</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class=""><td class="id">1655</td><td>B6</td><td class="st">43</td><td><span class="tag pr">prüfen</span> PRÜFEN: Passstück B6 im Tal suchen (zuerst Batch-6-Lieferung prüfen)</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class=""><td class="id">1847</td><td>B6</td><td class="st">43</td><td><span class="tag pr">prüfen</span> PRÜFEN: Passstück B6 im Tal suchen (zuerst Batch-6-Lieferung prüfen)</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class=""><td class="id">1880</td><td>B6</td><td class="st">43</td><td><span class="tag pr">prüfen</span> PRÜFEN: Passstück B6 im Tal suchen (zuerst Batch-6-Lieferung prüfen)</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class=""><td class="id">1950</td><td>B6</td><td class="st">43</td><td><span class="tag pr">prüfen</span> PRÜFEN: Passstück B6 im Tal suchen (zuerst Batch-6-Lieferung prüfen)</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class="matrow"><td class="id">1652</td><td>B6</td><td class="st">42</td><td><span class="tag mat">Material fehlt</span> Material fehlt – Passstück bestellt</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class="matrow"><td class="id">1804</td><td>B7</td><td class="st">42</td><td><span class="tag mat">Material fehlt</span> Material fehlt – Passstück bestellt</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class="matrow"><td class="id">1883</td><td>B6</td><td class="st">42</td><td><span class="tag mat">Material fehlt</span> Material fehlt – Passstück bestellt</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class="matrow"><td class="id">1890</td><td>B7</td><td class="st">42</td><td><span class="tag mat">Material fehlt</span> Material fehlt – Passstück bestellt</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class="matrow"><td class="id">2279</td><td>B7</td><td class="st">42</td><td><span class="tag mat">Material fehlt</span> Material fehlt – Passstück bestellt</td><td style="text-align:center"><span class="cb"></span></td></tr>
+</table></div>
+<div class="tblwrap"><table><colgroup><col style="width:13mm"><col style="width:8mm"><col style="width:13mm"><col><col style="width:8mm"></colgroup>
+<tr class="sub-b"><td colspan="5">Bereich 1.5 &nbsp;–&nbsp; 2 gestellt (fertig) · <b>14 noch zu stellen</b></td></tr>
+<tr><th style="text-align:center">Tisch</th><th>Batch</th><th style="text-align:center">Stapel</th><th>Zustand / Aktion</th><th style="text-align:center">gestellt</th></tr>
+<tr class=""><td class="id">345</td><td>B5</td><td class="st">43</td><td><span class="tag vm">vormont.</span> vormontiert (Tal) – Passstück da → stellen</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class=""><td class="id">343</td><td>B6</td><td class="st">45</td><td><span class="tag pr">prüfen</span> PRÜFEN: Passstück B6 im Tal suchen (zuerst Batch-6-Lieferung prüfen)</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class=""><td class="id">344</td><td>B6</td><td class="st">45</td><td><span class="tag pr">prüfen</span> PRÜFEN: Passstück B6 im Tal suchen (zuerst Batch-6-Lieferung prüfen)</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class=""><td class="id">363</td><td>B6</td><td class="st">45</td><td><span class="tag pr">prüfen</span> PRÜFEN: Passstück B6 im Tal suchen (zuerst Batch-6-Lieferung prüfen)</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class=""><td class="id">364</td><td>B6</td><td class="st">44</td><td><span class="tag pr">prüfen</span> PRÜFEN: Passstück B6 im Tal suchen (zuerst Batch-6-Lieferung prüfen)</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class=""><td class="id">405</td><td>B6</td><td class="st">44</td><td><span class="tag pr">prüfen</span> PRÜFEN: Passstück B6 im Tal suchen (zuerst Batch-6-Lieferung prüfen)</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class=""><td class="id">406</td><td>B6</td><td class="st">44</td><td><span class="tag pr">prüfen</span> PRÜFEN: Passstück B6 im Tal suchen (zuerst Batch-6-Lieferung prüfen)</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class=""><td class="id">429</td><td>B6</td><td class="st">44</td><td><span class="tag pr">prüfen</span> PRÜFEN: Passstück B6 im Tal suchen (zuerst Batch-6-Lieferung prüfen)</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class=""><td class="id">1742</td><td>B6</td><td class="st">44</td><td><span class="tag pr">prüfen</span> PRÜFEN: Passstück B6 im Tal suchen (zuerst Batch-6-Lieferung prüfen)</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class=""><td class="id">1743</td><td>B6</td><td class="st">44</td><td><span class="tag pr">prüfen</span> PRÜFEN: Passstück B6 im Tal suchen (zuerst Batch-6-Lieferung prüfen)</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class=""><td class="id">1879</td><td>B6</td><td class="st">44</td><td><span class="tag pr">prüfen</span> PRÜFEN: Passstück B6 im Tal suchen (zuerst Batch-6-Lieferung prüfen)</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class=""><td class="id">2161</td><td>B6</td><td class="st">44</td><td><span class="tag pr">prüfen</span> PRÜFEN: Passstück B6 im Tal suchen (zuerst Batch-6-Lieferung prüfen)</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class=""><td class="id">2165</td><td>B6</td><td class="st">44</td><td><span class="tag pr">prüfen</span> PRÜFEN: Passstück B6 im Tal suchen (zuerst Batch-6-Lieferung prüfen)</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class="matrow"><td class="id">384</td><td>B6</td><td class="st">44</td><td><span class="tag mat">Material fehlt</span> Material fehlt – Passstück bestellt</td><td style="text-align:center"><span class="cb"></span></td></tr>
+</table></div>
+<div class="tblwrap"><table><colgroup><col style="width:13mm"><col style="width:8mm"><col style="width:13mm"><col><col style="width:8mm"></colgroup>
+<tr class="sub-b"><td colspan="5">Bereich 1.6 &nbsp;–&nbsp; 0 gestellt (fertig) · <b>5 noch zu stellen</b></td></tr>
+<tr><th style="text-align:center">Tisch</th><th>Batch</th><th style="text-align:center">Stapel</th><th>Zustand / Aktion</th><th style="text-align:center">gestellt</th></tr>
+<tr class="matrow"><td class="id">528</td><td>—</td><td class="st"><span style="color:#999">—</span></td><td><span class="tag mat">Material fehlt</span> geplant – noch keine Passstücke</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class="matrow"><td class="id">550</td><td>—</td><td class="st"><span style="color:#999">—</span></td><td><span class="tag mat">Material fehlt</span> geplant – noch keine Passstücke</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class="matrow"><td class="id">551</td><td>—</td><td class="st"><span style="color:#999">—</span></td><td><span class="tag mat">Material fehlt</span> geplant – noch keine Passstücke</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class="matrow"><td class="id">552</td><td>—</td><td class="st"><span style="color:#999">—</span></td><td><span class="tag mat">Material fehlt</span> geplant – noch keine Passstücke</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class="matrow"><td class="id">1413</td><td>—</td><td class="st"><span style="color:#999">—</span></td><td><span class="tag mat">Material fehlt</span> geplant – noch keine Passstücke</td><td style="text-align:center"><span class="cb"></span></td></tr>
+</table></div>
+<div class="tblwrap"><table style="margin-top:6px"><colgroup><col style="width:13mm"><col style="width:8mm"><col style="width:13mm"><col><col style="width:8mm"></colgroup>
+<tr class="sub-b"><td colspan="5">Schräge Konstruktionen (montiert – Korrektur nötig) · <b>3</b></td></tr>
+<tr><th style="text-align:center">Tisch</th><th>Bereich</th><th style="text-align:center">Stapel</th><th>Befund / Aktion</th><th style="text-align:center">erledigt</th></tr>
+<tr class="sgrow"><td class="id">357</td><td style="text-align:center">1.2</td><td class="st">34 <span style="color:#2e7d32;font-weight:bold">&#10003;</span></td><td><span class="tag sg">SCHRÄG</span> Primärkonstruktion montiert – <b style="color:#c0281f">SCHRÄG</b> (Feldnotiz V. Malt; keine Mail gefunden)</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class="sgrow"><td class="id">2157</td><td style="text-align:center">1.2</td><td class="st">33 <span style="color:#2e7d32;font-weight:bold">&#10003;</span></td><td><span class="tag sg">SCHRÄG</span> Primärkonstruktion montiert – <b style="color:#c0281f">SCHRÄG</b> (Feldnotiz; evtl. Verwechslung mit 2178)</td><td style="text-align:center"><span class="cb"></span></td></tr>
+<tr class="sgrow"><td class="id">2178</td><td style="text-align:center">1.1</td><td class="st">31 <span style="color:#2e7d32;font-weight:bold">&#10003;</span></td><td><span class="tag sg">SCHRÄG</span> Modulträger montiert – <b style="color:#c0281f">SCHRÄG</b>: Passstück S2 (2178-1388) zu kurz / Pfahl 87°; Ersatz-S2 Batch 1 bestellt, Einbau offen</td><td style="text-align:center"><span class="cb"></span></td></tr>
+</table></div>
+<div class="foot">Quelle: Nalpi-Export 09.07.2026 + Detail-Export 07.07. (Spalte Stapel, nur 1.2/1.3) + Bestellbatch 1-10 + Feldnotizen V. Malt. Berg-Stapel (≥1 Konstruktion gesetzt): 27,31,32,33,34,39,41. Zusätzlich: ID 542 „Lasche schräg angeschweisst, neu produzieren" (Mail). Stapel-Nr aus Nalpi-Export 09.07. (17:55, mit Stapel-Spalte).</div>
+</div>
+
+<script>
+// Checkbox abhaken (nur lokal auf diesem Gerät gemerkt)
+(function(){
+  var KEY='nalp_stellen_done_v1';
+  var done={}; try{ done=JSON.parse(localStorage.getItem(KEY)||'{}'); }catch(e){}
+  var boxes=document.querySelectorAll('.cb'); 
+  boxes.forEach(function(cb,i){
+    var row=cb.closest('tr'); var id=row?(row.querySelector('.id')||{}).textContent:''; var k=(id||'')+'#'+i;
+    if(done[k]) cb.classList.add('done');
+    cb.addEventListener('click',function(){
+      cb.classList.toggle('done');
+      if(cb.classList.contains('done')) done[k]=1; else delete done[k];
+      try{ localStorage.setItem(KEY, JSON.stringify(done)); }catch(e){}
+    });
+  });
+})();
+</script>
+</body>
+</html>
