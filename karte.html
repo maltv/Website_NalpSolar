@@ -372,7 +372,7 @@
   <button id="gpsBtn" type="button" onclick="toggleGps()">GPS</button>
   <button id="allBtn" type="button" onclick="zoomAll()">Alle</button>
   <button id="viewer3dBtn" type="button" onclick="window.location.href='viewer3d.html'">3D</button>
-  <button id="stahlBtn" type="button" onclick="nalpStahlteileOpen()" title="Herumliegende Stahlteile mit GPS erfassen">🔩 Stahlteile</button>
+  <button id="stahlBtn" type="button" onclick="nalpStahlteileOpen()" title="Stahlteile erfassen (GPS oder Position antippen)">🔩 Stahlteile</button>
   <button id="measBtn" type="button" onclick="toggleMeasureBar()" title="Messen">📏</button>
   <span id="mControls">
     <button class="m-btn" id="mLinBtn" onclick="startMeasure('line')">📐 Linie</button>
@@ -1299,14 +1299,14 @@ window.nalpFocusTisch = function (id) {
   searchTableId();
 };
 
-// ── Stahlteile-Ebene: per GPS erfasste Teile (nalp-stahlteile.js) ──
+// ── Stahlteile-Ebene: erfasste Teile (nalp-stahlteile.js) ──
 let stahlteileItems = [];
 
 function stahlteilPopupHtml(it, idx) {
   const lines = [];
   if (it.anzahl && it.anzahl !== '1') lines.push('<b>Anzahl:</b> ' + it.anzahl);
   if (it.bemerkung) lines.push(String(it.bemerkung));
-  lines.push('<span style="color:#777">' + (it.von || '—') + ' · ' + (it.datum || '') + ' · GPS ±' + (it.acc || '?') + ' m</span>');
+  lines.push('<span style="color:#777">' + (it.von || '—') + ' · ' + (it.datum || '') + ' · ' + NalpStahlteile.posText(it) + '</span>');
   return '<div style="font:600 13px/1.5 Arial;min-width:190px">' +
     '<b>' + NalpStahlteile.itemTitle(it) + '</b><br>' + lines.join('<br>') +
     '<br><button class="stahl-del-btn" onclick="stahlteilDelete(' + idx + ')">🗑 Löschen (aufgeräumt/verbaut)</button></div>';
@@ -1317,10 +1317,10 @@ function renderStahlteile(items) {
   stahlteileLayer.clearLayers();
   stahlteileItems.forEach((it, idx) => {
     if (typeof it.lat !== 'number' || typeof it.lon !== 'number') return;
-    const isPk = it.art === 'primaer';
+    const K = NalpStahlteile.katInfo(it.art);
     const icon = L.divIcon({
       className: '',
-      html: '<div class="stahl-pin ' + (isPk ? 'pk' : 'teil') + '">' + (isPk ? '🏗' : '🔩') + '</div>',
+      html: '<div class="stahl-pin" style="background:' + K.col + '">' + K.icon + '</div>',
       iconSize: [30, 30],
       iconAnchor: [15, 15]
     });
@@ -1330,6 +1330,15 @@ function renderStahlteile(items) {
     m.addTo(stahlteileLayer);
   });
 }
+
+// Positionswahl ohne GPS: Panel ruft dies auf, Nutzer tippt den Standort an
+if (window.NalpStahlteile) NalpStahlteile.registerPicker(function (done) {
+  map.getContainer().style.cursor = 'crosshair';
+  function onPick(e) { cleanup(); done({ lat: e.latlng.lat, lon: e.latlng.lng }); }
+  function cleanup() { map.off('click', onPick); map.getContainer().style.cursor = ''; }
+  map.on('click', onPick);
+  return cleanup;
+});
 
 window.stahlteilDelete = function (idx) {
   const it = stahlteileItems[idx];

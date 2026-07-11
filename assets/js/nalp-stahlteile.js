@@ -2,15 +2,18 @@
  * nalp-stahlteile.js — herumliegende Stahlteile im Perimeter per GPS erfassen.
  *
  * Zweck: Beim Ablaufen des Perimeters festhalten, WO eine vormontierte
- * Primärkonstruktion (mit Tisch-ID) oder ein loses Stahlteil liegt.
+ * Primärkonstruktion (mit Tisch-ID) oder ein Stahlteil (Modulträger,
+ * Modulträgerstapel, Quertraversen, Fussplatten, Pfahlkopfplatten,
+ * Sonstiges) liegt. Position wahlweise per GPS ODER per Antippen auf der
+ * 2D-Karte / im 3D-Modell («Position wählen», posArt:'manuell').
  * Die Einträge werden auf der 2D-Karte (karte.html) und im 3D-Viewer
- * (viewer3d.html) als Marker am erfassten GPS-Standort angezeigt und
- * können dort per Antippen wieder gelöscht werden (aufgeräumt/verbaut).
+ * (viewer3d.html) als Marker angezeigt und können dort per Antippen
+ * wieder gelöscht werden (aufgeräumt/verbaut).
  *
  * Speicher: Firebase Realtime Database (anmeldefrei, REST) unter
  *   erfassung/stahlteile/<key>  +  localStorage-Spiegel (offline-sicher).
- * Datensatz: { art:'primaer'|'teil', teilTyp, tischId, anzahl, bemerkung,
- *              von, datum, lat, lon, acc, ts }
+ * Datensatz: { art:<Kategorie-Key aus KATS>|'teil'(alt), teilTyp, tischId,
+ *              anzahl, bemerkung, von, datum, lat, lon, acc, posArt, ts }
  *
  * Einbindung: <script src="assets/js/nalp-stahlteile.js"></script>
  *   window.nalpStahlteileOpen()            – Erfassungs-Panel öffnen
@@ -29,19 +32,25 @@
   var LS_LOG = 'nalp_stahlteile_v1';      // lokaler Spiegel
   var LS_VON = 'nalp_erfasser_v1';        // gleicher "Erfasst von" wie nalp-erfassung.js
 
-  // Stahlbauteile Primärkonstruktion (Begriffe aus Montagekonzept/Plänen)
-  var TEILE = [
-    'Stütze',
-    'Auflagerträger',
-    'Modulträger (Pfette)',
-    'Aussteifung / Riegel',
-    'Passstück',
-    'Modulklemmen',
-    'Schrauben / Kleinmaterial',
-    'Sonstiges Stahlteil'
+  // Kategorien (Begriffe aus Montagekonzept/Primärkonstruktions-Plänen)
+  var KATS = [
+    { k:'primaer',      icon:'🏗', label:'Primärkonstruktion vormontiert', col:'#0b5fff' },
+    { k:'traeger',      icon:'📏', label:'Modulträger',       col:'#12a457' },
+    { k:'stapel',       icon:'📚', label:'Modulträgerstapel', col:'#7a4de8' },
+    { k:'quertraverse', icon:'➖', label:'Quertraversen',     col:'#e8a012' },
+    { k:'fussplatte',   icon:'🦶', label:'Fussplatten',       col:'#00a9c9' },
+    { k:'pfahlkopf',    icon:'🔘', label:'Pfahlkopfplatten',  col:'#d63a86' },
+    { k:'sonstiges',    icon:'🔩', label:'Sonstiges',         col:'#ff8a3d' }
   ];
+  var KATMAP = {}; KATS.forEach(function(K){ KATMAP[K.k] = K; });
+  // Alt-Einträge aus der Zeit vor der Kategorien-Umstellung ("Loses Stahlteil")
+  KATMAP['teil'] = { k:'teil', icon:'🔩', label:'Stahlteil', col:'#ff8a3d' };
+  function katInfo(art){ return KATMAP[art] || KATMAP['teil']; }
 
   var current = 'primaer';
+  var posMode = 'gps';                    // 'gps' | 'pick' (Position auf Karte/3D wählen)
+  var pickHandler = null;                 // von karte.html / viewer3d.html registriert
+  var pickCancel = null, pickFinish = null;
   var subscribers = [];
   var gpsWatch = null, lastFix = null;
 
@@ -156,6 +165,10 @@
   function paintGps(errMsg){
     var el = panel && panel.querySelector('#stGps');
     if (!el) return;
+    if (posMode === 'pick') {
+      el.innerHTML = '👆 Position wird nach «Speichern» durch Antippen auf der Karte / im 3D-Modell gesetzt.';
+      el.className = 'st-gps ok'; return;
+    }
     if (errMsg) { el.innerHTML = '📡 GPS-Fehler: '+esc(errMsg); el.className='st-gps bad'; return; }
     if (!lastFix) { el.innerHTML = '📡 GPS: warte auf Position …'; el.className='st-gps'; return; }
     var a = Math.round(lastFix.acc);
@@ -214,7 +227,15 @@
     '#stPanel .st-empty{font-size:12.5px;color:rgba(232,238,247,.4);padding:8px 0;}' +
     '#stToast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);z-index:12050;background:#12a457;color:#fff;' +
       'font-weight:800;font-size:14px;padding:12px 20px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:all .25s;}' +
-    '#stToast.on{opacity:1;transform:translateX(-50%) translateY(0);} #stToast.err{background:#d63a3f;}';
+    '#stToast.on{opacity:1;transform:translateX(-50%) translateY(0);} #stToast.err{background:#d63a3f;}' +
+    '#stPanel .st-tabs.kats{grid-template-columns:1fr 1fr;} #stPanel .st-tab .i{pointer-events:none;}' +
+    '#stPanel .st-pos{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0 0 12px;}' +
+    '#stPanel .st-pos .st-tab.on{background:linear-gradient(135deg,#1c8a4a,#12a457);}' +
+    '#stPickBar{position:fixed;top:14px;left:50%;transform:translateX(-50%) translateY(-90px);z-index:12060;background:#0b5fff;color:#fff;' +
+      'font-weight:800;font-size:14px;padding:11px 16px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.45);display:flex;gap:12px;align-items:center;' +
+      'opacity:0;pointer-events:none;transition:all .25s;max-width:92vw;font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;}' +
+    '#stPickBar.on{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0);}' +
+    '#stPickBar button{background:rgba(255,255,255,.22);border:0;color:#fff;border-radius:8px;padding:6px 11px;font-weight:800;cursor:pointer;font-size:12px;white-space:nowrap;}';
   }
 
   var built = false, ov, panel, toastEl;
@@ -230,24 +251,37 @@
       '<div class="st-head"><button class="st-x" title="Schliessen">&times;</button>' +
         '<div class="st-brand">NalpSolar · STRABAG B8-13</div><h2>🔩 Stahlteile erfassen</h2></div>' +
       '<div class="st-body">' +
+        '<div class="st-pos" id="stPos">' +
+          '<button class="st-tab on" data-p="gps"><span class="i">📡</span>GPS-Standort</button>' +
+          '<button class="st-tab" data-p="pick"><span class="i">👆</span>Position wählen</button>' +
+        '</div>' +
         '<div class="st-gps" id="stGps">📡 GPS: warte auf Position …</div>' +
         '<div class="st-von"><label>Erfasst von</label><input id="stVon" placeholder="Name / Kürzel"></div>' +
-        '<div class="st-tabs" id="stTabs">' +
-          '<button class="st-tab on" data-k="primaer"><span class="i">🏗</span>Primärkonstruktion vormontiert</button>' +
-          '<button class="st-tab" data-k="teil"><span class="i">🔩</span>Loses Stahlteil</button>' +
+        '<div class="st-tabs kats" id="stTabs">' +
+          KATS.map(function(K, i){
+            return '<button class="st-tab'+(i===0?' on':'')+'" data-k="'+K.k+'"><span class="i">'+K.icon+'</span>'+esc(K.label)+'</button>';
+          }).join('') +
         '</div>' +
         '<div id="stForm"></div>' +
         '<button class="st-save" id="stSave">📍 Am Standort speichern</button>' +
         '<div class="st-status" id="stStatus"></div>' +
-        '<div class="st-hint">Der Eintrag wird am aktuellen GPS-Standort gespeichert und erscheint als Marker ' +
-          'auf der 2D-Karte und im 3D-Modell. <b>Löschen:</b> Marker in der Karte / im 3D antippen ' +
-          '(z.&nbsp;B. wenn das Teil verbaut oder abtransportiert wurde) – oder unten in der Liste.</div>' +
+        '<div class="st-hint">Der Eintrag wird am GPS-Standort <b>oder</b> an einer per Antippen gewählten Position ' +
+          'gespeichert und erscheint als Marker auf der 2D-Karte und im 3D-Modell. <b>Löschen:</b> Marker in der ' +
+          'Karte / im 3D antippen (z.&nbsp;B. wenn das Teil verbaut oder abtransportiert wurde) – oder unten in der Liste.</div>' +
         '<div class="st-sec">Erfasste Stahlteile <button class="st-refresh" id="stRefresh">⟳ laden</button></div>' +
         '<div id="stList"></div>' +
       '</div>';
 
-    panel.querySelectorAll('.st-tab').forEach(function(b){
+    panel.querySelectorAll('#stTabs .st-tab').forEach(function(b){
       b.addEventListener('click', function(){ current = b.dataset.k; renderTabs(); renderForm(); });
+    });
+    panel.querySelectorAll('#stPos .st-tab').forEach(function(b){
+      b.addEventListener('click', function(){
+        posMode = b.dataset.p;
+        panel.querySelectorAll('#stPos .st-tab').forEach(function(x){ x.classList.toggle('on', x.dataset.p===posMode); });
+        if (posMode === 'gps') gpsStart(); else gpsStop();
+        paintGps(); renderSaveBtn(); setStatus('');
+      });
     });
     panel.querySelector('#stVon').value = getVon();
     panel.querySelector('#stVon').addEventListener('change', function(){ setVon(this.value.trim()); });
@@ -255,13 +289,21 @@
     panel.querySelector('#stSave').addEventListener('click', save);
     panel.querySelector('#stRefresh').addEventListener('click', function(){ setStatus('Lade …'); notify(); });
     ov.addEventListener('click', close);
-    document.addEventListener('keydown', function(e){ if(e.key==='Escape') close(); });
+    document.addEventListener('keydown', function(e){
+      if (e.key !== 'Escape') return;
+      if (pickFinish) pickFinish(null); else close();
+    });
 
-    renderForm();
+    renderForm(); renderSaveBtn();
   }
 
   function renderTabs(){
-    panel.querySelectorAll('.st-tab').forEach(function(b){ b.classList.toggle('on', b.dataset.k===current); });
+    panel.querySelectorAll('#stTabs .st-tab').forEach(function(b){ b.classList.toggle('on', b.dataset.k===current); });
+  }
+
+  function renderSaveBtn(){
+    var b = panel && panel.querySelector('#stSave'); if (!b) return;
+    b.textContent = posMode === 'pick' ? '👆 Speichern & Position antippen' : '📍 Am Standort speichern';
   }
 
   function renderForm(){
@@ -274,9 +316,10 @@
         '</div>' +
         '<label class="fl">Bemerkung (optional)</label><textarea id="f_bem" placeholder="z.B. liegt neben Baupiste, Lasche prüfen …"></textarea>';
     } else {
-      f.innerHTML =
-        '<label class="fl">Stahlteil</label>' +
-        '<select id="f_teil">' + TEILE.map(function(t,i){ return '<option'+(i===0?' selected':'')+'>'+esc(t)+'</option>'; }).join('') + '</select>' +
+      var extra = current === 'sonstiges'
+        ? '<label class="fl">Bezeichnung</label><input id="f_typ" placeholder="z.B. Windverband, Kiste Kleinmaterial …">'
+        : '';
+      f.innerHTML = extra +
         '<div class="row2">' +
           '<div><label class="fl">Anzahl</label><input id="f_anz" inputmode="numeric" value="1"></div>' +
           '<div><label class="fl">Tisch-ID (optional)</label><input id="f_tisch" inputmode="numeric" placeholder="falls zuordenbar"></div>' +
@@ -293,24 +336,68 @@
     setTimeout(function(){ toastEl.className = err?'err':''; }, 2200);
   }
 
-  function save(){
+  function buildRec(){
     var von = val('stVon'); setVon(von);
-    if (!lastFix) { setStatus('Noch kein GPS-Fix – bitte kurz warten (Standort-Freigabe erteilt?).', true); return; }
-    if (Date.now() - lastFix.t > 60000) { setStatus('GPS-Fix ist älter als 1 Minute – bitte auf neue Position warten.', true); return; }
-
+    var K = katInfo(current);
     var rec = {
       art: current,
-      teilTyp: current==='primaer' ? val('f_typ') : val('f_teil'),
+      teilTyp: current==='primaer' ? val('f_typ')
+             : current==='sonstiges' ? (val('f_typ') || 'Sonstiges')
+             : K.label,
       tischId: val('f_tisch'),
-      anzahl: current==='teil' ? (val('f_anz')||'1') : '',
+      anzahl: current==='primaer' ? '' : (val('f_anz')||'1'),
       bemerkung: val('f_bem'),
       von: von,
       datum: todayISO(),
-      lat: lastFix.lat, lon: lastFix.lon, acc: Math.round(lastFix.acc),
       ts: Date.now()
     };
-    if (current==='primaer' && !rec.tischId) { setStatus('Bitte die Tisch-ID der vormontierten Primärkonstruktion eingeben.', true); return; }
+    if (current==='primaer' && !rec.tischId) { setStatus('Bitte die Tisch-ID der vormontierten Primärkonstruktion eingeben.', true); return null; }
+    return rec;
+  }
 
+  function save(){
+    var rec = buildRec(); if (!rec) return;
+
+    if (posMode === 'pick') {
+      if (!pickHandler) { setStatus('Positionswahl ist auf dieser Seite nicht verfügbar – bitte GPS-Standort verwenden.', true); return; }
+      startPick(rec);
+      return;
+    }
+
+    if (!lastFix) { setStatus('Noch kein GPS-Fix – bitte kurz warten (Standort-Freigabe erteilt?).', true); return; }
+    if (Date.now() - lastFix.t > 60000) { setStatus('GPS-Fix ist älter als 1 Minute – bitte auf neue Position warten.', true); return; }
+    rec.lat = lastFix.lat; rec.lon = lastFix.lon; rec.acc = Math.round(lastFix.acc); rec.posArt = 'gps';
+    persist(rec);
+  }
+
+  // Panel schliessen, Nutzer tippt die Position auf Karte/3D an, dann speichern
+  var pickBar = null;
+  function startPick(rec){
+    close();
+    if (!pickBar) { pickBar = document.createElement('div'); pickBar.id = 'stPickBar'; document.body.appendChild(pickBar); }
+    pickBar.innerHTML = '👆 Standort für «' + esc(itemTitle(rec)) + '» antippen' +
+      ' <button id="stPickCancel">✕ Abbrechen</button>';
+    pickBar.classList.add('on');
+
+    var done = false;
+    pickFinish = function(pt){
+      if (done) return; done = true;
+      pickFinish = null;
+      pickBar.classList.remove('on');
+      if (pickCancel) { try { pickCancel(); } catch(e){} pickCancel = null; }
+      open();
+      if (pt && typeof pt.lat === 'number' && typeof pt.lon === 'number') {
+        rec.lat = pt.lat; rec.lon = pt.lon; rec.acc = 0; rec.posArt = 'manuell';
+        persist(rec);
+      } else {
+        setStatus('Positionswahl abgebrochen – nichts gespeichert.', true);
+      }
+    };
+    pickBar.querySelector('#stPickCancel').addEventListener('click', function(){ pickFinish && pickFinish(null); });
+    pickCancel = pickHandler(pickFinish) || null;
+  }
+
+  function persist(rec){
     // 1) sofort lokal sichern
     rec.fb = false;
     var log = lsLoad(); log.push(rec); lsSave(log);
@@ -322,7 +409,7 @@
       if (key && i >= 0) {
         l[i].fb = true; l[i].key = key; lsSave(l);
         toast('✓ Gespeichert – Marker gesetzt');
-        setStatus('In Firebase gespeichert (±'+rec.acc+' m).');
+        setStatus('In Firebase gespeichert ('+(rec.posArt==='manuell' ? 'Position manuell gewählt' : '±'+rec.acc+' m')+').');
       } else if (key) {
         fbDelete(key).then(notify);   // Eintrag wurde noch vor Upload-Ende wieder gelöscht
         resetForm(); return;
@@ -340,9 +427,15 @@
   }
 
   function itemTitle(r){
-    return r.art==='primaer'
-      ? '🏗 PK vormontiert'+(r.tischId?' · Tisch '+r.tischId:'')+(r.teilTyp?' ('+r.teilTyp+')':'')
-      : '🔩 '+(r.teilTyp||'Stahlteil')+(r.anzahl&&r.anzahl!=='1'?' × '+r.anzahl:'')+(r.tischId?' · Tisch '+r.tischId:'');
+    if (r.art==='primaer')
+      return '🏗 PK vormontiert'+(r.tischId?' · Tisch '+r.tischId:'')+(r.teilTyp?' ('+r.teilTyp+')':'');
+    var K = katInfo(r.art);
+    var name = (r.art==='teil' || r.art==='sonstiges') ? (r.teilTyp || K.label) : K.label;
+    return K.icon+' '+name+(r.anzahl&&r.anzahl!=='1'?' × '+r.anzahl:'')+(r.tischId?' · Tisch '+r.tischId:'');
+  }
+
+  function posText(r){
+    return r.posArt==='manuell' ? '👆 Position manuell gesetzt' : 'GPS ±'+(r.acc||'?')+' m';
   }
 
   function renderList(items){
@@ -350,11 +443,11 @@
     if (!items.length) { listEl.innerHTML = '<div class="st-empty">Noch keine Stahlteile erfasst.</div>'; setStatus(''); return; }
     listEl.innerHTML = items.slice(0, 25).map(function(r, i){
       var syn = r.fb ? '<span class="st-dot ok" title="in Firebase"></span>' : '<span class="st-dot off" title="nur lokal"></span>';
-      var ec = r.art==='primaer' ? '#0b5fff' : '#ff8a3d';
+      var ec = katInfo(r.art).col;
       return '<div class="st-item" style="--ec:'+ec+'">' +
         '<div class="st-it-top"><div class="st-it-t">'+esc(itemTitle(r))+syn+'</div><div class="st-it-d">'+esc(fmtDate(r.datum))+'</div></div>' +
         (r.bemerkung ? '<div class="st-it-s">'+esc(r.bemerkung)+'</div>' : '') +
-        '<div class="st-it-m">'+esc(r.von||'—')+' · GPS ±'+esc(r.acc||'?')+' m</div>' +
+        '<div class="st-it-m">'+esc(r.von||'—')+' · '+esc(posText(r))+'</div>' +
         '<button class="st-del" data-i="'+i+'">🗑 Löschen (aufgeräumt/verbaut)</button>' +
       '</div>';
     }).join('');
@@ -375,7 +468,8 @@
     build();
     panel.querySelector('#stVon').value = getVon();
     ov.classList.add('on'); panel.classList.add('on');
-    gpsStart(); paintGps();
+    if (posMode === 'gps') gpsStart();
+    paintGps(); renderSaveBtn();
     flushPending();
     setStatus('Lade …');
     notify();
@@ -388,11 +482,17 @@
 
   /* ---------- Öffentliche API ---------- */
   window.NalpStahlteile = {
-    TEILE: TEILE,
+    KATS: KATS,
+    katInfo: katInfo,
+    posText: posText,
     open: open,
     refresh: notify,
     remove: removeItem,
     itemTitle: itemTitle,
+    // Host-Seite (karte.html / viewer3d.html) registriert, wie eine Position
+    // angetippt wird: fn(done) → done({lat,lon}) oder done(null); optional
+    // gibt fn eine Abbruch-Funktion zurück.
+    registerPicker: function (fn) { pickHandler = fn; },
     subscribe: function (fn) {
       subscribers.push(fn);
       // initiale Daten liefern (asynchron)

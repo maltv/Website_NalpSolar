@@ -78,7 +78,7 @@
 
 <script>
 var DB='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app';
-var KINDS={ primaer:'Primärkonstruktion', modultraeger:'Modulträger', vorkommnis:'Vorkommnis', stahlteile:'Stahlteil (GPS)' };
+var KINDS={ primaer:'Primärkonstruktion', modultraeger:'Modulträger', vorkommnis:'Vorkommnis', stahlteile:'Stahlteil' };
 var LS_LOG='nalp_erfassung_log_v1';
 var state={ rows:[], filter:'alle', q:'', sortKey:'ts', sortDir:-1 };
 
@@ -92,7 +92,7 @@ function normalize(rec, art, fb){
   return { art:art||rec.art||'', tischId:rec.tischId||'', typ:rec.typ||rec.teilTyp||'', schwere:rec.schwere||'',
     titel:rec.titel||'', text:rec.text||'', bemerkung:rec.bemerkung||'', datum:rec.datum||'',
     von:rec.von||'', ts:rec.ts||0, fb: fb===true ? true : (rec.fb===true),
-    anzahl:rec.anzahl||'', lat:(typeof rec.lat==='number'?rec.lat:null), lon:(typeof rec.lon==='number'?rec.lon:null), acc:rec.acc||'' };
+    anzahl:rec.anzahl||'', lat:(typeof rec.lat==='number'?rec.lat:null), lon:(typeof rec.lon==='number'?rec.lon:null), acc:rec.acc||'', posArt:rec.posArt||'' };
 }
 
 function merge(fbData, local){
@@ -169,7 +169,7 @@ function render(){
     if(r.art==='stahlteile'){
       var extra=[];
       if(r.anzahl && r.anzahl!=='1') extra.push('Anzahl '+esc(r.anzahl));
-      if(r.lat!=null && r.lon!=null) extra.push('📍 '+r.lat.toFixed(5)+', '+r.lon.toFixed(5)+' (±'+esc(r.acc||'?')+' m)');
+      if(r.lat!=null && r.lon!=null) extra.push('📍 '+r.lat.toFixed(5)+', '+r.lon.toFixed(5)+(r.posArt==='manuell'?' (manuell gesetzt)':' (±'+esc(r.acc||'?')+' m)'));
       inhalt=[esc(r.bemerkung||''), extra.join(' · ')].filter(Boolean).join('<br>');
     }
     return '<tr>'+
@@ -197,7 +197,7 @@ function exportCsv(){
   var lines=[head.map(cell).join(';')];
   rows.forEach(function(r){
     var bem = r.art==='vorkommnis' ? r.text : r.bemerkung;
-    if(r.art==='stahlteile' && r.lat!=null && r.lon!=null) bem=(bem?bem+' ':'')+'[GPS '+r.lat.toFixed(6)+','+r.lon.toFixed(6)+' ±'+(r.acc||'?')+'m]';
+    if(r.art==='stahlteile' && r.lat!=null && r.lon!=null) bem=(bem?bem+' ':'')+'['+(r.posArt==='manuell'?'Position':'GPS')+' '+r.lat.toFixed(6)+','+r.lon.toFixed(6)+(r.posArt==='manuell'?' manuell':' ±'+(r.acc||'?')+'m')+']';
     lines.push([fmtTs(r.ts), KINDS[r.art]||r.art, r.tischId, r.typ, r.schwere,
       (r.art==='vorkommnis'?r.titel:''), bem,
       fmtDate(r.datum), r.von, r.fb?'ja':'nein'].map(cell).join(';'));
