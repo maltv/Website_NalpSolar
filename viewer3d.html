@@ -7,7 +7,6 @@
 <title>NalpSolar 3D</title>
 <script src="assets/js/nalp-gate.js"></script>
 <script src="assets/js/nalp-status.js"></script>
-<script src="assets/js/nalp-stahlteile.js"></script>
 <link rel="manifest" href="manifest.json" id="manifestLink">
 <script>
 // Game-App-Modus (?game=1): eigenes Manifest + reine Spiel-Oberfläche
@@ -93,8 +92,6 @@ html, body { width:100%; height:100%; overflow:hidden; background:#0d1117;
   border:1px solid rgba(255,255,255,.2);
 }
 .lbl-gps { background:rgba(33,150,243,.9); border-color:#2196F3; font-size:11px; }
-.lbl-stahl { background:rgba(255,138,61,.92); border-color:#ff8a3d; color:#111; font-size:10.5px; font-weight:800; }
-.lbl-stahl.pk { background:rgba(11,95,255,.92); border-color:#0b5fff; color:#fff; }
 .lbl-tisch { background:rgba(255,220,0,.85); color:#111; border-color:#ffd700; font-size:9px; padding:1px 4px;
              transition:opacity .25s linear; will-change:opacity; }
 .lbl-status { font-size:10px; font-weight:800; padding:1px 5px;
@@ -391,7 +388,6 @@ body.ar-mode { background:transparent!important; }
           onkeydown="if(event.key==='Enter'){searchTisch();}">
   <button class="tb-btn" id="btnSearch" onclick="searchTisch()">🔍</button>
   <button class="tb-btn" id="btnGps" onclick="toggleGps()">📍 GPS</button>
-  <button class="tb-btn" id="btnStahl" onclick="nalpStahlteileOpen()" title="Stahlteile erfassen (GPS oder Position antippen)">🔩 Stahlteil</button>
   <button class="tb-btn" id="btnAR"  onclick="toggleAR()">📷 AR</button>
   <button class="tb-btn" id="btnMenuMore" onclick="tbMenu('menuMore')">⋯ Mehr ▾</button>
 </div>
@@ -684,13 +680,6 @@ function gpsToScene(lat,lon,alt){
   var E=2600072.37+211455.93*l-10938.51*l*p-0.36*l*p*p-44.54*l*l*l;
   var N=1200147.07+308807.95*p+3745.25*l*l+76.63*p*p-194.56*l*l*p+119.79*p*p*p;
   return new THREE.Vector3(E-OE, (alt||OZ)-OZ, -(N-ON));
-}
-// Umkehrung: Szene (x,z) → WGS84 (swisstopo-Näherungsformeln LV95→WGS84)
-function sceneToGps(x,z){
-  var Y=(x+OE-2600000)/1000000, X=(-z+ON-1200000)/1000000;
-  var lam=2.6779094+4.728982*Y+0.791484*Y*X+0.1306*Y*X*X-0.0436*Y*Y*Y;
-  var phi=16.9023892+3.238272*X-0.270978*Y*Y-0.002528*X*X-0.0447*Y*Y*X-0.0140*X*X*X;
-  return { lat: phi*100/36, lon: lam*100/36 };
 }
 
 /* ── Terrain mesh ────────────────────────────────────────── */
@@ -2781,8 +2770,7 @@ window.tbMenu=function(id){
 
 /* ── Tap detection (distinguish tap from orbit drag) ─────── */
 function onTapDown(e){
-  if(!gamePlaying && !birdARon && !measurePlacing() && !measEditOn && !stahlPickDone &&
-     !(stahlGroup && stahlGroup.children.length)) return;
+  if(!gamePlaying && !birdARon && !measurePlacing() && !measEditOn) return;
   tapStart={x:e.clientX, y:e.clientY, t:performance.now()};
 }
 function onTapUp(e){
@@ -2799,8 +2787,6 @@ function onTapUp(e){
   }
   if(measurePlacing()){ measureTapAt(e.clientX, e.clientY); return; }
   if(measEditOn){ measEditTap(e.clientX, e.clientY); return; }
-  if(stahlPickTap(e.clientX, e.clientY)) return;   // Stahlteil-Position antippen (Erfassung ohne GPS)
-  pickStahl(e.clientX, e.clientY);   // Stahlteil-Marker antippen = löschen
 }
 function pickBird(cx,cy){
   if(!birdGroup) return;
@@ -3844,82 +3830,6 @@ function mkGps(){
   return g;
 }
 
-/* ── Stahlteile: per GPS erfasste Teile (nalp-stahlteile.js) ── */
-var stahlGroup=null, stahlPending=null;
-function renderStahlteile(items){
-  if(items) stahlPending=items;
-  if(!scene || !stahlPending) return;
-  if(stahlGroup) scene.remove(stahlGroup);
-  stahlGroup=new THREE.Group();
-  stahlPending.forEach(function(it){
-    if(typeof it.lat!=='number' || typeof it.lon!=='number') return;
-    var s=gpsToScene(it.lat,it.lon,null);
-    var y=terraY(s.x,s.z) || s.y;
-    var isPk=it.art==='primaer';
-    var K=NalpStahlteile.katInfo(it.art);
-    var col=new THREE.Color(K.col).getHex();
-    var g=new THREE.Group();
-    var pole=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,5,8),
-      new THREE.MeshBasicMaterial({color:0xffffff}));
-    pole.position.y=2.5; g.add(pole);
-    var head=new THREE.Mesh(new THREE.SphereGeometry(1.4,12,10),
-      new THREE.MeshBasicMaterial({color:col}));
-    head.position.y=5.6; g.add(head);
-    // unsichtbare grössere Trefferfläche fürs Antippen am Handy
-    var hit=new THREE.Mesh(new THREE.SphereGeometry(3.5,8,6),
-      new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}));
-    hit.position.y=5; g.add(hit);
-    var d=document.createElement('div');
-    d.className='lbl lbl-stahl'+(isPk?' pk':'');
-    d.textContent=isPk ? ('🏗 PK '+(it.tischId||'?')) : (K.icon+' '+(it.teilTyp||K.label));
-    var lbl=new THREE.CSS2DObject(d); lbl.position.set(0,8,0); g.add(lbl);
-    g.position.set(s.x,y,s.z);
-    g.userData.stahlItem=it;
-    stahlGroup.add(g);
-  });
-  scene.add(stahlGroup);
-}
-if(window.NalpStahlteile) NalpStahlteile.subscribe(function(items){ renderStahlteile(items); });
-
-// Tap auf einen Stahlteil-Marker → Eintrag löschen (aufgeräumt/verbaut)
-function pickStahl(cx,cy){
-  if(!stahlGroup || !stahlGroup.children.length) return false;
-  var rect=renderer.domElement.getBoundingClientRect();
-  var m=new THREE.Vector2(((cx-rect.left)/rect.width)*2-1, -((cy-rect.top)/rect.height)*2+1);
-  raycaster.setFromCamera(m,camera);
-  var hits=raycaster.intersectObjects(stahlGroup.children,true);
-  if(!hits.length) return false;
-  var o=hits[0].object;
-  while(o && o.parent && o.parent!==stahlGroup) o=o.parent;
-  var it=o && o.userData && o.userData.stahlItem;
-  if(!it) return false;
-  if(confirm('„'+NalpStahlteile.itemTitle(it)+'" löschen (aufgeräumt/verbaut)?')){
-    NalpStahlteile.remove(it, function(ok,msg){ if(!ok) alert(msg||'Löschen fehlgeschlagen – offline?'); });
-  }
-  return true;
-}
-
-// Positionswahl ohne GPS: Nutzer tippt den Standort im 3D-Modell an
-var stahlPickDone=null;
-if(window.NalpStahlteile) NalpStahlteile.registerPicker(function(done){
-  stahlPickDone=done;
-  return function(){ stahlPickDone=null; };
-});
-function stahlPickTap(cx,cy){
-  if(!stahlPickDone) return false;
-  var rect=renderer.domElement.getBoundingClientRect();
-  var m=new THREE.Vector2(((cx-rect.left)/rect.width)*2-1, -((cy-rect.top)/rect.height)*2+1);
-  raycaster.setFromCamera(m,camera);
-  var objs=[]; if(terrainMesh) objs.push(terrainMesh);
-  Object.values(layers).forEach(function(o){ if(o) objs.push(o); });
-  var hits=raycaster.intersectObjects(objs,true);
-  if(!hits.length) return true;          // Tap ins Leere: Auswahl bleibt aktiv
-  var p=hits[0].point;
-  var cb=stahlPickDone; stahlPickDone=null;
-  cb(sceneToGps(p.x,p.z));
-  return true;
-}
-
 /* ── Toggle UI ───────────────────────────────────────────── */
 window.toggleTerrain=function(){
   terrainOn=!terrainOn; if(terrainMesh) terrainMesh.visible=terrainOn;
@@ -4529,7 +4439,6 @@ async function init(){
     spawnWorkers(5); if(workerGroup) setCast(workerGroup);
     try{ spawnCows(4); }catch(e){ console.warn('cows',e); }
     try{ spawnSamuel(); }catch(e){ console.warn('samuel',e); }
-    try{ renderStahlteile(); }catch(e){ console.warn('stahlteile',e); }   // jetzt mit Terrain-Höhe
     // Umgebung: Vegetation, Kletterer, Pneukran-Strasse, Wetter
     try{ spawnVegetation(workerArea); }catch(e){ console.warn('veg',e); }
     try{ spawnClimbers(3); }catch(e){ console.warn('climbers',e); }

@@ -1,14 +1,11 @@
 'use strict';
-var CACHE = 'nalpsolar-v41';
+var CACHE = 'nalpsolar-v42';
 var PRECACHE = [
   './index.html',
   './stahlbau.html',
   './stellen.html',
-  './erfassungen.html',
   './viewer3d.html',
   './assets/js/nalp-gate.js',
-  './assets/js/nalp-erfassung.js',
-  './assets/js/nalp-stahlteile.js',
   './assets/js/nalp-status.js',
   './uploads/tables/modultische_status.json',
   './assets/js/three/three.min.js',
