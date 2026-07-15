@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>NalpSolar · Passstück-Rechner</title>
+<meta name="theme-color" content="#0b1826">
+<script src="assets/js/nalp-gate.js"></script>
+<script src="assets/js/nalp-passstueck-daten.js"></script>
+<script src="assets/js/nalp-passstueck-abz.js"></script>
+<style>
+  :root{
+    --bg:#eef1f5; --card:#fff; --line:rgba(10,22,38,.12); --txt:#14202e; --muted:#5b6b7c;
+    --blue:#0b5fff; --blue-d:#12304f; --orange:#e0691b; --orange2:#ff8a3d; --red:#d63a3f; --green:#1c8a4a;
+    --amber:#e8a012; --violet:#7a1fa2;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;}
+  body{background:var(--bg);color:var(--txt);font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;line-height:1.45;}
+  .wrap{max-width:820px;margin:0 auto;padding:0 14px 60px;}
+
+  .top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    padding:10px 14px calc(10px + env(safe-area-inset-top));margin:0 -14px 14px;
+    color:#e8eef7;background:radial-gradient(120% 160% at 0 0,#173657,#0b1826);box-shadow:0 2px 14px rgba(0,0,0,.3);}
+  .top .brand{font-size:10px;letter-spacing:.22em;font-weight:800;color:#ffc340;text-transform:uppercase;}
+  .top h1{font-size:16px;font-weight:900;margin:1px 0 0;}
+  .home{border:0;border-radius:11px;padding:10px 14px;font-weight:800;font-size:14px;color:#fff;cursor:pointer;
+    background:linear-gradient(135deg,#0b5fff,#2196F3);white-space:nowrap;}
+  .kbtn{border:0;border-radius:11px;padding:10px 14px;font-weight:800;font-size:14px;color:#e8eef7;cursor:pointer;
+    background:rgba(255,255,255,.14);white-space:nowrap;}
+  .kbtn:hover{background:rgba(255,255,255,.22);}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px;
+    box-shadow:0 6px 18px rgba(10,22,38,.06);}
+  h2{font-size:15px;font-weight:900;margin:0 0 10px;display:flex;align-items:center;gap:8px;}
+  .lead{font-size:12.5px;color:var(--muted);margin:-6px 0 10px;}
+
+  /* Suche */
+  .srow{display:flex;gap:8px;}
+  .srow input{flex:1;min-width:0;font-size:18px;font-weight:800;padding:12px;border-radius:12px;
+    border:1.5px solid var(--line);background:#f7f9fc;color:var(--txt);}
+  .srow input:focus{outline:none;border-color:var(--blue);}
+  .gps{border:0;border-radius:12px;padding:0 14px;font-weight:800;font-size:14px;color:#fff;cursor:pointer;
+    background:linear-gradient(135deg,#1c8a4a,#12a457);white-space:nowrap;}
+  .sug{margin:6px 0 0;padding:0;list-style:none;border:1px solid var(--line);border-radius:12px;overflow:hidden;display:none;}
+  .sug li{padding:10px 12px;font-size:14.5px;display:flex;gap:10px;align-items:baseline;cursor:pointer;background:#fff;}
+  .sug li+li{border-top:1px solid var(--line);}
+  .sug li:active{background:#eef4ff;}
+  .sug b{font-size:16px;} .sug .m{color:var(--muted);font-size:12px;}
+  .hint{font-size:12px;color:var(--muted);margin-top:8px;}
+  .hint.warn{color:#b5510f;font-weight:700;}
+
+  /* Tisch-Info */
+  .tid{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .tid .big{font-size:30px;font-weight:900;line-height:1;}
+  .chip{font-size:11px;font-weight:800;border-radius:7px;padding:3px 9px;color:#fff;white-space:nowrap;}
+  .chip.typ{background:var(--blue);} .chip.bj{background:#5b6b7c;} .chip.rev{background:var(--green);}
+  .chip.rev.alt{background:var(--amber);}
+  .soll{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:12px 0 4px;padding:12px;border-radius:12px;
+    background:linear-gradient(135deg,#eef4ff,#f7f9fc);border:1px solid #cfe0ff;}
+  .soll .lb{font-size:12px;font-weight:800;color:#0b3ea8;text-transform:uppercase;letter-spacing:.03em;}
+  .soll .v{font-size:26px;font-weight:900;color:#0b3ea8;} .soll .u{font-size:13px;color:var(--muted);}
+  .meta{font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.6;}
+  .meta b{color:var(--txt);}
+  .bem{margin-top:8px;font-size:12.5px;background:#fdf3e3;border:1px solid #f0d9a8;border-radius:10px;padding:8px 10px;color:#7a5410;}
+  .bem.rot{background:#fdeaea;border-color:#f2c2c2;color:#8f1d1d;font-weight:700;}
+
+  .tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:10px;}
+  table.st{border-collapse:collapse;width:100%;font-size:13px;}
+  table.st th{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);text-align:left;
+    padding:6px 8px;border-bottom:2px solid var(--line);white-space:nowrap;}
+  table.st td{padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap;}
+  .tb{font-size:10.5px;font-weight:800;border-radius:6px;padding:2px 7px;color:#fff;}
+  .tb.tal{background:#3b7dd8;} .tb.berg{background:var(--orange2);}
+
+  /* Modus-Umschalter */
+  .modes{display:flex;gap:8px;margin-bottom:12px;}
+  .modes button{flex:1;border:1.5px solid var(--line);border-radius:12px;padding:11px 8px;font-weight:800;font-size:13.5px;
+    background:#f7f9fc;color:var(--muted);cursor:pointer;}
+  .modes button.on{background:linear-gradient(135deg,#0b5fff,#2196F3);color:#fff;border-color:transparent;}
+
+  /* Stützen-Rechenzeilen */
+  .srowst{border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px;background:#fbfcfe;}
+  .srowst .h{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;}
+  .srowst .h .nm{font-size:16px;font-weight:900;}
+  .srowst .h .ref{font-size:11.5px;color:var(--muted);}
+  .inrow{display:flex;gap:8px;flex-wrap:wrap;}
+  .fld{flex:1;min-width:140px;}
+  .fld label{display:block;font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.02em;margin-bottom:3px;}
+  .fld input{width:100%;font-size:17px;font-weight:800;padding:10px;border-radius:10px;border:1.5px solid var(--line);
+    background:#fff;color:var(--txt);}
+  .fld input:focus{outline:none;border-color:var(--blue);}
+  .res{margin-top:9px;border-radius:10px;padding:10px 12px;font-size:14px;display:none;}
+  .res.ok{display:block;background:#e9f7ee;border:1px solid #bfe3cc;color:#14532d;}
+  .res.warn{display:block;background:#fdf3e3;border:1px solid #f0d9a8;color:#7a5410;}
+  .res.err{display:block;background:#fdeaea;border:1px solid #f2c2c2;color:#8f1d1d;}
+  .res .bigv{font-size:24px;font-weight:900;}
+  .res .sub{font-size:12px;margin-top:2px;opacity:.85;}
+  .locked{border-radius:10px;padding:10px 12px;font-size:12.5px;background:#f3eefa;border:1px solid #ddc9ee;color:#5b2c6f;}
+  .fillrow{margin-top:6px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .fillbtn{border:1px solid #cfe0ff;border-radius:8px;padding:4px 9px;font-weight:800;font-size:12px;color:#0b3ea8;background:#eef4ff;cursor:pointer;white-space:nowrap;}
+  .fillbtn:active{background:#dcE9ff;}
+  .ers{color:#a33;text-decoration:line-through;opacity:.7;}
+  h3.sub{font-size:13px;font-weight:900;margin:14px 0 6px;}
+
+  /* Konstanten */
+  .konst table{border-collapse:collapse;width:100%;font-size:13.5px;}
+  .konst th{font-size:11px;text-transform:uppercase;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:2px solid var(--line);}
+  .konst td{padding:6px 8px;border-bottom:1px solid var(--line);}
+  .konst input{width:96px;font-size:15px;font-weight:800;padding:7px;border-radius:8px;border:1.5px solid var(--line);background:#fff;color:var(--txt);}
+  .konst .prov{font-size:11px;color:var(--muted);}
+  .kreset{margin-top:10px;border:0;border-radius:10px;padding:9px 13px;font-weight:800;font-size:13px;color:#fff;cursor:pointer;background:#5b6b7c;}
+  .warnbox{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--red);border-radius:12px;
+    padding:12px 14px;margin-bottom:14px;box-shadow:0 4px 12px rgba(10,22,38,.05);}
+  .warnbox .wt{font-size:14px;font-weight:900;}
+  .warnbox .wb{font-size:12.5px;color:#2a3a49;margin-top:4px;line-height:1.5;}
+
+  .src{font-size:11px;color:var(--muted);margin-top:22px;line-height:1.7;border-top:1px solid var(--line);padding-top:12px;}
+  details.card summary{font-size:15px;font-weight:900;cursor:pointer;}
+  @media(max-width:560px){ .fld{min-width:120px;} .soll .v{font-size:22px;} }
+</style>
+</head>
+<body>
+<div class="top">
+  <button class="home" onclick="location.href='index.html'">🏠 Start</button>
+  <div>
+    <div class="brand">NalpSolar · STRABAG B8-13</div>
+    <h1>📏 Passstück-Rechner</h1>
+  </div>
+  <span style="flex:1"></span>
+  <button class="kbtn" onclick="location.href='stahlbau.html'">🔩 Stahlbau</button>
+</div>
+<div class="wrap">
+
+  <div class="warnbox">
+    <div class="wt">⚠ Rechenwerte vor Bestellung immer im Nalpi gegenprüfen</div>
+    <div class="wb">Tal-Formel (S1/S4) und SOLL-Höhen sind quellenbelegt; die Typ-Konstanten (ABZ) sind teils
+      <b>empirisch aus den Bestellbatches abgeleitet</b> – Herkunft steht unter ⚙&nbsp;Konstanten.
+      Berg-Stützen (S2/S3, geneigt) rechnet nur das Nalpi exakt. Massgeblich bleibt der ILF-Freigabe-Workflow.</div>
+  </div>
+
+  <div class="card">
+    <h2>1 · Tisch wählen</h2>
+    <div class="lead" id="leadData">Tische mit SOLL-Daten werden geladen …</div>
+    <div class="srow">
+      <input id="q" type="search" autocomplete="off" placeholder="Tisch-ID oder Betriebs-ID …">
+      <button class="gps" id="gpsBtn" title="Nächstgelegenen Tisch per GPS suchen">📍</button>
+    </div>
+    <ul class="sug" id="sug"></ul>
+    <div class="hint" id="qHint"></div>
+    <div id="tisch" style="display:none;margin-top:12px;">
+      <div class="tid">
+        <span class="big" id="tId"></span>
+        <span class="chip typ" id="tTyp"></span>
+        <span class="chip bj" id="tBj"></span>
+        <span class="chip rev" id="tRev"></span>
+      </div>
+      <div class="soll">
+        <span class="lb">SOLL-Höhe UK Modul</span>
+        <span class="v" id="tSoll"></span><span class="u">m ü. M.</span>
+      </div>
+      <div class="meta" id="tMeta"></div>
+      <div class="bem rot" id="tWarn" style="display:none;"></div>
+      <div class="bem" id="tBem" style="display:none;"></div>
+      <div class="tblwrap">
+        <table class="st">
+          <thead><tr><th>Stütze</th><th></th><th>SOLL Absteckpunkt</th><th>ILF-Stützenlänge*</th><th>bis UK Riegel</th></tr></thead>
+          <tbody id="tStTb"></tbody>
+        </table>
+      </div>
+      <div class="hint">* ILF-Referenz: Gesamtlänge der Stütze ab Absteckpunkt (Tal lotrecht, Berg = geneigte Länge). Nur zur Gegenprobe.</div>
+      <div id="tBestWrap" style="display:none;">
+        <h3 class="sub">🧾 Bestellte Passstücke (Mauchle-Batches 1–10)</h3>
+        <div class="tblwrap">
+          <table class="st">
+            <thead><tr><th>Stütze</th><th>Länge [mm]</th><th>Batch</th><th>Bauteilart</th><th>Status</th></tr></thead>
+            <tbody id="tBestTb"></tbody>
+          </table>
+        </div>
+        <div class="hint">Belegt nur die <b>Bestellung</b> (Basis = damaliger SOLL-Stand), nicht die Lieferung –
+          Liefererfassung ist bekannt lückenhaft. Bei Tischen mit ILF-Bemerkung „Korrektur/Neuberechnung“ können bestellte Längen überholt sein.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="calcCard" style="display:none;">
+    <h2>2 · Rechnen</h2>
+    <div class="modes">
+      <button id="mFwd" class="on">→ Passstück berechnen</button>
+      <button id="mRev">← Kontrolle rückwärts</button>
+    </div>
+    <div class="lead" id="mLead"></div>
+    <div id="rows"></div>
+  </div>
+
+  <details class="card konst" id="konstCard">
+    <summary>⚙ Konstanten (ABZ je Typ) &amp; Grundlagen</summary>
+    <div class="lead" style="margin-top:8px;">ABZ = Abzug vom Höhenunterschied (SOLL UK Modul − IST OK Pfahl) bis zum Passstück:
+      Standardstütze + Aufbau bis UK Modul, in mm. Gespeichert auf diesem Gerät.</div>
+    <table>
+      <thead><tr><th>Typ · Baujahr</th><th>ABZ Tal [mm]</th><th>Herkunft</th></tr></thead>
+      <tbody id="kTb"></tbody>
+    </table>
+    <button class="kreset" id="kReset">Auf belegte Standardwerte zurücksetzen</button>
+    <div class="hint warn" style="margin-top:10px;">Formel Tal: PS [mm] = (SOLL UK Modul − IST OK Pfahl) × 1000 − ABZ(Typ) ·
+      Rückwärts: Modulhöhe = IST OK Pfahl + (PS + ABZ) / 1000. Quelle: Nalpi-Kalkulation (D. Rathgeb 20.04.2026, geprüft F. Borner).</div>
+    <div class="hint">Mindestlängen Berg-Passrohr lt. Mauchle (J. Mäder, 16.03.2026): Version 2026: A 120 / B 110 / C 160 / D 120 / E 240 mm ·
+      Version 2025: A 120 / B 120 / D 120 / E 115 mm. Unterschreitung ⇒ „Doppel“ (ganze Stütze passgenau).</div>
+  </details>
+
+  <div class="src" id="quellen">
+    <b>Quellen:</b>
+    SOLL-Daten: ILF-Abstecklisten 51_LI_0301_A9 (10.07.2026, PZ2025), 0305_A2 (05.05.2026, PZ1 – Rev A3 vom 10.07. am 13.07.2026 zurückgezogen),
+    0307_A2 (20.05.2026, PZ2), 0309_A1 (12.06.2026, PZ3) ·
+    modul_hoehe = „Höhe des Moduls, vordere Kante unten“ (ILF-ReadMe 10.07.2026) ·
+    Tal-Formel: Mail D. Rathgeb 20.04.2026 („Kalkulation Passtücke“, Nalpi/SharePoint), bestätigt F. Borner 20.04.2026 ·
+    Rückwärtsrechnung analog ILF-Prüfrechnung Batch 1 (B. Rüde, 15.04.2026) ·
+    ABZ-Konstanten: ILF-Konstantentabelle (Blatt „Beschreibung“, Freigabedatei Batch 6, 19.06.2026), empirisch an 178
+    Tal-Bestellpositionen mit IST-Höhen aus den ILF-Freigaben Batch 1/1-1/6 bestätigt (Abweichung 0.0 mm) ·
+    Tischtypen inkl. KF-Varianten: Nalpi-Voll-Export 13.07.2026 ·
+    Bestellte Längen: Mauchle-Bestellbatches NR 1–10 (Stand 08.07.2026; Batch 5+6 = Korrekturversion 08.06.2026) ·
+    Toleranz ±100 mm Modulhöhe (Verschattung, ILF 06/2025) ·
+    Mindestlängen: J. Mäder/Mauchle 16.03.2026 (deckt sich mit ILF-Tabelle ABS_PS_B_MIN).
+    <span id="quellenKonst"></span>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var D = window.NALP_PS_DATEN;
+  var COLS = {}; D.spalten.forEach(function(c,i){ COLS[c]=i; });
+
+  // ---- Katalog aufbauen ----
+  var byId = {}, list = [];
+  Object.keys(D.zonen).forEach(function(z){
+    var zone = D.zonen[z];
+    zone.tische.forEach(function(row){
+      var r = { zone: z, rev: zone.revision, quelle: zone.quelle };
+      D.spalten.forEach(function(c,i){ r[c]=row[i]; });
+      byId[r.id]=r; list.push(r);
+    });
+  });
+
+  // ---- Konstanten (ABZ Tal je Typ_Baujahr) ----
+  // Wird durch die empirische Ableitung aus den Bestellbatches gefüllt (siehe Herkunftstexte).
+  var ABZ_DEFAULTS = window.NALP_PS_ABZ_DEFAULTS || {};
+  var LS_KEY = 'nalp_ps_abz_v1';
+  function loadAbz(){
+    var o = {};
+    Object.keys(ABZ_DEFAULTS).forEach(function(k){ o[k]=ABZ_DEFAULTS[k].wert; });
+    try { var s = JSON.parse(localStorage.getItem(LS_KEY)||'{}');
+          Object.keys(s).forEach(function(k){ if(typeof s[k]==='number'&&isFinite(s[k])) o[k]=s[k]; }); } catch(e){}
+    return o;
+  }
+  var abz = loadAbz();
+  // Konstanten-Schlüssel: bevorzugt Nalpi-Typ (inkl. KF-Variante), sonst aus ILF-Typ + Baujahr
+  function abzKey(r){
+    if(r.nalpi_typ) return r.nalpi_typ;
+    if(r.baujahr===2025) return r.typ + '_2025';
+    return r.typ;  // 2026er-Serie (Tabellen-Typen A–E); 2027: Serie 2026 angenommen
+  }
+  function abzHinweis(r){
+    var h=[];
+    if(r.nalpi_typ && r.nalpi_typ.charAt(0)!==r.typ)
+      h.push('TYPKONFLIKT: ILF-Liste sagt Typ '+r.typ+', Nalpi sagt '+r.nalpi_typ+' – vor Bestellung mit ILF/Nalpi klären');
+    if(!r.nalpi_typ) h.push('Typ ohne Nalpi-Abgleich (KF-Variante unbekannt)');
+    if(r.baujahr===2027) h.push('Baujahr 2027: Konstanten der 2026er-Serie angenommen – mit ILF bestätigen');
+    return h.join(' · ');
+  }
+
+  // Bestellungen: [tisch, stuetze, laenge_mm, batch, datum, bauteilart, gueltig]
+  var BEST = {};
+  (D.bestellungen||[]).forEach(function(b){ (BEST[b[0]]=BEST[b[0]]||[]).push(b); });
+  var IST = D.ist || {};
+  function saveAbz(){
+    var diff = {};
+    Object.keys(abz).forEach(function(k){
+      if(!ABZ_DEFAULTS[k] || ABZ_DEFAULTS[k].wert !== abz[k]) diff[k]=abz[k];
+    });
+    try { localStorage.setItem(LS_KEY, JSON.stringify(diff)); } catch(e){}
+  }
+
+  function renderKonst(){
+    var keys = {}; list.forEach(function(r){ keys[abzKey(r)]=true; });
+    Object.keys(ABZ_DEFAULTS).forEach(function(k){ keys[k]=true; });
+    var tb = document.getElementById('kTb'); tb.innerHTML='';
+    Object.keys(keys).sort().forEach(function(k){
+      var tr = document.createElement('tr');
+      var prov = ABZ_DEFAULTS[k] ? ABZ_DEFAULTS[k].quelle : 'kein Standardwert – manuell eintragen (Nalpi)';
+      tr.innerHTML = '<td><b>'+k.replace('_',' · ')+'</b></td>'+
+        '<td><input inputmode="decimal" data-k="'+k+'" value="'+(abz[k]!=null?abz[k]:'')+'"></td>'+
+        '<td class="prov">'+esc(prov)+'</td>';
+      tb.appendChild(tr);
+    });
+    tb.querySelectorAll('input').forEach(function(inp){
+      inp.addEventListener('input', function(){
+        var v = parseFloat(inp.value.replace(',','.'));
+        if(isFinite(v)) abz[inp.dataset.k]=v; else delete abz[inp.dataset.k];
+        saveAbz(); renderRows();
+      });
+    });
+  }
+  document.getElementById('kReset').addEventListener('click', function(){
+    try{ localStorage.removeItem(LS_KEY); }catch(e){}
+    abz = loadAbz(); renderKonst(); renderRows();
+  });
+
+  // ---- Suche ----
+  var q = document.getElementById('q'), sug = document.getElementById('sug'), qHint = document.getElementById('qHint');
+  var current = null;
+  function fmt(n,d){ return n==null?'–':n.toFixed(d==null?3:d); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+  // Datenstand-Zeile aus den generierten Daten (nie hardcodieren -> kein Revisions-Drift)
+  (function(){
+    var zs = Object.keys(D.zonen).map(function(z){ return z+' Rev '+D.zonen[z].revision; });
+    document.getElementById('leadData').textContent =
+      list.length + ' Tische mit SOLL-Daten: ' + zs.join(' · ') + ' · Datenstand ' + D.meta.erstellt;
+  })();
+  q.addEventListener('input', function(){
+    var t = q.value.trim().toLowerCase(); sug.innerHTML=''; sug.style.display='none'; qHint.textContent='';
+    if(!t) return;
+    var labels = {};
+    var alt = D.alt_ids[t];
+    if(alt && byId[alt]) labels[alt] = '(Alt-ID '+esc(t)+')';
+    var koll = (D.alt_kollision||{})[t];
+    if(koll && byId[koll]) labels[koll] = '(ehem. Alt-ID '+esc(t)+' bis Rev A8, PZ2025!)';
+    var hits = list.filter(function(r){
+      return String(r.id).indexOf(t)===0 || (r.betriebs_id||'').toLowerCase().indexOf(t)===0;
+    }).slice(0,12);
+    if(koll && byId[koll]) hits.unshift(byId[koll]);
+    if(alt && byId[alt]) hits.unshift(byId[alt]);
+    if(!hits.length){
+      var msg = 'Keine SOLL-Daten zu „'+esc(t)+'“ ('+list.length+' Tische abgedeckt; Alt-2025er der Liste A5 fehlen).';
+      var ob = BEST[parseInt(t,10)];
+      if(ob && ob.length){
+        msg += ' <b>ABER: Bestellungen vorhanden</b> – '+ob.map(function(o){
+          return o[1]+' '+o[2]+' mm (Batch '+o[3]+(o[6]===1?'':', ersetzt')+')';
+        }).join(', ')+' – Pendenz, mit ILF/Nalpi klären.';
+      }
+      if(current) msg += ' Angezeigt bleibt Tisch '+current.id+'.';
+      qHint.innerHTML = msg; return;
+    }
+    hits.forEach(function(r){
+      var li = document.createElement('li');
+      li.innerHTML = '<b>'+r.id+'</b><span class="m">'+esc(r.betriebs_id||'')+' · Typ '+esc(r.typ)+' · '+r.zone+' '+r.rev+'</span>'
+        + (labels[r.id] ? '<span class="m">'+labels[r.id]+'</span>' : '');
+      li.addEventListener('click', function(){ select(r); });
+      sug.appendChild(li);
+    });
+    sug.style.display='block';
+    var exact = byId[parseInt(t,10)];
+    if(exact && String(exact.id)===t && !koll) select(exact, true);
+  });
+
+  // ---- GPS: nächstgelegener Tisch (Näherungsformeln swisstopo WGS84→LV95) ----
+  function wgsToLv95(lat, lon){
+    var p = (lat*3600 - 169028.66)/10000, l = (lon*3600 - 26782.5)/10000;
+    var E = 2600072.37 + 211455.93*l - 10938.51*l*p - 0.36*l*p*p - 44.54*l*l*l;
+    var N = 1200147.07 + 308807.95*p + 3745.25*l*l + 76.63*p*p - 194.56*l*l*p + 119.79*p*p*p;
+    return [E,N];
+  }
+  document.getElementById('gpsBtn').addEventListener('click', function(){
+    if(!navigator.geolocation){ qHint.textContent='Kein GPS verfügbar.'; return; }
+    qHint.textContent='📍 GPS wird geholt …';
+    navigator.geolocation.getCurrentPosition(function(pos){
+      var en = wgsToLv95(pos.coords.latitude, pos.coords.longitude);
+      var best=null, bd=1e12;
+      list.forEach(function(r){
+        if(r.zentrum_rechts==null) return;
+        var dx=r.zentrum_rechts-en[0], dy=r.zentrum_hoch-en[1], d=dx*dx+dy*dy;
+        if(d<bd){bd=d;best=r;}
+      });
+      if(best){ select(best); qHint.textContent='📍 Nächster Tisch: '+best.id+' ('+Math.round(Math.sqrt(bd))+' m entfernt, ±'+Math.round(pos.coords.accuracy)+' m GPS)'; }
+    }, function(){ qHint.textContent='GPS-Position nicht verfügbar.'; }, {enableHighAccuracy:true, timeout:12000});
+  });
+
+  // ---- Tisch anzeigen ----
+  var ST = [ ['S1','tal'], ['S2','berg'], ['S3','berg'], ['S4','tal'] ];
+  function select(r, keepSug){
+    if(!current || current.id !== r.id){ inputs = {}; }   // Tischwechsel: alte Eingaben verwerfen!
+    current = r;
+    if(!keepSug){ sug.style.display='none'; q.value = String(r.id); }
+    document.getElementById('tisch').style.display='block';
+    document.getElementById('calcCard').style.display='block';
+    document.getElementById('tId').textContent = r.id;
+    document.getElementById('tTyp').textContent = 'Typ ' + r.typ;
+    document.getElementById('tBj').textContent = 'Baujahr ' + r.baujahr;
+    var rev = document.getElementById('tRev');
+    rev.textContent = r.zone + ' · Rev ' + r.rev;
+    rev.className = 'chip rev' + (r.zone==='PZ1' ? ' alt' : '');
+    rev.title = r.quelle;
+    document.getElementById('tSoll').textContent = fmt(r.modul_hoehe);
+    document.getElementById('tMeta').innerHTML =
+      'Betriebs-ID: <b>'+esc(r.betriebs_id||'–')+'</b> · Bauphase: <b>'+esc(r.bauphase||'–')+'</b> · '+
+      'Zentrum Gelände: <b>'+fmt(r.zentrum_hoehe)+'</b> m ü. M.<br>Quelle: '+esc(r.quelle) +
+      (r.zone==='PZ1' ? ' · <b>Achtung:</b> Rev A3 (10.07.) zurückgezogen – es gilt A2 (Mail ILF/Borner 13.07.2026).' : '');
+    var warn = document.getElementById('tWarn');
+    var wmsg = [];
+    var hz = (D.hinweise||{})[String(r.id)];
+    if(hz) wmsg.push(hz);
+    var kollNeu = (D.alt_kollision||{})[String(r.id)];
+    if(kollNeu) wmsg.push('ID '+r.id+' ist doppelt belegt: dieser '+r.zone+'-Tisch UND (bis Rev A8) Alt-ID des PZ2025-Tischs '+
+      kollNeu+' – bei Nummern von alten Plänen/Markierungen zuerst prüfen, welcher Tisch gemeint ist!');
+    if(wmsg.length){ warn.style.display='block'; warn.textContent = '🚨 ' + wmsg.join(' — '); }
+    else warn.style.display='none';
+    var bem = document.getElementById('tBem');
+    if(r.bemerkung){ bem.style.display='block'; bem.textContent = '📌 ILF-Bemerkung: ' + r.bemerkung; }
+    else bem.style.display='none';
+    var tb = document.getElementById('tStTb'); tb.innerHTML='';
+    ST.forEach(function(s){
+      var n=s[0].toLowerCase();
+      var L=r['laenge_'+n], U=r['laenge_ukr_'+n];
+      var tr=document.createElement('tr');
+      tr.innerHTML='<td><b>'+s[0]+'</b></td><td><span class="tb '+s[1]+'">'+(s[1]==='tal'?'Tal':'Berg')+'</span></td>'+
+        '<td>'+fmt(r[n+'_hoehe'])+' m ü. M.</td><td>'+(L!=null?fmt(L)+' m':'–')+'</td><td>'+(U!=null?fmt(U)+' m':'–')+'</td>';
+      tb.appendChild(tr);
+    });
+    var bw = document.getElementById('tBestWrap'), bt = document.getElementById('tBestTb');
+    var orders = (BEST[r.id]||[]).slice().sort(function(a,b){
+      return a[1]===b[1] ? a[3]-b[3] : (a[1]<b[1]?-1:1);
+    });
+    if(orders.length){
+      bw.style.display='block'; bt.innerHTML='';
+      orders.forEach(function(o){
+        var tr=document.createElement('tr');
+        var cls = o[6]===1 ? '' : ' class="ers"';
+        tr.innerHTML='<td'+cls+'><b>'+o[1]+'</b></td><td'+cls+'>'+o[2]+'</td>'+
+          '<td'+cls+'>Batch '+o[3]+' ('+o[4]+')</td><td'+cls+'>'+esc(o[5])+'</td>'+
+          '<td'+cls+'>'+(o[6]===1?'bestellt':'ersetzt')+'</td>';
+        bt.appendChild(tr);
+      });
+    } else { bw.style.display='none'; bt.innerHTML=''; }
+    renderRows();
+  }
+
+  // ---- Rechnen ----
+  var mode = 'fwd';
+  var inputs = {};   // pro Tisch flüchtig: {S1:{ist:…,ps:…},…}
+  document.getElementById('mFwd').addEventListener('click', function(){ setMode('fwd'); });
+  document.getElementById('mRev').addEventListener('click', function(){ setMode('rev'); });
+  function setMode(m){
+    mode=m;
+    document.getElementById('mFwd').className = m==='fwd'?'on':'';
+    document.getElementById('mRev').className = m==='rev'?'on':'';
+    renderRows();
+  }
+
+  function renderRows(){
+    var host = document.getElementById('rows');
+    document.getElementById('mLead').textContent = mode==='fwd'
+      ? 'IST-Höhe OK Mikropfahl je Stütze eingeben (m ü. M.) → benötigte Passstücklänge.'
+      : 'Verbaute/gelieferte Passstücklänge + IST-Höhe OK Pfahl eingeben → erreichte Modulhöhe & Abweichung vom SOLL.';
+    host.innerHTML='';
+    if(!current) return;
+    var r = current, k = abzKey(r), A = abz[k];
+    ST.forEach(function(s){
+      var st=s[0], art=s[1], n=st.toLowerCase();
+      var div=document.createElement('div'); div.className='srowst';
+      var refL = r['laenge_'+n];
+      var head='<div class="h"><span class="nm">'+st+'</span><span class="tb '+art+'">'+(art==='tal'?'Tal':'Berg')+'</span>'+
+        '<span class="ref">SOLL Absteckpunkt '+fmt(r[n+'_hoehe'])+' m ü. M.'+(refL!=null?' · ILF-Länge '+fmt(refL)+' m':'')+'</span></div>';
+      if(art==='berg'){
+        div.innerHTML = head + '<div class="locked">🔒 Berg-Stütze (geneigt): hier bewusst keine Näherung – die Trigonometrie braucht beide '+
+          'Pfahlkopf-Vermessungen (Tal + Berg) und die exakte Nalpi-Formel. Die ILF-Typkonstanten (L_A50, L_L, ε, ABZ_PBL_B, Mindestlänge) '+
+          'sind bereits hinterlegt; es fehlt nur die Formel-Implementierung aus dem Nalpi (JavaScript D. Rathgeb angefordert). '+
+          'Bis dahin: im Nalpi rechnen.</div>';
+        host.appendChild(div); return;
+      }
+      var iv = (inputs[st]&&inputs[st].ist!=null)?inputs[st].ist:'';
+      var pv = (inputs[st]&&inputs[st].ps!=null)?inputs[st].ps:'';
+      var fields = '<div class="inrow"><div class="fld"><label>IST OK Pfahl [m ü. M.]</label>'+
+        '<input inputmode="decimal" data-st="'+st+'" data-f="ist" value="'+iv+'" placeholder="z. B. '+fmt(r[n+'_hoehe'])+'"></div>';
+      if(mode==='rev'){
+        fields += '<div class="fld"><label>Passstück verbaut [mm]</label>'+
+          '<input inputmode="decimal" data-st="'+st+'" data-f="ps" value="'+pv+'" placeholder="z. B. 950"></div>';
+      }
+      fields += '</div>';
+      var istRef = IST[r.id+'_'+st];
+      if(istRef){
+        fields += '<div class="fillrow">📄 IST lt. ILF-Freigabe: <b>'+istRef[0].toFixed(3)+'</b> m ü. M. '+
+          '<button class="fillbtn" data-fill="ist" data-st="'+st+'" data-v="'+istRef[0]+'">übernehmen</button>'+
+          '<span>('+istRef[1]+' – im Zweifel neu messen)</span></div>';
+      }
+      if(mode==='rev'){
+        var ord = (BEST[r.id]||[]).filter(function(o){ return o[1]===st && o[6]===1; }).sort(function(a,b){ return b[3]-a[3]; })[0];
+        if(ord){
+          fields += '<div class="fillrow">🧾 Bestellt: <b>'+ord[2].toFixed(1)+'</b> mm (Batch '+ord[3]+', '+ord[4]+', '+ord[5]+') '+
+            '<button class="fillbtn" data-fill="ps" data-st="'+st+'" data-v="'+ord[2]+'">übernehmen</button></div>';
+        }
+      }
+      fields += '<div class="res" id="res'+st+'"></div>';
+      div.innerHTML = head + fields;
+      host.appendChild(div);
+    });
+    host.querySelectorAll('.fillbtn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var st=btn.dataset.st, f=btn.dataset.fill, v=parseFloat(btn.dataset.v);
+        var inp=host.querySelector('input[data-st="'+st+'"][data-f="'+f+'"]');
+        if(inp){ inp.value=btn.dataset.v; inputs[st]=inputs[st]||{}; inputs[st][f]=v; calc(st); }
+      });
+    });
+    host.querySelectorAll('input').forEach(function(inp){
+      inp.addEventListener('input', function(){
+        var st=inp.dataset.st; inputs[st]=inputs[st]||{};
+        var v=parseFloat(inp.value.replace(',','.'));
+        inputs[st][inp.dataset.f]= isFinite(v)?v:null;
+        calc(st);
+      });
+    });
+    ST.forEach(function(s){ if(s[1]==='tal') calc(s[0]); });
+  }
+
+  function calc(st){
+    if(!current) return;
+    var r=current, k=abzKey(r), A=abz[k];
+    var el=document.getElementById('res'+st); if(!el) return;
+    var inp=inputs[st]||{};
+    el.className='res'; el.innerHTML='';
+    if(inp.ist==null) return;
+    if(inp.ist<1000 || inp.ist>3500){
+      el.className='res err';
+      el.innerHTML='IST-Höhe unplausibel – bitte Meter über Meer eingeben (z. B. '+fmt(r.modul_hoehe-2)+').';
+      return;
+    }
+    if(A==null){
+      el.className='res warn';
+      el.innerHTML='Für <b>'+k.replace('_',' · ')+'</b> ist keine ABZ-Konstante hinterlegt → unter ⚙ Konstanten eintragen (Wert aus Nalpi).';
+      return;
+    }
+    var hzT = (D.hinweise||{})[String(r.id)];
+    var over = ABZ_DEFAULTS[k] && abz[k]!==ABZ_DEFAULTS[k].wert;
+    if(mode==='fwd'){
+      var ps = (r.modul_hoehe - inp.ist)*1000 - A;
+      var hw = abzHinweis(r);
+      var kons = (window.NALP_PS_KONSTANTEN||{})[k];
+      var cls='ok', note='Formel: ('+fmt(r.modul_hoehe)+' − '+fmt(inp.ist)+') × 1000 − '+A+' (ABZ '+k+')';
+      if(ps<0){ cls='err'; note='Negativ: Pfahl liegt zu hoch für Standardstütze – nicht bestellbar, ILF/Nalpi klären. · '+note; }
+      else if(kons && ps<kons.ABS_PS_B_MIN){ cls='warn'; note='Unter der Mauchle-Mindestlänge des Typs (Berg-Passrohr: '+kons.ABS_PS_B_MIN+' mm) – Machbarkeit klären. · '+note; }
+      else if(ps<100){ cls='warn'; note='Sehr kurz – Machbarkeit mit Mauchle klären (Mindestlängen s. ⚙). · '+note; }
+      else if(ps>5700){ cls='warn'; note='Länger als alles bisher Bestellte (max ≈ 5620 mm) – prüfen. · '+note; }
+      if(hw){ if(cls==='ok') cls='warn'; note='⚠ '+hw+' · '+note; }
+      if(over){ if(cls==='ok') cls='warn'; note='⚠ ABZ manuell geändert (Standard: '+ABZ_DEFAULTS[k].wert+' mm) · '+note; }
+      if(hzT){ cls='err'; note='🚨 SONDERFALL – Ergebnis NICHT verwenden (siehe roter Hinweis oben)! · '+note; }
+      el.className='res '+cls;
+      el.innerHTML='<span class="bigv">'+ps.toFixed(0)+' mm</span> <span style="font-size:12px;">('+ps.toFixed(1)+' mm)</span>'+
+        '<div class="sub">'+note+'</div>';
+    } else {
+      if(inp.ps==null) return;
+      var h = inp.ist + (inp.ps + A)/1000;
+      var dv = (h - r.modul_hoehe)*1000;
+      var hw2 = abzHinweis(r);
+      var cls2 = Math.abs(dv)<=100 ? 'ok':'err';
+      if(hw2 && cls2==='ok') cls2='warn';
+      if(over && cls2==='ok') cls2='warn';
+      if(hzT) cls2='err';
+      el.className='res '+cls2;
+      el.innerHTML='<span class="bigv">'+fmt(h)+' m ü. M.</span>'+
+        '<div class="sub">Abweichung vom SOLL ('+fmt(r.modul_hoehe)+'): <b>'+(dv>0?'+':'')+dv.toFixed(0)+' mm</b> – '+
+        (Math.abs(dv)<=100?'innerhalb ±100 mm (Verschattungstoleranz).':'ausserhalb ±100 mm Toleranz!')+
+        (hzT?' · 🚨 SONDERFALL – SOLL-Höhe strittig, siehe roter Hinweis oben!':'')+
+        (hw2?' · ⚠ '+hw2:'')+
+        (over?' · ⚠ ABZ manuell geändert (Standard: '+ABZ_DEFAULTS[k].wert+' mm)':'')+
+        ' · ABZ '+k+' = '+A+' mm</div>';
+    }
+  }
+
+  // ---- Herkunft der Standardwerte in Quellenzeile ----
+  (function(){
+    var ks = Object.keys(ABZ_DEFAULTS);
+    if(ks.length){
+      document.getElementById('quellenKonst').textContent =
+        ' · ABZ-Standardwerte: ' + (window.NALP_PS_ABZ_QUELLE || 'empirisch aus Mauchle-Bestellbatches abgeleitet (Details unter ⚙).');
+    }
+  })();
+
+  renderKonst();
+})();
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').catch(function () {});
+    });
+  }
+</script>
+</body>
+</html>

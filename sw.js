@@ -1,8 +1,11 @@
 'use strict';
-var CACHE = 'nalpsolar-v43';
+var CACHE = 'nalpsolar-v44';
 var PRECACHE = [
   './index.html',
   './stahlbau.html',
+  './passstueck.html',
+  './assets/js/nalp-passstueck-daten.js',
+  './assets/js/nalp-passstueck-abz.js',
   './stellen.html',
   './viewer3d.html',
   './assets/js/nalp-gate.js',
@@ -63,7 +66,8 @@ self.addEventListener('fetch', function(e) {
   // App pages + data (HTML/JSON): network first so deploys show immediately,
   // fall back to cache when offline.
   var isFresh = e.request.mode === 'navigate'
-    || url.endsWith('.html') || url.endsWith('.json');
+    || url.endsWith('.html') || url.endsWith('.json')
+    || url.indexOf('nalp-passstueck-') !== -1;   // SOLL-Daten/Konstanten: immer network first
   if (isFresh) {
     e.respondWith(
       fetch(e.request).then(function(resp) {
