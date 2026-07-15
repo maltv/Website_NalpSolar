@@ -82,6 +82,8 @@
   .chip.i{background:#eef4ff;color:#0b3ea8;border-color:#cfe0ff;}
   .chip.h{background:#fff1e6;color:#b5510f;border-color:#ffd9be;}
   .clab{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-top:2px;}
+  .stoss{font-size:13px;font-weight:900;color:var(--red);background:#fdecec;border:1px solid #f3c1c3;border-radius:6px;padding:3px 8px;align-self:flex-start;}
+  .stoss.na{color:var(--muted);background:#f1f3f6;border-color:var(--line);font-weight:700;}
   .open{margin-top:auto;border:0;border-radius:10px;padding:10px;font-weight:800;font-size:13.5px;color:#fff;
     background:linear-gradient(135deg,#233b54,#12304f);cursor:pointer;text-align:center;text-decoration:none;display:block;}
   .pcard.montage{grid-column:1/-1;border-color:#ffb877;}
@@ -219,7 +221,9 @@
   </a>
 
   <h2>4 · Pläne – wo sitzt welche Schraube (nach Typ &amp; Baujahr)</h2>
-  <div class="lead">Chip <span class="chip i">blau = 8.8 innen</span> und <span class="chip h">orange = HV 10.9</span> zeigen die im Typ verbauten Schrauben. Plan öffnen für die genaue Lage.</div>
+  <div class="lead">Chip <span class="chip i">blau = 8.8 innen</span> und <span class="chip h">orange = HV 10.9</span> zeigen die im Typ verbauten Schrauben. Plan öffnen für die genaue Lage.
+    In jedem Plan-PDF ist die <b>Stosslänge der Bergstütze</b> (reine Stahlrohrlänge, ohne Fussplatte) als rote Box beim Schnitt A-A eingezeichnet –
+    zum Nachmessen im Gelände, ob eine 2025er oder 2026er Normstütze verbaut ist.</div>
   <div class="plans" id="plans"></div>
 
   <div class="src" id="src"></div>
@@ -229,25 +233,25 @@
 const MONTAGE = { file:'stahlbau/Montagekonzept_MT-Montage.pdf', nr:'NalpSolar_51_BE_0300 · Rev A4 · 26.06.2025' };
 const TYPEN = [
   {typ:'A', jahr:'Standard', cls:'jstd', nr:'24027-S-0-M-002 · Rev B', file:'stahlbau/Primaerkonstruktion_TypA.pdf',
-    innen:['M20×70','M20×90','M12×45','M10×35'], hv:['M20×75']},
+    innen:['M20×70','M20×90','M12×45','M10×35'], hv:['M20×75'], stoss:3566},
   {typ:'A', jahr:'2026', cls:'j2026', nr:'24027-S-0-M-008 · Rev B', file:'stahlbau/Primaerkonstruktion_TypA_2026.pdf',
-    innen:['M24×100','M24×75','M20×70','M12×50'], hv:['M20×75']},
+    innen:['M24×100','M24×75','M20×70','M12×50'], hv:['M20×75'], stoss:3107},
   {typ:'B', jahr:'Standard', cls:'jstd', nr:'24027-S-0-M-001 · Rev G', file:'stahlbau/Primaerkonstruktion_TypB.pdf',
-    innen:['M24×100','M24×90','M24×80','M24×75','M16×65','M16×55','M12×45','M10×40'], hv:['M20×90']},
+    innen:['M24×100','M24×90','M24×80','M24×75','M16×65','M16×55','M12×45','M10×40'], hv:['M20×90'], stoss:3043},
   {typ:'B', jahr:'2026', cls:'j2026', nr:'24027-S-0-M-009 · Rev B', file:'stahlbau/Primaerkonstruktion_TypB_2026.pdf',
-    innen:['M24×100','M16×65','M12×50'], hv:['M20×75']},
+    innen:['M24×100','M16×65','M12×50'], hv:['M20×75'], stoss:2535},
   {typ:'B', jahr:'8er Modultisch', cls:'j8er', nr:'24027-S-0-P-005', file:'stahlbau/Primaerkonstruktion_TypB_8er.pdf',
-    innen:['M24×100','M24×90','M24×80','M24×75','M16×65','M16×55','M12×45','M10×40'], hv:['M20×90']},
+    innen:['M24×100','M24×90','M24×80','M24×75','M16×65','M16×55','M12×45','M10×40'], hv:['M20×90'], stoss:null},
   {typ:'C', jahr:'2026', cls:'j2026', nr:'24027-S-0-M-010 · Rev B', file:'stahlbau/Primaerkonstruktion_TypC_2026.pdf',
-    innen:['M30×120','M24×110','M24×75','M20×80','M12×50'], hv:['M24×85']},
+    innen:['M30×120','M24×110','M24×75','M20×80','M12×50'], hv:['M24×85'], stoss:2220},
   {typ:'D', jahr:'Standard', cls:'jstd', nr:'Plan Typ D', file:'stahlbau/Primaerkonstruktion_TypD.pdf',
-    innen:['M30×130','M30×120','M24×90','M12×45','M10×40'], hv:['M24×90']},
+    innen:['M30×130','M30×120','M24×90','M12×45','M10×40'], hv:['M24×90'], stoss:2623},
   {typ:'D', jahr:'2026', cls:'j2026', nr:'Plan Typ D · 2026', file:'stahlbau/Primaerkonstruktion_TypD_2026.pdf',
-    innen:['M30×130','M24×90','M12×50'], hv:['M24×85']},
+    innen:['M30×130','M24×90','M12×50'], hv:['M24×85'], stoss:2127},
   {typ:'E', jahr:'Standard', cls:'jstd', nr:'Plan Typ E', file:'stahlbau/Primaerkonstruktion_TypE.pdf',
-    innen:['M36×150','M27×120','M27×100','M12×45','M10×40'], hv:['M30×105']},
+    innen:['M36×150','M27×120','M27×100','M12×45','M10×40'], hv:['M30×105'], stoss:2575},
   {typ:'E', jahr:'2026', cls:'j2026', nr:'Plan Typ E · 2026', file:'stahlbau/Primaerkonstruktion_TypE_2026.pdf',
-    innen:['M36×150','M30×130','M27×120','M12×55'], hv:['M27×100']},
+    innen:['M36×150','M30×130','M27×120','M12×55'], hv:['M27×100'], stoss:1923},
 ];
 
 function chips(arr, kind){
@@ -270,6 +274,8 @@ TYPEN.forEach(function(p){
       '<div class="pnr">'+p.nr+'</div>'+
       '<div class="clab">Innen (8.8 → Tab. 1)</div><div class="chips">'+chips(p.innen,'i')+'</div>'+
       '<div class="clab">HV Fuss/Kopf (10.9 → Tab. 2)</div><div class="chips">'+chips(p.hv,'h')+'</div>'+
+      '<div class="clab">Stosslänge Bergstütze (reines Rohr)</div>'+
+      (p.stoss ? '<div class="stoss">'+p.stoss+' mm</div>' : '<div class="stoss na">– nicht erfasst</div>')+
       '<a class="open" href="'+p.file+'" target="_blank" rel="noopener">Plan öffnen (PDF)</a>'+
     '</div>');
 });
@@ -278,6 +284,8 @@ document.getElementById('src').innerHTML =
   '<b>Quellen (alle Angaben belegt, keine Schätzung):</b><br>'+
   'Drehmomente &amp; Montageregeln: Montagekonzept „NalpSolar_51_BE_0300_A4_MT-Montage" Rev A4, 26.06.2025 (Tab. 1/2, Kap. 4–6). '+
   'Schrauben je Typ: Primärkonstruktions-Pläne 24027-S-0-M-001/002/008/009/010, -P-005 sowie Pläne Typ D/E. '+
+  'Stosslängen Bergstütze (reine Rohrlänge, ohne Fussplatte): Tabelle V. Malt, Stand 15.07.2026 – in den Plan-PDFs als rote Box eingezeichnet; '+
+  'Typ B 8er-Modultisch noch nicht erfasst, Typ C existiert nur als 2026er. '+
   'Zusammenstellung Stand 10.07.2026. Bei Unklarheit oder Sonderfall (z. B. 10.9-Schraube ausserhalb Fuss-/Kopfplatte): Bauleitung / Statik fragen.';
 
 if('serviceWorker' in navigator){ window.addEventListener('load',function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
