@@ -364,6 +364,27 @@ body.game-on #gameVignette, body.game-on #gameGrain { display:block; }
 body.ar-mode #canvas3d { background:transparent!important; }
 body.ar-mode #canvas3d canvas { background:transparent!important; }
 body.ar-mode { background:transparent!important; }
+/* ── Bauablauf (5W-Programm) ── */
+#baHud{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:9500;display:none;
+  width:min(560px,94vw);background:rgba(10,18,28,.92);border:1px solid rgba(255,255,255,.16);border-radius:14px;
+  padding:10px 14px;color:#e8eef7;font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;box-shadow:0 10px 34px rgba(0,0,0,.5);}
+#baHud.on{display:block;}
+#baHud .ba-top{display:flex;align-items:center;gap:10px;}
+#baHud .ba-date{font-size:19px;font-weight:900;white-space:nowrap;}
+#baHud .ba-kw{font-size:11px;font-weight:800;color:#ffc340;background:rgba(255,195,64,.14);border:1px solid rgba(255,195,64,.4);
+  border-radius:6px;padding:2px 7px;white-space:nowrap;}
+#baHud .ba-sp{flex:1;}
+#baHud button{background:rgba(255,255,255,.12);border:0;color:#fff;border-radius:8px;padding:7px 11px;
+  font-size:13px;font-weight:800;cursor:pointer;line-height:1;}
+#baHud button.primary{background:linear-gradient(135deg,#0b5fff,#2196F3);}
+#baHud input[type=range]{width:100%;margin:8px 0 4px;accent-color:#2196F3;}
+#baHud .ba-tasks{display:flex;flex-direction:column;gap:3px;max-height:118px;overflow-y:auto;margin-top:4px;}
+#baHud .ba-task{font-size:12px;font-weight:700;display:flex;gap:7px;align-items:center;color:rgba(232,238,247,.92);}
+#baHud .ba-task .d{width:9px;height:9px;border-radius:50%;flex:none;}
+#baHud .ba-none{font-size:11.5px;color:rgba(232,238,247,.5);}
+#baHud .ba-stand{font-size:10px;color:rgba(232,238,247,.4);margin-top:6px;line-height:1.4;}
+.lbl-bau{background:rgba(10,18,28,.88);border:1px solid var(--bc,#3b82f6);color:#fff;font-size:10.5px;
+  font-weight:800;border-radius:7px;padding:2px 7px;white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -408,6 +429,7 @@ body.ar-mode { background:transparent!important; }
 
 <div id="menuMore" class="tb-menu">
   <div class="tb-menu-h">Werkzeuge</div>
+  <button class="tb-btn" id="btnBau" onclick="toggleBauablauf()">🎬 Bauablauf (5W-Programm)</button>
   <button class="tb-btn" id="btnMeasure" onclick="toggleMeasure()">📐 Messen &amp; Ausmass</button>
   <button class="tb-btn" id="btnShot"    onclick="captureScreenshot()">📸 Screenshot</button>
   <button class="tb-btn"                  onclick="resetCam()">↺ Ansicht zurücksetzen</button>
@@ -421,6 +443,21 @@ body.ar-mode { background:transparent!important; }
 
 <div id="canvas3d"></div>
 <div id="lblLayer"></div>
+
+<!-- Bauablauf-Steuerung (5W-Programm) -->
+<div id="baHud">
+  <div class="ba-top">
+    <div class="ba-date" id="baDate">–</div>
+    <div class="ba-kw" id="baKw">KW –</div>
+    <div class="ba-sp"></div>
+    <button class="primary" id="baPlay" onclick="baTogglePlay()">⏸</button>
+    <button onclick="baSetSpeed()" id="baSpeedBtn">1×</button>
+    <button onclick="toggleBauablauf()">✕</button>
+  </div>
+  <input type="range" id="baSlider" min="0" max="34" step="0.01" value="0">
+  <div class="ba-tasks" id="baTasks"></div>
+  <div class="ba-stand" id="baStand"></div>
+</div>
 
 <div id="compass">
   <svg id="compassNeedle" width="28" height="28" viewBox="0 0 28 28">
@@ -925,7 +962,7 @@ async function loadTische(){
 
     // Index for ID search (camera position = table centre)
     tischeIndex[String(id).trim()]={ pos:new THREE.Vector3(px,py,pz), lbl:lbl };
-    tischeItems.push({ mesh:mesh, legs:legsForItem, lbl:lbl, x:px, z:pz, status:sInfo?sInfo.key:null });
+    tischeItems.push({ id:String(id).trim(), mesh:mesh, legs:legsForItem, lbl:lbl, x:px, z:pz, status:sInfo?sInfo.key:null });
   });
 
   scene.add(tischeGroup);
@@ -3830,6 +3867,197 @@ function mkGps(){
   return g;
 }
 
+/* ── Bauablauf-Animation (5W-Programm 13.07.–16.08.) ─────── */
+var baOn=false, baData=null, baGroup=null, baTasks=[], baDay=0, baPlaying=true,
+    baSpeed=1, baTotal=35, baBuilt=false, baBase=0, baKw0=29;
+var BA_COL={bohren:'#e5484d', stahl:'#3b82f6', pfahl:'#22c55e', erd:'#22d3ee'};
+var BA_ICON={bohren:'🛠', stahl:'🔩', pfahl:'🟢', erd:'🚜'};
+var BA_DAYSEC=1.4;                                  // Sekunden pro Bautag bei 1×
+
+function baDayIdx(iso){
+  var p=iso.split('-');
+  return Math.round((Date.UTC(+p[0],+p[1]-1,+p[2])-baBase)/86400000);
+}
+function baPointInPoly(px,pz,poly){
+  var inside=false;
+  for(var i=0,j=poly.length-1;i<poly.length;j=i++){
+    var xi=poly[i][0], zi=poly[i][1], xj=poly[j][0], zj=poly[j][1];
+    if(((zi>pz)!==(zj>pz)) && (px < (xj-xi)*(pz-zi)/(zj-zi)+xi)) inside=true;
+  }
+  return inside;
+}
+
+function baBuild(){
+  if(baBuilt) return; baBuilt=true;
+  var p0=baData.start.split('-');
+  baBase=Date.UTC(+p0[0],+p0[1]-1,+p0[2]);
+  baTotal=baDayIdx(baData.ende)+1;
+  baGroup=new THREE.Group(); scene.add(baGroup);
+
+  var scenePolys={};
+  Object.keys(baData.polygone).forEach(function(k){
+    scenePolys[k]=baData.polygone[k].map(function(p){
+      var v=gpsToScene(p[1],p[0],null); return [v.x,v.z];
+    });
+  });
+
+  baData.aufgaben.forEach(function(a){
+    var t={a:a, von:baDayIdx(a.von), bis:baDayIdx(a.bis)+1,
+           col:BA_COL[a.gewerk]||'#fff', fills:[], lines:[], lbls:[], items:[], shown:-1};
+    (a.bereiche||[]).forEach(function(bz){
+      var poly=scenePolys[bz]; if(!poly || poly.length<3) return;
+      // Fuellflaeche aufs Terrain gelegt
+      var shape=new THREE.Shape(poly.map(function(q){ return new THREE.Vector2(q[0],q[1]); }));
+      var g=new THREE.ShapeGeometry(shape);
+      var pos=g.attributes.position;
+      for(var i=0;i<pos.count;i++){
+        var x=pos.getX(i), z=pos.getY(i);
+        pos.setXYZ(i, x, (terraY(x,z)||0)+1.2, z);
+      }
+      var mesh=new THREE.Mesh(g, new THREE.MeshBasicMaterial({
+        color:new THREE.Color(t.col), transparent:true, opacity:0, side:THREE.DoubleSide, depthWrite:false}));
+      mesh.visible=false; mesh.renderOrder=6;
+      baGroup.add(mesh); t.fills.push(mesh);
+      // Umriss
+      var lpts=poly.map(function(q){ return new THREE.Vector3(q[0], (terraY(q[0],q[1])||0)+1.6, q[1]); });
+      lpts.push(lpts[0].clone());
+      var line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(lpts),
+        new THREE.LineBasicMaterial({color:new THREE.Color(t.col), transparent:true, opacity:0.9}));
+      line.visible=false; baGroup.add(line); t.lines.push(line);
+      // Label am Schwerpunkt
+      var cx=0,cz=0; poly.forEach(function(q){cx+=q[0];cz+=q[1];}); cx/=poly.length; cz/=poly.length;
+      var d=document.createElement('div'); d.className='lbl-bau'; d.style.setProperty('--bc',t.col);
+      d.textContent=(BA_ICON[a.gewerk]||'')+' '+a.label;
+      var lbl=new THREE.CSS2DObject(d); lbl.position.set(cx,(terraY(cx,cz)||0)+14,cz);
+      lbl.visible=false; baGroup.add(lbl); t.lbls.push(lbl);
+      // Aufbau-Animation: Tische in diesem Bereich
+      if(a.aufbau) tischeItems.forEach(function(it){ if(baPointInPoly(it.x,it.z,poly)) t.items.push(it); });
+    });
+    if(a.aufbau && a.tische){
+      var want={}; a.tische.forEach(function(id){ want[String(id)]=1; });
+      tischeItems.forEach(function(it){ if(want[it.id]) t.items.push(it); });
+    }
+    t.items.sort(function(p,q){ return p.x-q.x || p.z-q.z; });
+    t.items.forEach(function(it){ if(it.baOrigY===undefined) it.baOrigY=it.mesh.position.y; });
+    baTasks.push(t);
+  });
+
+  document.getElementById('baStand').textContent=baData.stand;
+  var sl=document.getElementById('baSlider');
+  sl.max=baTotal;
+  sl.addEventListener('input', function(){ baDay=parseFloat(this.value)||0; });
+}
+
+function baHideItem(it){
+  it.mesh.visible=false; it.mesh.position.y=it.baOrigY; it.baRise=0;
+  it.legs.forEach(function(l){ l.visible=false; });
+  if(it.lbl && it.lbl.element) it.lbl.element.style.display='none';
+}
+function baShowItem(it,instant){
+  it.mesh.visible=true;
+  if(it.lbl && it.lbl.element) it.lbl.element.style.display='';
+  if(instant){ it.mesh.position.y=it.baOrigY; it.baRise=1; it.legs.forEach(function(l){ l.visible=true; }); }
+}
+
+function baEnter(){
+  baBuild();
+  baOn=true; baDay=0; baPlaying=true;
+  baGroup.visible=true;
+  baTasks.forEach(function(t){ t.shown=-1; t.items.forEach(baHideItem); });
+  document.getElementById('baHud').classList.add('on');
+  var b=document.getElementById('btnBau'); if(b) b.classList.add('active');
+  document.getElementById('baPlay').textContent='⏸';
+}
+function baExit(){
+  baOn=false;
+  if(baGroup) baGroup.visible=false;
+  baTasks.forEach(function(t){
+    t.fills.forEach(function(m){ m.visible=false; });
+    t.lines.forEach(function(l){ l.visible=false; });
+    t.lbls.forEach(function(l){ l.visible=false; });
+    t.items.forEach(function(it){ baShowItem(it,true); });
+  });
+  document.getElementById('baHud').classList.remove('on');
+  var b=document.getElementById('btnBau'); if(b) b.classList.remove('active');
+}
+window.toggleBauablauf=function(){
+  if(baOn){ baExit(); return; }
+  if(gamePlaying) return;
+  if(baData){ baEnter(); return; }
+  fetch('uploads/bauablauf.json',{cache:'no-store'})
+    .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+    .then(function(j){ baData=j; baEnter(); })
+    .catch(function(){ alert('Bauablauf-Daten konnten nicht geladen werden.'); });
+};
+window.baTogglePlay=function(){
+  baPlaying=!baPlaying;
+  if(baPlaying && baDay>=baTotal) baDay=0;
+  document.getElementById('baPlay').textContent=baPlaying?'⏸':'▶';
+};
+window.baSetSpeed=function(){
+  baSpeed = baSpeed===1?2:(baSpeed===2?4:1);
+  document.getElementById('baSpeedBtn').textContent=baSpeed+'×';
+};
+
+var _baLastHud='';
+function updateBauablauf(dt){
+  if(!baOn) return;
+  if(gamePlaying){ baExit(); return; }
+  baGroup.visible=!arActive;
+  if(baPlaying){
+    var dow=Math.floor(baDay)%7;                     // Start = Montag
+    baDay+=dt*baSpeed*(dow>=5?3:1)/BA_DAYSEC;        // Wochenende schneller
+    if(baDay>=baTotal){ baDay=baTotal; baPlaying=false; document.getElementById('baPlay').textContent='▶'; }
+    document.getElementById('baSlider').value=baDay;
+  }
+  var pulse=0.32+0.13*Math.sin(performance.now()/1000*3.2);
+  var activeList=[];
+  baTasks.forEach(function(t){
+    var st = baDay<t.von ? 0 : (baDay<t.bis ? 1 : 2);
+    t.fills.forEach(function(m){ m.visible=st>0; m.material.opacity= st===1?pulse:0.10; });
+    t.lines.forEach(function(l){ l.visible=st>0; l.material.opacity= st===1?0.95:0.25; });
+    t.lbls.forEach(function(l){ l.visible=(st===1 && !arActive); });
+    if(st===1) activeList.push(t);
+    if(t.items.length){
+      var p= st===0?0 : (st===2?1 : (baDay-t.von)/(t.bis-t.von));
+      var k= st===2? t.items.length : Math.floor(p*t.items.length+1e-6);
+      if(k!==t.shown){
+        for(var i=0;i<t.items.length;i++){
+          var it=t.items[i];
+          if(i<k){ if(!it.mesh.visible) baShowItem(it,false); }
+          else if(it.mesh.visible || it.baRise) baHideItem(it);
+        }
+        t.shown=k;
+      }
+      t.items.forEach(function(it){
+        if(it.mesh.visible && it.baRise<1){
+          it.baRise=Math.min(1,(it.baRise||0)+dt*2.2);
+          var e=1-Math.pow(1-it.baRise,3);
+          it.mesh.position.y=it.baOrigY-14*(1-e);
+          if(it.baRise>=1) it.legs.forEach(function(l){ l.visible=true; });
+        }
+      });
+    }
+  });
+  // HUD nur bei Aenderung neu schreiben
+  var di=Math.min(Math.floor(baDay), baTotal-1);
+  var d0=new Date(baBase+di*86400000);
+  var WD=['So','Mo','Di','Mi','Do','Fr','Sa'];
+  var ds=WD[d0.getUTCDay()]+' '+String(d0.getUTCDate()).padStart(2,'0')+'.'+String(d0.getUTCMonth()+1).padStart(2,'0')+'.';
+  var hudKey=ds+'|'+activeList.map(function(t){return t.a.label;}).join(',');
+  if(hudKey!==_baLastHud){
+    _baLastHud=hudKey;
+    document.getElementById('baDate').textContent=ds;
+    document.getElementById('baKw').textContent='KW '+(baKw0+Math.floor(di/7));
+    document.getElementById('baTasks').innerHTML= activeList.length
+      ? activeList.map(function(t){
+          return '<div class="ba-task"><span class="d" style="background:'+t.col+'"></span>'+
+                 (BA_ICON[t.a.gewerk]||'')+' '+t.a.label+'</div>';
+        }).join('')
+      : '<div class="ba-none">'+((di%7)>=5?'Wochenende – keine Arbeiten geplant':'Keine Arbeiten geplant')+'</div>';
+  }
+}
+
 /* ── Toggle UI ───────────────────────────────────────────── */
 window.toggleTerrain=function(){
   terrainOn=!terrainOn; if(terrainMesh) terrainMesh.visible=terrainOn;
@@ -4206,6 +4434,7 @@ function animate(){
   updateClimbers(gdt);
   updateCows(gdt);
   updateSamuel(gdt);
+  updateBauablauf(gdt);
   updateCrane(gdt);
   updatePG(gdt);
   updateRain(gdt);
@@ -4446,6 +4675,10 @@ async function init(){
     try{ spawnClouds(10); }catch(e){ console.warn('clouds',e); }
     applyNormalSky();   // Normalansicht: kein Wetter, scharf
     startFlyIn(box);
+
+    // ?bauablauf=1: Animation direkt starten (Link vom 5W-Programm)
+    if(!GAME_APP && location.search.indexOf('bauablauf')>=0)
+      setTimeout(function(){ try{ toggleBauablauf(); }catch(e){ console.warn('bauablauf',e); } }, 1200);
 
     // Bind long-press on canvas (touch) + mouse long-press (laptop)
     bindLongPress(renderer.domElement);
