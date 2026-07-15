@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>NalpSolar · Passstück-Rechner</title>
+<title>NalpSolar · Passstücke & schräge Konstruktionen</title>
 <meta name="theme-color" content="#0b1826">
 <script src="assets/js/nalp-gate.js"></script>
 <script src="assets/js/nalp-passstueck-daten.js"></script>
@@ -103,6 +103,35 @@
   .ers{color:#a33;text-decoration:line-through;opacity:.7;}
   h3.sub{font-size:13px;font-weight:900;margin:14px 0 6px;}
 
+  /* Diagnose schräge Konstruktion */
+  .tolrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-bottom:12px;}
+  .tolrow input{width:64px;font-size:15px;font-weight:800;padding:6px;border-radius:8px;border:1.5px solid var(--line);text-align:center;}
+  details.chk{border:1px solid var(--line);border-radius:14px;margin-bottom:10px;background:#fbfcfe;overflow:hidden;}
+  details.chk summary{cursor:pointer;padding:11px 12px;font-size:14px;font-weight:900;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  details.chk summary::-webkit-details-marker{display:none;}
+  details.chk .body{padding:0 12px 12px;border-top:1px dashed var(--line);}
+  .stx{font-size:11px;font-weight:800;border-radius:7px;padding:3px 9px;color:#fff;margin-left:auto;}
+  .stx.open{background:#5b6b7c;} .stx.ok{background:var(--green);} .stx.bad{background:var(--red);} .stx.teil{background:var(--amber);}
+  .drow{border:1px solid var(--line);border-radius:11px;padding:10px;margin-top:10px;background:#fff;}
+  .drow .dh{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;margin-bottom:6px;}
+  .drow .dh b{font-size:15px;}
+  .dres{margin-top:6px;font-size:12.5px;border-radius:8px;padding:7px 9px;display:none;}
+  .dres.ok{display:block;background:#e9f7ee;border:1px solid #bfe3cc;color:#14532d;}
+  .dres.bad{display:block;background:#fdeaea;border:1px solid #f2c2c2;color:#8f1d1d;}
+  .dres.info{display:block;background:#eef4ff;border:1px solid #cfe0ff;color:#0b3ea8;}
+  .cand{margin-top:6px;font-size:12px;color:var(--muted);}
+  .cand b{color:var(--txt);}
+  .vbtns{display:flex;gap:8px;margin-top:10px;}
+  .vbtns button{flex:1;border:1.5px solid var(--line);border-radius:10px;padding:10px;font-weight:800;font-size:13.5px;background:#fff;cursor:pointer;color:var(--muted);}
+  .vbtns button.on-ok{background:#e9f7ee;border-color:#1c8a4a;color:#14532d;}
+  .vbtns button.on-bad{background:#fdeaea;border-color:#d63a3f;color:#8f1d1d;}
+  .mass{margin-top:8px;font-size:12.5px;background:#fdf3e3;border:1px solid #f0d9a8;border-radius:10px;padding:8px 10px;color:#7a5410;display:none;}
+  .mass.show{display:block;}
+  .sketch{font-family:ui-monospace,Consolas,monospace;font-size:12.5px;background:#f2f6fb;border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:8px 0;white-space:pre;overflow-x:auto;}
+  .befund pre{white-space:pre-wrap;background:#f7f9fc;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:12px;line-height:1.5;margin:6px 0 10px;}
+  .kbtn2{border:0;border-radius:10px;padding:10px 14px;font-weight:800;font-size:13.5px;color:#fff;cursor:pointer;background:linear-gradient(135deg,#0b5fff,#2196F3);}
+  .vartbl td,.vartbl th{white-space:normal;}
+
   /* Konstanten */
   .konst table{border-collapse:collapse;width:100%;font-size:13.5px;}
   .konst th{font-size:11px;text-transform:uppercase;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:2px solid var(--line);}
@@ -125,7 +154,7 @@
   <button class="home" onclick="location.href='index.html'">🏠 Start</button>
   <div>
     <div class="brand">NalpSolar · STRABAG B8-13</div>
-    <h1>📏 Passstück-Rechner</h1>
+    <h1>🔧 Passstücke &amp; schräge Konstruktionen</h1>
   </div>
   <span style="flex:1"></span>
   <button class="kbtn" onclick="location.href='stahlbau.html'">🔩 Stahlbau</button>
@@ -133,10 +162,10 @@
 <div class="wrap">
 
   <div class="warnbox">
-    <div class="wt">⚠ Rechenwerte vor Bestellung immer im Nalpi gegenprüfen</div>
-    <div class="wb">Tal-Formel (S1/S4) und SOLL-Höhen sind quellenbelegt; die Typ-Konstanten (ABZ) sind teils
-      <b>empirisch aus den Bestellbatches abgeleitet</b> – Herkunft steht unter ⚙&nbsp;Konstanten.
-      Berg-Stützen (S2/S3, geneigt) rechnet nur das Nalpi exakt. Massgeblich bleibt der ILF-Freigabe-Workflow.</div>
+    <div class="wt">⚠ Diagnose-Tool für schräge Konstruktionen – Bestellungen immer im Nalpi gegenprüfen</div>
+    <div class="wb">Ablauf: Tisch wählen → <b>Abschnitt 2: fünf Kontrollen</b> (Stützen-Positionen, Passstück = Plan,
+      Laser-Messung, Pfahlkopf-IST, Stützen-Jahrgang) → Befund kopieren. Abschnitt 3 rechnet Passstücke Tal
+      exakt nach der Nalpi-Formel; Berg (S2/S3) rechnet nur das Nalpi. Massgeblich bleibt der ILF-Freigabe-Workflow.</div>
   </div>
 
   <div class="card">
@@ -183,8 +212,21 @@
     </div>
   </div>
 
+  <div class="card" id="diagCard" style="display:none;">
+    <h2>2 · 🔧 Schräge Konstruktion beheben</h2>
+    <div class="lead">Fünf Kontrollen in Prüfreihenfolge – jede Eingabe wird sofort bewertet und fliesst unten in den Befund.</div>
+    <div class="tolrow">Toleranzen: Länge ± <input id="tolL" inputmode="decimal" value="3"> mm · Höhe ± <input id="tolH" inputmode="decimal" value="10"> mm
+      <span>(App-Vorgabe, nicht dokumentiert – bei Bedarf anpassen)</span></div>
+    <div id="diagChecks"></div>
+    <div class="befund">
+      <h3 class="sub">📋 Befund</h3>
+      <pre id="befundTxt">– noch keine Eingaben –</pre>
+      <button class="kbtn2" id="befundCopy">Befund in Zwischenablage kopieren</button>
+    </div>
+  </div>
+
   <div class="card" id="calcCard" style="display:none;">
-    <h2>2 · Rechnen</h2>
+    <h2>3 · 📏 Passstück-Rechner (vorwärts / rückwärts)</h2>
     <div class="modes">
       <button id="mFwd" class="on">→ Passstück berechnen</button>
       <button id="mRev">← Kontrolle rückwärts</button>
@@ -217,6 +259,8 @@
     Rückwärtsrechnung analog ILF-Prüfrechnung Batch 1 (B. Rüde, 15.04.2026) ·
     ABZ-Konstanten: ILF-Konstantentabelle (Blatt „Beschreibung“, Freigabedatei Batch 6, 19.06.2026), empirisch an 178
     Tal-Bestellpositionen mit IST-Höhen aus den ILF-Freigaben Batch 1/1-1/6 bestätigt (Abweichung 0.0 mm) ·
+    Diagnose-Referenzen: freigegebene Längen, IST-Höhen und Lageabweichungen (Abw RL) aus denselben ILF-Freigabedateien;
+    Jahrgangs-Differenzen (Kontrolle 5) aus der ILF-Konstantentabelle ·
     Tischtypen inkl. KF-Varianten: Nalpi-Voll-Export 13.07.2026 ·
     Bestellte Längen: Mauchle-Bestellbatches NR 1–10 (Stand 08.07.2026; Batch 5+6 = Korrekturversion 08.06.2026) ·
     Toleranz ±100 mm Modulhöhe (Verschattung, ILF 06/2025) ·
@@ -272,7 +316,8 @@
   // Bestellungen: [tisch, stuetze, laenge_mm, batch, datum, bauteilart, gueltig]
   var BEST = {};
   (D.bestellungen||[]).forEach(function(b){ (BEST[b[0]]=BEST[b[0]]||[]).push(b); });
-  var IST = D.ist || {};
+  // ILF-Freigaben: key "id_Sx" -> [laenge_mm, ist_h, soll_h_freigabe, abw_rl_mm, quelle]
+  var FRG = D.frg || {};
   function saveAbz(){
     var diff = {};
     Object.keys(abz).forEach(function(k){
@@ -295,7 +340,7 @@
     });
     tb.querySelectorAll('input').forEach(function(inp){
       inp.addEventListener('input', function(){
-        var v = parseFloat(inp.value.replace(',','.'));
+        var v = parseFloat(inp.value.replace(/[\s']/g,'').replace(',','.'));
         if(isFinite(v)) abz[inp.dataset.k]=v; else delete abz[inp.dataset.k];
         saveAbz(); renderRows();
       });
@@ -380,10 +425,11 @@
   // ---- Tisch anzeigen ----
   var ST = [ ['S1','tal'], ['S2','berg'], ['S3','berg'], ['S4','tal'] ];
   function select(r, keepSug){
-    if(!current || current.id !== r.id){ inputs = {}; }   // Tischwechsel: alte Eingaben verwerfen!
+    if(!current || current.id !== r.id){ inputs = {}; diag = {}; }  // Tischwechsel: alte Eingaben verwerfen!
     current = r;
     if(!keepSug){ sug.style.display='none'; q.value = String(r.id); }
     document.getElementById('tisch').style.display='block';
+    document.getElementById('diagCard').style.display='block';
     document.getElementById('calcCard').style.display='block';
     document.getElementById('tId').textContent = r.id;
     document.getElementById('tTyp').textContent = 'Typ ' + r.typ;
@@ -406,6 +452,7 @@
       kollNeu+' – bei Nummern von alten Plänen/Markierungen zuerst prüfen, welcher Tisch gemeint ist!');
     if(wmsg.length){ warn.style.display='block'; warn.textContent = '🚨 ' + wmsg.join(' — '); }
     else warn.style.display='none';
+    renderDiag();
     var bem = document.getElementById('tBem');
     if(r.bemerkung){ bem.style.display='block'; bem.textContent = '📌 ILF-Bemerkung: ' + r.bemerkung; }
     else bem.style.display='none';
@@ -478,11 +525,11 @@
           '<input inputmode="decimal" data-st="'+st+'" data-f="ps" value="'+pv+'" placeholder="z. B. 950"></div>';
       }
       fields += '</div>';
-      var istRef = IST[r.id+'_'+st];
-      if(istRef){
-        fields += '<div class="fillrow">📄 IST lt. ILF-Freigabe: <b>'+istRef[0].toFixed(3)+'</b> m ü. M. '+
-          '<button class="fillbtn" data-fill="ist" data-st="'+st+'" data-v="'+istRef[0]+'">übernehmen</button>'+
-          '<span>('+istRef[1]+' – im Zweifel neu messen)</span></div>';
+      var istRef = FRG[r.id+'_'+st];
+      if(istRef && istRef[1]!=null){
+        fields += '<div class="fillrow">📄 IST lt. ILF-Freigabe: <b>'+istRef[1].toFixed(3)+'</b> m ü. M. '+
+          '<button class="fillbtn" data-fill="ist" data-st="'+st+'" data-v="'+istRef[1]+'">übernehmen</button>'+
+          '<span>('+esc(istRef[4])+' – im Zweifel neu messen)</span></div>';
       }
       if(mode==='rev'){
         var ord = (BEST[r.id]||[]).filter(function(o){ return o[1]===st && o[6]===1; }).sort(function(a,b){ return b[3]-a[3]; })[0];
@@ -505,7 +552,7 @@
     host.querySelectorAll('input').forEach(function(inp){
       inp.addEventListener('input', function(){
         var st=inp.dataset.st; inputs[st]=inputs[st]||{};
-        var v=parseFloat(inp.value.replace(',','.'));
+        var v=numParse(inp.value);
         inputs[st][inp.dataset.f]= isFinite(v)?v:null;
         calc(st);
       });
@@ -566,6 +613,427 @@
         ' · ABZ '+k+' = '+A+' mm</div>';
     }
   }
+
+  // ================= Diagnose: Schräge Konstruktion beheben =================
+  var diag = {};   // Eingaben (et/ms/ht je Stütze, c1, tal, berg) – Reset beim Tischwechsel in select()
+  var verd = {c2:{},c3:{},c4:{},c5:null};   // Zeilen-Urteile für Status/Befund
+  var BERG_F = 0.66; // Höhenwirkung geneigter Berg-Stützen ≈ 0.66×Länge (empirisch aus ILF-Freigaben rückgerechnet: 0.64–0.69)
+  function numParse(s){ return parseFloat(String(s||'').replace(/[\s']/g,'').replace(',','.')); }
+  function tolLen(){ var v=numParse(document.getElementById('tolL').value); return (isFinite(v)&&v>=0)?v:3; }
+  function tolHgt(){ var v=numParse(document.getElementById('tolH').value); return (isFinite(v)&&v>=0)?v:10; }
+  function istKorr(){
+    return !!current && ( !!((D.hinweise||{})[String(current.id)]) ||
+      /korrektur|neuberechnung/i.test(current.bemerkung||'') );
+  }
+
+  // Beste Plan-Referenzlänge je Stütze: neuere Quelle gewinnt; Gleichstand -> Bestellung
+  // (das ist das tatsächlich gefertigte Teil, z. B. Batch 7 vs. Freigabe Batch 6 vom selben Tag)
+  function planRef(st){
+    if(!current) return null;
+    var key = current.id+'_'+st;
+    var f = FRG[key];
+    var o = (BEST[current.id]||[]).filter(function(b){ return b[1]===st && b[6]===1; })
+            .sort(function(a,b){ return b[3]-a[3]; })[0];
+    if(f && o){
+      var diff = Math.abs(o[2]-f[0])>0.5;
+      if(o[4] >= (f[5]||'2026-01-01'))
+        return { len:o[2], src:'Bestellung Batch '+o[3]+' ('+o[4]+', '+o[5]+')', art:o[5],
+                 alt:diff?{len:f[0], src:f[4]}:null, konflikt:diff };
+      return { len:f[0], src:f[4], art:null,
+               alt:diff?{len:o[2], src:'Bestellung Batch '+o[3]+' ('+o[4]+', '+o[5]+')'}:null, konflikt:diff };
+    }
+    if(f) return { len:f[0], src:f[4], art:null, alt:null, konflikt:false };
+    if(o) return { len:o[2], src:'Bestellung Batch '+o[3]+' ('+o[4]+', '+o[5]+')', art:o[5], alt:null, konflikt:false };
+    return null;
+  }
+  // Rückwärtssuche: zu welcher Position gehört ein Stück dieser Länge?
+  function lookupByLen(target, tol, excludeKey){
+    var out=[];
+    (D.bestellungen||[]).forEach(function(b){
+      if(b[6]!==1 || b[5]==='Doppel') return;   // Doppel = passgenaue Ganzstütze, kein tauschbares Passrohr
+      var key=b[0]+'_'+b[1];
+      if(key===excludeKey) return;
+      var d=Math.abs(b[2]-target);
+      if(d<=tol) out.push({key:key, len:b[2], info:'Batch '+b[3]+', '+b[4]+', '+b[5], diff:d});
+    });
+    out.sort(function(a,b){ return a.diff-b.diff; });
+    return out.slice(0,6);
+  }
+  function candHtml(list, prefix){
+    if(!list.length) return '<div class="cand">'+prefix+': keine Position mit passender Länge in den Bestellbatches 1–10 gefunden.</div>';
+    return '<div class="cand">'+prefix+': '+list.map(function(c){
+      return '<b>'+c.key+'</b> ('+c.len+' mm, '+esc(c.info)+')';
+    }).join(' · ')+'</div>';
+  }
+
+  function jahrgangTreffer(){
+    var r=current; if(!r) return [];
+    var k=abzKey(r), K=window.NALP_PS_KONSTANTEN||{};
+    if(!K[k]) return [];
+    var letter=k.charAt(0), out=[];
+    Object.keys(K).forEach(function(v){
+      if(v===k || v.charAt(0)!==letter) return;
+      var dT=K[v].ABZ_PBL_T-K[k].ABZ_PBL_T;
+      var dBh=(K[v].ABZ_PBL_B-K[k].ABZ_PBL_B)*BERG_F;    // Höhenwirkung, nicht Länge!
+      var tolB=Math.max(tolHgt(), 20+0.06*Math.abs(dBh)); // Unsicherheit des 0.66-Faktors
+      // Signal muss über der Toleranz liegen, sonst ist es nicht von normaler Streuung unterscheidbar
+      var hitT = diag.tal!=null && Math.abs(dT)>tolHgt() && Math.abs(diag.tal-dT)<=tolHgt();
+      var hitB = diag.berg!=null && Math.abs(dBh)>tolB && Math.abs(diag.berg-dBh)<=tolB;
+      if(hitT||hitB) out.push({v:v, dT:dT, dBh:dBh, hitT:hitT, hitB:hitB});
+    });
+    return out;
+  }
+
+  function stChip(i, st){
+    var el=document.getElementById('dst'+i); if(!el) return;
+    if(st==='na'){ el.className='stx open'; el.textContent='nicht prüfbar'; return; }
+    el.className='stx '+(st==null?'open':st);
+    el.textContent = st==null?'offen':(st==='ok'?'i.O.':(st==='teil'?'teilweise':'PROBLEM'));
+  }
+
+  function diagStatus(){
+    var s={c1:null,c2:null,c3:null,c4:null,c5:null};
+    var r=current; if(!r) return s;
+    s.c1 = diag.c1||null;
+    // Aggregation aus Zeilen-Urteilen: nur echte Vergleiche zählen (ohneref/ueberholt nie als "geprüft")
+    function agg(m, refTotal){
+      var bad=false, konf=false, okCnt=0, entered=false;
+      ST.forEach(function(x){
+        var v=m[x[0]];
+        if(v==null) return;
+        entered=true;
+        if(v==='bad'||v==='unplausibel') bad=true;
+        else if(v==='konflikt') konf=true;
+        else if(v==='ok') okCnt++;
+      });
+      if(bad) return 'bad';
+      if(konf) return 'teil';
+      if(okCnt===0) return null;                    // nur ohneref/ueberholt -> nichts bewertet
+      return (refTotal>0 && okCnt>=refTotal)?'ok':'teil';
+    }
+    var ref2=0, ref3=0, ref4=0;
+    ST.forEach(function(x){
+      var st=x[0], p=planRef(st), f=FRG[r.id+'_'+st];
+      if(p && !istKorr()) ref2++;
+      if((diag.et&&diag.et[st]!=null) || (p&&!istKorr())) ref3++;
+      if(f&&f[1]!=null) ref4++;
+    });
+    // SOLL-Korrektur (Rev A8/A9, Sonderfälle): Plan-Längen sind per Datenlage überholt -> PROBLEM
+    s.c2 = istKorr() ? 'bad' : agg(verd.c2, ref2);
+    s.c3 = agg(verd.c3, ref3);
+    s.c4 = agg(verd.c4, ref4);
+    s.c5 = verd.c5;
+    return s;
+  }
+
+  function renderDiag(){
+    var host=document.getElementById('diagChecks');
+    if(!current){ host.innerHTML=''; return; }
+    var r=current, k=abzKey(r);
+    var et=diag.et||{}, ms=diag.ms||{}, ht=diag.ht||{};
+    var korrHin = istKorr();
+    verd = {c2:{},c3:{},c4:{},c5:null};
+    var h='';
+
+    // Kontrolle 1 – Positionen
+    h+='<details class="chk" open><summary>Kontrolle 1 · Stützen am richtigen Ort? <span class="stx open" id="dst1">offen</span></summary><div class="body">';
+    h+='<div class="sketch">BERG (hangseitig, geneigt):   S2 ──────────── S3\n'+
+       '                               │                │\n'+
+       'TAL  (talseitig, lotrecht):   S1 ──────────── S4</div>';
+    h+='<div class="tblwrap"><table class="st"><thead><tr><th>Stütze</th><th></th><th>Etikett Mauchle</th><th>Plan-Länge</th><th>SOLL Absteckpunkt</th></tr></thead><tbody>';
+    ST.forEach(function(x){ var st=x[0], p=planRef(st);
+      h+='<tr><td><b>'+st+'</b></td><td><span class="tb '+x[1]+'">'+(x[1]==='tal'?'Tal':'Berg')+'</span></td>'+
+         '<td>'+r.id+'_'+st+'</td><td>'+(p?p.len+' mm'+(p.art==='Doppel'?' (Doppel = ganze Stütze)':''):'–')+'</td>'+
+         '<td>'+fmt(r[st.toLowerCase()+'_hoehe'])+' m</td></tr>'; });
+    h+='</tbody></table></div>';
+    h+='<div class="hint">Mauchle beschriftet jedes Passstück mit der Position (Tisch_Stütze) – Etiketten am Bauteil mit der Tabelle abgleichen. Tal = kurze lotrechte Stützen, Berg = geneigte.</div>';
+    h+='<div class="vbtns"><button data-c1="ok"'+(diag.c1==='ok'?' class="on-ok"':'')+'>✓ Positionen stimmen</button>'+
+       '<button data-c1="bad"'+(diag.c1==='bad'?' class="on-bad"':'')+'>✗ vertauscht</button></div>';
+    h+='<div class="mass'+(diag.c1==='bad'?' show':'')+'" id="massK1">→ Stützen/Passstücke an die richtige Position <b>tauschen</b> (Zuordnung per Etikett), danach Kontrolle 2 wiederholen.</div>';
+    h+='</div></details>';
+
+    // Kontrolle 2 – Etikett vs Plan
+    h+='<details class="chk"><summary>Kontrolle 2 · Passstücklängen = Plan (Nalpi)? <span class="stx open" id="dst2">offen</span></summary><div class="body">';
+    if(korrHin) h+='<div class="dres info" style="margin-top:10px;">ℹ SOLL-Höhe dieses Tischs wurde nachträglich geändert (siehe Hinweis/Bemerkung oben) – Freigabe-/Bestelllängen können überholt sein; massgeblich ist die Neuberechnung (Kontrolle 4 / Abschnitt 3).</div>';
+    ST.forEach(function(x){ var st=x[0], p=planRef(st);
+      h+='<div class="drow"><div class="dh"><b>'+st+'</b><span class="tb '+x[1]+'">'+(x[1]==='tal'?'Tal':'Berg')+'</span>'+
+         '<span class="ref">Plan: '+(p?('<b>'+p.len+' mm</b>'+(p.art==='Doppel'?' (Doppel)':'')+' <span style="color:var(--muted)">('+esc(p.src)+')</span>'+
+         (p.alt?' · ⚠ zweite Quelle weicht ab: '+p.alt.len+' mm ('+esc(p.alt.src)+')':'')):'<b>keine Plan-Länge hinterlegt</b>')+'</span></div>';
+      h+='<div class="inrow"><div class="fld"><label>Etikett / aufgedruckte Länge [mm]</label>'+
+         '<input inputmode="decimal" data-d="et" data-st="'+st+'" value="'+(et[st]!=null?et[st]:'')+'"></div></div>';
+      h+='<div class="dres" id="d2'+st+'"></div><div id="d2c'+st+'"></div></div>'; });
+    h+='<div class="hint">Bei Abweichung: Passstück <b>tauschen</b> – der Vorschlag unter der Zeile zeigt, wohin das montierte Stück vermutlich gehört. Lager IP1: alte obsolete Passstücke (geänderte Modulhöhen) NICHT verbauen (F. Borner 06.05.26).</div>';
+    h+='</div></details>';
+
+    // Kontrolle 3 – Laser-Messung vs Etikett/Plan
+    h+='<details class="chk"><summary>Kontrolle 3 · Gemessene Länge = Etikett/Plan? <span class="stx open" id="dst3">offen</span></summary><div class="body">';
+    ST.forEach(function(x){ var st=x[0];
+      h+='<div class="drow"><div class="dh"><b>'+st+'</b><span class="tb '+x[1]+'">'+(x[1]==='tal'?'Tal':'Berg')+'</span>'+
+         '<span class="ref">Referenz: Etikett aus Kontrolle 2, sonst Plan-Länge</span></div>';
+      h+='<div class="inrow"><div class="fld"><label>Laser-Messung [mm]</label>'+
+         '<input inputmode="decimal" data-d="ms" data-st="'+st+'" value="'+(ms[st]!=null?ms[st]:'')+'"></div></div>';
+      h+='<div class="dres" id="d3'+st+'"></div><div id="d3c'+st+'"></div></div>'; });
+    h+='<div class="hint">Weicht die Messung vom Etikett ab = <b>falsch gefertigt</b>: Foto + Messprotokoll, Mauchle via J. Mäder reklamieren, <b>REGIE erfassen</b>, Neubau via Mike Berndt anstossen – oder Ersatzstück mit passender Länge verwenden (Vorschlagsliste; vorher mit ILF/Nalpi freigeben, das Stück fehlt dann an seiner Originalposition!).</div>';
+    h+='</div></details>';
+
+    // Kontrolle 4 – Pfahlkopf-IST
+    h+='<details class="chk"><summary>Kontrolle 4 · Pfahlkopf-IST noch aktuell? <span class="stx open" id="dst4">offen</span></summary><div class="body">';
+    h+='<div class="hint" style="margin-top:10px;">Häufige Ursache: Pfahlkopf hat sich zwischen IST-Vermessung und Injektion verschoben – dann wurde das Passstück auf eine falsche Höhe gerechnet.</div>';
+    ST.forEach(function(x){ var st=x[0], f=FRG[r.id+'_'+st];
+      h+='<div class="drow"><div class="dh"><b>'+st+'</b><span class="tb '+x[1]+'">'+(x[1]==='tal'?'Tal':'Berg')+'</span>';
+      if(f && f[1]!=null){
+        h+='<span class="ref">IST erfasst: <b>'+f[1].toFixed(3)+'</b> m ü. M. ('+esc(f[4])+')'+
+           ((f[3]!=null||f[6]!=null)?' · Lage damals: RL '+(f[3]!=null?f[3]:'–')+' / BT '+(f[6]!=null?f[6]:'–')+' mm neben SOLL':'')+'</span></div>';
+        if(f[2]!=null && Math.abs(f[2]-r.modul_hoehe)>0.0005)
+          h+='<div class="dres info">ℹ Freigabe rechnete mit SOLL '+fmt(f[2])+' m – aktuell gilt '+fmt(r.modul_hoehe)+' m (Δ '+
+             (((r.modul_hoehe-f[2])*1000)>0?'+':'')+((r.modul_hoehe-f[2])*1000).toFixed(0)+' mm) → Passstück ohnehin neu rechnen!</div>';
+        h+='<div class="inrow"><div class="fld"><label>Heute gemessen: OK Pfahl [m ü. M.]</label>'+
+           '<input inputmode="decimal" data-d="ht" data-st="'+st+'" value="'+(ht[st]!=null?ht[st]:'')+'"></div></div>'+
+           '<div class="dres" id="d4'+st+'"></div>';
+      } else {
+        h+='<span class="ref">keine erfasste IST-Höhe vorhanden</span></div>'+
+           '<div class="dres info">Direkt messen und in Abschnitt 3 rechnen (Tal) bzw. Nalpi (Berg).</div>';
+      }
+      h+='</div>'; });
+    h+='</div></details>';
+
+    // Kontrolle 5 – Jahrgang der Normstützen
+    h+='<details class="chk"><summary>Kontrolle 5 · Normstützen-Jahrgang korrekt? <span class="stx open" id="dst5">offen</span></summary><div class="body">';
+    h+='<div class="hint" style="margin-top:10px;">Typisches Symptom: ganzer Tisch <b>gleichmässig</b> nach vorne (Tal) oder hinten (Berg) geneigt – z. B. 2025er-Normstützen statt 2026er oder KF-Variante verwechselt. Höhenwirkung je Variante (ILF-Konstantentabelle):</div>';
+    var K=window.NALP_PS_KONSTANTEN||{}, letter=k.charAt(0);
+    var hatVarianten = !!K[k] && Object.keys(K).some(function(v){ return v!==k && v.charAt(0)===letter; });
+    h+='<div class="tblwrap"><table class="st vartbl"><thead><tr><th>Variante</th><th>Tal: Δ Modulhöhe</th><th>Berg: Δ Höhe ≈*</th></tr></thead><tbody>';
+    Object.keys(K).forEach(function(v){
+      if(v.charAt(0)!==letter) return;
+      var me=(v===k);
+      var dT=K[k]?K[v].ABZ_PBL_T-K[k].ABZ_PBL_T:null;
+      var dBl=K[k]?K[v].ABZ_PBL_B-K[k].ABZ_PBL_B:null;
+      var dBh=dBl!=null?dBl*BERG_F:null;
+      h+='<tr><td><b>'+v+'</b>'+(me?' <span style="color:var(--muted)">(gehört verbaut)</span>':'')+'</td>'+
+         '<td>'+(me||dT==null?'—':((dT>0?'+':'')+Math.round(dT*10)/10+' mm'))+'</td>'+
+         '<td>'+(me||dBh==null?'—':((dBh>0?'+':'')+Math.round(dBh)+' mm (Länge '+(dBl>0?'+':'')+Math.round(dBl)+' mm)'))+'</td></tr>'; });
+    h+='</tbody></table></div>';
+    h+='<div class="hint">* Berg-Stützen geneigt: Höhenwirkung ≈ 0.66 × Längendifferenz (empirisch aus den ILF-Freigaben rückgerechnet, Faktor 0.64–0.69; exakt nur im Nalpi). Positiv = Tisch zu hoch.</div>';
+    if(!hatVarianten) h+='<div class="dres info" style="display:block;">ℹ Für Typ '+esc(letter)+' existieren keine Vergleichsvarianten in der ILF-Konstantentabelle – diese Kontrolle ist hier nicht anwendbar.</div>';
+    h+='<div class="inrow"><div class="fld"><label>Tal-Seite: zu hoch (+) / zu tief (−) [mm]</label>'+
+       '<input inputmode="decimal" data-d="tal" value="'+(diag.tal!=null?diag.tal:'')+'"></div>'+
+       '<div class="fld"><label>Berg-Seite: zu hoch (+) / zu tief (−) [mm]</label>'+
+       '<input inputmode="decimal" data-d="berg" value="'+(diag.berg!=null?diag.berg:'')+'"></div></div>';
+    h+='<div class="dres" id="d5res"></div>';
+    h+='</div></details>';
+
+    host.innerHTML=h;
+
+    host.querySelectorAll('input[data-d]').forEach(function(inp){
+      inp.addEventListener('input', function(){
+        var v=numParse(inp.value);   // toleriert 1'704 / 1 704 / 1704,5
+        var kind=inp.dataset.d;
+        if(kind==='tal'||kind==='berg'){ diag[kind]=isFinite(v)?v:null; updK5(); }
+        else{
+          var st=inp.dataset.st;
+          diag[kind]=diag[kind]||{}; diag[kind][st]=isFinite(v)?v:null;
+          if(kind==='et'){ updK2(st); updK3(st); }
+          else if(kind==='ms'){ updK3(st); }
+          else { updK4(st); }
+        }
+        updBefund();
+      });
+    });
+    host.querySelectorAll('.vbtns button').forEach(function(b){
+      b.addEventListener('click', function(){
+        diag.c1 = (diag.c1===b.dataset.c1)?null:b.dataset.c1;
+        host.querySelectorAll('.vbtns button').forEach(function(x){
+          x.className = (diag.c1===x.dataset.c1) ? (x.dataset.c1==='ok'?'on-ok':'on-bad') : '';
+        });
+        var m=document.getElementById('massK1');
+        if(m) m.className='mass'+(diag.c1==='bad'?' show':'');
+        updBefund();
+      });
+    });
+    ST.forEach(function(x){ updK2(x[0]); updK3(x[0]); updK4(x[0]); });
+    updK5(); updBefund();
+  }
+
+  function updK2(st){
+    var el=document.getElementById('d2'+st); if(!el||!current) return;
+    var cd=document.getElementById('d2c'+st);
+    var v=diag.et&&diag.et[st], p=planRef(st);
+    el.className='dres'; el.innerHTML=''; if(cd) cd.innerHTML='';
+    delete verd.c2[st];
+    if(v==null) return;
+    if(v<50||v>8000){ el.className='dres bad'; el.textContent='Unplausibel – Länge in mm eingeben (z. B. 1704).'; verd.c2[st]='unplausibel'; return; }
+    if(!p){ el.className='dres info'; el.textContent='Keine Plan-Länge hinterlegt – Länge in der Nalpi-Vormontage-App prüfen.'; verd.c2[st]='ohneref'; return; }
+    if(istKorr()){
+      el.className='dres info';
+      el.innerHTML='ℹ Plan-Länge überholt (SOLL-Höhe wurde geändert) – Etikett NICHT gegen die alte Länge bewerten. '+
+        'Benötigte Länge per Neuberechnung ermitteln (Kontrolle 4 / Abschnitt 3, Berg: Nalpi).';
+      verd.c2[st]='ueberholt'; return;
+    }
+    var d=v-p.len;
+    if(Math.abs(d)<=tolLen()){
+      el.className='dres ok';
+      el.innerHTML='✓ stimmt mit Plan überein (Δ '+(d>0?'+':'')+d.toFixed(1)+' mm).'+
+        (p.konflikt?' <b>Aber:</b> zweite Quelle weicht ab ('+p.alt.len+' mm, '+esc(p.alt.src)+') → Quellen-Konflikt ILF melden.':'');
+      verd.c2[st]='ok';
+    } else if(p.alt && Math.abs(v-p.alt.len)<=tolLen()){
+      el.className='dres info';
+      el.innerHTML='⚠ Etikett entspricht der ZWEITEN Quelle ('+p.alt.len+' mm, '+esc(p.alt.src)+'), nicht der massgeblichen ('+p.len+' mm, '+esc(p.src)+') '+
+        '→ Referenz-Konflikt Freigabe ≠ Bestellung: <b>NICHT tauschen</b>, mit ILF/Nalpi klären.';
+      verd.c2[st]='konflikt';
+    } else {
+      el.className='dres bad';
+      el.innerHTML='✗ Abweichung <b>'+(d>0?'+':'')+d.toFixed(1)+' mm</b> zum Plan → vermutlich falsches Passstück montiert – tauschen!';
+      if(cd) cd.innerHTML=candHtml(lookupByLen(v, Math.max(tolLen(),2), current.id+'_'+st),
+        'Das montierte Stück ('+v+' mm) könnte gehören zu');
+      verd.c2[st]='bad';
+    }
+  }
+
+  function updK3(st){
+    var el=document.getElementById('d3'+st); if(!el||!current) return;
+    var cd=document.getElementById('d3c'+st);
+    var v=diag.ms&&diag.ms[st], p=planRef(st);
+    el.className='dres'; el.innerHTML=''; if(cd) cd.innerHTML='';
+    delete verd.c3[st];
+    if(v==null) return;
+    if(v<50||v>8000){ el.className='dres bad'; el.textContent='Unplausibel – Länge in mm eingeben.'; verd.c3[st]='unplausibel'; return; }
+    var refv=null, refname='';
+    if(diag.et&&diag.et[st]!=null){ refv=diag.et[st]; refname='Etikett'; }
+    else if(p&&!istKorr()){ refv=p.len; refname='Plan'; }
+    else if(p&&istKorr()){ el.className='dres info'; el.textContent='Plan-Länge überholt (SOLL geändert) und kein Etikett erfasst – zuerst Etikett in Kontrolle 2 eingeben.'; verd.c3[st]='ohneref'; return; }
+    if(refv==null){ el.className='dres info'; el.textContent='Keine Referenz (weder Etikett eingegeben noch Plan-Länge hinterlegt).'; verd.c3[st]='ohneref'; return; }
+    var d=v-refv;
+    if(Math.abs(d)<=tolLen()){ el.className='dres ok'; el.textContent='✓ Länge bestätigt (Δ '+(d>0?'+':'')+d.toFixed(1)+' mm zu '+refname+').'; verd.c3[st]='ok'; }
+    else{
+      el.className='dres bad'; verd.c3[st]='bad';
+      el.innerHTML='✗ Gemessen '+v+' mm ≠ '+refname+' '+refv+' mm (Δ '+(d>0?'+':'')+d.toFixed(1)+' mm) → <b>falsch gefertigt</b>: '+
+        'Foto + Mass dokumentieren, Mauchle via J. Mäder reklamieren, <b>REGIE erfassen</b>, Neubau via Mike Berndt.';
+      if(cd&&p&&!istKorr()) cd.innerHTML=candHtml(lookupByLen(p.len, Math.max(tolLen(),3), current.id+'_'+st),
+        'Ersatz mit Soll-Länge '+p.len+' mm (nur nach Freigabe ILF/Nalpi – das Stück fehlt dann an seiner Originalposition!)');
+      else if(cd&&istKorr()) cd.innerHTML='<div class="cand">SOLL geändert – benötigte Länge zuerst neu rechnen (Abschnitt 3 / Nalpi), dann Ersatz suchen.</div>';
+    }
+  }
+
+  function updK4(st){
+    if(!current) return;
+    var f=FRG[current.id+'_'+st];
+    var el=document.getElementById('d4'+st);
+    if(!el||!f||f[1]==null) return;
+    var v=diag.ht&&diag.ht[st];
+    el.className='dres'; el.innerHTML='';
+    delete verd.c4[st];
+    if(v==null) return;
+    if(v<1000||v>3500){ el.className='dres bad'; el.textContent='Unplausibel – bitte Meter über Meer eingeben (z. B. '+f[1].toFixed(3)+').'; verd.c4[st]='unplausibel'; return; }
+    var d=(v-f[1])*1000;
+    if(Math.abs(d)<=tolHgt()){
+      el.className='dres ok'; el.textContent='✓ Pfahlkopf unverändert (Δ '+(d>0?'+':'')+d.toFixed(0)+' mm zur Erfassung).'; verd.c4[st]='ok';
+    } else {
+      var tal = (st==='S1'||st==='S4');
+      el.className='dres bad'; verd.c4[st]='bad';
+      el.innerHTML='✗ IST um <b>'+(d>0?'+':'')+d.toFixed(0)+' mm</b> gegenüber der Erfassung verschoben. '+
+        '<b>Zuerst Kontrollmessung</b> (zweiter Gerätestandort/Kontrollpunkt, Höhenbezug prüfen – Messfehler ausschliessen). '+
+        'Bestätigt sich der Wert: Pfahl z. B. zwischen Vermessung und Injektion verrutscht → Passstück neu rechnen. '+
+        (tal?'<button class="fillbtn" data-goc="1">→ mit '+v.toFixed(3)+' m in Abschnitt 3 neu rechnen</button>':'Berg-Stütze: im Nalpi neu rechnen.')+
+        ' Danach Nalpi-IST korrigieren lassen.';
+      var btn=el.querySelector('button[data-goc]');
+      if(btn) btn.addEventListener('click', function(){
+        setMode('fwd'); inputs[st]=inputs[st]||{}; inputs[st].ist=v; renderRows();
+        document.getElementById('calcCard').scrollIntoView({behavior:'smooth'});
+      });
+    }
+  }
+
+  function updK5(){
+    var el=document.getElementById('d5res'); if(!el||!current) return;
+    var K=window.NALP_PS_KONSTANTEN||{}, k=abzKey(current);
+    var vars = K[k] ? Object.keys(K).filter(function(v){ return v!==k && v.charAt(0)===k.charAt(0); }) : [];
+    el.className='dres'; el.innerHTML='';
+    if(!K[k] || !vars.length){
+      verd.c5='na';
+      if(!K[k]){ el.className='dres info'; el.textContent='Typ-Konstanten nicht geladen/vorhanden – Kontrolle 5 nicht prüfbar.'; }
+      // (fehlende Varianten: statische Info unter der Tabelle zeigt es bereits)
+      return;
+    }
+    if(diag.tal==null && diag.berg==null){ verd.c5=null; return; }
+    var hits=jahrgangTreffer();
+    if(hits.length){
+      verd.c5='bad';
+      el.className='dres bad';
+      el.innerHTML='✗ Muster passt zu falschem Stützen-Jahrgang: '+hits.map(function(t){
+        return '<b>'+t.v+'</b> statt '+k+
+          (t.hitT?' (Tal Δ '+(t.dT>0?'+':'')+Math.round(t.dT*10)/10+' mm)':'')+
+          (t.hitB?' (Berg Δ Höhe ≈ '+(t.dBh>0?'+':'')+Math.round(t.dBh)+' mm, Näherung)':'');
+      }).join(' oder ')+' → verbaute Normstützen prüfen/tauschen. <b>Nur stichhaltig, wenn Kontrollen 1–4 i.O. sind</b> – '+
+      'dieselbe Signatur kann durch gleichmässigen IST-/SOLL-Fehler entstehen; der Beweis ist die Materialkennzeichnung der Stützen.';
+    } else {
+      verd.c5='ok';
+      el.className='dres ok';
+      el.textContent='✓ Keine Jahrgangs-Signatur – Abweichung passt zu keiner Varianten-Differenz (oberhalb der Toleranz). Ursache eher Kontrolle 2–4.';
+    }
+  }
+
+  function updBefund(){
+    var s=diagStatus();
+    [1,2,3,4,5].forEach(function(i){ stChip(i, s['c'+i]); });
+    var pre=document.getElementById('befundTxt'); if(!pre) return;
+    if(!current){ pre.textContent='– noch keine Eingaben –'; return; }
+    var r=current, L=[], mass=[];
+    function nm(v){ return v==null?'offen':(v==='ok'?'i.O.':(v==='teil'?'teilweise geprüft':(v==='na'?'nicht prüfbar':'PROBLEM'))); }
+    L.push('BEFUND schräge Konstruktion – Tisch '+r.id+' ('+abzKey(r)+', '+r.zone+' Rev '+r.rev+'), '+new Date().toLocaleDateString('de-CH'));
+    L.push('Betriebs-ID: '+(r.betriebs_id||'–')+' · Bauphase: '+(r.bauphase||'–')+' · SOLL UK Modul: '+fmt(r.modul_hoehe)+' m ü. M.'+
+      (((D.hinweise||{})[String(r.id)])?' – ACHTUNG Sonderfall (siehe App-Hinweis)!':''));
+    L.push('Toleranzen: Länge ±'+tolLen()+' mm / Höhe ±'+tolHgt()+' mm (App-Vorgabe) · Datenstand '+D.meta.erstellt);
+    L.push('');
+    L.push('K1 Stützen-Positionen: '+nm(s.c1));
+    if(s.c1==='bad') mass.push('K1: Stützen/Passstücke an richtige Position tauschen (Etikett Tisch_Stütze).');
+    L.push('K2 Passstück = Plan: '+nm(s.c2));
+    if(istKorr()) mass.push('K2: SOLL-Höhe wurde korrigiert (Rev A8/A9 bzw. Sonderfall) – alle Passstücke gegen die NEUBERECHNUNG prüfen (Tal: Abschnitt 3, Berg: Nalpi) und ggf. neu bestellen; alte Plan-/Bestelllängen sind überholt.');
+    ST.forEach(function(x){ var st=x[0], v=diag.et&&diag.et[st], p=planRef(st);
+      if(v==null) return;
+      var d=(p&&!istKorr())?(v-p.len):null;
+      L.push('   '+st+': Etikett '+v+' mm / Plan '+(p?p.len+' mm ['+p.src+']':'–')+
+        (d!=null?' (Δ '+(d>0?'+':'')+d.toFixed(1)+' mm'+(Math.abs(d)<=tolLen()?' OK':' ABWEICHUNG')+')':(istKorr()?' (Plan überholt – nicht bewertet)':'')));
+      if(verd.c2[st]==='bad'){
+        var c=lookupByLen(v, Math.max(tolLen(),2), r.id+'_'+st);
+        mass.push('K2 '+st+': Passstück tauschen'+(c.length?(' – montiertes Stück gehört evtl. zu '+c[0].key):'')+'.');
+      }
+      if(verd.c2[st]==='konflikt') mass.push('K2 '+st+': Referenz-Konflikt Freigabe ≠ Bestellung ('+(p?p.len+' vs '+(p.alt?p.alt.len:'?'):'')+' mm) – NICHT tauschen, mit ILF/Nalpi klären.');
+    });
+    L.push('K3 Messung = Etikett/Plan: '+nm(s.c3));
+    ST.forEach(function(x){ var st=x[0], v=diag.ms&&diag.ms[st];
+      if(v==null) return;
+      var refv=(diag.et&&diag.et[st]!=null)?diag.et[st]:((planRef(st)&&!istKorr())?planRef(st).len:null);
+      var d=refv!=null?(v-refv):null;
+      L.push('   '+st+': gemessen '+v+' mm / Referenz '+(refv!=null?refv+' mm':'–')+(d!=null?' (Δ '+(d>0?'+':'')+d.toFixed(1)+' mm'+(Math.abs(d)<=tolLen()?' OK':' ABWEICHUNG')+')':''));
+      if(verd.c3[st]==='bad') mass.push('K3 '+st+': falsch gefertigt – Foto/Messprotokoll, Mauchle (J. Mäder) reklamieren, REGIE erfassen, Neubau (M. Berndt) oder freigegebenes Ersatzstück.');
+    });
+    L.push('K4 Pfahlkopf-IST: '+nm(s.c4));
+    ST.forEach(function(x){ var st=x[0], f=FRG[r.id+'_'+st], v=diag.ht&&diag.ht[st];
+      if(!f||f[1]==null||v==null) return;
+      var d=(v-f[1])*1000;
+      L.push('   '+st+': heute '+v.toFixed(3)+' / erfasst '+f[1].toFixed(3)+' ['+f[4]+'] (Δ '+(d>0?'+':'')+d.toFixed(0)+' mm'+(Math.abs(d)<=tolHgt()?' OK':' ABWEICHUNG')+')');
+      if(verd.c4[st]==='bad') mass.push('K4 '+st+': IST-Drift – zuerst Kontrollmessung; bestätigt: Passstück neu rechnen (Tal: Abschnitt 3, Berg: Nalpi) und Nalpi-IST korrigieren.');
+    });
+    L.push('K5 Stützen-Jahrgang: '+nm(s.c5)+(diag.tal!=null?' (Tal '+(diag.tal>0?'+':'')+diag.tal+' mm)':'')+(diag.berg!=null?' (Berg '+(diag.berg>0?'+':'')+diag.berg+' mm)':''));
+    if(s.c5==='bad') jahrgangTreffer().forEach(function(t){
+      mass.push('K5: Verdacht '+t.v+' statt '+abzKey(r)+' verbaut – Normstützen prüfen/tauschen (Beweis: Materialkennzeichnung; nur stichhaltig wenn K1–K4 i.O.).');
+    });
+    if(mass.length){ L.push(''); L.push('MASSNAHMEN:'); mass.forEach(function(m){ L.push('• '+m); }); }
+    pre.textContent=L.join('\n');
+  }
+
+  document.getElementById('befundCopy').addEventListener('click', function(){
+    var t=document.getElementById('befundTxt').textContent;
+    var b=document.getElementById('befundCopy');
+    function done(ok){ b.textContent= ok?'✓ kopiert':'Kopieren nicht möglich – Text von Hand markieren'; setTimeout(function(){ b.textContent='Befund in Zwischenablage kopieren'; },2500); }
+    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(function(){done(true);},function(){done(false);}); }
+    else done(false);
+  });
+  ['tolL','tolH'].forEach(function(id){
+    document.getElementById(id).addEventListener('input', function(){
+      if(current){ ST.forEach(function(x){ updK2(x[0]); updK3(x[0]); updK4(x[0]); }); updK5(); updBefund(); }
+    });
+  });
 
   // ---- Herkunft der Standardwerte in Quellenzeile ----
   (function(){
