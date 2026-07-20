@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>NalpSolar · Feldplan</title>
+<meta name="theme-color" content="#0b1826">
+<script src="assets/js/nalp-gate.js"></script>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;}
+  body{background:radial-gradient(120% 90% at 50% -10%,#12304f 0%,#0b1826 55%,#070d15 100%) fixed;
+    color:#e8eef7;font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;
+    display:flex;flex-direction:column;min-height:100%;}
+  .top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    padding:10px 14px calc(10px + env(safe-area-inset-top));
+    background:radial-gradient(120% 160% at 0 0,#173657,#0b1826);box-shadow:0 2px 14px rgba(0,0,0,.3);}
+  .top .brand{font-size:10px;letter-spacing:.22em;font-weight:800;color:#ffc340;text-transform:uppercase;}
+  .top h1{font-size:16px;font-weight:900;margin:1px 0 0;}
+  .top .sp{flex:1;}
+  .btn{border:0;border-radius:11px;padding:10px 14px;font-weight:800;font-size:13.5px;color:#fff;cursor:pointer;
+    background:linear-gradient(135deg,#0b5fff,#2196F3);white-space:nowrap;}
+  .btn.sec{background:rgba(255,255,255,.14);}
+  .legend{display:flex;gap:7px;flex-wrap:wrap;align-items:center;padding:9px 14px 4px;}
+  .legend .t{font-size:11.5px;font-weight:800;color:rgba(232,238,247,.6);}
+  .chipM{border:1px solid rgba(229,72,77,.65);background:rgba(229,72,77,.16);color:#ff9b9b;
+    border-radius:8px;padding:5px 10px;font-size:12.5px;font-weight:900;cursor:pointer;
+    animation:chipblink 1.1s ease-in-out infinite;}
+  @keyframes chipblink{0%,100%{background:rgba(229,72,77,.16);}50%{background:rgba(229,72,77,.5);color:#fff;}}
+  .planwrap{flex:1;margin:8px 14px calc(14px + env(safe-area-inset-bottom));
+    background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.12);border-radius:16px;
+    overflow:hidden;position:relative;min-height:320px;}
+  svg{display:block;width:100%;height:100%;touch-action:none;cursor:grab;}
+  .tisch{fill:#2f5f95;stroke:#5b8ec4;stroke-width:.5;}
+  .tisch-mark{fill:#e5484d;stroke:#ffffff;stroke-width:1.1;animation:blinkfill 1.1s ease-in-out infinite;}
+  @keyframes blinkfill{0%,100%{fill:#e5484d;opacity:1;}50%{fill:#ff8a8d;opacity:.35;}}
+  .ring{fill:none;stroke:#ff4444;stroke-width:2;animation:ringpulse 1.6s ease-out infinite;transform-origin:center;transform-box:fill-box;}
+  @keyframes ringpulse{0%{transform:scale(.55);opacity:1;}80%{transform:scale(1.25);opacity:0;}100%{opacity:0;}}
+  .mlabel{font-size:11px;font-weight:900;fill:#fff;paint-order:stroke;stroke:#7a1013;stroke-width:3px;}
+  .hint{position:absolute;left:10px;bottom:8px;font-size:10.5px;color:rgba(232,238,247,.55);pointer-events:none;}
+  .north{position:absolute;top:8px;right:10px;font-size:12px;font-weight:900;color:rgba(232,238,247,.75);pointer-events:none;}
+</style>
+</head>
+<body>
+<div class="top">
+  <button class="btn sec" onclick="location.href='index.html'">🏠 Start</button>
+  <div>
+    <div class="brand">NalpSolar · STRABAG B8-13</div>
+    <h1>📍 Feldplan – markierte Tische</h1>
+  </div>
+  <span class="sp"></span>
+  <button class="btn" id="zoomBtn" onclick="toggleZoom()">🎯 Zu den Markierungen</button>
+</div>
+
+<div class="legend" id="legend"><span class="t">Rot blinkend:</span></div>
+
+<div class="planwrap">
+  <svg id="plan" preserveAspectRatio="xMidYMid meet"></svg>
+  <div class="north">N ↑</div>
+  <div class="hint">Ziehen = verschieben · Pinch/Scrollrad = zoomen</div>
+</div>
+
+<script>
+// Markierte Tische (rot blinkend)
+var MARKS = [
+  { id:'205',  typ:'S2' },
+  { id:'206',  typ:'S2' },
+  { id:'1567', typ:'S3' },
+  { id:'827',  typ:'S4' }
+];
+
+var svg=document.getElementById('plan');
+var NS='http://www.w3.org/2000/svg';
+var fullVB=null, markVB=null, zoomed=false, curVB=null;
+
+function el(name, attrs, parent){
+  var e=document.createElementNS(NS,name);
+  Object.keys(attrs||{}).forEach(function(k){ e.setAttribute(k,attrs[k]); });
+  (parent||svg).appendChild(e); return e;
+}
+function setVB(vb){ curVB=vb.slice(); svg.setAttribute('viewBox',vb.join(' ')); }
+
+async function load(){
+  var data=[];
+  try{
+    var r=await fetch('uploads/tables/modultische.json'); data=await r.json();
+    var rs=await fetch('uploads/tables/modultische_status.json');
+    if(rs.ok){ var extra=await rs.json(); var have={}; data.forEach(function(t){have[t[0]]=1;});
+      extra.forEach(function(t){ if(!have[t[0]]){have[t[0]]=1; data.push(t);} }); }
+  }catch(e){}
+  if(!data.length){ document.querySelector('.hint').textContent='Tischdaten konnten nicht geladen werden.'; return; }
+
+  // Ausdehnung (E/N) -> SVG (x=E, y=-N, Norden oben)
+  var minE=1e12,maxE=-1e12,minN=1e12,maxN=-1e12;
+  data.forEach(function(t){ minE=Math.min(minE,t[1]); maxE=Math.max(maxE,t[1]);
+                            minN=Math.min(minN,t[2]); maxN=Math.max(maxN,t[2]); });
+  var pad=30;
+  fullVB=[minE-pad, -(maxN+pad), (maxE-minE)+2*pad, (maxN-minN)+2*pad];
+  setVB(fullVB);
+
+  var markMap={}; MARKS.forEach(function(m){ markMap[m.id]=m; });
+  var marked=[];
+
+  // Erst normale Tische, dann markierte (damit sie oben liegen)
+  var gN=el('g',{}), gM=el('g',{});
+  data.forEach(function(t){
+    var id=String(t[0]).trim(), E=t[1], N=t[2], az=t[4], len=t[5]||12.4;
+    var x=E, y=-N, isM=!!markMap[id];
+    var rect=el('rect',{
+      x:x-len/2, y:y-1.5, width:len, height:3, rx:.7,
+      transform:'rotate('+az+' '+x+' '+y+')',
+      'class': isM?'tisch-mark':'tisch'
+    }, isM?gM:gN);
+    if(isM){
+      marked.push({m:markMap[id], x:x, y:y});
+      el('circle',{cx:x, cy:y, r:16, 'class':'ring'}, gM);
+      el('text',{x:x, y:y-11, 'text-anchor':'middle', 'class':'mlabel'}, gM)
+        .textContent=id+' · '+markMap[id].typ;
+    }
+  });
+
+  // Zoom-Ausschnitt um die Markierungen
+  if(marked.length){
+    var mnx=1e12,mxx=-1e12,mny=1e12,mxy=-1e12;
+    marked.forEach(function(p){ mnx=Math.min(mnx,p.x); mxx=Math.max(mxx,p.x);
+                                mny=Math.min(mny,p.y); mxy=Math.max(mxy,p.y); });
+    var mp=45;
+    markVB=[mnx-mp, mny-mp, (mxx-mnx)+2*mp, (mxy-mny)+2*mp];
+  }
+
+  // Legende
+  var lg=document.getElementById('legend');
+  marked.forEach(function(p){
+    var c=document.createElement('button'); c.className='chipM';
+    c.textContent='🔴 '+p.m.id+' ('+p.m.typ+')';
+    c.onclick=function(){ zoomed=true; document.getElementById('zoomBtn').textContent='🗺 Ganzes Feld';
+      setVB([p.x-55, p.y-55, 110, 110]); };
+    lg.appendChild(c);
+  });
+  var missing=MARKS.filter(function(m){ return !marked.some(function(p){return p.m.id===m.id;}); });
+  if(missing.length){
+    var s=document.createElement('span'); s.className='t';
+    s.textContent='(nicht gefunden: '+missing.map(function(m){return m.id;}).join(', ')+')';
+    lg.appendChild(s);
+  }
+}
+
+function toggleZoom(){
+  zoomed=!zoomed;
+  setVB(zoomed && markVB ? markVB : fullVB);
+  document.getElementById('zoomBtn').textContent=zoomed?'🗺 Ganzes Feld':'🎯 Zu den Markierungen';
+}
+
+/* Pan & Zoom (Maus + Touch/Pinch) */
+(function(){
+  var ptrs={}, panStart=null, pinchStart=null;
+  function vbScale(){ var r=svg.getBoundingClientRect(); return curVB[2]/r.width; }
+  svg.addEventListener('pointerdown',function(e){
+    svg.setPointerCapture(e.pointerId);
+    ptrs[e.pointerId]={x:e.clientX,y:e.clientY};
+    var ks=Object.keys(ptrs);
+    if(ks.length===1) panStart={x:e.clientX,y:e.clientY,vb:curVB.slice()};
+    else if(ks.length===2){
+      var a=ptrs[ks[0]], b=ptrs[ks[1]];
+      pinchStart={d:Math.hypot(a.x-b.x,a.y-b.y), vb:curVB.slice(),
+                  cx:(a.x+b.x)/2, cy:(a.y+b.y)/2};
+      panStart=null;
+    }
+  });
+  svg.addEventListener('pointermove',function(e){
+    if(!ptrs[e.pointerId]) return;
+    ptrs[e.pointerId]={x:e.clientX,y:e.clientY};
+    var ks=Object.keys(ptrs);
+    if(ks.length===1 && panStart){
+      var s=vbScale();
+      setVB([panStart.vb[0]-(e.clientX-panStart.x)*s, panStart.vb[1]-(e.clientY-panStart.y)*s,
+             panStart.vb[2], panStart.vb[3]]);
+    } else if(ks.length===2 && pinchStart){
+      var a=ptrs[ks[0]], b=ptrs[ks[1]];
+      var d=Math.hypot(a.x-b.x,a.y-b.y);
+      var f=Math.max(.2,Math.min(5,pinchStart.d/d));
+      var vb=pinchStart.vb, r=svg.getBoundingClientRect();
+      var mx=vb[0]+(pinchStart.cx-r.left)/r.width*vb[2];
+      var my=vb[1]+(pinchStart.cy-r.top)/r.height*vb[3];
+      setVB([mx-(mx-vb[0])*f, my-(my-vb[1])*f, vb[2]*f, vb[3]*f]);
+    }
+  });
+  function up(e){ delete ptrs[e.pointerId]; panStart=null; pinchStart=null; }
+  svg.addEventListener('pointerup',up); svg.addEventListener('pointercancel',up);
+  svg.addEventListener('wheel',function(e){
+    e.preventDefault();
+    var f=e.deltaY>0?1.18:1/1.18, vb=curVB, r=svg.getBoundingClientRect();
+    var mx=vb[0]+(e.clientX-r.left)/r.width*vb[2];
+    var my=vb[1]+(e.clientY-r.top)/r.height*vb[3];
+    setVB([mx-(mx-vb[0])*f, my-(my-vb[1])*f, vb[2]*f, vb[3]*f]);
+  },{passive:false});
+})();
+
+load();
+</script>
+</body>
+</html>
