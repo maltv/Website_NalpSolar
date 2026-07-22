@@ -4,6 +4,7 @@ var PRECACHE = [
   './index.html',
   './stahlbau.html',
   './baupiste-chaos.html',
+  './passstuecke-suchen.html',
   './assets/data/bpc.enc',
   './assets/js/nalp-terrain.js',
   './passstueck.html',
