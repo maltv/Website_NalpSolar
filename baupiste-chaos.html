@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Baupiste-Chaos · NalpSolar</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0b1826">
+<script src="assets/js/nalp-gate.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; max-width: 100%; overflow-x: hidden; }
+  body {
+    font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+    color: #e8eef7; background: #0b1826; line-height: 1.5;
+    padding-bottom: env(safe-area-inset-bottom);
+    overflow-wrap: anywhere;
+  }
+  a { color: #57b0ff; }
+
+  header {
+    position: sticky; top: 0; z-index: 900;
+    background: rgba(11,24,38,.94); backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(255,255,255,.10);
+    padding: max(10px, env(safe-area-inset-top)) 14px 0;
+  }
+  .hrow { display: flex; align-items: center; gap: 10px; }
+  .back { text-decoration: none; font-size: 22px; color: #e8eef7; padding: 2px 6px; }
+  h1 { font-size: 18px; margin: 0; font-weight: 900; }
+  h1 span { color: #ff8a3d; }
+  .stand { font-size: 11px; color: rgba(232,238,247,.55); }
+  nav { display: flex; gap: 4px; overflow-x: auto; padding: 8px 0 0; scrollbar-width: none; }
+  nav::-webkit-scrollbar { display: none; }
+  nav button {
+    flex: none; border: 0; background: transparent; color: rgba(232,238,247,.62);
+    font: inherit; font-size: 13px; font-weight: 700; padding: 8px 11px;
+    border-bottom: 2.5px solid transparent; cursor: pointer; white-space: nowrap;
+  }
+  nav button.on { color: #ff8a3d; border-bottom-color: #ff8a3d; }
+
+  main { padding: 14px; max-width: 1100px; margin: 0 auto; }
+  section { display: none; }
+  section.on { display: block; }
+
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); gap: 9px; margin-bottom: 16px; }
+  .kpi { background: rgba(255,255,255,.055); border: 1px solid rgba(255,255,255,.10);
+         border-radius: 13px; padding: 12px 13px; }
+  .kpi b { display: block; font-size: 25px; font-weight: 900; line-height: 1.1; }
+  .kpi small { display: block; font-size: 11.5px; color: rgba(232,238,247,.62); margin-top: 3px; }
+  .kpi.warn b { color: #ff6b6b; } .kpi.good b { color: #4ade80; } .kpi.info b { color: #57b0ff; }
+
+  .box { background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.10);
+         border-radius: 15px; padding: 15px 16px; margin-bottom: 14px; }
+  .box h2 { font-size: 16px; margin: 0 0 9px; font-weight: 900; }
+  .box h3 { font-size: 13.5px; margin: 16px 0 6px; color: #ffc340; font-weight: 800; }
+  .box p { margin: 0 0 9px; font-size: 14px; }
+  .box ul, .box ol { margin: 0 0 9px; padding-left: 20px; font-size: 14px; }
+  .box li { margin-bottom: 5px; }
+  .alarm { border-left: 4px solid #ff6b6b; background: rgba(255,107,107,.09); }
+  .ok    { border-left: 4px solid #4ade80; background: rgba(74,222,128,.08); }
+  .frage { border-left: 4px solid #ffc340; background: rgba(255,195,64,.08); }
+  code { background: rgba(255,255,255,.10); padding: 1px 5px; border-radius: 4px; font-size: 12.5px;
+         word-break: break-all; }
+  .tw table { min-width: 100%; width: max-content; }
+  .quelle { font-size: 11.5px; color: rgba(232,238,247,.5); margin-top: 10px; }
+
+  #map { height: min(64vh, 560px); border-radius: 14px; border: 1px solid rgba(255,255,255,.12); }
+  .maplegende { display: flex; flex-wrap: wrap; gap: 7px 14px; margin: 10px 0 4px; font-size: 12px; }
+  .maplegende i { width: 12px; height: 12px; border-radius: 50%; display: inline-block;
+                  margin-right: 5px; vertical-align: -1px; border: 1.5px solid #fff; }
+
+  .detail { margin-top: 12px; }
+  .detail .leer { color: rgba(232,238,247,.45); font-size: 13.5px; }
+  .tt { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+  .tt b { font-size: 21px; font-weight: 900; }
+  .pill { font-size: 11px; font-weight: 800; padding: 2.5px 8px; border-radius: 999px; color: #fff; }
+  .schritte { counter-reset: s; padding-left: 0; list-style: none; margin: 11px 0 0; }
+  .schritte li { counter-increment: s; position: relative; padding-left: 30px; margin-bottom: 8px; font-size: 13.5px; }
+  .schritte li::before {
+    content: counter(s); position: absolute; left: 0; top: 0; width: 21px; height: 21px;
+    border-radius: 50%; background: #ff8a3d; color: #0b1826; font-weight: 900; font-size: 12px;
+    display: grid; place-items: center;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th { text-align: left; padding: 7px 6px; border-bottom: 1.5px solid rgba(255,255,255,.20);
+       font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
+       color: rgba(232,238,247,.62); position: sticky; top: 0; background: #0b1826; }
+  td { padding: 6px; border-bottom: 1px solid rgba(255,255,255,.07); vertical-align: top; }
+  tr.klick { cursor: pointer; }
+  tr.klick:hover td { background: rgba(255,255,255,.05); }
+  .tw { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .neu { color: #ff6b6b; font-weight: 800; }
+  .alt { color: #4ade80; }
+  .filter { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 11px; }
+  .filter button {
+    border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.05);
+    color: #e8eef7; font: inherit; font-size: 12px; font-weight: 700;
+    padding: 6px 11px; border-radius: 999px; cursor: pointer;
+  }
+  .filter button.on { background: #ff8a3d; color: #0b1826; border-color: #ff8a3d; }
+
+  #d3 { height: min(62vh, 520px); border-radius: 14px; border: 1px solid rgba(255,255,255,.12);
+        background: #060c14; touch-action: none; }
+  .d3ctl { display: flex; flex-wrap: wrap; gap: 7px; margin: 10px 0; align-items: center; font-size: 12.5px; }
+  .d3ctl label { display: flex; align-items: center; gap: 5px; background: rgba(255,255,255,.05);
+                 border: 1px solid rgba(255,255,255,.14); border-radius: 999px; padding: 5px 11px; cursor: pointer; }
+  .balken { height: 15px; background: rgba(255,255,255,.07); border-radius: 3px; position: relative; min-width: 90px; }
+  .balken i { position: absolute; top: 0; height: 100%; border-radius: 3px; }
+  .mid { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: rgba(255,255,255,.35); }
+
+  /* PIN-Dialog */
+  .pinbox { max-width: 340px; margin: 16vh auto 0; text-align: center; padding: 0 18px; }
+  .pinbox h2 { font-size: 19px; margin: 0 0 6px; }
+  .pinbox p { font-size: 13px; color: rgba(232,238,247,.6); margin: 0 0 18px; }
+  .pinbox input {
+    width: 100%; font: inherit; font-size: 26px; font-weight: 800; letter-spacing: .5em;
+    text-align: center; padding: 13px 10px 13px 20px; border-radius: 13px;
+    border: 1px solid rgba(255,255,255,.20); background: rgba(255,255,255,.06); color: #e8eef7;
+  }
+  .pinbox input:focus { outline: 2px solid #ff8a3d; }
+  .pinmsg { min-height: 20px; margin-top: 11px; font-size: 13px; color: #ff6b6b; }
+  .pinbox .hint { font-size: 11.5px; color: rgba(232,238,247,.38); margin-top: 20px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<div id="huelle">
+  <header>
+    <div class="hrow">
+      <a class="back" href="index.html">‹</a>
+      <div><h1>Baupiste<span>-Chaos</span></h1><div class="stand">geschützter Bereich</div></div>
+    </div>
+  </header>
+  <div class="pinbox">
+    <h2>PIN eingeben</h2>
+    <p>Dieser Bereich ist verschlüsselt abgelegt.</p>
+    <input id="pin" type="password" inputmode="numeric" autocomplete="off"
+           maxlength="12" placeholder="••••" autofocus>
+    <div class="pinmsg" id="pinmsg"></div>
+    <div class="hint">Der Inhalt liegt AES-256-verschlüsselt auf dem Server und wird erst
+      hier im Browser entschlüsselt.</div>
+  </div>
+</div>
+
+<div id="inhalt"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="assets/js/three/three.min.js"></script>
+<script src="assets/js/three/OrbitControls.js"></script>
+<script src="assets/js/nalp-terrain.js"></script>
+<script>
+'use strict';
+var SPEICHER = 'nalp_bpc_pin_v1';
+var b64 = function (s) { return Uint8Array.from(atob(s), function (c) { return c.charCodeAt(0); }); };
+
+function melde(t) { document.getElementById('pinmsg').textContent = t || ''; }
+
+async function entsperren(pin, still) {
+  melde(still ? '' : 'entschlüssle …');
+  var res = await fetch('assets/data/bpc.enc', { cache: 'no-cache' });
+  var p = await res.json();
+  var mat = await crypto.subtle.importKey('raw', new TextEncoder().encode(pin),
+              'PBKDF2', false, ['deriveKey']);
+  var key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: b64(p.salt), iterations: p.iter, hash: 'SHA-256' },
+    mat, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  var klar;
+  try {
+    klar = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64(p.iv) }, key, b64(p.ct));
+  } catch (e) {
+    melde(still ? '' : 'Falscher PIN.');
+    try { localStorage.removeItem(SPEICHER); } catch (e2) {}
+    return false;
+  }
+  var nutz = JSON.parse(new TextDecoder().decode(klar));
+  document.getElementById('huelle').remove();
+  document.getElementById('inhalt').innerHTML = nutz.html;
+  var s = document.createElement('script');
+  s.textContent = nutz.js;
+  document.body.appendChild(s);
+  try { localStorage.setItem(SPEICHER, pin); } catch (e3) {}
+  return true;
+}
+
+var feld = document.getElementById('pin');
+feld.addEventListener('input', function () {
+  melde('');
+  if (feld.value.length >= 4) entsperren(feld.value);
+});
+feld.addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') entsperren(feld.value);
+});
+
+// Bereits einmal korrekt eingegeben? Dann still oeffnen.
+try {
+  var g = localStorage.getItem(SPEICHER);
+  if (g) entsperren(g, true);
+} catch (e) {}
+</script>
+</body>
+</html>

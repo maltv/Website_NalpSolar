@@ -1,0 +1,5 @@
+# Klartext-Quellen des geschuetzten Bereichs duerfen NIE ins oeffentliche Repo.
+# Sie liegen unter Baupiste_B_Passstuecke\web_quelle\ ausserhalb dieses Ordners.
+assets/js/nalp-baupiste-chaos.js
+*.full.html
+_test_*.html
