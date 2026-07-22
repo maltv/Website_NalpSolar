@@ -1,8 +1,11 @@
 'use strict';
-var CACHE = 'nalpsolar-v53';
+var CACHE = 'nalpsolar-v54';
 var PRECACHE = [
   './index.html',
   './stahlbau.html',
+  './baupiste-chaos.html',
+  './assets/data/bpc.enc',
+  './assets/js/nalp-terrain.js',
   './passstueck.html',
   './assets/js/nalp-passstueck-daten.js',
   './assets/js/nalp-passstueck-abz.js',
