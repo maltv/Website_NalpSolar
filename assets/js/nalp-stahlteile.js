@@ -38,6 +38,7 @@
     { k:'traeger',      icon:'📏', label:'Modulträger',       col:'#12a457' },
     { k:'stapel',       icon:'📚', label:'Modulträgerstapel', col:'#7a4de8' },
     { k:'quertraverse', icon:'➖', label:'Querträger',        col:'#e8a012' },
+    { k:'knietraeger',  icon:'📐', label:'Knieträger',        col:'#8bd450' },
     { k:'fussplatte',   icon:'🦶', label:'Fussplatten',       col:'#00a9c9' },
     { k:'pfahlkopf',    icon:'🔘', label:'Pfahlkopfplatten',  col:'#d63a86' },
     { k:'sonstiges',    icon:'🔩', label:'Sonstiges',         col:'#ff8a3d' }

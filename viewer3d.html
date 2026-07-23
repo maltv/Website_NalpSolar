@@ -1092,6 +1092,10 @@ async function loadTische(){
                bs:bs?bs.s:null, bsVis:bsVis };
     tischeIndex[String(id).trim()]={ pos:new THREE.Vector3(px,py,pz), lbl:null, it:item };
     tischeItems.push(item);
+    // fürs Antippen (Verbindungslinien zu erfassten Stahlteilen)
+    mesh.userData.tischItem=item;
+    legsForItem.forEach(function(l){ l.userData.tischItem=item; });
+    if(shadow) shadow.userData.tischItem=item;
   });
 
   scene.add(tischeGroup);
@@ -2981,7 +2985,8 @@ function onTapUp(e){
   if(measurePlacing()){ measureTapAt(e.clientX, e.clientY); return; }
   if(measEditOn){ measEditTap(e.clientX, e.clientY); return; }
   if(stahlPickTap(e.clientX, e.clientY)) return;   // Stahlteil-Position antippen (Erfassung ohne GPS)
-  pickStahl(e.clientX, e.clientY);   // Stahlteil-Marker antippen = löschen
+  if(pickStahl(e.clientX, e.clientY)) return;      // Stahlteil antippen = löschen
+  pickTischLink(e.clientX, e.clientY);             // Tisch antippen = 🚀-Linien zu erfassten Teilen
 }
 function pickBird(cx,cy){
   if(!birdGroup) return;
@@ -4239,6 +4244,7 @@ function stahlM(){
     rot:   new THREE.MeshPhongMaterial({color:0xd8232a, emissive:0x3a0608, shininess:45}),
     blau:  new THREE.MeshPhongMaterial({color:0x3b6fd4, emissive:0x0a1e4a, shininess:55}),
     stahl: new THREE.MeshPhongMaterial({color:0x9aa2ad, emissive:0x1c2024, shininess:75}),
+    gruen: new THREE.MeshPhongMaterial({color:0x8bd450, emissive:0x1e3a10, shininess:50}),
     dunkel:new THREE.MeshPhongMaterial({color:0x4a4f57, shininess:40}),
     kiste: new THREE.MeshPhongMaterial({color:0xb5762a, emissive:0x2a1a06, shininess:25})
   };
@@ -4293,6 +4299,20 @@ function makeStahlteil(it){
       var pl=new THREE.Mesh(new THREE.BoxGeometry(6.0,0.12,2.3),M.rot);
       pl.position.y=0.25+i*0.16; pl.rotation.y=(i%2)*0.03; g.add(pl);
     }
+  } else if(art==='knietraeger'){
+    // Knieträger: abgewinkelter Träger (grün)
+    for(i=0;i<Math.max(1,Math.min(n,4));i++){
+      var k1=new THREE.Mesh(new THREE.BoxGeometry(2.2,0.16,0.16),M.gruen);
+      k1.position.set(0,0.2,i*0.3-0.3); g.add(k1);
+      var k2=new THREE.Mesh(new THREE.BoxGeometry(1.4,0.16,0.16),M.gruen);
+      k2.position.set(1.2,0.62,i*0.3-0.3); k2.rotation.z=0.7; g.add(k2);
+    }
+    if(it.tischId){
+      var kp=stahlIdPlane(String(it.tischId),2.2,0.9);
+      kp.position.set(0,0.5,0);
+      kp.rotation.order='YXZ'; kp.rotation.set(-Math.PI/2,Math.PI,0);
+      g.add(kp);
+    }
   } else if(art==='quertraverse'){
     for(i=0;i<Math.max(2,Math.min(n,5));i++){
       var q=new THREE.Mesh(new THREE.BoxGeometry(3.2,0.14,0.14),M.stahl);
@@ -4318,6 +4338,7 @@ function renderStahlteile(items){
   if(!scene || !stahlPending) return;
   if(stahlGroup) scene.remove(stahlGroup);
   stahlGroup=new THREE.Group();
+  var entries=[];
   stahlPending.forEach(function(it){
     if(typeof it.lat!=='number' || typeof it.lon!=='number') return;
     var s=gpsToScene(it.lat,it.lon,null);
@@ -4331,6 +4352,26 @@ function renderStahlteile(items){
     g.rotation.y=((it.ts||0)%628)/100;               // deterministisch leicht gedreht
     g.userData.stahlItem=it;
     stahlGroup.add(g);
+    entries.push({g:g, it:it, x:s.x, z:s.z});
+  });
+  // Liegen mehrere beschriftete Teile am selben Ort, ist die ID auf der
+  // Fläche nicht lesbar -> zusätzlich kleine Beschriftung darüber,
+  // in der Höhe gestaffelt (Wunsch Victor 23.07.)
+  var beschriftet=entries.filter(function(a){ return a.it.tischId; });
+  beschriftet.forEach(function(a,ai){
+    var stack=0, nah=false;
+    for(var bi=0;bi<beschriftet.length;bi++){
+      if(bi===ai) continue;
+      var b=beschriftet[bi];
+      if(Math.hypot(a.x-b.x,a.z-b.z)<10){ nah=true; if(bi<ai) stack++; }
+    }
+    if(!nah) return;
+    var d=document.createElement('div');
+    d.className='lbl lbl-stahl';
+    d.textContent=(a.it.art==='primaer'?'PK ':'')+a.it.tischId;
+    var lbl=new THREE.CSS2DObject(d);
+    lbl.position.set(0, 3.6+stack*1.5, 0);
+    a.g.add(lbl);
   });
   scene.add(stahlGroup);
 }
@@ -4373,6 +4414,94 @@ function stahlPickTap(cx,cy){
   var cb=stahlPickDone; stahlPickDone=null;
   cb(sceneToGps(p.x,p.z));
   return true;
+}
+
+/* ── Tisch antippen → 🚀-Verbindungslinien zu erfassten Teilen ────────
+   Zeigt mit einer animierten Bogenlinie («Rakete»), wo der zwischen-
+   gelagerte Modulträger, Knieträger oder die vormontierte PK dieses
+   Tisches liegen (alle Stahlteil-Erfassungen mit gleicher Tisch-ID).  */
+var linkGroup=null, linkAnims=[];
+function clearTischLinks(){
+  if(linkGroup){ scene.remove(linkGroup); linkGroup=null; }
+  linkAnims=[];
+}
+function pickTischLink(cx,cy){
+  if(!tischeGroup || arActive) return false;
+  var rect=renderer.domElement.getBoundingClientRect();
+  var m=new THREE.Vector2(((cx-rect.left)/rect.width)*2-1, -((cy-rect.top)/rect.height)*2+1);
+  raycaster.setFromCamera(m,camera);
+  var hits=raycaster.intersectObjects(tischeGroup.children,false);
+  var it=null;
+  for(var i=0;i<hits.length;i++){
+    var o=hits[i].object;
+    if(o.visible && o.userData && o.userData.tischItem){ it=o.userData.tischItem; break; }
+  }
+  if(!it) return false;
+  showTischLinks(it);
+  return true;
+}
+function showTischLinks(it){
+  clearTischLinks();
+  var targets=[];
+  (stahlPending||[]).forEach(function(r){
+    if(!r || String(r.tischId||'').trim()!==it.id) return;
+    if(typeof r.lat!=='number' || typeof r.lon!=='number') return;
+    var s=gpsToScene(r.lat,r.lon,null);
+    var y=terraY(s.x,s.z); if(y===null||y===undefined) y=s.y||0;
+    var K=(window.NalpStahlteile&&NalpStahlteile.katInfo)?NalpStahlteile.katInfo(r.art):null;
+    targets.push({ pos:new THREE.Vector3(s.x,y+1.2,s.z),
+      col:new THREE.Color((K&&K.col)||'#ff8a3d'),
+      name:(r.art==='primaer'?'PK':(r.teilTyp||r.art)) });
+  });
+  if(!targets.length){
+    flashMsg('Tisch '+it.id+': keine zwischengelagerten Teile erfasst');
+    return;
+  }
+  var y0=it.mesh.visible ? it.mesh.position.y : ((terraY(it.x,it.z)||0)+2);
+  var p0=new THREE.Vector3(it.x,y0+1,it.z);
+  linkGroup=new THREE.Group(); scene.add(linkGroup);
+  var info=[];
+  targets.forEach(function(t,i){
+    var d=p0.distanceTo(t.pos);
+    info.push(t.name+' '+Math.round(d)+' m');
+    var mid=p0.clone().lerp(t.pos,0.5);
+    mid.y=Math.max(p0.y,t.pos.y)+Math.min(60,12+d*0.22);
+    var curve=new THREE.QuadraticBezierCurve3(p0,mid,t.pos);
+    var pts=curve.getPoints(64);
+    var geo=new THREE.BufferGeometry().setFromPoints(pts);
+    geo.setDrawRange(0,0);
+    var line=new THREE.Line(geo,
+      new THREE.LineBasicMaterial({color:t.col,transparent:true,opacity:0.95,depthTest:false}));
+    line.renderOrder=9; linkGroup.add(line);
+    var head=new THREE.Mesh(new THREE.SphereGeometry(1.0,10,8),
+      new THREE.MeshBasicMaterial({color:t.col,depthTest:false,transparent:true}));
+    head.renderOrder=9; head.visible=false; linkGroup.add(head);
+    linkAnims.push({curve:curve,line:line,head:head,n:pts.length,
+                    t0:performance.now()+i*200,dur:1000,ttl:9000});
+  });
+  flashMsg('🚀 Tisch '+it.id+' → '+info.join(' · '));
+  if(navigator.vibrate) navigator.vibrate(30);
+}
+function updateTischLinks(){
+  if(!linkAnims.length) return;
+  var now=performance.now(), alive=false;
+  linkAnims.forEach(function(a){
+    var k=(now-a.t0)/a.dur;
+    if(k<0){ alive=true; return; }
+    if(k<1){
+      alive=true;
+      a.line.geometry.setDrawRange(0,Math.max(2,Math.floor(k*a.n)));
+      a.head.visible=true;
+      a.head.position.copy(a.curve.getPoint(k));
+    } else {
+      a.line.geometry.setDrawRange(0,a.n);
+      a.head.visible=false;
+      var age=now-a.t0-a.dur;
+      if(age<a.ttl){ alive=true; a.line.material.opacity=0.5+0.45*Math.sin(now/160); }
+      else a.line.visible=false;
+    }
+  });
+  if(!alive) clearTischLinks();
 }
 
 /* ── Menzi-Muck-Bohrgeräte (gelb = Gruppe 1, rot = Gruppe 2) ──────────
@@ -4850,6 +4979,7 @@ function animate(){
   updateCows(gdt);
   updateSamuel(gdt);
   updateBauablauf(gdt);
+  updateTischLinks();
   updateCrane(gdt);
   updatePG(gdt);
   updateRain(gdt);
