@@ -1,10 +1,10 @@
 {
- "stand": "5-Wochenprogramm KW30-34 (20.07.-23.08.2026), Stand 21.07.2026 inkl. Ist-Stand Tagesbericht 20.07.",
+ "stand": "5-Wochenprogramm KW30-34 (20.07.-23.08.2026), Stand 22.07.2026 (Muk-Wechsel: gelb->1.6, rot->5.2) inkl. Ist-Stand Tagesbericht 20.07.",
  "start": "2026-07-20",
  "ende": "2026-08-23",
  "aufgaben": [
   {
-   "label": "Bohren 26_5.2 (Gruppe 1)",
+   "label": "Bohren 26_5.2 (roter Muk, ab Mi 22.07. weiter oben)",
    "gewerk": "bohren",
    "von": "2026-07-20",
    "bis": "2026-07-29",
@@ -13,10 +13,10 @@
    ]
   },
   {
-   "label": "Bohren 26_1.6 (Gruppe 1)",
+   "label": "Bohren 26_1.6 (gelber Muk, heute Mi 22.07. runter)",
    "gewerk": "bohren",
-   "von": "2026-07-30",
-   "bis": "2026-08-03",
+   "von": "2026-07-22",
+   "bis": "2026-07-24",
    "bereiche": [
     "26_1.6"
    ]
@@ -61,10 +61,10 @@
    ]
   },
   {
-   "label": "Bohren 26_4.4 (Gruppe 2)",
+   "label": "Bohren 26_4.4 (Mo-Di roter Muk, Rest gelber Muk)",
    "gewerk": "bohren",
    "von": "2026-07-20",
-   "bis": "2026-07-28",
+   "bis": "2026-07-31",
    "bereiche": [
     "26_4.4"
    ]
