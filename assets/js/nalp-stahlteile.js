@@ -325,6 +325,9 @@
     b.textContent = posMode === 'pick' ? '👆 Speichern & Position antippen' : '📍 Am Standort speichern';
   }
 
+  // Diese Kategorien werden ohne Tisch-ID erfasst – nur Anzahl + Typ
+  var NUR_ANZAHL_TYP = { quertraverse:1, fussplatte:1, pfahlkopf:1 };
+
   function renderForm(){
     var f = panel.querySelector('#stForm');
     if (current === 'primaer') {
@@ -333,7 +336,19 @@
           '<div><label class="fl">Tisch-ID</label><input id="f_tisch" inputmode="numeric" placeholder="z.B. 2104"></div>' +
           '<div><label class="fl">Typ (optional)</label><input id="f_typ" placeholder="z.B. D_2026"></div>' +
         '</div>' +
+        '<label class="fl">Zustand</label>' +
+        '<select id="f_zust">' +
+          '<option value="komplett">🔩 komplett verschraubt (mit Querträger)</option>' +
+          '<option value="nur_knietraeger">📐 nur Knieträger liegen da</option>' +
+        '</select>' +
         '<label class="fl">Bemerkung (optional)</label><textarea id="f_bem" placeholder="z.B. liegt neben Baupiste, Lasche prüfen …"></textarea>';
+    } else if (NUR_ANZAHL_TYP[current]) {
+      f.innerHTML =
+        '<div class="row2">' +
+          '<div><label class="fl">Anzahl</label><input id="f_anz" inputmode="numeric" value="1"></div>' +
+          '<div><label class="fl">Typ (optional)</label><input id="f_typ" placeholder="z.B. D_2026"></div>' +
+        '</div>' +
+        '<label class="fl">Bemerkung (optional)</label><textarea id="f_bem" placeholder="z.B. Bund à 4 Stück, angerostet …"></textarea>';
     } else {
       var extra = current === 'sonstiges'
         ? '<label class="fl">Bezeichnung</label><input id="f_typ" placeholder="z.B. Windverband, Kiste Kleinmaterial …">'
@@ -363,14 +378,18 @@
       teilTyp: current==='primaer' ? val('f_typ')
              : current==='sonstiges' ? (val('f_typ') || 'Sonstiges')
              : K.label,
-      tischId: val('f_tisch'),
+      typ: NUR_ANZAHL_TYP[current] ? val('f_typ') : '',
+      tischId: NUR_ANZAHL_TYP[current] ? '' : val('f_tisch'),
       anzahl: current==='primaer' ? '' : (val('f_anz')||'1'),
       bemerkung: val('f_bem'),
       von: von,
       datum: todayISO(),
       ts: Date.now()
     };
-    if (current==='primaer' && !rec.tischId) { setStatus('Bitte die Tisch-ID der vormontierten Primärkonstruktion eingeben.', true); return null; }
+    if (current==='primaer'){
+      rec.zustand = val('f_zust') || 'komplett';   // komplett | nur_knietraeger
+      if (!rec.tischId) { setStatus('Bitte die Tisch-ID der vormontierten Primärkonstruktion eingeben.', true); return null; }
+    }
     return rec;
   }
 
@@ -447,10 +466,11 @@
 
   function itemTitle(r){
     if (r.art==='primaer')
-      return '🏗 PK vormontiert'+(r.tischId?' · Tisch '+r.tischId:'')+(r.teilTyp?' ('+r.teilTyp+')':'');
+      return '🏗 PK vormontiert'+(r.tischId?' · Tisch '+r.tischId:'')+(r.teilTyp?' ('+r.teilTyp+')':'')
+        +(r.zustand==='nur_knietraeger' ? ' · nur Knieträger' : (r.zustand==='komplett' ? ' · komplett verschraubt' : ''));
     var K = katInfo(r.art);
     var name = (r.art==='teil' || r.art==='sonstiges') ? (r.teilTyp || K.label) : K.label;
-    return K.icon+' '+name+(r.anzahl&&r.anzahl!=='1'?' × '+r.anzahl:'')+(r.tischId?' · Tisch '+r.tischId:'');
+    return K.icon+' '+name+(r.typ?' '+r.typ:'')+(r.anzahl&&r.anzahl!=='1'?' × '+r.anzahl:'')+(r.tischId?' · Tisch '+r.tischId:'');
   }
 
   function posText(r){
