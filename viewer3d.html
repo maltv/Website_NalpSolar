@@ -423,7 +423,7 @@ body.ar-mode { background:transparent!important; }
   <div class="tb-menu-h">Ebenen ein/aus</div>
   <button class="tb-btn active" id="btnTerrain" onclick="toggleTerrain()">🏔 Terrain</button>
   <button class="tb-btn active" id="btnSat"     onclick="toggleSat()">🛰 Satellit</button>
-  <button class="tb-btn active" id="btnWL"      onclick="toggleLayer('wl')">🔵 Werkleitungen</button>
+  <button class="tb-btn active" id="btnWL"      onclick="toggleLayer('wl')">🔵 WL 2025 (alt)</button>
   <button class="tb-btn active" id="btnErdung"  onclick="toggleLayer('erdung')">🟠 Erdung</button>
   <button class="tb-btn active" id="btnL26"     onclick="toggleLayer('leitungen26')">🟩 Leitungen 26/27</button>
   <button class="tb-btn active" id="btnTische"  onclick="toggleTische()">🟨 Modultische</button>
@@ -482,6 +482,7 @@ body.ar-mode { background:transparent!important; }
   <div class="leg"><div class="leg-dot" style="background:#cccccc"></div>Schacht</div>
   <div class="leg"><div class="leg-dot" style="background:rgba(140,210,140,.7)"></div>Terrain</div>
   <div class="leg"><div class="leg-dot" style="background:rgba(80,160,255,.7);border:1px solid #ffd700"></div>Modultische</div>
+  <div class="leg" style="opacity:.85">╌╌ gestrichelt = Leitung noch nicht gebaut (Stand 23.07.)</div>
 </div>
 
 <div id="orbitHint">📍 Orbit-Punkt gesetzt</div>
@@ -637,12 +638,33 @@ var GRID   = 64;
 
 var IFC = [
   { slot:'wl',    base:'uploads/ifc/werkleitungen',
-    col:[0,0.6,1], emissive:[0,0.2,0.5] },       // electric blue
+    col:[0,0.6,1], emissive:[0,0.2,0.5], baustatus:true },   // WL 2025 (alt), NW-Cluster
   { slot:'erdung', base:'uploads/ifc/erdung',
     col:[1,0.55,0], emissive:[0.4,0.15,0] },      // glowing orange
   { slot:'leitungen26', base:'uploads/ifc/leitungen26',
-    emissive:[0.05,0.05,0.05] }                   // vertex-coloured: 60/120/HRB/Schacht
+    emissive:[0.05,0.05,0.05], baustatus:true }   // vertex-coloured: 60/120/HRB/Schacht
 ];
+
+// Baustatus Werkleitungen (Victor-Skizze 23.07.2026): orange nachgefahren
+// (= 120er/HRB-Hauptstrang, per Vertexfarbe erkannt) und orange eingekreiste
+// Bereiche (Rechtecke NW/NE/SE, aus dem Vertex-Plot kalibriert) sind FERTIG;
+// alles andere wird gestrichelt (Schraffur-Discard im Shader) dargestellt.
+function wlFertigAttr(slot, raw, colors){
+  var NW=[35,165,405,545], NE=[160,205,455,530], SE=[315,420,190,310];
+  function inR(e,n,r){ return e>=r[0]&&e<=r[1]&&n>=r[2]&&n<=r[3]; }
+  var nV=raw.length/3, a=new Float32Array(nV), i, e, n, f;
+  for(i=0;i<nV;i++){
+    e=raw[i*3]; n=raw[i*3+1]; f=0;
+    if(slot==='wl'){ f=inR(e,n,NW)?1:0; }
+    else {
+      var r=colors?colors[i*3]:0, b=colors?colors[i*3+2]:0, g=colors?colors[i*3+1]:0;
+      if((r>0.9&&g<0.5)||(b>0.9&&r<0.3)) f=1;          // 120er (rot) + HRB (blau) = Strang
+      else if(inR(e,n,NE)||inR(e,n,SE)) f=1;           // eingekreiste Bereiche
+    }
+    a[i]=f;
+  }
+  return a;
+}
 
 // WMS BBOX for satellite texture
 var BBOX = (OE-EXTENT)+','+(ON-EXTENT)+','+(OE+EXTENT)+','+(ON+EXTENT);
@@ -832,6 +854,20 @@ async function loadLayer(cfg){
     flatShading:true, specular:0x333333, shininess:40,
     side:THREE.DoubleSide
   });
+
+  // Noch nicht gebaute Leitungen gestrichelt (Baustatus-Skizze Victor 23.07.)
+  if(cfg.baustatus){
+    geom.setAttribute('fertig', new THREE.BufferAttribute(
+      wlFertigAttr(cfg.slot, raw, meta.vertexColors?new Float32Array(bufs[2]):null), 1));
+    mat.onBeforeCompile=function(sh){
+      sh.vertexShader='attribute float fertig; varying float vFertig; varying vec3 vWPos;\n'
+        + sh.vertexShader.replace('#include <begin_vertex>',
+          '#include <begin_vertex>\nvFertig=fertig; vWPos=(modelMatrix*vec4(position,1.0)).xyz;');
+      sh.fragmentShader='varying float vFertig; varying vec3 vWPos;\n'
+        + sh.fragmentShader.replace('#include <clipping_planes_fragment>',
+          'if(vFertig<0.5){ float cx=step(1.25,mod(vWPos.x,2.5)); float cz=step(1.25,mod(vWPos.z,2.5)); if(abs(cx-cz)<0.5) discard; }\n#include <clipping_planes_fragment>');
+    };
+  }
   var mesh=new THREE.Mesh(geom,mat);
   scene.add(mesh);
   layers[cfg.slot]=mesh;
