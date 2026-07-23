@@ -7,6 +7,7 @@
 <title>NalpSolar 3D</title>
 <script src="assets/js/nalp-gate.js"></script>
 <script src="assets/js/nalp-status.js"></script>
+<script src="assets/js/nalp-stahlteile.js"></script>
 <link rel="manifest" href="manifest.json" id="manifestLink">
 <script>
 // Game-App-Modus (?game=1): eigenes Manifest + reine Spiel-Oberfläche
@@ -92,6 +93,10 @@ html, body { width:100%; height:100%; overflow:hidden; background:#0d1117;
   border:1px solid rgba(255,255,255,.2);
 }
 .lbl-gps { background:rgba(33,150,243,.9); border-color:#2196F3; font-size:11px; }
+.lbl-stahl { background:rgba(255,138,61,.92); border-color:#ff8a3d; color:#111; font-size:10.5px; font-weight:800; }
+.lbl-menzi { background:rgba(30,30,34,.88); border-color:#f2b705; color:#ffe89a; font-size:10.5px; font-weight:800; }
+.lbl-menzi.rot { border-color:#d8232a; color:#ffb3b6; }
+.lbl-stahl.pk { background:rgba(11,95,255,.92); border-color:#0b5fff; color:#fff; }
 .lbl-tisch { background:rgba(255,220,0,.85); color:#111; border-color:#ffd700; font-size:9px; padding:1px 4px;
              transition:opacity .25s linear; will-change:opacity; }
 .lbl-status { font-size:10px; font-weight:800; padding:1px 5px;
@@ -409,6 +414,7 @@ body.ar-mode { background:transparent!important; }
           onkeydown="if(event.key==='Enter'){searchTisch();}">
   <button class="tb-btn" id="btnSearch" onclick="searchTisch()">🔍</button>
   <button class="tb-btn" id="btnGps" onclick="toggleGps()">📍 GPS</button>
+  <button class="tb-btn" id="btnStahl" onclick="nalpStahlteileOpen()" title="Stahlteile erfassen (GPS oder Position antippen)">🔩 Stahlteil</button>
   <button class="tb-btn" id="btnAR"  onclick="toggleAR()">📷 AR</button>
   <button class="tb-btn" id="btnMenuMore" onclick="tbMenu('menuMore')">⋯ Mehr ▾</button>
 </div>
@@ -651,6 +657,7 @@ var terrainMesh=null, satTex=null, terrainOn=true, satOn=true, terrainData=null;
 var gpsGroup=null, gpsWid=null, gpsOn=false;
 var tischeGroup=null, tischeLbls=[], tischeOn=true;
 var tischeItems=[];                 // {mesh, legs[], lbl, x, z} pro Tisch (für AR-Cull)
+var baustand=null;                  // uploads/tables/baustand.json – nur gestellte Tische anzeigen
 var AR_TISCH_HIDE_R=10;             // Tische im 10m-Umkreis im AR ausblenden
 var tischeIndex={}, searchMarker=null, searchMarkerT=0;
 
@@ -717,6 +724,13 @@ function gpsToScene(lat,lon,alt){
   var E=2600072.37+211455.93*l-10938.51*l*p-0.36*l*p*p-44.54*l*l*l;
   var N=1200147.07+308807.95*p+3745.25*l*l+76.63*p*p-194.56*l*l*p+119.79*p*p*p;
   return new THREE.Vector3(E-OE, (alt||OZ)-OZ, -(N-ON));
+}
+// Umkehrung: Szene (x,z) → WGS84 (swisstopo-Näherungsformeln LV95→WGS84)
+function sceneToGps(x,z){
+  var Y=(x+OE-2600000)/1000000, X=(-z+ON-1200000)/1000000;
+  var lam=2.6779094+4.728982*Y+0.791484*Y*X+0.1306*Y*X*X-0.0436*Y*Y*Y;
+  var phi=16.9023892+3.238272*X-0.270978*Y*Y-0.002528*X*X-0.0447*Y*Y*X-0.0140*X*X*X;
+  return { lat: phi*100/36, lon: lam*100/36 };
 }
 
 /* ── Terrain mesh ────────────────────────────────────────── */
@@ -836,26 +850,44 @@ async function loadLayer(cfg){
 /* ── Modultische ─────────────────────────────────────────── */
 async function loadTische(){
   txt('Lade Modultische …');
-  var r=await fetch('uploads/tables/modultische.json');
-  if(!r.ok) return;
-  var data=await r.json();
+  // Volldatensatz: alle Tische aus den ILF-Belegungslisten (PZ2025 A9 / PZ1 A3 /
+  // PZ2 A2 / PZ3 A1 + Serie 2025 aus A5) – Generator: tools/build_baustand.py
+  var data=null;
+  try{
+    var ra=await fetch('uploads/tables/modultische_all.json');
+    if(ra.ok) data=await ra.json();
+  }catch(e){}
+  if(!data){
+    // Fallback: alte Dateien (452er-Export + Status-Tische), Dedupe nach ID
+    var r=await fetch('uploads/tables/modultische.json');
+    if(!r.ok) return;
+    data=await r.json();
+    try {
+      var rs=await fetch('uploads/tables/modultische_status.json');
+      if(rs.ok){
+        var extra=await rs.json();
+        var have={}; data.forEach(function(t){ have[t[0]]=1; });
+        extra.forEach(function(t){ if(!have[t[0]]){ have[t[0]]=1; data.push(t); } });
+      }
+    } catch(e){ /* optional */ }
+  }
 
-  // Status-/Problem-Tische ergaenzen: dieselbe Quelle wie die 2D-Karte
-  // (LV95 zentrum_rechts/hoch/hoehe, tisch_ausrichtung, tisch_laenge – exakt
-  // deckungsgleich mit modultische.json). Separate Datei, damit der Original-
-  // Export unangetastet bleibt. Dedupe nach ID.
-  try {
-    var rs=await fetch('uploads/tables/modultische_status.json');
-    if(rs.ok){
-      var extra=await rs.json();
-      var have={}; data.forEach(function(t){ have[t[0]]=1; });
-      extra.forEach(function(t){ if(!have[t[0]]){ have[t[0]]=1; data.push(t); } });
+  // Baustand (Nalpi-Export, via tools/build_baustand.py): reales Abbild –
+  // nur effektiv gestellte Tische. 'pk' = leere Primärkonstruktion,
+  // 'mt' = Modulträger montiert. Ohne Datei: alle Tische wie früher.
+  baustand=null;
+  try{
+    var rb=await fetch('uploads/tables/baustand.json',{cache:'no-store'});
+    if(rb.ok){
+      var bj=await rb.json();
+      baustand={stand:bj.stand||'?', tische:bj.tische||{}};
     }
-  } catch(e){ /* Status-Tische optional */ }
+  }catch(e){}
 
   var geomA=new THREE.BoxGeometry(10.007,0.25,3);
   var geomB=new THREE.BoxGeometry(12.394,0.25,3);
 
+  // EIN Material für alle Tische mit Modulträger (einfarbig, Wunsch 23.07.)
   var panelMat=new THREE.MeshPhongMaterial({
     color:0x2266cc, emissive:0x001144, specular:0x5599ff, shininess:80,
     transparent:true, opacity:0.50, side:THREE.DoubleSide, depthWrite:true
@@ -863,23 +895,28 @@ async function loadTische(){
   var legMat=new THREE.MeshPhongMaterial({color:0x777777, emissive:0x222222, shininess:30});
   var legGeom=new THREE.CylinderGeometry(0.07,0.07,1,6);  // unit-length, scaled per leg
 
-  // ── Status-Einfaerbung: Problem-Tische (nalp-status.js) heben sich ab ──
-  var statusMatCache={};
-  function statusMat(hex){
-    if(statusMatCache[hex]) return statusMatCache[hex];
-    var c=new THREE.Color(hex);
-    var m=new THREE.MeshPhongMaterial({
-      color:c, emissive:c.clone().multiplyScalar(0.32), specular:0xffffff, shininess:70,
-      transparent:true, opacity:0.9, side:THREE.DoubleSide, depthWrite:true
-    });
-    statusMatCache[hex]=m; return m;
-  }
-  function tischStatusInfo(id){
-    return (window.NALP_STATUS && NALP_STATUS.tischInfo) ? NALP_STATUS.tischInfo(id) : null;
-  }
-  function statusDarkText(hex){
-    var c=new THREE.Color(hex);
-    return (0.299*c.r+0.587*c.g+0.114*c.b) > 0.6;   // helle Farbe -> dunkler Text
+  // Leere Primärkonstruktion (noch kein Modulträger): offenes Stahlgerüst –
+  // fast durchsichtige Füllung + zwei sichtbare Längsträger
+  var pkFillMat=new THREE.MeshPhongMaterial({
+    color:0x3b6fd4, emissive:0x0a1e4a, transparent:true, opacity:0.14,
+    side:THREE.DoubleSide, depthWrite:false
+  });
+  var railMat=new THREE.MeshPhongMaterial({color:0x3b6fd4, emissive:0x11265c, shininess:60});
+
+  // ID direkt auf die Modulträger-Fläche geschrieben (statt schwebendem Label)
+  var qPlate=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),-Math.PI/2);
+  qPlate.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),Math.PI));
+  function idPlate(idTxt){
+    var cv=document.createElement('canvas'); cv.width=256; cv.height=96;
+    var c2=cv.getContext('2d');
+    c2.font='700 62px Arial'; c2.textAlign='center'; c2.textBaseline='middle';
+    c2.lineWidth=9; c2.strokeStyle='rgba(0,0,0,.6)'; c2.strokeText(idTxt,128,50);
+    c2.fillStyle='#ffffff'; c2.fillText(idTxt,128,50);
+    var tex=new THREE.CanvasTexture(cv); tex.anisotropy=4;
+    var m=new THREE.Mesh(new THREE.PlaneGeometry(4.6,1.72),
+      new THREE.MeshBasicMaterial({map:tex, transparent:true, depthWrite:false, side:THREE.DoubleSide}));
+    m.renderOrder=7;
+    return m;
   }
 
   tischeGroup=new THREE.Group();
@@ -916,13 +953,27 @@ async function loadTische(){
     );
     tmpQ.setFromRotationMatrix(rotM);
 
-    var sInfo=tischStatusInfo(id);
-    var mesh=new THREE.Mesh(len<11?geomA:geomB, sInfo?statusMat(sInfo.color):panelMat);
+    // Baustand: 'mt' = Modulträger montiert (volle Fläche), 'pk' = leeres
+    // Gerüst, null/fehlt = noch nicht gestellt -> unsichtbar (reales Abbild)
+    var bs = baustand ? (baustand.tische[String(id).trim()]||null) : {s:'mt'};
+    var bsVis = !!bs;
+
+    var mesh=new THREE.Mesh(len<11?geomA:geomB, (bs&&bs.s==='pk')?pkFillMat:panelMat);
     mesh.position.set(px,py,pz);
     mesh.quaternion.copy(tmpQ);
     tischeGroup.add(mesh);
 
     var legsForItem=[];
+    if(bs && bs.s==='pk'){
+      // zwei Längsträger oben/unten machen das leere Gerüst erkennbar
+      [[0,0.10,-1.42],[0,0.10,1.42]].forEach(function(rc){
+        var rail=new THREE.Mesh(new THREE.BoxGeometry(len,0.15,0.15), railMat);
+        rail.position.copy(new THREE.Vector3(rc[0],rc[1],rc[2]).applyMatrix4(rotM)
+          .add(new THREE.Vector3(px,py,pz)));
+        rail.quaternion.copy(tmpQ);
+        tischeGroup.add(rail); legsForItem.push(rail);
+      });
+    }
     // Two legs at front (lower) edge corners: local (±len/2, -0.125, -1.5)
     var half=len/2;
     [[half,-0.125,-1.5],[-half,-0.125,-1.5]].forEach(function(lc){
@@ -945,29 +996,36 @@ async function loadTische(){
       tischeGroup.add(leg); legsForItem.push(leg);
     });
 
-    // ID label above panel center
-    var div=document.createElement('div');
-    div.className='lbl lbl-tisch'; div.textContent=id;
-    if(sInfo){
-      div.classList.add('lbl-status');
-      div.style.background=sInfo.color;
-      div.style.borderColor=sInfo.color;
-      div.style.color=statusDarkText(sInfo.color)?'#111':'#fff';
-      div.title=sInfo.icon+' '+sInfo.label;
-      div.textContent=sInfo.icon+' '+id;
+    // ID auf der Fläche (nur bei gestellten Tischen – spart Speicher)
+    if(bsVis){
+      var plate=idPlate(String(id));
+      plate.position.copy(new THREE.Vector3(0,0.17,0).applyMatrix4(rotM)
+        .add(new THREE.Vector3(px,py,pz)));
+      plate.quaternion.copy(tmpQ).multiply(qPlate);
+      tischeGroup.add(plate); legsForItem.push(plate);
     }
-    var lbl=new THREE.CSS2DObject(div);
-    lbl.position.set(px, py+2, pz);
-    scene.add(lbl); tischeLbls.push(lbl);
+
+    // Sichtbarkeit gemäss Baustand
+    if(!bsVis){
+      mesh.visible=false;
+      legsForItem.forEach(function(l){ l.visible=false; });
+    }
 
     // Index for ID search (camera position = table centre)
-    tischeIndex[String(id).trim()]={ pos:new THREE.Vector3(px,py,pz), lbl:lbl };
-    tischeItems.push({ id:String(id).trim(), mesh:mesh, legs:legsForItem, lbl:lbl, x:px, z:pz, status:sInfo?sInfo.key:null });
+    var item={ id:String(id).trim(), mesh:mesh, legs:legsForItem, lbl:null, x:px, z:pz,
+               bs:bs?bs.s:null, bsVis:bsVis };
+    tischeIndex[String(id).trim()]={ pos:new THREE.Vector3(px,py,pz), lbl:null, it:item };
+    tischeItems.push(item);
   });
 
   scene.add(tischeGroup);
-  var nStatus=tischeItems.filter(function(it){return it.status;}).length;
-  console.info('Modultische: '+data.length+' (mit Beinen), davon '+nStatus+' mit Status markiert');
+  var nPk=tischeItems.filter(function(it){return it.bs==='pk';}).length;
+  var nMt=tischeItems.filter(function(it){return it.bs==='mt';}).length;
+  console.info('Modultische: '+data.length+' geladen'+(baustand
+    ? (' | Baustand '+baustand.stand+': '+(nPk+nMt)+' gestellt ('+nPk+' nur PK, '+nMt+' mit Modulträger)')
+    : ' | kein Baustand – alle sichtbar'));
+  if(baustand && typeof flashMsg==='function')
+    flashMsg('🏗 Baustand '+baustand.stand+': '+(nPk+nMt)+' Tische gestellt ('+nPk+' leere PK, '+nMt+' mit Modulträger)');
 }
 
 window.toggleTische=function(){
@@ -988,10 +1046,13 @@ function updateArTischeCull(){
   for(var i=0;i<tischeItems.length;i++){
     var it=tischeItems[i];
     var near = on && ((it.x-arPos.x)*(it.x-arPos.x)+(it.z-arPos.z)*(it.z-arPos.z) < AR_TISCH_HIDE_R*AR_TISCH_HIDE_R);
-    it.mesh.visible = !near;
-    for(var j=0;j<it.legs.length;j++) it.legs[j].visible = !near;
-    it.lbl.userData.arCulled = near;
-    if(near) it.lbl.visible=false;
+    var show = !near && it.bsVis!==false;            // Baustand: nie Gestelltes einblenden
+    it.mesh.visible = show;
+    for(var j=0;j<it.legs.length;j++) it.legs[j].visible = show;
+    if(it.lbl){
+      it.lbl.userData.arCulled = near;
+      if(near) it.lbl.visible=false;
+    }
   }
 }
 
@@ -1053,8 +1114,13 @@ window.searchTisch=function(){
   searchMarker.visible=true; searchMarkerT=4.5;
 
   if(e.lbl){ e.lbl.visible=true; if(e.lbl.element) e.lbl.element.style.opacity='1'; }
-  var info=(window.NALP_STATUS&&NALP_STATUS.tischInfo)?NALP_STATUS.tischInfo(q):null;
-  flashMsg(info ? (info.icon+' Tisch '+q+' – '+info.label) : ('🟨 Tisch '+q));
+  if(e.it && e.it.bsVis===false){
+    flashMsg('⬜ Tisch '+q+' – noch nicht gestellt'+(baustand?' (Stand '+baustand.stand+')':''));
+  } else if(e.it && e.it.bs==='pk'){
+    flashMsg('🏗 Tisch '+q+' – Primärkonstruktion ohne Modulträger');
+  } else {
+    flashMsg('🟦 Tisch '+q+(e.it&&e.it.bs==='mt'?' – Modulträger montiert':''));
+  }
   if(navigator.vibrate) navigator.vibrate(50);
   if(inp) inp.blur();
 };
@@ -2105,6 +2171,7 @@ function updateSamuel(dt){
 var sunLight=null, hemiLight=null, skyMesh=null, swayUniforms=[];
 var vegGroup=null, vegetationOn=true;
 var craneGroup=null, cranePath=null, craneCum=null, craneTotal=0, craneD=0, craneDir=1, craneWheels=[], craneTurret=null, craneRoll=0, craneOn=true;
+var craneLivePos=null;   // Live-Standort aus RTDB standorte/pneukran (Tracker/Handy im Kran)
 var climbers=[], climbersGroup=null;
 var weatherMode='sonne';
 var rainPts=null, rainVel=null, RAIN_N=4000;
@@ -2424,6 +2491,12 @@ function updateCrane(dt){
   if(!craneGroup) return;
   craneGroup.visible=craneOn && !arActive;
   if(!craneGroup.visible) return;
+  if(craneLivePos){
+    // Live-Position gemeldet: Kran steht dort, fährt nicht herum
+    craneGroup.position.set(craneLivePos.x, terraY(craneLivePos.x,craneLivePos.z)||craneGroup.position.y, craneLivePos.z);
+    if(craneTurret) craneTurret.rotation.y=Math.sin(performance.now()/4000)*0.5;
+    return;
+  }
   var spd=5; craneD+=craneDir*spd*dt;
   if(craneD>=craneTotal){ craneD=craneTotal; craneDir=-1; } else if(craneD<=0){ craneD=0; craneDir=1; }
   var p=craneAt(craneD);
@@ -2686,7 +2759,12 @@ function spawnClimbers(n){
 }
 function assignClimber(c){
   if(!tischeItems.length){ c.timer=5; return; }
-  var it=tischeItems[(Math.random()*tischeItems.length)|0];
+  var it=null;
+  for(var tr=0;tr<8;tr++){
+    var cand=tischeItems[(Math.random()*tischeItems.length)|0];
+    if(cand.mesh.visible){ it=cand; break; }          // nicht auf unsichtbare Tische klettern
+  }
+  if(!it){ c.timer=5; return; }
   c.group.position.set(it.x, it.mesh.position.y-0.3, it.z);
   c.group.rotation.y=Math.random()*6.28;
   var u=c.group.userData;
@@ -2807,7 +2885,8 @@ window.tbMenu=function(id){
 
 /* ── Tap detection (distinguish tap from orbit drag) ─────── */
 function onTapDown(e){
-  if(!gamePlaying && !birdARon && !measurePlacing() && !measEditOn) return;
+  if(!gamePlaying && !birdARon && !measurePlacing() && !measEditOn && !stahlPickDone &&
+     !(stahlGroup && stahlGroup.children.length)) return;
   tapStart={x:e.clientX, y:e.clientY, t:performance.now()};
 }
 function onTapUp(e){
@@ -2824,6 +2903,8 @@ function onTapUp(e){
   }
   if(measurePlacing()){ measureTapAt(e.clientX, e.clientY); return; }
   if(measEditOn){ measEditTap(e.clientX, e.clientY); return; }
+  if(stahlPickTap(e.clientX, e.clientY)) return;   // Stahlteil-Position antippen (Erfassung ohne GPS)
+  pickStahl(e.clientX, e.clientY);   // Stahlteil-Marker antippen = löschen
 }
 function pickBird(cx,cy){
   if(!birdGroup) return;
@@ -3349,8 +3430,9 @@ function fpvKeyTick(gdt){                            // Desktop: WASD/Pfeile
 /* Spielfluss */
 function restoreTables(){
   for(var i=0;i<tischeItems.length;i++){
-    tischeItems[i].mesh.visible=true;
-    for(var j=0;j<tischeItems[i].legs.length;j++) tischeItems[i].legs[j].visible=true;
+    var vis=tischeItems[i].bsVis!==false;            // Baustand respektieren
+    tischeItems[i].mesh.visible=vis;
+    for(var j=0;j<tischeItems[i].legs.length;j++) tischeItems[i].legs[j].visible=vis;
   }
   if(scorchGroup){ scene.remove(scorchGroup); scorchGroup=null; }
   updateArTischeCull();
@@ -3982,7 +4064,8 @@ function baExit(){
     t.fills.forEach(function(m){ m.visible=false; });
     t.lines.forEach(function(l){ l.visible=false; });
     t.lbls.forEach(function(l){ l.visible=false; });
-    t.items.forEach(function(it){ baShowItem(it,true); });
+    // zurück zum realen Baustand: nur effektiv Gestelltes einblenden
+    t.items.forEach(function(it){ if(it.bsVis!==false) baShowItem(it,true); else baHideItem(it); });
   });
   document.getElementById('baHud').classList.remove('on');
   var b=document.getElementById('btnBau'); if(b) b.classList.remove('active');
@@ -4063,6 +4146,185 @@ function updateBauablauf(dt){
         }).join('')
       : '<div class="ba-none">'+((di%7)>=5?'Wochenende – keine Arbeiten geplant':'Keine Arbeiten geplant')+'</div>';
   }
+}
+
+/* ── Stahlteile: erfasste Teile (nalp-stahlteile.js) ── */
+var stahlGroup=null, stahlPending=null;
+function renderStahlteile(items){
+  if(items) stahlPending=items;
+  if(!scene || !stahlPending) return;
+  if(stahlGroup) scene.remove(stahlGroup);
+  stahlGroup=new THREE.Group();
+  stahlPending.forEach(function(it){
+    if(typeof it.lat!=='number' || typeof it.lon!=='number') return;
+    var s=gpsToScene(it.lat,it.lon,null);
+    var y=terraY(s.x,s.z) || s.y;
+    var isPk=it.art==='primaer';
+    var K=NalpStahlteile.katInfo(it.art);
+    var col=new THREE.Color(K.col).getHex();
+    var g=new THREE.Group();
+    var pole=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,5,8),
+      new THREE.MeshBasicMaterial({color:0xffffff}));
+    pole.position.y=2.5; g.add(pole);
+    var head=new THREE.Mesh(new THREE.SphereGeometry(1.4,12,10),
+      new THREE.MeshBasicMaterial({color:col}));
+    head.position.y=5.6; g.add(head);
+    // unsichtbare grössere Trefferfläche fürs Antippen am Handy
+    var hit=new THREE.Mesh(new THREE.SphereGeometry(3.5,8,6),
+      new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}));
+    hit.position.y=5; g.add(hit);
+    var d=document.createElement('div');
+    d.className='lbl lbl-stahl'+(isPk?' pk':'');
+    d.textContent=isPk ? ('🏗 PK '+(it.tischId||'?')) : (K.icon+' '+(it.teilTyp||K.label));
+    var lbl=new THREE.CSS2DObject(d); lbl.position.set(0,8,0); g.add(lbl);
+    g.position.set(s.x,y,s.z);
+    g.userData.stahlItem=it;
+    stahlGroup.add(g);
+  });
+  scene.add(stahlGroup);
+}
+if(window.NalpStahlteile) NalpStahlteile.subscribe(function(items){ renderStahlteile(items); });
+
+// Tap auf einen Stahlteil-Marker → Eintrag löschen (aufgeräumt/verbaut)
+function pickStahl(cx,cy){
+  if(!stahlGroup || !stahlGroup.children.length) return false;
+  var rect=renderer.domElement.getBoundingClientRect();
+  var m=new THREE.Vector2(((cx-rect.left)/rect.width)*2-1, -((cy-rect.top)/rect.height)*2+1);
+  raycaster.setFromCamera(m,camera);
+  var hits=raycaster.intersectObjects(stahlGroup.children,true);
+  if(!hits.length) return false;
+  var o=hits[0].object;
+  while(o && o.parent && o.parent!==stahlGroup) o=o.parent;
+  var it=o && o.userData && o.userData.stahlItem;
+  if(!it) return false;
+  if(confirm('„'+NalpStahlteile.itemTitle(it)+'" löschen (aufgeräumt/verbaut)?')){
+    NalpStahlteile.remove(it, function(ok,msg){ if(!ok) alert(msg||'Löschen fehlgeschlagen – offline?'); });
+  }
+  return true;
+}
+
+// Positionswahl ohne GPS: Nutzer tippt den Standort im 3D-Modell an
+var stahlPickDone=null;
+if(window.NalpStahlteile) NalpStahlteile.registerPicker(function(done){
+  stahlPickDone=done;
+  return function(){ stahlPickDone=null; };
+});
+function stahlPickTap(cx,cy){
+  if(!stahlPickDone) return false;
+  var rect=renderer.domElement.getBoundingClientRect();
+  var m=new THREE.Vector2(((cx-rect.left)/rect.width)*2-1, -((cy-rect.top)/rect.height)*2+1);
+  raycaster.setFromCamera(m,camera);
+  var objs=[]; if(terrainMesh) objs.push(terrainMesh);
+  Object.values(layers).forEach(function(o){ if(o) objs.push(o); });
+  var hits=raycaster.intersectObjects(objs,true);
+  if(!hits.length) return true;          // Tap ins Leere: Auswahl bleibt aktiv
+  var p=hits[0].point;
+  var cb=stahlPickDone; stahlPickDone=null;
+  cb(sceneToGps(p.x,p.z));
+  return true;
+}
+
+/* ── Menzi-Muck-Bohrgeräte (gelb = Gruppe 1, rot = Gruppe 2) ──────────
+   Position: laut 5W-Programm (uploads/bauablauf.json, Gewerk 'bohren' –
+   aktive Aufgabe des Tages, sonst die nächste geplante). Übersteuerbar
+   durch Live-Standorte aus der RTDB unter standorte/menzi_gelb|menzi_rot
+   (z.B. altes Handy mit OwnTracks oder LTE-GPS-Tracker im Gerät).
+   standorte/pneukran parkiert zusätzlich den Pneukran am echten Ort.   */
+var menzis={};
+var STANDORTE_URL='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app/standorte.json';
+
+function makeMenzi(col){
+  var g=new THREE.Group();
+  var body=new THREE.MeshPhongMaterial({color:col, emissive:new THREE.Color(col).multiplyScalar(0.18), shininess:55});
+  var dark=new THREE.MeshPhongMaterial({color:0x2a2a2e, shininess:25});
+  var glas=new THREE.MeshPhongMaterial({color:0x9fd4ff, transparent:true, opacity:0.65});
+  var chassis=new THREE.Mesh(new THREE.BoxGeometry(2.2,0.7,1.6), body); chassis.position.y=1.5; g.add(chassis);
+  var cab=new THREE.Mesh(new THREE.BoxGeometry(1.3,1.25,1.2), body); cab.position.set(-0.45,2.45,0); g.add(cab);
+  var scheibe=new THREE.Mesh(new THREE.BoxGeometry(1.0,0.8,1.05), glas); scheibe.position.set(-0.45,2.55,0); g.add(scheibe);
+  // 4 Schreitbeine mit Tellerfüssen (Schreitbagger)
+  [[1,1],[1,-1],[-1,1],[-1,-1]].forEach(function(q){
+    var leg=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.07,2.6,6), dark);
+    leg.position.set(q[0]*1.5, 0.9, q[1]*1.3);
+    leg.rotation.z=q[0]*0.55; leg.rotation.x=q[1]*0.35; g.add(leg);
+    var fuss=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.36,0.25,10), dark);
+    fuss.position.set(q[0]*2.1,0.12,q[1]*1.8); g.add(fuss);
+  });
+  // Ausleger + senkrechte Bohrlafette mit Gestänge
+  var arm=new THREE.Mesh(new THREE.BoxGeometry(2.6,0.3,0.3), body);
+  arm.position.set(1.5,2.35,0); arm.rotation.z=0.5; g.add(arm);
+  var mast=new THREE.Mesh(new THREE.BoxGeometry(0.34,6.5,0.34), dark);
+  mast.position.set(2.7,3.6,0); g.add(mast);
+  var gest=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,5.6,6),
+    new THREE.MeshPhongMaterial({color:0xd8d8d8, shininess:85}));
+  gest.position.set(2.5,3.3,0); g.add(gest);
+  setCast(g);
+  return g;
+}
+
+function menziSet(farbe, lat, lon, quelle, live){
+  var m=menzis[farbe];
+  if(!m){
+    m=menzis[farbe]={g:makeMenzi(farbe==='gelb'?0xf2b705:0xd8232a), live:false};
+    var d=document.createElement('div');
+    d.className='lbl lbl-menzi'+(farbe==='rot'?' rot':'');
+    m.lblEl=d;
+    var lbl=new THREE.CSS2DObject(d); lbl.position.set(0,7.6,0); m.g.add(lbl);
+    scene.add(m.g);
+  }
+  if(m.live && !live) return;                        // Plan überschreibt nie live
+  m.live=!!live;
+  var s=gpsToScene(lat,lon,null);
+  var x=s.x+(live?0:(farbe==='rot'?14:0)), z=s.z+(live?0:(farbe==='rot'?6:0));
+  var y=terraY(x,z); if(y===null||y===undefined) y=s.y||0;
+  m.g.position.set(x,y,z);
+  m.g.rotation.y=(farbe==='rot')?2.2:0.8;
+  m.lblEl.textContent=(live?'📡 ':'⛏ ')+'Menzi '+farbe+' – '+quelle;
+}
+
+function menziPlan(){
+  fetch('uploads/bauablauf.json',{cache:'no-store'})
+    .then(function(r){ return r.ok?r.json():null; })
+    .then(function(j){
+      if(!j || !j.aufgaben) return;
+      var iso=new Date().toISOString().slice(0,10);
+      var bohr=j.aufgaben.filter(function(a){ return a.gewerk==='bohren'; });
+      function pick(gr){
+        var m=bohr.filter(function(a){ return (a.label||'').indexOf(gr)>=0; });
+        if(!m.length) m=bohr;
+        var akt=m.filter(function(a){ return a.von<=iso && iso<=a.bis; });
+        if(akt.length) return akt[0];
+        var next=m.filter(function(a){ return a.von>iso; })
+                  .sort(function(x,y){ return x.von<y.von?-1:1; });
+        return next.length?next[0]:m[m.length-1];
+      }
+      [['gelb','Gruppe 1'],['rot','Gruppe 2']].forEach(function(k){
+        var t=pick(k[1]); if(!t) return;
+        var bz=(t.bereiche||[])[0]; var poly=bz&&j.polygone?j.polygone[bz]:null;
+        if(!poly || !poly.length) return;
+        var cx=0,cy=0; poly.forEach(function(p){ cx+=p[0]; cy+=p[1]; });
+        cx/=poly.length; cy/=poly.length;              // Polygon = [lon,lat]
+        var heute=(t.von<=iso && iso<=t.bis);
+        menziSet(k[0], cy, cx, t.label+(heute?' (heute, 5W)':' (ab '+t.von+', 5W)'), false);
+      });
+    }).catch(function(){});
+}
+
+function standorteTick(){
+  fetch(STANDORTE_URL,{cache:'no-store'})
+    .then(function(r){ return r.ok?r.json():null; })
+    .then(function(s){
+      if(!s){ craneLivePos=null; return; }
+      [['menzi_gelb','gelb'],['menzi_rot','rot']].forEach(function(k){
+        var e=s[k[0]];
+        if(e && typeof e.lat==='number' && typeof e.lon==='number'){
+          var alter=(typeof e.ts==='number')?Math.round((Date.now()-e.ts)/3600000):null;
+          menziSet(k[1], e.lat, e.lon, 'live'+(alter!==null?' (vor '+alter+' h)':''), true);
+        }
+      });
+      var pk=s.pneukran;
+      craneLivePos=(pk && typeof pk.lat==='number' && typeof pk.lon==='number')
+        ? gpsToScene(pk.lat,pk.lon,null) : null;
+    }).catch(function(){ /* offline: Plan-Positionen bleiben */ });
 }
 
 /* ── Toggle UI ───────────────────────────────────────────── */
@@ -4676,6 +4938,8 @@ async function init(){
     spawnWorkers(5); if(workerGroup) setCast(workerGroup);
     try{ spawnCows(4); }catch(e){ console.warn('cows',e); }
     try{ spawnSamuel(); }catch(e){ console.warn('samuel',e); }
+    try{ renderStahlteile(); }catch(e){ console.warn('stahlteile',e); }   // jetzt mit Terrain-Höhe
+    try{ menziPlan(); standorteTick(); setInterval(standorteTick,60000); }catch(e){ console.warn('menzi',e); }
     // Umgebung: Vegetation, Kletterer, Pneukran-Strasse, Wetter
     try{ spawnVegetation(workerArea); }catch(e){ console.warn('veg',e); }
     try{ spawnClimbers(3); }catch(e){ console.warn('climbers',e); }

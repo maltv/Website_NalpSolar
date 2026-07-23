@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v58';
+var CACHE = 'nalpsolar-v59';
 var PRECACHE = [
   './index.html',
   './stahlbau.html',
@@ -11,8 +11,11 @@ var PRECACHE = [
   './assets/js/nalp-passstueck-daten.js',
   './assets/js/nalp-passstueck-abz.js',
   './stellen.html',
+  './erfassungen.html',
   './viewer3d.html',
   './assets/js/nalp-gate.js',
+  './assets/js/nalp-erfassung.js',
+  './assets/js/nalp-stahlteile.js',
   './assets/js/nalp-status.js',
   './uploads/tables/modultische_status.json',
   './assets/js/three/three.min.js',
@@ -30,6 +33,8 @@ var PRECACHE = [
   './uploads/ifc/leitungen26.f.bin',
   './uploads/ifc/leitungen26.c.bin',
   './uploads/tables/modultische.json',
+  './uploads/tables/modultische_all.json',
+  './uploads/tables/baustand.json',
   './uploads/road.json',
   './uploads/bauablauf.json',
   './game.html',
