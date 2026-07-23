@@ -4351,7 +4351,15 @@ function makeStahlteil(it){
 function renderStahlteile(items){
   if(items) stahlPending=items;
   if(!scene || !stahlPending) return;
-  if(stahlGroup) scene.remove(stahlGroup);
+  if(stahlGroup){
+    // CSS2D-Chips explizit aus dem DOM entfernen – scene.remove(gruppe)
+    // feuert das 'removed'-Event NICHT für Enkel-Labels, sonst bleiben
+    // sie als "eingebrannte" Beschriftungen im Overlay stehen
+    stahlGroup.traverse(function(o){
+      if(o.isCSS2DObject && o.element && o.element.parentNode) o.element.parentNode.removeChild(o.element);
+    });
+    scene.remove(stahlGroup);
+  }
   stahlGroup=new THREE.Group();
   stahlLbls=[];
   var entries=[];
