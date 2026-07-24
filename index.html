@@ -6,7 +6,8 @@
 <title>NalpSolar · Baustellen-Portal</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0b1826">
-<script src="assets/js/nalp-gate.js"></script>
+<!-- Startseite offen (kein Gate) – die einzelnen Reiter fragen ihren Code selbst ab
+     (bestehende Reiter: 6460, Logistik: 7188) -->
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -113,6 +114,7 @@
   .card.c-pass{ --glow: rgba(255, 210, 63, .30); grid-column: 1 / -1; min-height: 118px; }
   .card.c-chaos{ --glow: rgba(255, 107, 107, .36); grid-column: 1 / -1; min-height: 118px; }
   .card.c-erf{ --glow: rgba(60, 200, 140, .34); grid-column: 1 / -1; min-height: 118px; }
+  .card.c-log{ --glow: rgba(255, 170, 40, .38); grid-column: 1 / -1; min-height: 118px; }
 
   .foot {
     margin-top: 30px;
@@ -186,11 +188,17 @@
       <div class="ttl">Erfassungen</div>
       <div class="desc">Stahlteile &amp; Montage als Tabelle – live aus Firebase, mit CSV-/Excel-Export</div>
     </a>
+
+    <a class="card c-log" href="logistik.html">
+      <div class="ico">🚚</div>
+      <div class="ttl">Logistik</div>
+      <div class="desc">Transporte &amp; Abholungen melden (z.B. Stapel bei IP4 fertig) – Sandro hakt ab, mit Kommentar &amp; Foto</div>
+    </a>
   </div>
 
   <div class="foot">
     Interner Baustellen-Zugang · Victor Malt, STRABAG B8-13<br>
-    Code ändern/abmelden: <a href="javascript:nalpLogout()">Abmelden</a>
+    Code ändern/abmelden: <a href="#" onclick="try{localStorage.removeItem('nalp_portal_unlock_v1');localStorage.removeItem('nalp_logistik_unlock_v1');}catch(e){};alert('Abgemeldet – die Reiter fragen den Code wieder ab.');return false">Abmelden</a>
   </div>
 
   <script>

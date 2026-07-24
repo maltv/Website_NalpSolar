@@ -6,13 +6,20 @@
  * Schutz waere Firebase-Auth / Server-Passwort noetig.
  *
  * Einbindung: <script src="assets/js/nalp-gate.js"></script> im <head> JEDER
- * oeffentlichen Seite, moeglichst frueh (vor den grossen App-Skripten).
+ * geschuetzten Seite, moeglichst frueh (vor den grossen App-Skripten).
+ * Optional VOR dem Include konfigurierbar (z.B. Logistik mit eigenem Code):
+ *   window.NALP_GATE_CODE  = '7188';
+ *   window.NALP_GATE_KEY   = 'nalp_logistik_unlock_v1';
+ *   window.NALP_GATE_TITEL = 'Logistik';
+ *   window.NALP_GATE_SUB   = 'Code = PLZ Sedrun';
  */
 (function () {
   'use strict';
 
-  var CODE = '6460';                    // Zugangscode
-  var KEY = 'nalp_portal_unlock_v1';    // localStorage-Flag (bleibt bis Logout/Cache-Leerung)
+  var CODE = String(window.NALP_GATE_CODE || '6460');            // Zugangscode
+  var KEY  = String(window.NALP_GATE_KEY  || 'nalp_portal_unlock_v1');  // localStorage-Flag
+  var TITEL = String(window.NALP_GATE_TITEL || 'Baustellen-Portal');
+  var SUB   = String(window.NALP_GATE_SUB   || 'Code eingeben, um fortzufahren');
   var MAXLEN = CODE.length;
 
   // Bereits freigeschaltet? -> nichts tun.
@@ -68,8 +75,8 @@
     '<div class="ng-sun"></div>' +
     '<div class="ng-card">' +
       '<div class="ng-brand">NalpSolar &middot; STRABAG</div>' +
-      '<h1>Baustellen-Portal</h1>' +
-      '<div class="ng-sub">Code eingeben, um fortzufahren</div>' +
+      '<h1></h1>' +
+      '<div class="ng-sub"></div>' +
       '<div class="ng-dots">' +
         '<span class="ng-dot"></span><span class="ng-dot"></span>' +
         '<span class="ng-dot"></span><span class="ng-dot"></span>' +
@@ -94,6 +101,8 @@
     '<div class="ng-mtn"></div>';
 
   function mount() {
+    gate.querySelector('h1').textContent = TITEL;      // via textContent (kein HTML-Inject)
+    gate.querySelector('.ng-sub').textContent = SUB;
     (document.body || htmlEl).appendChild(gate);
     wire();
   }

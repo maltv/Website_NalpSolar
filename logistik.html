@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NalpSolar · Logistik</title>
+<meta name="theme-color" content="#0b1826">
+<script>
+  /* eigenes Gate: Code = PLZ Sedrun, eigener Schlüssel -> Sandro sieht NUR Logistik */
+  window.NALP_GATE_CODE  = '7188';
+  window.NALP_GATE_KEY   = 'nalp_logistik_unlock_v1';
+  window.NALP_GATE_TITEL = 'Logistik';
+  window.NALP_GATE_SUB   = 'Code eingeben (Tipp: PLZ Sedrun)';
+</script>
+<script src="assets/js/nalp-gate.js"></script>
+<style>
+  :root{ --bg:#0b1420; --card:#121e2e; --line:rgba(255,255,255,.09); --txt:#e8eef7;
+         --mut:rgba(232,238,247,.6); --blau:#2196F3; --gruen:#2fbf71; --rot:#ff5252; --gelb:#ffc340; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body{ margin:0; background:radial-gradient(120% 90% at 50% -10%,#12304f 0%,#0b1826 55%,#070d15 100%);
+        min-height:100vh; color:var(--txt);
+        font-family:-apple-system,"Helvetica Neue","Segoe UI",Arial,sans-serif; }
+  header{ position:sticky; top:0; z-index:10; display:flex; align-items:center; gap:10px;
+          padding:12px 14px; background:rgba(9,16,26,.92); backdrop-filter:blur(8px);
+          border-bottom:1px solid var(--line); }
+  header a.home{ color:var(--txt); text-decoration:none; font-size:20px; }
+  header h1{ font-size:17px; margin:0; flex:1; font-weight:800; }
+  header button{ background:rgba(255,255,255,.08); color:var(--txt); border:1px solid var(--line);
+          border-radius:9px; padding:7px 11px; font-size:13px; font-weight:700; cursor:pointer; }
+  main{ max-width:720px; margin:0 auto; padding:14px 12px 90px; }
+  .box{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:13px; margin-bottom:14px; }
+  .box h2{ margin:0 0 10px; font-size:14.5px; letter-spacing:.02em; }
+  label.fl{ display:block; font-size:11.5px; font-weight:700; color:var(--mut); margin:9px 0 4px; }
+  input,textarea,select{ width:100%; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14);
+          border-radius:9px; color:var(--txt); padding:9px 10px; font-size:15px; font-family:inherit; }
+  textarea{ min-height:56px; resize:vertical; }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+  .chkrow{ display:flex; align-items:center; gap:8px; margin-top:10px; font-size:14px; }
+  .chkrow input{ width:20px; height:20px; }
+  .btn{ display:inline-block; border:none; border-radius:11px; padding:11px 15px; font-size:14.5px;
+        font-weight:800; cursor:pointer; color:#fff; background:var(--blau); }
+  .btn.gruen{ background:var(--gruen); color:#06220f; }
+  .btn.ghost{ background:rgba(255,255,255,.08); color:var(--txt); border:1px solid var(--line);
+        font-weight:700; padding:8px 11px; font-size:13px; border-radius:9px; }
+  .btn[disabled]{ opacity:.5; }
+  #fotoPrev{ display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+  #fotoPrev img{ width:74px; height:74px; object-fit:cover; border-radius:8px; border:1px solid var(--line); }
+  #status{ font-size:12.5px; color:var(--mut); min-height:17px; margin-top:8px; }
+
+  .auftrag{ background:var(--card); border:1px solid var(--line); border-radius:14px;
+            padding:12px 13px; margin-bottom:11px; }
+  .auftrag.dringend{ border-color:rgba(255,82,82,.55); box-shadow:0 0 0 1px rgba(255,82,82,.25); }
+  .auftrag.done{ opacity:.62; }
+  .a-top{ display:flex; gap:8px; align-items:flex-start; }
+  .a-txt{ flex:1; font-size:15px; line-height:1.45; font-weight:600; white-space:pre-wrap; }
+  .a-badge{ font-size:10.5px; font-weight:900; letter-spacing:.05em; border-radius:6px;
+            padding:3px 7px; white-space:nowrap; }
+  .a-badge.dr{ background:rgba(255,82,82,.18); color:#ff9b9b; border:1px solid rgba(255,82,82,.4); }
+  .a-badge.ok{ background:rgba(47,191,113,.16); color:#7ee2ae; border:1px solid rgba(47,191,113,.4); }
+  .a-meta{ font-size:12px; color:var(--mut); margin-top:6px; }
+  .a-meta .ort{ color:#ffd479; font-weight:700; }
+  .a-fotos{ display:flex; gap:8px; margin-top:9px; flex-wrap:wrap; }
+  .a-fotos img{ width:86px; height:86px; object-fit:cover; border-radius:9px; border:1px solid var(--line); cursor:pointer; }
+  .a-komms{ margin-top:9px; border-top:1px dashed var(--line); padding-top:8px; }
+  .a-komm{ font-size:13px; margin:4px 0; line-height:1.4; }
+  .a-komm b{ color:#9ecbff; }
+  .a-act{ display:flex; gap:8px; margin-top:11px; flex-wrap:wrap; }
+  .a-done-info{ margin-top:8px; font-size:13px; color:#7ee2ae; font-weight:700; }
+  .sek{ margin:20px 0 9px; font-size:13px; font-weight:900; letter-spacing:.06em;
+        text-transform:uppercase; color:var(--mut); }
+  .leer{ color:var(--mut); font-size:13.5px; padding:6px 2px; }
+  .mini{ font-size:11px; color:var(--mut); }
+  #bigfoto{ position:fixed; inset:0; z-index:60; background:rgba(0,0,0,.92); display:none;
+            align-items:center; justify-content:center; padding:12px; }
+  #bigfoto img{ max-width:100%; max-height:100%; border-radius:10px; }
+  #toast{ position:fixed; left:50%; bottom:22px; transform:translateX(-50%) translateY(80px);
+          background:#123c22; color:#c9f2da; border:1px solid rgba(47,191,113,.5); font-weight:700;
+          padding:10px 16px; border-radius:12px; font-size:14px; transition:transform .25s; z-index:70; }
+  #toast.on{ transform:translateX(-50%) translateY(0); }
+  #toast.err{ background:#3c1212; color:#ffc9c9; border-color:rgba(255,82,82,.5); }
+</style>
+</head>
+<body>
+<header>
+  <a class="home" href="index.html" title="Startseite">🏠</a>
+  <h1>🚚 Logistik · Transporte</h1>
+  <button onclick="laden(true)">↻</button>
+</header>
+<main>
+  <div class="box">
+    <h2>➕ Neuer Auftrag / Abholung melden</h2>
+    <label class="fl">Was ist zu tun?</label>
+    <textarea id="f_text" placeholder="z.B. Modulträgerstapel fertig, kann abgeholt werden"></textarea>
+    <div class="row2">
+      <div>
+        <label class="fl">Ort</label>
+        <input id="f_ort" placeholder="z.B. IP4, Magazin, Tisch 538">
+      </div>
+      <div>
+        <label class="fl">Gemeldet von</label>
+        <input id="f_von" placeholder="Name / Kürzel">
+      </div>
+    </div>
+    <div class="chkrow"><input type="checkbox" id="f_prio"><label for="f_prio">🔴 Dringend</label></div>
+    <label class="fl">Foto (optional)</label>
+    <input type="file" id="f_foto" accept="image/*" capture="environment">
+    <div id="fotoPrev"></div>
+    <div style="margin-top:12px"><button class="btn" id="btnSave" onclick="speichern()">📤 Auftrag melden</button></div>
+    <div id="status"></div>
+  </div>
+
+  <div class="sek">Offen</div>
+  <div id="listOffen"><div class="leer">Lade …</div></div>
+
+  <div class="sek">✅ Erledigt <button class="btn ghost" id="btnDone" onclick="toggleDone()">anzeigen</button></div>
+  <div id="listDone" style="display:none"></div>
+
+  <div class="mini" style="margin-top:18px">
+    Einträge kann jeder erfassen (Mike, Samuel, Victor …). Sandro Schuoler hakt ab, wenn erledigt –
+    mit Kommentar und Foto. Daten liegen in der Baustellen-Datenbank (Firebase).
+  </div>
+</main>
+
+<div id="bigfoto" onclick="this.style.display='none'"><img id="bigfotoImg" alt=""></div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+var DB='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app';
+var P_AUF='logistik/auftraege', P_FOTO='logistik/fotos';
+var LS_VON='nalp_erfasser_v1';                       // gleicher Name wie Stahlteile-Erfassung
+var eintraege={}, fotoDataNeu=null, fotoCache={};
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+function toast(t,err){ var e=$('toast'); e.textContent=t; e.className='on'+(err?' err':'');
+  setTimeout(function(){ e.className=err?'err':''; },2600); }
+function heute(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fmtD(iso){ if(!iso) return ''; var p=String(iso).split('-'); return p.length===3?p[2]+'.'+p[1]+'.'+p[0]:iso; }
+function getVon(){ try{ return localStorage.getItem(LS_VON)||''; }catch(e){ return ''; } }
+function setVon(v){ try{ localStorage.setItem(LS_VON,v||''); }catch(e){} }
+
+/* ---------- Foto: verkleinern + als JPEG-Base64 ---------- */
+function fotoLesen(file, cb){
+  var img=new Image();
+  img.onload=function(){
+    var m=1100, w=img.width, h=img.height;
+    if(w>m||h>m){ if(w>h){ h=Math.round(h*m/w); w=m; } else { w=Math.round(w*m/h); h=m; } }
+    var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+    cv.getContext('2d').drawImage(img,0,0,w,h);
+    var data=cv.toDataURL('image/jpeg',0.72);
+    if(data.length>900000) data=cv.toDataURL('image/jpeg',0.5);
+    cb(data);
+  };
+  img.onerror=function(){ cb(null); };
+  img.src=URL.createObjectURL(file);
+}
+$('f_foto').addEventListener('change',function(){
+  fotoDataNeu=null; $('fotoPrev').innerHTML='';
+  var f=this.files&&this.files[0]; if(!f) return;
+  fotoLesen(f,function(data){
+    if(!data){ toast('Foto konnte nicht gelesen werden',true); return; }
+    fotoDataNeu=data;
+    var im=document.createElement('img'); im.src=data; $('fotoPrev').appendChild(im);
+  });
+});
+
+/* ---------- REST ---------- */
+function apiGet(p){ return fetch(DB+'/'+p+'.json',{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }); }
+function apiPost(p,body){ return fetch(DB+'/'+p+'.json',{method:'POST',body:JSON.stringify(body)})
+  .then(function(r){ return r.ok?r.json():null; }).then(function(j){ return j&&j.name?j.name:null; }); }
+function apiPatch(p,body){ return fetch(DB+'/'+p+'.json',{method:'PATCH',body:JSON.stringify(body)})
+  .then(function(r){ return r.ok; }); }
+function apiPut(p,body){ return fetch(DB+'/'+p+'.json',{method:'PUT',body:JSON.stringify(body)})
+  .then(function(r){ return r.ok; }); }
+
+/* ---------- Speichern ---------- */
+function speichern(){
+  var text=$('f_text').value.trim(), ort=$('f_ort').value.trim(), von=$('f_von').value.trim();
+  if(!text){ toast('Bitte beschreiben, was zu tun ist.',true); return; }
+  if(!von){ toast('Bitte Namen angeben.',true); return; }
+  setVon(von);
+  $('btnSave').disabled=true; $('status').textContent='Speichere …';
+  var rec={ text:text, ort:ort, von:von, prio:$('f_prio').checked?'dringend':'normal',
+            datum:heute(), ts:Date.now(), status:'offen' };
+  apiPost(P_AUF,rec).then(function(key){
+    if(!key) throw 0;
+    if(!fotoDataNeu) return key;
+    return fotoSpeichern(key, fotoDataNeu, von).then(function(){ return key; });
+  }).then(function(){
+    $('f_text').value=''; $('f_ort').value=''; $('f_prio').checked=false;
+    $('f_foto').value=''; $('fotoPrev').innerHTML=''; fotoDataNeu=null;
+    $('status').textContent=''; $('btnSave').disabled=false;
+    toast('Auftrag gemeldet ✔'); laden(false);
+  }).catch(function(){
+    $('status').textContent=''; $('btnSave').disabled=false;
+    toast('Speichern fehlgeschlagen – Empfang?',true);
+  });
+}
+function fotoSpeichern(auftragKey, data, von){
+  return apiPost(P_FOTO,{auftrag:auftragKey, von:von, ts:Date.now(), data:data})
+    .then(function(fk){ if(!fk) throw 0; return apiPut(P_AUF+'/'+auftragKey+'/fotos/'+fk, true); });
+}
+
+/* ---------- Laden + Rendern ---------- */
+function laden(manuell){
+  apiGet(P_AUF).then(function(j){
+    eintraege=j||{};
+    render();
+    if(manuell) toast('Aktualisiert');
+  }).catch(function(){ if(manuell) toast('Laden fehlgeschlagen – offline?',true); });
+}
+function render(){
+  var keys=Object.keys(eintraege);
+  var offen=[], done=[];
+  keys.forEach(function(k){
+    var r=eintraege[k]; if(!r||!r.text) return;
+    r._k=k; (r.status==='erledigt'?done:offen).push(r);
+  });
+  offen.sort(function(a,b){ return (b.prio==='dringend')-(a.prio==='dringend') || (b.ts||0)-(a.ts||0); });
+  done.sort(function(a,b){ return (b.erledigtTs||b.ts||0)-(a.erledigtTs||a.ts||0); });
+  $('listOffen').innerHTML = offen.length ? offen.map(card).join('') : '<div class="leer">Nichts offen – alles abgeholt. 👍</div>';
+  $('listDone').innerHTML  = done.length ? done.map(card).join('') : '<div class="leer">Noch nichts erledigt.</div>';
+  $('btnDone').textContent = ($('listDone').style.display==='none'?'anzeigen':'verbergen')+' ('+done.length+')';
+}
+function card(r){
+  var k=r._k, dr=r.prio==='dringend', don=r.status==='erledigt';
+  var fotoKeys=r.fotos?Object.keys(r.fotos):[];
+  var h='<div class="auftrag'+(dr&&!don?' dringend':'')+(don?' done':'')+'" id="a_'+k+'">';
+  h+='<div class="a-top"><div class="a-txt">'+esc(r.text)+'</div>';
+  h+= don ? '<span class="a-badge ok">ERLEDIGT</span>' : (dr?'<span class="a-badge dr">DRINGEND</span>':'');
+  h+='</div>';
+  h+='<div class="a-meta">'+(r.ort?'<span class="ort">📍 '+esc(r.ort)+'</span> · ':'')+esc(r.von||'—')+' · '+esc(fmtD(r.datum))+'</div>';
+  if(fotoKeys.length){
+    h+='<div class="a-fotos" id="af_'+k+'"><button class="btn ghost" onclick="fotosZeigen(\''+k+'\')">📷 '+fotoKeys.length+' Foto'+(fotoKeys.length>1?'s':'')+' anzeigen</button></div>';
+  }
+  var kk=r.kommentare?Object.keys(r.kommentare):[];
+  if(kk.length){
+    h+='<div class="a-komms">'+kk.sort(function(a,b){return (r.kommentare[a].ts||0)-(r.kommentare[b].ts||0);})
+      .map(function(ck){ var c=r.kommentare[ck];
+        return '<div class="a-komm"><b>'+esc(c.von||'—')+':</b> '+esc(c.text)+'</div>'; }).join('')+'</div>';
+  }
+  if(don){
+    h+='<div class="a-done-info">✅ '+esc(r.erledigtVon||'—')+' · '+esc(fmtD(r.erledigtAm||''))+'</div>';
+  } else {
+    h+='<div class="a-act">'+
+       '<button class="btn gruen" onclick="erledigen(\''+k+'\')">✅ Erledigt</button>'+
+       '<button class="btn ghost" onclick="kommentieren(\''+k+'\')">💬 Kommentar</button>'+
+       '<button class="btn ghost" onclick="fotoNach(\''+k+'\')">📷 Foto</button>'+
+       '</div>';
+  }
+  h+='</div>';
+  return h;
+}
+function toggleDone(){
+  var e=$('listDone');
+  e.style.display = e.style.display==='none' ? '' : 'none';
+  render();
+}
+
+/* ---------- Aktionen ---------- */
+function erledigen(k){
+  var von=prompt('Erledigt durch (Name):', getVon()||'Sandro Schuoler');
+  if(von===null) return;
+  von=von.trim(); if(!von){ toast('Name fehlt.',true); return; }
+  setVon(von);
+  var komm=prompt('Kommentar (optional):','');
+  var upd={ status:'erledigt', erledigtVon:von, erledigtAm:heute(), erledigtTs:Date.now() };
+  apiPatch(P_AUF+'/'+k, upd).then(function(ok){
+    if(!ok) throw 0;
+    if(komm && komm.trim())
+      return apiPost(P_AUF+'/'+k+'/kommentare',{text:komm.trim(),von:von,ts:Date.now()});
+  }).then(function(){ toast('Abgehakt ✔'); laden(false); })
+    .catch(function(){ toast('Fehlgeschlagen – Empfang?',true); });
+}
+function kommentieren(k){
+  var von=prompt('Dein Name:', getVon()); if(von===null) return;
+  von=von.trim(); if(!von){ toast('Name fehlt.',true); return; }
+  setVon(von);
+  var t=prompt('Kommentar:',''); if(t===null||!t.trim()) return;
+  apiPost(P_AUF+'/'+k+'/kommentare',{text:t.trim(),von:von,ts:Date.now()})
+    .then(function(key){ if(!key) throw 0; toast('Kommentar gespeichert ✔'); laden(false); })
+    .catch(function(){ toast('Fehlgeschlagen – Empfang?',true); });
+}
+var fotoNachKey=null;
+var fotoNachInput=document.createElement('input');
+fotoNachInput.type='file'; fotoNachInput.accept='image/*'; fotoNachInput.setAttribute('capture','environment');
+fotoNachInput.addEventListener('change',function(){
+  var f=this.files&&this.files[0]; this.value2=null;
+  if(!f||!fotoNachKey) return;
+  var k=fotoNachKey; fotoNachKey=null;
+  toast('Foto wird hochgeladen …');
+  fotoLesen(f,function(data){
+    if(!data){ toast('Foto konnte nicht gelesen werden',true); return; }
+    fotoSpeichern(k,data,getVon()||'—')
+      .then(function(){ toast('Foto gespeichert ✔'); laden(false); })
+      .catch(function(){ toast('Upload fehlgeschlagen',true); });
+  });
+  this.value='';
+});
+function fotoNach(k){ fotoNachKey=k; fotoNachInput.click(); }
+
+function fotosZeigen(k){
+  var r=eintraege[k]; if(!r||!r.fotos) return;
+  var box=$('af_'+k); box.innerHTML='Lade Fotos …';
+  var keys=Object.keys(r.fotos);
+  Promise.all(keys.map(function(fk){
+    if(fotoCache[fk]) return Promise.resolve(fotoCache[fk]);
+    return apiGet(P_FOTO+'/'+fk).then(function(f){ fotoCache[fk]=f; return f; });
+  })).then(function(fs){
+    box.innerHTML='';
+    fs.forEach(function(f){
+      if(!f||!f.data) return;
+      var im=document.createElement('img'); im.src=f.data; im.alt='Foto';
+      im.title=(f.von||'')+' ';
+      im.addEventListener('click',function(){ $('bigfotoImg').src=f.data; $('bigfoto').style.display='flex'; });
+      box.appendChild(im);
+    });
+    if(!box.children.length) box.innerHTML='<span class="mini">Fotos nicht ladbar.</span>';
+  });
+}
+
+/* ---------- Start ---------- */
+$('f_von').value=getVon();
+laden(false);
+setInterval(function(){ laden(false); },60000);
+</script>
+</body>
+</html>
