@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>NalpSolar · Logistik</title>
-<meta name="theme-color" content="#0b1826">
+<meta name="theme-color" content="#ffffff">
 <script>
   /* eigenes Gate: Code = PLZ Sedrun, eigener Schlüssel -> Sandro sieht NUR Logistik */
   window.NALP_GATE_CODE  = '7188';
@@ -14,76 +14,81 @@
 </script>
 <script src="assets/js/nalp-gate.js"></script>
 <style>
-  :root{ --bg:#0b1420; --card:#121e2e; --line:rgba(255,255,255,.09); --txt:#e8eef7;
-         --mut:rgba(232,238,247,.6); --blau:#2196F3; --gruen:#2fbf71; --rot:#ff5252; --gelb:#ffc340; }
+  /* STRABAG-CI: Weiss, Rot #D72622, Arial */
+  :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
+         --gruen:#1e9e5a; }
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  body{ margin:0; background:radial-gradient(120% 90% at 50% -10%,#12304f 0%,#0b1826 55%,#070d15 100%);
-        min-height:100vh; color:var(--txt);
-        font-family:-apple-system,"Helvetica Neue","Segoe UI",Arial,sans-serif; }
-  header{ position:sticky; top:0; z-index:10; display:flex; align-items:center; gap:10px;
-          padding:12px 14px; background:rgba(9,16,26,.92); backdrop-filter:blur(8px);
-          border-bottom:1px solid var(--line); }
-  header a.home{ color:var(--txt); text-decoration:none; font-size:20px; }
-  header h1{ font-size:17px; margin:0; flex:1; font-weight:800; }
-  header button{ background:rgba(255,255,255,.08); color:var(--txt); border:1px solid var(--line);
-          border-radius:9px; padding:7px 11px; font-size:13px; font-weight:700; cursor:pointer; }
+  body{ margin:0; background:#f2f3f5; min-height:100vh; color:var(--ink);
+        font-family:Arial,"Helvetica Neue",sans-serif; }
+  header{ position:sticky; top:0; z-index:10; display:flex; align-items:center; gap:12px;
+          padding:10px 14px; background:#fff; border-bottom:4px solid var(--rot); }
+  header a.home{ color:var(--ink); text-decoration:none; font-size:20px; }
+  header .logo{ font-size:18px; font-weight:900; color:var(--rot); }
+  header h1{ font-size:15.5px; margin:0; flex:1; font-weight:800; }
+  header button{ background:#fff; color:var(--ink); border:1px solid var(--line);
+          border-radius:7px; padding:7px 11px; font-size:14px; font-weight:700; cursor:pointer; }
   main{ max-width:720px; margin:0 auto; padding:14px 12px 90px; }
-  .box{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:13px; margin-bottom:14px; }
-  .box h2{ margin:0 0 10px; font-size:14.5px; letter-spacing:.02em; }
-  label.fl{ display:block; font-size:11.5px; font-weight:700; color:var(--mut); margin:9px 0 4px; }
-  input,textarea,select{ width:100%; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14);
-          border-radius:9px; color:var(--txt); padding:9px 10px; font-size:15px; font-family:inherit; }
+  .box{ background:#fff; border:1px solid var(--line); border-left:5px solid var(--rot);
+        border-radius:6px; padding:13px; margin-bottom:14px; box-shadow:0 1px 4px rgba(20,25,32,.07); }
+  .box h2{ margin:0 0 8px; font-size:15px; }
+  label.fl{ display:block; font-size:11.5px; font-weight:700; color:var(--mut); margin:9px 0 4px;
+            text-transform:uppercase; letter-spacing:.04em; }
+  input,textarea,select{ width:100%; background:#fff; border:1px solid #c9ccd2;
+          border-radius:6px; color:var(--ink); padding:9px 10px; font-size:15px; font-family:inherit; }
+  input:focus,textarea:focus,select:focus{ outline:2px solid rgba(215,38,34,.35); }
   textarea{ min-height:56px; resize:vertical; }
   .row2{ display:grid; grid-template-columns:1fr 1fr; gap:9px; }
   .chkrow{ display:flex; align-items:center; gap:8px; margin-top:10px; font-size:14px; }
   .chkrow input{ width:20px; height:20px; }
-  .btn{ display:inline-block; border:none; border-radius:11px; padding:11px 15px; font-size:14.5px;
-        font-weight:800; cursor:pointer; color:#fff; background:var(--blau); }
-  .btn.gruen{ background:var(--gruen); color:#06220f; }
-  .btn.ghost{ background:rgba(255,255,255,.08); color:var(--txt); border:1px solid var(--line);
-        font-weight:700; padding:8px 11px; font-size:13px; border-radius:9px; }
+  .btn{ display:inline-block; border:none; border-radius:6px; padding:11px 16px; font-size:14.5px;
+        font-weight:800; cursor:pointer; color:#fff; background:var(--rot); }
+  .btn.gruen{ background:var(--gruen); }
+  .btn.ghost{ background:#fff; color:var(--ink); border:1px solid #c9ccd2;
+        font-weight:700; padding:8px 11px; font-size:13px; }
   .btn[disabled]{ opacity:.5; }
   #fotoPrev{ display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
-  #fotoPrev img{ width:74px; height:74px; object-fit:cover; border-radius:8px; border:1px solid var(--line); }
+  #fotoPrev img{ width:74px; height:74px; object-fit:cover; border-radius:6px; border:1px solid var(--line); }
   #status{ font-size:12.5px; color:var(--mut); min-height:17px; margin-top:8px; }
 
-  .auftrag{ background:var(--card); border:1px solid var(--line); border-radius:14px;
-            padding:12px 13px; margin-bottom:11px; }
-  .auftrag.dringend{ border-color:rgba(255,82,82,.55); box-shadow:0 0 0 1px rgba(255,82,82,.25); }
-  .auftrag.done{ opacity:.62; }
+  .auftrag{ background:#fff; border:1px solid var(--line); border-left:5px solid #b9bdc4;
+            border-radius:6px; padding:12px 13px; margin-bottom:11px; box-shadow:0 1px 4px rgba(20,25,32,.06); }
+  .auftrag.dringend{ border-left-color:var(--rot); }
+  .auftrag.done{ opacity:.65; border-left-color:var(--gruen); }
   .a-top{ display:flex; gap:8px; align-items:flex-start; }
   .a-txt{ flex:1; font-size:15px; line-height:1.45; font-weight:600; white-space:pre-wrap; }
-  .a-badge{ font-size:10.5px; font-weight:900; letter-spacing:.05em; border-radius:6px;
+  .a-badge{ font-size:10.5px; font-weight:900; letter-spacing:.05em; border-radius:4px;
             padding:3px 7px; white-space:nowrap; }
-  .a-badge.dr{ background:rgba(255,82,82,.18); color:#ff9b9b; border:1px solid rgba(255,82,82,.4); }
-  .a-badge.ok{ background:rgba(47,191,113,.16); color:#7ee2ae; border:1px solid rgba(47,191,113,.4); }
-  .a-meta{ font-size:12px; color:var(--mut); margin-top:6px; }
-  .a-meta .ort{ color:#ffd479; font-weight:700; }
+  .a-badge.dr{ background:var(--rot); color:#fff; }
+  .a-badge.ok{ background:var(--gruen); color:#fff; }
+  .a-meta{ font-size:12.5px; color:var(--mut); margin-top:6px; }
+  .a-meta .ort{ color:var(--ink); font-weight:800; }
+  .a-meta .ort b{ color:var(--rot); }
   .a-fotos{ display:flex; gap:8px; margin-top:9px; flex-wrap:wrap; }
-  .a-fotos img{ width:86px; height:86px; object-fit:cover; border-radius:9px; border:1px solid var(--line); cursor:pointer; }
+  .a-fotos img{ width:86px; height:86px; object-fit:cover; border-radius:6px; border:1px solid var(--line); cursor:pointer; }
   .a-komms{ margin-top:9px; border-top:1px dashed var(--line); padding-top:8px; }
   .a-komm{ font-size:13px; margin:4px 0; line-height:1.4; }
-  .a-komm b{ color:#9ecbff; }
+  .a-komm b{ color:var(--rot); }
   .a-act{ display:flex; gap:8px; margin-top:11px; flex-wrap:wrap; }
-  .a-done-info{ margin-top:8px; font-size:13px; color:#7ee2ae; font-weight:700; }
+  .a-done-info{ margin-top:8px; font-size:13px; color:var(--gruen); font-weight:800; }
   .sek{ margin:20px 0 9px; font-size:13px; font-weight:900; letter-spacing:.06em;
         text-transform:uppercase; color:var(--mut); }
   .leer{ color:var(--mut); font-size:13.5px; padding:6px 2px; }
   .mini{ font-size:11px; color:var(--mut); }
   #bigfoto{ position:fixed; inset:0; z-index:60; background:rgba(0,0,0,.92); display:none;
             align-items:center; justify-content:center; padding:12px; }
-  #bigfoto img{ max-width:100%; max-height:100%; border-radius:10px; }
+  #bigfoto img{ max-width:100%; max-height:100%; border-radius:6px; }
   #toast{ position:fixed; left:50%; bottom:22px; transform:translateX(-50%) translateY(80px);
-          background:#123c22; color:#c9f2da; border:1px solid rgba(47,191,113,.5); font-weight:700;
-          padding:10px 16px; border-radius:12px; font-size:14px; transition:transform .25s; z-index:70; }
+          background:#0f5c33; color:#fff; font-weight:700;
+          padding:10px 16px; border-radius:8px; font-size:14px; transition:transform .25s; z-index:70; }
   #toast.on{ transform:translateX(-50%) translateY(0); }
-  #toast.err{ background:#3c1212; color:#ffc9c9; border-color:rgba(255,82,82,.5); }
+  #toast.err{ background:var(--rot); }
 </style>
 </head>
 <body>
 <header>
   <a class="home" href="index.html" title="Startseite">🏠</a>
-  <h1>🚚 Logistik · Transporte</h1>
+  <div class="logo">STRABAG</div>
+  <h1>🚚 Logistik · NalpSolar</h1>
   <button onclick="laden(true)">↻</button>
 </header>
 <main>
@@ -93,15 +98,38 @@
     <textarea id="f_text" placeholder="z.B. Modulträgerstapel fertig, kann abgeholt werden"></textarea>
     <div class="row2">
       <div>
-        <label class="fl">Ort</label>
-        <input id="f_ort" placeholder="z.B. IP4, Magazin, Tisch 538">
+        <label class="fl">Von wo</label>
+        <select id="f_von_sel" onchange="ortToggle('von')">
+          <option value="">–</option>
+          <option>IP Tal 1</option>
+          <option>IP Tal 4</option>
+          <option>IP Berg</option>
+          <option value="anderer">anderer Ort …</option>
+        </select>
+        <input id="f_von_txt" style="display:none;margin-top:6px" placeholder="Ort eingeben (z.B. Tisch 538)">
       </div>
+      <div>
+        <label class="fl">Wohin</label>
+        <select id="f_nach_sel" onchange="ortToggle('nach')">
+          <option value="">–</option>
+          <option>IP Tal 1</option>
+          <option>IP Tal 4</option>
+          <option>IP Berg</option>
+          <option value="anderer">anderer Ort …</option>
+        </select>
+        <input id="f_nach_txt" style="display:none;margin-top:6px" placeholder="Ort eingeben (z.B. Magazin)">
+      </div>
+    </div>
+    <div class="row2">
       <div>
         <label class="fl">Gemeldet von</label>
         <input id="f_von" placeholder="Name / Kürzel">
       </div>
+      <div>
+        <label class="fl">&nbsp;</label>
+        <div class="chkrow" style="margin-top:0"><input type="checkbox" id="f_prio"><label for="f_prio">🔴 Dringend</label></div>
+      </div>
     </div>
-    <div class="chkrow"><input type="checkbox" id="f_prio"><label for="f_prio">🔴 Dringend</label></div>
     <label class="fl">Foto (optional)</label>
     <input type="file" id="f_foto" accept="image/*" capture="environment">
     <div id="fotoPrev"></div>
@@ -140,6 +168,23 @@ function fmtD(iso){ if(!iso) return ''; var p=String(iso).split('-'); return p.l
 function getVon(){ try{ return localStorage.getItem(LS_VON)||''; }catch(e){ return ''; } }
 function setVon(v){ try{ localStorage.setItem(LS_VON,v||''); }catch(e){} }
 
+/* Von-wo/Wohin: Auswahl oder freier Text */
+function ortToggle(w){
+  var sel=$('f_'+w+'_sel'), txt=$('f_'+w+'_txt');
+  txt.style.display = sel.value==='anderer' ? '' : 'none';
+  if(sel.value==='anderer') txt.focus();
+}
+function ortVal(w){
+  var sel=$('f_'+w+'_sel');
+  return sel.value==='anderer' ? $('f_'+w+'_txt').value.trim() : sel.value;
+}
+function ortText(r){
+  var v=r.vonOrt||'', n=r.nachOrt||'';
+  if(!v && !n) return r.ort ? esc(r.ort) : '';        // alte Einträge: ein Ortsfeld
+  if(v && n) return esc(v)+' <b>→</b> '+esc(n);
+  return v ? ('ab '+esc(v)) : ('<b>→</b> '+esc(n));
+}
+
 /* ---------- Foto: verkleinern + als JPEG-Base64 ---------- */
 function fotoLesen(file, cb){
   var img=new Image();
@@ -176,19 +221,22 @@ function apiPut(p,body){ return fetch(DB+'/'+p+'.json',{method:'PUT',body:JSON.s
 
 /* ---------- Speichern ---------- */
 function speichern(){
-  var text=$('f_text').value.trim(), ort=$('f_ort').value.trim(), von=$('f_von').value.trim();
+  var text=$('f_text').value.trim(), von=$('f_von').value.trim();
   if(!text){ toast('Bitte beschreiben, was zu tun ist.',true); return; }
   if(!von){ toast('Bitte Namen angeben.',true); return; }
   setVon(von);
   $('btnSave').disabled=true; $('status').textContent='Speichere …';
-  var rec={ text:text, ort:ort, von:von, prio:$('f_prio').checked?'dringend':'normal',
+  var rec={ text:text, vonOrt:ortVal('von'), nachOrt:ortVal('nach'), von:von,
+            prio:$('f_prio').checked?'dringend':'normal',
             datum:heute(), ts:Date.now(), status:'offen' };
   apiPost(P_AUF,rec).then(function(key){
     if(!key) throw 0;
     if(!fotoDataNeu) return key;
     return fotoSpeichern(key, fotoDataNeu, von).then(function(){ return key; });
   }).then(function(){
-    $('f_text').value=''; $('f_ort').value=''; $('f_prio').checked=false;
+    $('f_text').value=''; $('f_prio').checked=false;
+    $('f_von_sel').value=''; $('f_nach_sel').value='';
+    $('f_von_txt').value=''; $('f_nach_txt').value=''; ortToggle('von'); ortToggle('nach');
     $('f_foto').value=''; $('fotoPrev').innerHTML=''; fotoDataNeu=null;
     $('status').textContent=''; $('btnSave').disabled=false;
     toast('Auftrag gemeldet ✔'); laden(false);
@@ -230,7 +278,8 @@ function card(r){
   h+='<div class="a-top"><div class="a-txt">'+esc(r.text)+'</div>';
   h+= don ? '<span class="a-badge ok">ERLEDIGT</span>' : (dr?'<span class="a-badge dr">DRINGEND</span>':'');
   h+='</div>';
-  h+='<div class="a-meta">'+(r.ort?'<span class="ort">📍 '+esc(r.ort)+'</span> · ':'')+esc(r.von||'—')+' · '+esc(fmtD(r.datum))+'</div>';
+  var ot=ortText(r);
+  h+='<div class="a-meta">'+(ot?'<span class="ort">📍 '+ot+'</span> · ':'')+esc(r.von||'—')+' · '+esc(fmtD(r.datum))+'</div>';
   if(fotoKeys.length){
     h+='<div class="a-fotos" id="af_'+k+'"><button class="btn ghost" onclick="fotosZeigen(\''+k+'\')">📷 '+fotoKeys.length+' Foto'+(fotoKeys.length>1?'s':'')+' anzeigen</button></div>';
   }
@@ -286,7 +335,7 @@ var fotoNachKey=null;
 var fotoNachInput=document.createElement('input');
 fotoNachInput.type='file'; fotoNachInput.accept='image/*'; fotoNachInput.setAttribute('capture','environment');
 fotoNachInput.addEventListener('change',function(){
-  var f=this.files&&this.files[0]; this.value2=null;
+  var f=this.files&&this.files[0];
   if(!f||!fotoNachKey) return;
   var k=fotoNachKey; fotoNachKey=null;
   toast('Foto wird hochgeladen …');

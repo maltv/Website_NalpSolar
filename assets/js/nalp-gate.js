@@ -29,40 +29,38 @@
   var htmlEl = document.documentElement;
   htmlEl.classList.add('nalp-gate-locked');
 
+  // STRABAG-CI: weisse Karte mit rotem Balken auf dem Nalps-Drohnenfoto
   var css = '' +
     '.nalp-gate-locked{overflow:hidden !important;}' +
     '#nalpGate{position:fixed;inset:0;z-index:2147483647;display:flex;flex-direction:column;' +
       'align-items:center;justify-content:center;padding:24px;box-sizing:border-box;' +
-      'font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;color:#e8eef7;' +
-      'background:radial-gradient(120% 90% at 50% -10%,#12304f 0%,#0b1826 55%,#070d15 100%);' +
+      'font-family:Arial,"Helvetica Neue",sans-serif;color:#1a1a1a;' +
+      'background:linear-gradient(rgba(20,28,38,.35),rgba(20,28,38,.55)),' +
+        'url(assets/img/hero.jpg) center/cover no-repeat #223041;' +
       '-webkit-tap-highlight-color:transparent;user-select:none;}' +
-    '#nalpGate .ng-sun{position:absolute;top:-90px;left:50%;transform:translateX(-50%);' +
-      'width:340px;height:340px;border-radius:50%;filter:blur(2px);opacity:.55;' +
-      'background:radial-gradient(circle,rgba(255,196,64,.9) 0%,rgba(255,150,32,.25) 45%,transparent 70%);}' +
-    '#nalpGate .ng-mtn{position:absolute;bottom:0;left:0;right:0;height:32vh;min-height:150px;' +
-      'background:linear-gradient(180deg,transparent,rgba(10,20,32,.85));' +
-      'clip-path:polygon(0 62%,14% 40%,26% 55%,40% 24%,54% 50%,66% 30%,80% 52%,92% 36%,100% 58%,100% 100%,0 100%);' +
-      'opacity:.5;pointer-events:none;}' +
-    '#nalpGate .ng-card{position:relative;z-index:2;width:100%;max-width:320px;text-align:center;}' +
-    '#nalpGate .ng-brand{font-size:13px;letter-spacing:.28em;font-weight:800;' +
-      'color:#ffc340;text-transform:uppercase;margin-bottom:6px;}' +
-    '#nalpGate h1{font-size:26px;font-weight:900;margin:0 0 4px;letter-spacing:.01em;}' +
-    '#nalpGate .ng-sub{font-size:13px;color:rgba(232,238,247,.6);margin-bottom:26px;}' +
+    '#nalpGate .ng-sun,#nalpGate .ng-mtn{display:none;}' +
+    '#nalpGate .ng-card{position:relative;z-index:2;width:100%;max-width:330px;text-align:center;' +
+      'background:#fff;border-radius:8px;border-top:6px solid #D72622;' +
+      'padding:24px 20px 20px;box-shadow:0 14px 44px rgba(10,14,20,.45);}' +
+    '#nalpGate .ng-brand{font-size:15px;letter-spacing:.12em;font-weight:900;' +
+      'color:#D72622;text-transform:uppercase;margin-bottom:6px;}' +
+    '#nalpGate h1{font-size:24px;font-weight:900;margin:0 0 4px;letter-spacing:.01em;}' +
+    '#nalpGate .ng-sub{font-size:13px;color:#63676d;margin-bottom:22px;}' +
     '#nalpGate .ng-dots{display:flex;gap:16px;justify-content:center;margin-bottom:8px;height:20px;}' +
-    '#nalpGate .ng-dot{width:15px;height:15px;border-radius:50%;border:2px solid rgba(255,255,255,.35);' +
+    '#nalpGate .ng-dot{width:15px;height:15px;border-radius:50%;border:2px solid #b8bcc3;' +
       'transition:transform .12s,background .12s,border-color .12s;}' +
-    '#nalpGate .ng-dot.on{background:#2196F3;border-color:#57b0ff;transform:scale(1.12);}' +
-    '#nalpGate .ng-msg{height:20px;font-size:13px;font-weight:700;color:#ff6b6b;margin-bottom:14px;opacity:0;transition:opacity .15s;}' +
+    '#nalpGate .ng-dot.on{background:#D72622;border-color:#D72622;transform:scale(1.12);}' +
+    '#nalpGate .ng-msg{height:20px;font-size:13px;font-weight:700;color:#D72622;margin-bottom:12px;opacity:0;transition:opacity .15s;}' +
     '#nalpGate .ng-msg.show{opacity:1;}' +
     '#nalpGate.shake .ng-dots{animation:ngShake .38s;}' +
     '@keyframes ngShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-9px)}40%{transform:translateX(9px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}' +
-    '#nalpGate .ng-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:280px;margin:0 auto;}' +
-    '#nalpGate .ng-key{aspect-ratio:1/1;border:none;border-radius:50%;font-size:26px;font-weight:700;' +
-      'color:#e8eef7;background:rgba(255,255,255,.07);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);' +
+    '#nalpGate .ng-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:270px;margin:0 auto;}' +
+    '#nalpGate .ng-key{aspect-ratio:1/1;border:none;border-radius:50%;font-size:25px;font-weight:700;' +
+      'color:#1a1a1a;background:#f0f1f3;box-shadow:inset 0 0 0 1px #d5d8dd;' +
       'cursor:pointer;touch-action:manipulation;transition:background .12s,transform .06s;}' +
-    '#nalpGate .ng-key:active{background:rgba(33,150,243,.4);transform:scale(.94);}' +
-    '#nalpGate .ng-key.ghost{background:none;box-shadow:none;font-size:15px;font-weight:600;color:rgba(232,238,247,.55);}' +
-    '#nalpGate .ng-foot{margin-top:26px;font-size:11px;color:rgba(232,238,247,.4);line-height:1.5;}' +
+    '#nalpGate .ng-key:active{background:rgba(215,38,34,.3);transform:scale(.94);}' +
+    '#nalpGate .ng-key.ghost{background:none;box-shadow:none;font-size:15px;font-weight:700;color:#63676d;}' +
+    '#nalpGate .ng-foot{margin-top:18px;font-size:11px;color:#8a8e94;line-height:1.5;}' +
     '#nalpGate.ng-out{opacity:0;transform:scale(1.04);transition:opacity .35s,transform .35s;pointer-events:none;}';
 
   var style = document.createElement('style');

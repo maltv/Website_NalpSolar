@@ -5,195 +5,160 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>NalpSolar · Baustellen-Portal</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0b1826">
+<meta name="theme-color" content="#ffffff">
 <!-- Startseite offen (kein Gate) – die einzelnen Reiter fragen ihren Code selbst ab
-     (bestehende Reiter: 6460, Logistik: 7188) -->
+     (bestehende Reiter: 6460, Logistik: 7188).
+     Design: STRABAG-CI – Weiss, STRABAG-Rot #D72622, Arial (vgl. strabag.com) -->
 <style>
-  :root { color-scheme: dark; }
+  :root { color-scheme: light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; height: 100%; }
+  html, body { margin: 0; }
   body {
-    min-height: 100%;
-    font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
-    color: #e8eef7;
-    background:
-      radial-gradient(120% 90% at 50% -10%, #12304f 0%, #0b1826 55%, #070d15 100%) fixed;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: max(24px, env(safe-area-inset-top)) 18px calc(24px + env(safe-area-inset-bottom));
+    min-height: 100vh;
+    font-family: Arial, "Helvetica Neue", sans-serif;
+    color: var(--ink);
+    background: #f2f3f5;
+    display: flex; flex-direction: column;
   }
 
-  .head {
-    text-align: center;
-    margin: 18px 0 26px;
+  /* ── Kopfleiste ───────────────────────────── */
+  .topbar {
+    background: #fff;
+    border-bottom: 4px solid var(--rot);
+    padding: 12px max(18px, env(safe-area-inset-left));
+    display: flex; align-items: baseline; gap: 14px;
   }
-  .brand {
-    font-size: 13px;
-    letter-spacing: .28em;
-    font-weight: 800;
-    color: #ffc340;
-    text-transform: uppercase;
+  .logo {
+    font-size: 24px; font-weight: 900; letter-spacing: .02em;
+    color: var(--rot); font-family: Arial, sans-serif;
   }
-  h1 {
-    font-size: clamp(26px, 7vw, 40px);
-    font-weight: 900;
-    margin: 6px 0 4px;
-  }
-  h1 span { color: #57b0ff; }
-  .sub {
-    font-size: 14px;
-    color: rgba(232, 238, 247, .6);
-  }
+  .losnr { font-size: 12.5px; color: var(--mut); font-weight: 700; letter-spacing: .06em; }
 
-  .grid {
-    width: 100%;
-    max-width: 760px;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
-  }
-
-  .card {
+  /* ── Hero mit Baustellenfoto (Lai da Nalps, Drohne 22.07.2026) ── */
+  .hero {
     position: relative;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    min-height: 168px;
-    padding: 20px;
-    border-radius: 20px;
-    text-decoration: none;
-    color: #e8eef7;
-    background: linear-gradient(160deg, rgba(255,255,255,.09), rgba(255,255,255,.03));
-    border: 1px solid rgba(255,255,255,.10);
-    box-shadow: 0 10px 30px rgba(0,0,0,.35);
-    overflow: hidden;
-    transition: transform .14s ease, border-color .14s ease, box-shadow .14s ease;
+    background: url('assets/img/hero.jpg') center 42% / cover no-repeat;
+    min-height: 34vh;
   }
-  .card::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(120% 80% at 15% 0%, var(--glow, rgba(87,176,255,.28)), transparent 60%);
-    opacity: .9;
-    pointer-events: none;
+  .hero .shade {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(10,16,24,.05) 40%, rgba(10,16,24,.62) 100%);
+  }
+  .hero .txt {
+    position: relative; z-index: 1;
+    max-width: 860px; margin: 0 auto;
+    padding: 22vh 20px 22px;
+    color: #fff;
+  }
+  .hero h1 { margin: 0; font-size: clamp(26px, 6vw, 40px); font-weight: 900; text-shadow: 0 2px 14px rgba(0,0,0,.55); }
+  .hero .sub { font-size: 14.5px; opacity: .92; margin-top: 4px; text-shadow: 0 1px 8px rgba(0,0,0,.6); }
+
+  /* ── Kacheln ──────────────────────────────── */
+  .wrap { width: 100%; max-width: 860px; margin: 0 auto; padding: 20px 16px 30px; flex: 1; }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .card {
+    display: flex; flex-direction: column; justify-content: flex-end;
+    min-height: 150px; padding: 16px 18px;
+    background: #fff; border: 1px solid var(--line); border-left: 5px solid var(--rot);
+    border-radius: 6px;
+    text-decoration: none; color: var(--ink);
+    box-shadow: 0 1px 4px rgba(20,25,32,.07);
+    transition: transform .13s ease, box-shadow .13s ease;
   }
   .card:hover, .card:active {
-    transform: translateY(-3px);
-    border-color: rgba(255,255,255,.28);
-    box-shadow: 0 16px 40px rgba(0,0,0,.5);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(20,25,32,.16);
   }
-  .card .ico {
-    position: relative;
-    z-index: 1;
-    font-size: 46px;
-    line-height: 1;
-    margin-bottom: auto;
-  }
-  .card .ttl {
-    position: relative;
-    z-index: 1;
-    font-size: 21px;
-    font-weight: 900;
-    margin-top: 14px;
-  }
-  .card .desc {
-    position: relative;
-    z-index: 1;
-    font-size: 12.5px;
-    color: rgba(232, 238, 247, .72);
-    margin-top: 3px;
-    line-height: 1.4;
-  }
-
-  .card.c-2d  { --glow: rgba(45, 157, 143, .38); }
-  .card.c-3d  { --glow: rgba(87, 176, 255, .40); }
-  .card.c-game{ --glow: rgba(255, 195, 64, .34); }
-  .card.c-steel{ --glow: rgba(255, 138, 61, .38); }
-  .card.c-5w  { --glow: rgba(60, 200, 140, .34); grid-column: 1 / -1; min-height: 118px; }
-  .card.c-pass{ --glow: rgba(255, 210, 63, .30); grid-column: 1 / -1; min-height: 118px; }
-  .card.c-chaos{ --glow: rgba(255, 107, 107, .36); grid-column: 1 / -1; min-height: 118px; }
-  .card.c-erf{ --glow: rgba(60, 200, 140, .34); grid-column: 1 / -1; min-height: 118px; }
-  .card.c-log{ --glow: rgba(255, 170, 40, .38); grid-column: 1 / -1; min-height: 118px; }
+  .card .ico { font-size: 38px; line-height: 1; margin-bottom: auto; }
+  .card .ttl { font-size: 19px; font-weight: 900; margin-top: 12px; }
+  .card .ttl::after { content: " →"; color: var(--rot); font-weight: 900; }
+  .card .desc { font-size: 12.5px; color: var(--mut); margin-top: 3px; line-height: 1.45; }
+  .card.breit { grid-column: 1 / -1; min-height: 104px; }
 
   .foot {
-    margin-top: 30px;
-    font-size: 11px;
-    color: rgba(232, 238, 247, .4);
-    text-align: center;
-    line-height: 1.6;
+    background: #fff; border-top: 1px solid var(--line);
+    padding: 14px 18px calc(14px + env(safe-area-inset-bottom));
+    font-size: 11.5px; color: var(--mut); text-align: center; line-height: 1.6;
   }
-  .foot a { color: rgba(232, 238, 247, .6); }
+  .foot a { color: var(--rot); font-weight: 700; }
 
   @media (max-width: 520px) {
-    .grid { grid-template-columns: 1fr; gap: 13px; }
-    .card { min-height: 128px; padding: 17px; }
-    .card .ico { font-size: 38px; }
-    .card .ttl { font-size: 19px; }
+    .grid { grid-template-columns: 1fr; gap: 11px; }
+    .card { min-height: 116px; }
+    .hero .txt { padding-top: 16vh; }
   }
 </style>
 </head>
 <body>
-  <div class="head">
-    <div class="brand">NalpSolar · STRABAG B8-13</div>
-    <h1>Baustellen<span>-Portal</span></h1>
-    <div class="sub">Was möchtest du öffnen?</div>
+  <div class="topbar">
+    <div class="logo">STRABAG</div>
+    <div class="losnr">NALPSOLAR · LOS B8-13</div>
   </div>
 
+  <div class="hero">
+    <div class="shade"></div>
+    <div class="txt">
+      <h1>Baustellen-Portal</h1>
+      <div class="sub">Hochalpine PV-Anlage Nalps · Was möchtest du öffnen?</div>
+    </div>
+  </div>
+
+  <div class="wrap">
   <div class="grid">
-    <a class="card c-2d" href="karte.html">
+    <a class="card" href="karte.html">
       <div class="ico">🗺️</div>
       <div class="ttl">2D-Plan</div>
       <div class="desc">Karte mit Tischen, Typen, Kranstandorten &amp; ID-Suche</div>
     </a>
 
-    <a class="card c-3d" href="viewer3d.html">
+    <a class="card" href="viewer3d.html">
       <div class="ico">⛰️</div>
       <div class="ttl">3D-Plan</div>
-      <div class="desc">Geländemodell mit Tischen, Werkleitungen &amp; Erdung</div>
+      <div class="desc">Geländemodell mit Baustand, Werkleitungen &amp; Erdung</div>
     </a>
 
-    <a class="card c-game" href="game.html">
+    <a class="card" href="game.html">
       <div class="ico">🎮</div>
       <div class="ttl">Spiele</div>
       <div class="desc">Birkhuhn-Jagd &amp; Creeper-Nacht im 3D-Gelände</div>
     </a>
 
-    <a class="card c-steel" href="stahlbau.html">
+    <a class="card" href="stahlbau.html">
       <div class="ico">🏗️</div>
       <div class="ttl">Stahlbau</div>
       <div class="desc">Montagekonzept &amp; Primärkonstruktionen (Typ &amp; Baujahr)</div>
     </a>
 
-    <a class="card c-5w" href="5w-programm.html">
+    <a class="card breit" href="logistik.html">
+      <div class="ico">🚚</div>
+      <div class="ttl">Logistik</div>
+      <div class="desc">Transporte &amp; Abholungen melden (z.B. Stapel bei IP Tal 4 fertig) – Sandro hakt ab, mit Kommentar &amp; Foto</div>
+    </a>
+
+    <a class="card breit" href="5w-programm.html">
       <div class="ico">🗓️</div>
       <div class="ttl">5W-Programm</div>
       <div class="desc">Fünfwochenprogramm KW 29–33 (Stand 13.07., korrigiert) – mit Bauablauf-Animation in 3D</div>
     </a>
 
-    <a class="card c-chaos" href="baupiste-chaos.html">
+    <a class="card breit" href="baupiste-chaos.html">
       <div class="ico">🚧</div>
       <div class="ttl">Baupiste-Chaos 🔒</div>
       <div class="desc">Geschützter Bereich · PIN erforderlich</div>
     </a>
 
-    <a class="card c-pass" href="passstueck.html">
+    <a class="card breit" href="passstueck.html">
       <div class="ico">🔧</div>
       <div class="ttl">Passstücke &amp; schräge Tische</div>
       <div class="desc">Schiefstand-Diagnose (5 Kontrollen: Positionen · Plan · Messung · Pfahlkopf · Jahrgang) + Passstück-Rechner (SOLL A9/A2)</div>
     </a>
 
-    <a class="card c-erf" href="erfassungen.html">
+    <a class="card breit" href="erfassungen.html">
       <div class="ico">📋</div>
       <div class="ttl">Erfassungen</div>
       <div class="desc">Stahlteile &amp; Montage als Tabelle – live aus Firebase, mit CSV-/Excel-Export</div>
     </a>
-
-    <a class="card c-log" href="logistik.html">
-      <div class="ico">🚚</div>
-      <div class="ttl">Logistik</div>
-      <div class="desc">Transporte &amp; Abholungen melden (z.B. Stapel bei IP4 fertig) – Sandro hakt ab, mit Kommentar &amp; Foto</div>
-    </a>
+  </div>
   </div>
 
   <div class="foot">

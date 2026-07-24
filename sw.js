@@ -1,8 +1,9 @@
 'use strict';
-var CACHE = 'nalpsolar-v63';
+var CACHE = 'nalpsolar-v64';
 var PRECACHE = [
   './index.html',
   './logistik.html',
+  './assets/img/hero.jpg',
   './stahlbau.html',
   './baupiste-chaos.html',
   './passstuecke-suchen.html',
