@@ -165,6 +165,9 @@ function toast(t,err){ var e=$('toast'); e.textContent=t; e.className='on'+(err?
   setTimeout(function(){ e.className=err?'err':''; },2600); }
 function heute(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function fmtD(iso){ if(!iso) return ''; var p=String(iso).split('-'); return p.length===3?p[2]+'.'+p[1]+'.'+p[0]:iso; }
+function fmtZeit(ts){ if(!ts) return ''; var d=new Date(ts);
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function fmtDZ(iso,ts){ var s=fmtD(iso); var z=fmtZeit(ts); return s+(z?' · '+z+' Uhr':''); }
 function getVon(){ try{ return localStorage.getItem(LS_VON)||''; }catch(e){ return ''; } }
 function setVon(v){ try{ localStorage.setItem(LS_VON,v||''); }catch(e){} }
 
@@ -279,7 +282,7 @@ function card(r){
   h+= don ? '<span class="a-badge ok">ERLEDIGT</span>' : (dr?'<span class="a-badge dr">DRINGEND</span>':'');
   h+='</div>';
   var ot=ortText(r);
-  h+='<div class="a-meta">'+(ot?'<span class="ort">📍 '+ot+'</span> · ':'')+esc(r.von||'—')+' · '+esc(fmtD(r.datum))+'</div>';
+  h+='<div class="a-meta">'+(ot?'<span class="ort">📍 '+ot+'</span> · ':'')+esc(r.von||'—')+' · '+esc(fmtDZ(r.datum,r.ts))+'</div>';
   if(fotoKeys.length){
     h+='<div class="a-fotos" id="af_'+k+'"><button class="btn ghost" onclick="fotosZeigen(\''+k+'\')">📷 '+fotoKeys.length+' Foto'+(fotoKeys.length>1?'s':'')+' anzeigen</button></div>';
   }
@@ -287,10 +290,11 @@ function card(r){
   if(kk.length){
     h+='<div class="a-komms">'+kk.sort(function(a,b){return (r.kommentare[a].ts||0)-(r.kommentare[b].ts||0);})
       .map(function(ck){ var c=r.kommentare[ck];
-        return '<div class="a-komm"><b>'+esc(c.von||'—')+':</b> '+esc(c.text)+'</div>'; }).join('')+'</div>';
+        var z=c.ts?' <span class="mini">('+fmtZeit(c.ts)+')</span>':'';
+        return '<div class="a-komm"><b>'+esc(c.von||'—')+z+':</b> '+esc(c.text)+'</div>'; }).join('')+'</div>';
   }
   if(don){
-    h+='<div class="a-done-info">✅ '+esc(r.erledigtVon||'—')+' · '+esc(fmtD(r.erledigtAm||''))+'</div>';
+    h+='<div class="a-done-info">✅ '+esc(r.erledigtVon||'—')+' · '+esc(fmtDZ(r.erledigtAm||'', r.erledigtTs))+'</div>';
   } else {
     h+='<div class="a-act">'+
        '<button class="btn gruen" onclick="erledigen(\''+k+'\')">✅ Erledigt</button>'+
