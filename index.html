@@ -17,8 +17,13 @@
     min-height: 100vh;
     font-family: Arial, "Helvetica Neue", sans-serif;
     color: var(--ink);
-    background: #f2f3f5;
+    background: #4a5a66;
     display: flex; flex-direction: column;
+  }
+  /* Nalps-Panorama als Hintergrund der ganzen Seite (fixed-Layer, iOS-tauglich) */
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: -1;
+    background: url('assets/img/hero.jpg') center 40% / cover no-repeat;
   }
 
   /* ── Kopfleiste ───────────────────────────── */
@@ -28,26 +33,23 @@
     padding: 12px max(18px, env(safe-area-inset-left));
     display: flex; align-items: baseline; gap: 14px;
   }
-  .logo {
-    font-size: 24px; font-weight: 900; letter-spacing: .02em;
-    color: var(--rot); font-family: Arial, sans-serif;
-  }
+  .topbar { align-items: center; }
+  .logo img { height: 30px; display: block; }
   .losnr { font-size: 12.5px; color: var(--mut); font-weight: 700; letter-spacing: .06em; }
 
-  /* ── Hero mit Baustellenfoto (Lai da Nalps, Drohne 22.07.2026) ── */
+  /* ── Titelbereich über dem Panorama ── */
   .hero {
     position: relative;
-    background: url('assets/img/hero.jpg') center 42% / cover no-repeat;
-    min-height: 34vh;
+    min-height: 30vh;
   }
   .hero .shade {
     position: absolute; inset: 0;
-    background: linear-gradient(180deg, rgba(10,16,24,.05) 40%, rgba(10,16,24,.62) 100%);
+    background: linear-gradient(180deg, rgba(10,16,24,.02) 30%, rgba(10,16,24,.45) 100%);
   }
   .hero .txt {
     position: relative; z-index: 1;
     max-width: 860px; margin: 0 auto;
-    padding: 22vh 20px 22px;
+    padding: 19vh 20px 20px;
     color: #fff;
   }
   .hero h1 { margin: 0; font-size: clamp(26px, 6vw, 40px); font-weight: 900; text-shadow: 0 2px 14px rgba(0,0,0,.55); }
@@ -75,6 +77,7 @@
   .card .desc { font-size: 12.5px; color: var(--mut); margin-top: 3px; line-height: 1.45; }
   .card.breit { grid-column: 1 / -1; min-height: 104px; }
 
+  .wrap { background: linear-gradient(180deg, rgba(242,243,245,.0), rgba(242,243,245,.25)); }
   .foot {
     background: #fff; border-top: 1px solid var(--line);
     padding: 14px 18px calc(14px + env(safe-area-inset-bottom));
@@ -91,7 +94,7 @@
 </head>
 <body>
   <div class="topbar">
-    <div class="logo">STRABAG</div>
+    <div class="logo"><img src="assets/img/strabag-logo.png" alt="STRABAG"></div>
     <div class="losnr">NALPSOLAR · LOS B8-13</div>
   </div>
 

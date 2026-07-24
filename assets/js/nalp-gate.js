@@ -42,8 +42,8 @@
     '#nalpGate .ng-card{position:relative;z-index:2;width:100%;max-width:330px;text-align:center;' +
       'background:#fff;border-radius:8px;border-top:6px solid #D72622;' +
       'padding:24px 20px 20px;box-shadow:0 14px 44px rgba(10,14,20,.45);}' +
-    '#nalpGate .ng-brand{font-size:15px;letter-spacing:.12em;font-weight:900;' +
-      'color:#D72622;text-transform:uppercase;margin-bottom:6px;}' +
+    '#nalpGate .ng-brand{margin-bottom:8px;}' +
+    '#nalpGate .ng-brand img{height:26px;display:inline-block;}' +
     '#nalpGate h1{font-size:24px;font-weight:900;margin:0 0 4px;letter-spacing:.01em;}' +
     '#nalpGate .ng-sub{font-size:13px;color:#63676d;margin-bottom:22px;}' +
     '#nalpGate .ng-dots{display:flex;gap:16px;justify-content:center;margin-bottom:8px;height:20px;}' +
@@ -72,7 +72,7 @@
   gate.innerHTML =
     '<div class="ng-sun"></div>' +
     '<div class="ng-card">' +
-      '<div class="ng-brand">NalpSolar &middot; STRABAG</div>' +
+      '<div class="ng-brand"><img src="assets/img/strabag-logo.png" alt="STRABAG"></div>' +
       '<h1></h1>' +
       '<div class="ng-sub"></div>' +
       '<div class="ng-dots">' +
