@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v65';
+var CACHE = 'nalpsolar-v66';
 var PRECACHE = [
   './index.html',
   './logistik.html',
@@ -17,7 +17,6 @@ var PRECACHE = [
   './erfassungen.html',
   './viewer3d.html',
   './assets/js/nalp-gate.js',
-  './assets/js/nalp-erfassung.js',
   './assets/js/nalp-stahlteile.js',
   './assets/js/nalp-status.js',
   './uploads/tables/modultische_status.json',
