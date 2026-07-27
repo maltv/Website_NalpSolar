@@ -152,10 +152,26 @@
 <div id="bigfoto" onclick="this.style.display='none'"><img id="bigfotoImg" alt=""></div>
 <div id="toast"></div>
 
+<!-- Nach dem Melden: Auftrag per WhatsApp/Anruf an den Transporteur -->
+<div id="waNudge" style="display:none;position:fixed;inset:0;z-index:80;background:rgba(15,20,26,.6);align-items:flex-end;justify-content:center;">
+  <div style="background:#fff;border-radius:10px 10px 0 0;border-top:6px solid var(--rot);max-width:720px;width:100%;padding:18px 16px calc(18px + env(safe-area-inset-bottom));">
+    <div style="font-size:16px;font-weight:900;margin-bottom:4px;">✔ Auftrag gespeichert – jetzt melden?</div>
+    <div style="font-size:13px;color:var(--mut);margin-bottom:14px;">Damit nichts liegen bleibt: Auftrag direkt per WhatsApp schicken oder kurz durchrufen.</div>
+    <a id="waLink" class="btn" style="display:block;text-align:center;text-decoration:none;background:#25D366;margin-bottom:9px;" target="_blank" rel="noopener">📱 Per WhatsApp senden</a>
+    <a id="telLink" class="btn ghost" style="display:block;text-align:center;text-decoration:none;margin-bottom:9px;">📞 Anrufen</a>
+    <button class="btn ghost" style="display:block;width:100%;" onclick="document.getElementById('waNudge').style.display='none'">Ohne Meldung schliessen</button>
+  </div>
+</div>
+
 <script>
 'use strict';
 var DB='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app';
 var P_AUF='logistik/auftraege', P_FOTO='logistik/fotos';
+// Melde-Nummer für WhatsApp/Anruf. TEST-PHASE: Victor (079 126 90 82);
+// nach dem Test auf Sandro Schuoler (Schuoler Logistik) umstellen.
+var MELDE_NUMMER='+41791269082';
+var MELDE_NAME='Sandro';
+var SEITE='https://maltv.github.io/Website_NalpSolar/logistik.html';
 var LS_VON='nalp_erfasser_v1';                       // gleicher Name wie Stahlteile-Erfassung
 var eintraege={}, fotoDataNeu=null, fotoCache={};
 
@@ -170,6 +186,24 @@ function fmtZeit(ts){ if(!ts) return ''; var d=new Date(ts);
 function fmtDZ(iso,ts){ var s=fmtD(iso); var z=fmtZeit(ts); return s+(z?' · '+z+' Uhr':''); }
 function getVon(){ try{ return localStorage.getItem(LS_VON)||''; }catch(e){ return ''; } }
 function setVon(v){ try{ localStorage.setItem(LS_VON,v||''); }catch(e){} }
+
+/* WhatsApp-/Anruf-Meldung an den Transporteur (Testphase: Victors Nummer) */
+function waText(r){
+  var t='🚚 NalpSolar Logistik – neuer Auftrag'+(r.prio==='dringend'?' (DRINGEND!)':'')+'\n';
+  t+=r.text+'\n';
+  var v=r.vonOrt||'', n=r.nachOrt||'';
+  if(v||n) t+='📍 '+(v||'?')+(n?' → '+n:'')+'\n';
+  t+='Gemeldet: '+(r.von||'—')+', '+fmtD(r.datum)+' '+fmtZeit(r.ts)+' Uhr\n';
+  t+='Abhaken: '+SEITE;
+  return t;
+}
+function waZeigen(r){
+  document.getElementById('waLink').href=
+    'https://wa.me/'+MELDE_NUMMER.replace(/[^0-9]/g,'')+'?text='+encodeURIComponent(waText(r));
+  document.getElementById('telLink').href='tel:'+MELDE_NUMMER;
+  document.getElementById('telLink').textContent='📞 '+MELDE_NAME+' anrufen ('+MELDE_NUMMER+')';
+  document.getElementById('waNudge').style.display='flex';
+}
 
 /* Von-wo/Wohin: Auswahl oder freier Text */
 function ortToggle(w){
@@ -232,6 +266,7 @@ function speichern(){
   var rec={ text:text, vonOrt:ortVal('von'), nachOrt:ortVal('nach'), von:von,
             prio:$('f_prio').checked?'dringend':'normal',
             datum:heute(), ts:Date.now(), status:'offen' };
+  var recKopie=rec;
   apiPost(P_AUF,rec).then(function(key){
     if(!key) throw 0;
     if(!fotoDataNeu) return key;
@@ -243,6 +278,7 @@ function speichern(){
     $('f_foto').value=''; $('fotoPrev').innerHTML=''; fotoDataNeu=null;
     $('status').textContent=''; $('btnSave').disabled=false;
     toast('Auftrag gemeldet ✔'); laden(false);
+    waZeigen(recKopie);                              // WhatsApp/Anruf anbieten
   }).catch(function(){
     $('status').textContent=''; $('btnSave').disabled=false;
     toast('Speichern fehlgeschlagen – Empfang?',true);
@@ -300,6 +336,8 @@ function card(r){
        '<button class="btn gruen" onclick="erledigen(\''+k+'\')">✅ Erledigt</button>'+
        '<button class="btn ghost" onclick="kommentieren(\''+k+'\')">💬 Kommentar</button>'+
        '<button class="btn ghost" onclick="fotoNach(\''+k+'\')">📷 Foto</button>'+
+       '<a class="btn ghost" style="text-decoration:none" target="_blank" rel="noopener" href="https://wa.me/'+MELDE_NUMMER.replace(/[^0-9]/g,'')+'?text='+encodeURIComponent(waText(r))+'">📱 WhatsApp</a>'+
+       '<a class="btn ghost" style="text-decoration:none" href="tel:'+MELDE_NUMMER+'">📞</a>'+
        '</div>';
   }
   h+='</div>';
