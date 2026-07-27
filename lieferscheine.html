@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NalpSolar · Lieferscheine</title>
+<meta name="theme-color" content="#ffffff">
+<script>
+  /* gleicher Zugang wie Logistik (Code 7188) – Sandro + Fahrer + Baustelle */
+  window.NALP_GATE_CODE  = '7188';
+  window.NALP_GATE_KEY   = 'nalp_logistik_unlock_v1';
+  window.NALP_GATE_TITEL = 'Lieferscheine';
+  window.NALP_GATE_SUB   = 'Code eingeben (Tipp: PLZ Sedrun)';
+</script>
+<script src="assets/js/nalp-gate.js"></script>
+<style>
+  :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
+         --gruen:#1e9e5a; --orange:#e08a00; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body{ margin:0; background:#eef0f3; min-height:100vh; color:var(--ink);
+        font-family:Arial,"Helvetica Neue",sans-serif; }
+  body::before{ content:""; position:fixed; inset:0; z-index:-1;
+        background:linear-gradient(rgba(240,242,245,.82),rgba(240,242,245,.92)),
+        url('assets/img/hero.jpg') center 40%/cover no-repeat; }
+  header{ position:sticky; top:0; z-index:10; display:flex; align-items:center; gap:12px;
+          padding:10px 14px; background:#fff; border-bottom:4px solid var(--rot); }
+  header a.home{ color:var(--ink); text-decoration:none; font-size:20px; }
+  header .logo img{ height:22px; display:block; }
+  header h1{ font-size:15.5px; margin:0; flex:1; font-weight:800; }
+  header a.nav{ font-size:13px; font-weight:700; color:var(--rot); text-decoration:none; }
+  header button{ background:#fff; color:var(--ink); border:1px solid var(--line);
+          border-radius:7px; padding:7px 11px; font-size:14px; font-weight:700; cursor:pointer; }
+  main{ max-width:760px; margin:0 auto; padding:14px 12px 90px; }
+  .box{ background:#fff; border:1px solid var(--line); border-left:5px solid var(--rot);
+        border-radius:6px; padding:13px; margin-bottom:14px; box-shadow:0 1px 4px rgba(20,25,32,.07); }
+  .box h2{ margin:0 0 8px; font-size:15px; }
+  label.fl{ display:block; font-size:11.5px; font-weight:700; color:var(--mut); margin:9px 0 4px;
+            text-transform:uppercase; letter-spacing:.04em; }
+  input,textarea,select{ width:100%; background:#fff; border:1px solid #c9ccd2;
+          border-radius:6px; color:var(--ink); padding:9px 10px; font-size:15px; font-family:inherit; }
+  input:focus,textarea:focus,select:focus{ outline:2px solid rgba(215,38,34,.35); }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+  .btn{ display:inline-block; border:none; border-radius:6px; padding:11px 16px; font-size:14.5px;
+        font-weight:800; cursor:pointer; color:#fff; background:var(--rot); }
+  .btn.gruen{ background:var(--gruen); }
+  .btn.ghost{ background:#fff; color:var(--ink); border:1px solid #c9ccd2;
+        font-weight:700; padding:8px 11px; font-size:13px; }
+  .btn[disabled]{ opacity:.5; }
+  #fotoPrev{ display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+  #fotoPrev img{ width:74px; height:74px; object-fit:cover; border-radius:6px; border:1px solid var(--line); }
+  #status{ font-size:12.5px; color:var(--mut); min-height:17px; margin-top:8px; }
+  .filter{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+
+  .ls{ background:#fff; border:1px solid var(--line); border-left:5px solid var(--orange);
+       border-radius:6px; padding:11px 12px; margin-bottom:10px; box-shadow:0 1px 4px rgba(20,25,32,.06);
+       display:flex; gap:11px; }
+  .ls.ok{ border-left-color:var(--gruen); }
+  .ls .thumb{ width:78px; height:78px; flex:none; border-radius:6px; border:1px solid var(--line);
+       background:#f2f3f5; display:flex; align-items:center; justify-content:center;
+       font-size:26px; cursor:pointer; overflow:hidden; }
+  .ls .thumb img{ width:100%; height:100%; object-fit:cover; }
+  .ls .bd{ flex:1; min-width:0; }
+  .ls .t1{ font-size:14.5px; font-weight:800; }
+  .ls .t1 .nr{ color:var(--mut); font-weight:700; }
+  .ls .t2{ font-size:12.5px; color:var(--mut); margin-top:3px; line-height:1.45; }
+  .ls .t2 b{ color:var(--ink); }
+  .ls .chip{ display:inline-block; font-size:10.5px; font-weight:900; letter-spacing:.05em;
+       border-radius:4px; padding:2px 7px; margin-left:6px; vertical-align:1px; }
+  .ls .chip.neu{ background:var(--orange); color:#fff; }
+  .ls .chip.ok{ background:var(--gruen); color:#fff; }
+  .ls .akt{ margin-top:8px; display:flex; gap:7px; flex-wrap:wrap; }
+  .mon{ margin:20px 0 9px; font-size:13px; font-weight:900; letter-spacing:.06em;
+        text-transform:uppercase; color:#fff; text-shadow:0 1px 8px rgba(10,15,22,.85); }
+  .leer{ color:var(--mut); font-size:13.5px; padding:9px 12px; background:rgba(255,255,255,.9); border-radius:6px; }
+  .mini{ font-size:11px; color:var(--mut); background:rgba(255,255,255,.88); border-radius:6px; padding:8px 10px; }
+  #bigfoto{ position:fixed; inset:0; z-index:60; background:rgba(0,0,0,.92); display:none;
+            align-items:center; justify-content:center; padding:12px; }
+  #bigfoto img{ max-width:100%; max-height:100%; border-radius:6px; }
+  #toast{ position:fixed; left:50%; bottom:22px; transform:translateX(-50%) translateY(80px);
+          background:#0f5c33; color:#fff; font-weight:700;
+          padding:10px 16px; border-radius:8px; font-size:14px; transition:transform .25s; z-index:70; }
+  #toast.on{ transform:translateX(-50%) translateY(0); }
+  #toast.err{ background:var(--rot); }
+</style>
+</head>
+<body>
+<header>
+  <a class="home" href="index.html" title="Startseite">🏠</a>
+  <div class="logo"><img src="assets/img/strabag-logo.png" alt="STRABAG"></div>
+  <h1>📄 Lieferscheine</h1>
+  <a class="nav" href="logistik.html">🚚 Logistik</a>
+  <button onclick="laden(true)">↻</button>
+</header>
+<main>
+  <div class="box">
+    <h2>📷 Lieferschein erfassen <span style="font-weight:400;font-size:12px;color:var(--mut)">– Papierschein abfotografieren, fertig</span></h2>
+    <label class="fl">Foto vom Lieferschein *</label>
+    <input type="file" id="f_foto" accept="image/*" capture="environment">
+    <div id="fotoPrev"></div>
+    <div class="row2">
+      <div>
+        <label class="fl">Lieferant / Transporteur *</label>
+        <select id="f_lief">
+          <option value="">– wählen –</option>
+          <option>Schuoler Logistik</option>
+          <option>Röfix</option>
+          <option>Mäder / Mauchle</option>
+          <option>Zeitler</option>
+          <option>Barit / bmsuisse</option>
+          <option>Geowork</option>
+          <option value="anderer">anderer …</option>
+        </select>
+        <input id="f_lief_txt" style="display:none;margin-top:6px" placeholder="Lieferant eingeben">
+      </div>
+      <div>
+        <label class="fl">Lieferschein-Nr. (optional)</label>
+        <input id="f_nr" placeholder="z.B. LS-4711">
+      </div>
+    </div>
+    <label class="fl">Material / Inhalt (optional)</label>
+    <input id="f_text" placeholder="z.B. Injektionsmörtel 25 to, KSR-Rohre …">
+    <div class="row2">
+      <div>
+        <label class="fl">Abgeladen bei</label>
+        <select id="f_ort">
+          <option value="">–</option>
+          <option>IP Tal 1</option>
+          <option>IP Tal 4</option>
+          <option>IP Berg</option>
+          <option value="anderer">anderer Ort …</option>
+        </select>
+        <input id="f_ort_txt" style="display:none;margin-top:6px" placeholder="Ort eingeben">
+      </div>
+      <div>
+        <label class="fl">Erfasst von *</label>
+        <input id="f_von" placeholder="Name / Kürzel">
+      </div>
+    </div>
+    <label class="fl">Zu Transportauftrag (optional)</label>
+    <select id="f_auftrag"><option value="">– keiner –</option></select>
+    <div style="margin-top:12px"><button class="btn" id="btnSave" onclick="speichern()">📤 Lieferschein ablegen</button></div>
+    <div id="status"></div>
+  </div>
+
+  <div class="box" style="border-left-color:#8a8e94">
+    <h2>🔎 Suchen & Prüfen</h2>
+    <div class="filter">
+      <select id="fi_lief" onchange="render()"><option value="">Alle Lieferanten</option></select>
+      <select id="fi_status" onchange="render()">
+        <option value="">Alle Status</option>
+        <option value="neu">nur NEU</option>
+        <option value="ok">nur geprüft</option>
+      </select>
+      <input id="fi_q" placeholder="Suche …" oninput="render()">
+    </div>
+    <div style="margin-top:9px"><button class="btn ghost" onclick="csvExport()">⬇ CSV-Export (Excel)</button></div>
+  </div>
+
+  <div id="liste"><div class="leer">Lade …</div></div>
+
+  <div class="mini" style="margin-top:18px">
+    Ablauf wie in der Branche üblich: Beim Abladen den Papier-Lieferschein kurz abfotografieren
+    (Fahrer oder Baustelle), Lieferant wählen, ablegen – Zeit und GPS werden automatisch gespeichert.
+    Victor hakt bei der Rechnungsprüfung ab («✔ geprüft»). Kein Zettel geht mehr verloren.
+  </div>
+</main>
+
+<div id="bigfoto" onclick="this.style.display='none'"><img id="bigfotoImg" alt=""></div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+var DB='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app';
+var P_LS='lieferscheine/eintraege', P_LSF='lieferscheine/fotos', P_AUF='logistik/auftraege';
+var LS_VON='nalp_erfasser_v1';
+var eintraege={}, auftraege={}, fotoDataNeu=null, fotoCache={}, gpsFix=null;
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+function toast(t,err){ var e=$('toast'); e.textContent=t; e.className='on'+(err?' err':'');
+  setTimeout(function(){ e.className=err?'err':''; },2600); }
+function heute(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fmtD(iso){ if(!iso) return ''; var p=String(iso).split('-'); return p.length===3?p[2]+'.'+p[1]+'.'+p[0]:iso; }
+function fmtZeit(ts){ if(!ts) return ''; var d=new Date(ts);
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function getVon(){ try{ return localStorage.getItem(LS_VON)||''; }catch(e){ return ''; } }
+function setVon(v){ try{ localStorage.setItem(LS_VON,v||''); }catch(e){} }
+
+/* GPS einmalig, nicht blockierend (Branchenstandard: Geo+Zeitstempel automatisch) */
+if(navigator.geolocation) navigator.geolocation.getCurrentPosition(function(p){
+  gpsFix={lat:+p.coords.latitude.toFixed(6), lon:+p.coords.longitude.toFixed(6)};
+},function(){},{enableHighAccuracy:true,timeout:8000,maximumAge:120000});
+
+/* Auswahl-Umschalter */
+$('f_lief').addEventListener('change',function(){
+  $('f_lief_txt').style.display=this.value==='anderer'?'':'none';
+});
+$('f_ort').addEventListener('change',function(){
+  $('f_ort_txt').style.display=this.value==='anderer'?'':'none';
+});
+function liefVal(){ var s=$('f_lief'); return s.value==='anderer'?$('f_lief_txt').value.trim():s.value; }
+function ortVal(){ var s=$('f_ort'); return s.value==='anderer'?$('f_ort_txt').value.trim():s.value; }
+
+/* Foto verkleinern (gleiches Muster wie Logistik) */
+function fotoLesen(file, cb){
+  var img=new Image();
+  img.onload=function(){
+    var m=1400, w=img.width, h=img.height;   // Lieferschein: etwas höher aufgelöst, muss lesbar sein
+    if(w>m||h>m){ if(w>h){ h=Math.round(h*m/w); w=m; } else { w=Math.round(w*m/h); h=m; } }
+    var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+    cv.getContext('2d').drawImage(img,0,0,w,h);
+    var data=cv.toDataURL('image/jpeg',0.78);
+    if(data.length>1300000) data=cv.toDataURL('image/jpeg',0.6);
+    cb(data);
+  };
+  img.onerror=function(){ cb(null); };
+  img.src=URL.createObjectURL(file);
+}
+$('f_foto').addEventListener('change',function(){
+  fotoDataNeu=null; $('fotoPrev').innerHTML='';
+  var f=this.files&&this.files[0]; if(!f) return;
+  fotoLesen(f,function(data){
+    if(!data){ toast('Foto konnte nicht gelesen werden',true); return; }
+    fotoDataNeu=data;
+    var im=document.createElement('img'); im.src=data; $('fotoPrev').appendChild(im);
+  });
+});
+
+/* REST */
+function apiGet(p){ return fetch(DB+'/'+p+'.json',{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }); }
+function apiPost(p,body){ return fetch(DB+'/'+p+'.json',{method:'POST',body:JSON.stringify(body)})
+  .then(function(r){ return r.ok?r.json():null; }).then(function(j){ return j&&j.name?j.name:null; }); }
+function apiPatch(p,body){ return fetch(DB+'/'+p+'.json',{method:'PATCH',body:JSON.stringify(body)})
+  .then(function(r){ return r.ok; }); }
+function apiPut(p,body){ return fetch(DB+'/'+p+'.json',{method:'PUT',body:JSON.stringify(body)})
+  .then(function(r){ return r.ok; }); }
+
+/* Speichern */
+function speichern(){
+  var lief=liefVal(), von=$('f_von').value.trim();
+  if(!fotoDataNeu){ toast('Bitte zuerst den Lieferschein fotografieren.',true); return; }
+  if(!lief){ toast('Bitte Lieferant wählen.',true); return; }
+  if(!von){ toast('Bitte Namen angeben.',true); return; }
+  setVon(von);
+  $('btnSave').disabled=true; $('status').textContent='Speichere …';
+  var rec={ ts:Date.now(), datum:heute(), lieferant:lief, nr:$('f_nr').value.trim(),
+            text:$('f_text').value.trim(), ort:ortVal(), von:von,
+            auftrag:$('f_auftrag').value||'', status:'neu' };
+  if(gpsFix){ rec.lat=gpsFix.lat; rec.lon=gpsFix.lon; }
+  var foto=fotoDataNeu;
+  apiPost(P_LS,rec).then(function(key){
+    if(!key) throw 0;
+    return apiPost(P_LSF,{eintrag:key, von:von, ts:Date.now(), data:foto})
+      .then(function(fk){ if(!fk) throw 0; return apiPut(P_LS+'/'+key+'/fotos/'+fk,true); });
+  }).then(function(){
+    ['f_nr','f_text','f_lief_txt','f_ort_txt'].forEach(function(i){ $(i).value=''; });
+    $('f_lief').value=''; $('f_ort').value=''; $('f_auftrag').value='';
+    $('f_foto').value=''; $('fotoPrev').innerHTML=''; fotoDataNeu=null;
+    $('status').textContent=''; $('btnSave').disabled=false;
+    toast('Lieferschein abgelegt ✔'); laden(false);
+  }).catch(function(){
+    $('status').textContent=''; $('btnSave').disabled=false;
+    toast('Speichern fehlgeschlagen – Empfang?',true);
+  });
+}
+
+/* Laden + Rendern */
+function laden(manuell){
+  Promise.all([apiGet(P_LS), apiGet(P_AUF)]).then(function(res){
+    eintraege=res[0]||{}; auftraege=res[1]||{};
+    fuelleAuftragSelect(); fuelleLieferantFilter(); render();
+    if(manuell) toast('Aktualisiert');
+  }).catch(function(){ if(manuell) toast('Laden fehlgeschlagen – offline?',true); });
+}
+function fuelleAuftragSelect(){
+  var s=$('f_auftrag'), alt=s.value;
+  var opts='<option value="">– keiner –</option>';
+  Object.keys(auftraege).forEach(function(k){
+    var a=auftraege[k];
+    if(!a||a.status==='erledigt') return;
+    var t=(a.text||'').slice(0,48);
+    opts+='<option value="'+k+'">'+esc(t)+(a.vonOrt||a.nachOrt?' ('+esc(a.vonOrt||'?')+'→'+esc(a.nachOrt||'?')+')':'')+'</option>';
+  });
+  s.innerHTML=opts; s.value=alt;
+}
+function fuelleLieferantFilter(){
+  var s=$('fi_lief'), alt=s.value, seen={};
+  var opts='<option value="">Alle Lieferanten</option>';
+  Object.keys(eintraege).forEach(function(k){
+    var l=(eintraege[k]||{}).lieferant; if(!l||seen[l]) return; seen[l]=1;
+    opts+='<option>'+esc(l)+'</option>';
+  });
+  s.innerHTML=opts; s.value=alt;
+}
+function monat(iso){ return iso?iso.slice(0,7):'?'; }
+function monatName(m){
+  var MN=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  var p=m.split('-'); return p.length===2 ? (MN[+p[1]-1]+' '+p[0]) : m;
+}
+function gefiltert(){
+  var fl=$('fi_lief').value, fs=$('fi_status').value, q=$('fi_q').value.trim().toLowerCase();
+  return Object.keys(eintraege).map(function(k){ var r=eintraege[k]; if(r) r._k=k; return r; })
+    .filter(function(r){
+      if(!r||!r.lieferant) return false;
+      if(fl && r.lieferant!==fl) return false;
+      if(fs==='neu' && r.status!=='neu') return false;
+      if(fs==='ok' && r.status!=='geprueft') return false;
+      if(q){
+        var blob=(r.lieferant+' '+(r.nr||'')+' '+(r.text||'')+' '+(r.ort||'')+' '+(r.von||'')).toLowerCase();
+        if(blob.indexOf(q)<0) return false;
+      }
+      return true;
+    })
+    .sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+}
+function render(){
+  var rows=gefiltert(), out='', lastMon='';
+  if(!rows.length){ $('liste').innerHTML='<div class="leer">Keine Lieferscheine gefunden.</div>'; return; }
+  rows.forEach(function(r){
+    var m=monat(r.datum);
+    if(m!==lastMon){ lastMon=m; out+='<div class="mon">'+esc(monatName(m))+'</div>'; }
+    out+=card(r);
+  });
+  $('liste').innerHTML=out;
+  rows.forEach(function(r){ thumbLaden(r); });
+}
+function card(r){
+  var ok=r.status==='geprueft';
+  var fk=r.fotos?Object.keys(r.fotos)[0]:null;
+  var h='<div class="ls'+(ok?' ok':'')+'">';
+  h+='<div class="thumb" id="th_'+r._k+'" onclick="fotoGross(\''+r._k+'\')">📄</div>';
+  h+='<div class="bd">';
+  h+='<div class="t1">'+esc(r.lieferant)+(r.nr?' <span class="nr">· '+esc(r.nr)+'</span>':'')
+    +'<span class="chip '+(ok?'ok':'neu')+'">'+(ok?'GEPRÜFT':'NEU')+'</span></div>';
+  h+='<div class="t2">'+(r.text?'<b>'+esc(r.text)+'</b><br>':'')
+    +esc(fmtD(r.datum))+' · '+fmtZeit(r.ts)+' Uhr'
+    +(r.ort?' · 📍 '+esc(r.ort):'')+' · '+esc(r.von||'—');
+  if(r.auftrag && auftraege[r.auftrag]) h+='<br>🚚 '+esc((auftraege[r.auftrag].text||'').slice(0,60));
+  if(ok) h+='<br><span style="color:var(--gruen);font-weight:700">✔ geprüft: '+esc(r.geprueftVon||'—')+' · '+esc(fmtD(r.geprueftAm||''))+(r.bem?' – '+esc(r.bem):'')+'</span>';
+  h+='</div>';
+  h+='<div class="akt">';
+  if(!ok) h+='<button class="btn gruen" onclick="pruefen(\''+r._k+'\')">✔ geprüft</button>';
+  h+='<button class="btn ghost" onclick="fotoGross(\''+r._k+'\')">🔍 Foto</button>';
+  h+='</div></div></div>';
+  return h;
+}
+function thumbLaden(r){
+  var fk=r.fotos?Object.keys(r.fotos)[0]:null;
+  if(!fk) return;
+  var el=$('th_'+r._k); if(!el) return;
+  if(fotoCache[fk]){ el.innerHTML='<img src="'+fotoCache[fk].data+'">'; return; }
+  apiGet(P_LSF+'/'+fk).then(function(f){
+    if(!f||!f.data) return;
+    fotoCache[fk]=f;
+    var el2=$('th_'+r._k);
+    if(el2) el2.innerHTML='<img src="'+f.data+'">';
+  });
+}
+function fotoGross(k){
+  var r=eintraege[k]; if(!r||!r.fotos) return;
+  var fk=Object.keys(r.fotos)[0]; if(!fk) return;
+  function zeig(f){ if(!f||!f.data) return;
+    $('bigfotoImg').src=f.data; $('bigfoto').style.display='flex'; }
+  if(fotoCache[fk]) zeig(fotoCache[fk]);
+  else apiGet(P_LSF+'/'+fk).then(function(f){ fotoCache[fk]=f; zeig(f); });
+}
+function pruefen(k){
+  var von=prompt('Geprüft durch:', getVon()||'Victor');
+  if(von===null) return;
+  von=von.trim(); if(!von){ toast('Name fehlt.',true); return; }
+  setVon(von);
+  var bem=prompt('Bemerkung (optional, z.B. Rechnungs-Nr.):','');
+  var upd={ status:'geprueft', geprueftVon:von, geprueftAm:heute(), geprueftTs:Date.now() };
+  if(bem && bem.trim()) upd.bem=bem.trim();
+  apiPatch(P_LS+'/'+k,upd).then(function(ok){
+    if(!ok) throw 0;
+    toast('Als geprüft markiert ✔'); laden(false);
+  }).catch(function(){ toast('Fehlgeschlagen – Empfang?',true); });
+}
+function csvExport(){
+  var rows=gefiltert();
+  var kopf=['Datum','Zeit','Lieferant','LS-Nr','Material/Inhalt','Ort','Erfasst von','Status','Geprüft von','Geprüft am','Bemerkung','Transportauftrag'];
+  var lines=[kopf.join(';')];
+  rows.forEach(function(r){
+    var a=r.auftrag&&auftraege[r.auftrag]?(auftraege[r.auftrag].text||''):'';
+    lines.push([fmtD(r.datum),fmtZeit(r.ts),r.lieferant||'',r.nr||'',r.text||'',r.ort||'',r.von||'',
+      r.status==='geprueft'?'geprüft':'NEU',r.geprueftVon||'',fmtD(r.geprueftAm||''),r.bem||'',a]
+      .map(function(v){ return '"'+String(v).replace(/"/g,'""')+'"'; }).join(';'));
+  });
+  var blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='Lieferscheine_NalpSolar_'+heute()+'.csv';
+  a.click();
+}
+
+/* Start */
+$('f_von').value=getVon();
+laden(false);
+setInterval(function(){ laden(false); },60000);
+</script>
+</body>
+</html>

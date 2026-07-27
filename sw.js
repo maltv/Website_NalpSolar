@@ -1,8 +1,9 @@
 'use strict';
-var CACHE = 'nalpsolar-v66';
+var CACHE = 'nalpsolar-v67';
 var PRECACHE = [
   './index.html',
   './logistik.html',
+  './lieferscheine.html',
   './assets/img/hero.jpg',
   './assets/img/strabag-logo.png',
   './stahlbau.html',
