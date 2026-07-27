@@ -482,7 +482,7 @@ body.ar-mode { background:transparent!important; }
   <div class="leg"><div class="leg-dot" style="background:#cccccc"></div>Schacht</div>
   <div class="leg"><div class="leg-dot" style="background:rgba(140,210,140,.7)"></div>Terrain</div>
   <div class="leg"><div class="leg-dot" style="background:rgba(80,160,255,.7);border:1px solid #ffd700"></div>Modultische</div>
-  <div class="leg" style="opacity:.85">╌╌ gestrichelt = Leitung noch nicht gebaut (Stand 23.07.)</div>
+  <div class="leg" style="opacity:.85">▨ schraffiert/durchscheinend = Leitung noch nicht gebaut (Stand 23.07.)</div>
 </div>
 
 <div id="orbitHint">📍 Orbit-Punkt gesetzt</div>
@@ -855,17 +855,20 @@ async function loadLayer(cfg){
     side:THREE.DoubleSide
   });
 
-  // Noch nicht gebaute Leitungen gestrichelt (Baustatus-Skizze Victor 23.07.)
+  // Noch nicht gebaute Leitungen schraffiert (Baustatus-Skizze Victor 23.07.).
+  // Bildschirm-Schraffur statt Weltraster: das alte 2.5-m-Karo hat schräge
+  // Rohre in grossen Brocken abgeschnitten (Victor 27.07.) – das feine
+  // gl_FragCoord-Muster wirkt wie halbtransparent gestrichelt, richtungsunabhängig.
   if(cfg.baustatus){
     geom.setAttribute('fertig', new THREE.BufferAttribute(
       wlFertigAttr(cfg.slot, raw, meta.vertexColors?new Float32Array(bufs[2]):null), 1));
     mat.onBeforeCompile=function(sh){
-      sh.vertexShader='attribute float fertig; varying float vFertig; varying vec3 vWPos;\n'
+      sh.vertexShader='attribute float fertig; varying float vFertig;\n'
         + sh.vertexShader.replace('#include <begin_vertex>',
-          '#include <begin_vertex>\nvFertig=fertig; vWPos=(modelMatrix*vec4(position,1.0)).xyz;');
-      sh.fragmentShader='varying float vFertig; varying vec3 vWPos;\n'
+          '#include <begin_vertex>\nvFertig=fertig;');
+      sh.fragmentShader='varying float vFertig;\n'
         + sh.fragmentShader.replace('#include <clipping_planes_fragment>',
-          'if(vFertig<0.5){ float cx=step(1.25,mod(vWPos.x,2.5)); float cz=step(1.25,mod(vWPos.z,2.5)); if(abs(cx-cz)<0.5) discard; }\n#include <clipping_planes_fragment>');
+          'if(vFertig<0.5 && mod(gl_FragCoord.x+gl_FragCoord.y,7.0)<3.5) discard;\n#include <clipping_planes_fragment>');
     };
   }
   var mesh=new THREE.Mesh(geom,mat);
