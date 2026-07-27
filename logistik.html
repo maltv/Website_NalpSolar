@@ -18,8 +18,13 @@
   :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
          --gruen:#1e9e5a; }
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  body{ margin:0; background:#f2f3f5; min-height:100vh; color:var(--ink);
+  body{ margin:0; background:#eef0f3; min-height:100vh; color:var(--ink);
         font-family:Arial,"Helvetica Neue",sans-serif; }
+  /* Hintergrund: abgesoftetes Nalps-Panorama + animierte Transport-Karte */
+  body::before{ content:""; position:fixed; inset:0; z-index:-2;
+        background:linear-gradient(rgba(240,242,245,.88),rgba(240,242,245,.94)),
+        url('assets/img/hero.jpg') center 40%/cover no-repeat; }
+  #bgKarte{ position:fixed; inset:0; z-index:-1; pointer-events:none; }
   header{ position:sticky; top:0; z-index:10; display:flex; align-items:center; gap:12px;
           padding:10px 14px; background:#fff; border-bottom:4px solid var(--rot); }
   header a.home{ color:var(--ink); text-decoration:none; font-size:20px; }
@@ -85,6 +90,7 @@
 </style>
 </head>
 <body>
+<canvas id="bgKarte"></canvas>
 <header>
   <a class="home" href="index.html" title="Startseite">🏠</a>
   <div class="logo"><img src="assets/img/strabag-logo.png" alt="STRABAG" style="height:22px;display:block"></div>
@@ -294,6 +300,7 @@ function laden(manuell){
   apiGet(P_AUF).then(function(j){
     eintraege=j||{};
     render();
+    karteUpdate();                     // Hintergrund-Karte nachführen
     if(manuell) toast('Aktualisiert');
   }).catch(function(){ if(manuell) toast('Laden fehlgeschlagen – offline?',true); });
 }
@@ -410,6 +417,107 @@ function fotosZeigen(k){
     if(!box.children.length) box.innerHTML='<span class="mini">Fotos nicht ladbar.</span>';
   });
 }
+
+/* ---------- Animierte Transport-Karte im Hintergrund ----------
+   Schemakarte (keine Geo-Koordinaten der IPs verfügbar): Knoten Tal/Berg,
+   offene Aufträge = rot pulsierende Linie mit wanderndem Punkt Von→Nach,
+   erledigte = grün und verblassen über 7 Tage bis sie verschwinden.   */
+var KARTE_FADE_TAGE=7;
+var kCv=$('bgKarte'), kCtx=kCv.getContext('2d');
+var kTrans=[];                       // {p0,p1,farbe,alpha,dringend,phase}
+function kResize(){ kCv.width=innerWidth*devicePixelRatio; kCv.height=innerHeight*devicePixelRatio;
+  kCv.style.width=innerWidth+'px'; kCv.style.height=innerHeight+'px';
+  kCtx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0); }
+window.addEventListener('resize',kResize); kResize();
+
+function kKnoten(){
+  var w=innerWidth, h=innerHeight;
+  return {
+    'IP Berg':   {x:w*0.78, y:h*0.14},
+    'IP Tal 1':  {x:w*0.13, y:h*0.42},
+    'IP Tal 4':  {x:w*0.17, y:h*0.84},
+    'anderer Ort':{x:w*0.85, y:h*0.70}
+  };
+}
+function kNode(name){
+  var K=kKnoten();
+  if(K[name]) return {p:K[name], n:name};
+  return {p:K['anderer Ort'], n:'anderer Ort'};
+}
+function karteUpdate(){
+  kTrans=[];
+  var now=Date.now();
+  Object.keys(eintraege).forEach(function(k){
+    var r=eintraege[k]; if(!r||!r.text) return;
+    var don=r.status==='erledigt';
+    var alpha=1;
+    if(don){
+      var alter=(now-(r.erledigtTs||r.ts||now))/86400000;
+      alpha=1-alter/KARTE_FADE_TAGE;
+      if(alpha<=0) return;                    // verschwunden
+    }
+    var von=kNode(r.vonOrt||r.ort||'');
+    var nach=kNode(r.nachOrt||'');
+    // beide unbekannt/gleich: kleiner Bogen am Knoten selbst
+    kTrans.push({ a:von.p, b:nach.p, gleich:(von.n===nach.n),
+                  don:don, alpha:alpha, dringend:r.prio==='dringend',
+                  phase:(r.ts||0)%10000/10000 });
+  });
+}
+function kCurve(t,a,b,lift){
+  var mx=(a.x+b.x)/2, my=(a.y+b.y)/2-lift;
+  var u=1-t;
+  return { x:u*u*a.x+2*u*t*mx+t*t*b.x, y:u*u*a.y+2*u*t*my+t*t*b.y };
+}
+function karteMalen(ts){
+  var w=innerWidth, h=innerHeight;
+  kCtx.clearRect(0,0,w,h);
+  var K=kKnoten();
+  // Knoten + Beschriftung
+  Object.keys(K).forEach(function(n){
+    var p=K[n];
+    kCtx.beginPath(); kCtx.arc(p.x,p.y,7,0,6.283);
+    kCtx.fillStyle='rgba(99,103,109,.35)'; kCtx.fill();
+    kCtx.beginPath(); kCtx.arc(p.x,p.y,3,0,6.283);
+    kCtx.fillStyle='rgba(99,103,109,.55)'; kCtx.fill();
+    kCtx.font='700 12px Arial'; kCtx.fillStyle='rgba(70,74,80,.55)';
+    kCtx.textAlign='center'; kCtx.fillText(n, p.x, p.y-14);
+  });
+  var t=ts/1000;
+  kTrans.forEach(function(tr){
+    var a=tr.a, b=tr.gleich?{x:tr.a.x+70,y:tr.a.y-10}:tr.b;
+    var dist=Math.hypot(b.x-a.x,b.y-a.y);
+    var lift=Math.min(140, 30+dist*0.25);
+    var col, puls=1;
+    if(tr.don){ col='30,158,90'; }               // grün, verblasst mit alpha
+    else {
+      col=tr.dringend?'215,38,34':'226,90,70';   // rot, pulsiert
+      puls=0.65+0.35*Math.sin(t*2.4+tr.phase*6.28);
+    }
+    var al=tr.alpha*(tr.don?0.65:0.8*puls);
+    // Linie
+    kCtx.beginPath();
+    for(var i=0;i<=32;i++){ var p=kCurve(i/32,a,b,lift); if(i)kCtx.lineTo(p.x,p.y); else kCtx.moveTo(p.x,p.y); }
+    kCtx.strokeStyle='rgba('+col+','+(al*0.55)+')';
+    kCtx.lineWidth=tr.dringend&&!tr.don?3:2;
+    kCtx.setLineDash(tr.don?[]:[9,7]);
+    kCtx.stroke(); kCtx.setLineDash([]);
+    // wandernder Transportpunkt (nur offene)
+    if(!tr.don){
+      var tp=kCurve((t*0.12+tr.phase)%1, a,b,lift);
+      kCtx.beginPath(); kCtx.arc(tp.x,tp.y,tr.dringend?6:4.5,0,6.283);
+      kCtx.fillStyle='rgba('+col+','+Math.min(1,al+0.25)+')';
+      kCtx.shadowColor='rgba('+col+',.9)'; kCtx.shadowBlur=12;
+      kCtx.fill(); kCtx.shadowBlur=0;
+    } else {
+      // erledigt: Häkchenpunkt am Ziel
+      kCtx.beginPath(); kCtx.arc(b.x,b.y-6,4,0,6.283);
+      kCtx.fillStyle='rgba('+col+','+al+')'; kCtx.fill();
+    }
+  });
+  requestAnimationFrame(karteMalen);
+}
+requestAnimationFrame(karteMalen);
 
 /* ---------- Start ---------- */
 $('f_von').value=getVon();
