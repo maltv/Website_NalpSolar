@@ -1,5 +1,5 @@
 {
- "stand": "5-Wochenprogramm KW30-34 (20.07.-23.08.2026), Stand 22.07.2026 (Muk-Wechsel: gelb->1.6, rot->5.2) inkl. Ist-Stand Tagesbericht 20.07.",
+ "stand": "5-Wochenprogramm KW30-34 (20.07.-23.08.2026), Stand 28.07.2026 (Ist: gelb 1.6 / rot 5.1, Stahlbau 5.1 gestartet, FV C4)",
  "start": "2026-07-20",
  "ende": "2026-08-23",
  "aufgaben": [
@@ -13,10 +13,10 @@
    ]
   },
   {
-   "label": "Bohren 26_1.6 (gelber Muk, heute Mi 22.07. runter)",
+   "label": "Bohren 26_1.6 (gelber Muk, Stand 28.07. noch dran)",
    "gewerk": "bohren",
    "von": "2026-07-22",
-   "bis": "2026-07-24",
+   "bis": "2026-07-31",
    "bereiche": [
     "26_1.6"
    ]
@@ -70,9 +70,9 @@
    ]
   },
   {
-   "label": "Bohren 26_5.1 (Gruppe 2)",
+   "label": "Bohren 26_5.1 (roter Muk, Stand 28.07. dran)",
    "gewerk": "bohren",
-   "von": "2026-07-29",
+   "von": "2026-07-28",
    "bis": "2026-08-07",
    "bereiche": [
     "26_5.1"
@@ -242,7 +242,7 @@
    "aufbau": true
   },
   {
-   "label": "Feinverteilung Strang C - Camatex (nur KW30 + KW31)",
+   "label": "Feinverteilung Strang C - Camatex (seit 28.07. Abschnitt C4)",
    "gewerk": "erd",
    "von": "2026-07-21",
    "bis": "2026-07-31",
@@ -280,6 +280,16 @@
    "von": "2026-08-03",
    "bis": "2026-08-07",
    "bereiche": null
+  },
+  {
+   "gewerk": "stahl",
+   "label": "Stahlbau 26_5.1 (Ist: gestartet 28.07.)",
+   "von": "2026-07-28",
+   "bis": "2026-07-31",
+   "bereiche": [
+    "26_5.1"
+   ],
+   "aufbau": true
   }
  ],
  "polygone": {
