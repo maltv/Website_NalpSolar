@@ -1,5 +1,5 @@
 {
- "stand": "5-Wochenprogramm KW30-34 (20.07.-23.08.2026), Stand 28.07.2026 (Ist: gelb 1.6 / rot 5.1, Stahlbau 5.1 gestartet, FV C4)",
+ "stand": "5-Wochenprogramm KW30-34 (20.07.-23.08.2026), Stand 28.07.2026 (Ist: gelb 1.6 / rot 5.1, Stahlbau 2.1 gestartet, FV C4)",
  "start": "2026-07-20",
  "ende": "2026-08-23",
  "aufgaben": [
@@ -280,16 +280,6 @@
    "von": "2026-08-03",
    "bis": "2026-08-07",
    "bereiche": null
-  },
-  {
-   "gewerk": "stahl",
-   "label": "Stahlbau 26_5.1 (Ist: gestartet 28.07.)",
-   "von": "2026-07-28",
-   "bis": "2026-07-31",
-   "bereiche": [
-    "26_5.1"
-   ],
-   "aufbau": true
   }
  ],
  "polygone": {
