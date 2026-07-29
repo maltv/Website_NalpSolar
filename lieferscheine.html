@@ -6,7 +6,7 @@
 <title>NalpSolar · Lieferscheine</title>
 <meta name="theme-color" content="#ffffff">
 <script>
-  /* gleicher Zugang wie Logistik (Code 7188) – Sandro + Fahrer + Baustelle */
+  /* Zugang wie Logistik per Code 7188 (Firebase-Login noch nicht bereit). */
   window.NALP_GATE_CODE  = '7188';
   window.NALP_GATE_KEY   = 'nalp_logistik_unlock_v1';
   window.NALP_GATE_TITEL = 'Lieferscheine';
@@ -162,6 +162,7 @@
     Ablauf wie in der Branche üblich: Beim Abladen den Papier-Lieferschein kurz abfotografieren
     (Fahrer oder Baustelle), Lieferant wählen, ablegen – Zeit und GPS werden automatisch gespeichert.
     Victor hakt bei der Rechnungsprüfung ab («✔ geprüft»). Kein Zettel geht mehr verloren.
+    · <a href="#" onclick="try{localStorage.removeItem('nalp_logistik_unlock_v1');}catch(e){};location.reload();return false;">Abmelden</a>
   </div>
 </main>
 
@@ -226,7 +227,7 @@ $('f_foto').addEventListener('change',function(){
   });
 });
 
-/* REST */
+/* REST (mit Login-Token, siehe nalp-auth.js) */
 function apiGet(p){ return fetch(DB+'/'+p+'.json',{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }); }
 function apiPost(p,body){ return fetch(DB+'/'+p+'.json',{method:'POST',body:JSON.stringify(body)})
   .then(function(r){ return r.ok?r.json():null; }).then(function(j){ return j&&j.name?j.name:null; }); }

@@ -6,11 +6,16 @@
 <title>NalpSolar · Logistik</title>
 <meta name="theme-color" content="#ffffff">
 <script>
-  /* Echter Login (Firebase Auth) statt Zahlen-Gate – Konten verwaltet Victor
-     in der Firebase Console (Authentication -> Nutzer). */
-  window.NALP_AUTH_TITEL = 'Logistik';
+  /* Zugang wie gehabt per Code 7188 (PLZ Sedrun).
+     HINWEIS 29.07.: Der Firebase-Login (nalp-auth.js) ist noch NICHT
+     einsatzbereit (Datei war nicht deployed + API-Key-Platzhalter) und
+     deshalb hier wieder ausgebaut – sonst laedt die Seite ewig. */
+  window.NALP_GATE_CODE  = '7188';
+  window.NALP_GATE_KEY   = 'nalp_logistik_unlock_v1';
+  window.NALP_GATE_TITEL = 'Logistik';
+  window.NALP_GATE_SUB   = 'Code eingeben (Tipp: PLZ Sedrun)';
 </script>
-<script src="assets/js/nalp-auth.js"></script>
+<script src="assets/js/nalp-gate.js"></script>
 <style>
   /* STRABAG-CI: Weiss, Rot #D72622, Arial */
   :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
@@ -171,7 +176,7 @@
   <div class="mini" style="margin-top:18px">
     Einträge kann jeder erfassen (Mike, Samuel, Victor …). Sandro Schuoler hakt ab, wenn erledigt –
     mit Kommentar und Foto. Daten liegen geschützt in der Baustellen-Datenbank (nur mit Login).
-    · <a href="#" onclick="nalpAuth.logout();return false;">Abmelden</a>
+    · <a href="#" onclick="try{localStorage.removeItem('nalp_logistik_unlock_v1');}catch(e){};location.reload();return false;">Abmelden</a>
   </div>
 </main>
 
@@ -277,12 +282,12 @@ $('f_foto').addEventListener('change',function(){
 });
 
 /* ---------- REST (mit Login-Token, siehe nalp-auth.js) ---------- */
-function apiGet(p){ return nalpAuth.fetch(DB+'/'+p+'.json',{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }); }
-function apiPost(p,body){ return nalpAuth.fetch(DB+'/'+p+'.json',{method:'POST',body:JSON.stringify(body)})
+function apiGet(p){ return fetch(DB+'/'+p+'.json',{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }); }
+function apiPost(p,body){ return fetch(DB+'/'+p+'.json',{method:'POST',body:JSON.stringify(body)})
   .then(function(r){ return r.ok?r.json():null; }).then(function(j){ return j&&j.name?j.name:null; }); }
-function apiPatch(p,body){ return nalpAuth.fetch(DB+'/'+p+'.json',{method:'PATCH',body:JSON.stringify(body)})
+function apiPatch(p,body){ return fetch(DB+'/'+p+'.json',{method:'PATCH',body:JSON.stringify(body)})
   .then(function(r){ return r.ok; }); }
-function apiPut(p,body){ return nalpAuth.fetch(DB+'/'+p+'.json',{method:'PUT',body:JSON.stringify(body)})
+function apiPut(p,body){ return fetch(DB+'/'+p+'.json',{method:'PUT',body:JSON.stringify(body)})
   .then(function(r){ return r.ok; }); }
 
 /* ---------- Speichern (neu ODER Bearbeiten-Modus) ---------- */
