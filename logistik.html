@@ -144,9 +144,10 @@
       </div>
       <div>
         <label class="fl">Uhrzeit (optional)</label>
-        <input type="time" id="f_zzeit">
+        <input type="time" id="f_zzeit" step="900">
       </div>
     </div>
+    <div id="zeitChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
     <div class="row2">
       <div>
         <label class="fl">Gemeldet von</label>
@@ -213,6 +214,13 @@ function toast(t,err){ var e=$('toast'); e.textContent=t; e.className='on'+(err?
   setTimeout(function(){ e.className=err?'err':''; },2600); }
 function heute(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function fmtD(iso){ if(!iso) return ''; var p=String(iso).split('-'); return p.length===3?p[2]+'.'+p[1]+'.'+p[0]:iso; }
+var WT=['So','Mo','Di','Mi','Do','Fr','Sa'];
+function fmtDWT(iso){                                    // 'Fr 31.07.2026'
+  if(!iso) return '';
+  var p=String(iso).split('-'); if(p.length!==3) return iso;
+  var d=new Date(+p[0],+p[1]-1,+p[2]);
+  return WT[d.getDay()]+' '+fmtD(iso);
+}
 function fmtZeit(ts){ if(!ts) return ''; var d=new Date(ts);
   return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
 function fmtDZ(iso,ts){ var s=fmtD(iso); var z=fmtZeit(ts); return s+(z?' · '+z+' Uhr':''); }
@@ -226,7 +234,8 @@ function waText(r){
   var v=r.vonOrt||'', n=r.nachOrt||'';
   if(v||n) t+='📍 '+(v||'?')+(n?' → '+n:'')+'\n';
   if(r.zielDatum||r.zielZeit)
-    t+='📅 Abholen: '+(r.zielDatum?fmtD(r.zielDatum):'')+(r.zielZeit?' um '+r.zielZeit+' Uhr':'')+'\n';
+    t+='📅 Abholen: '+(r.zielDatum?fmtDWT(r.zielDatum):'')
+      +(r.zielZeit?' um '+r.zielZeit+' Uhr':(r.zielDatum?' (Zeit noch offen)':''))+'\n';
   t+='Gemeldet: '+(r.von||'—')+', '+fmtD(r.datum)+' '+fmtZeit(r.ts)+' Uhr\n';
   t+='Abhaken: '+SEITE;
   return t;
@@ -238,6 +247,35 @@ function waZeigen(r){
   document.getElementById('telLink').textContent='📞 '+MELDE_NAME+' anrufen ('+MELDE_NUMMER+')';
   document.getElementById('waNudge').style.display='flex';
 }
+
+/* Uhrzeit-Schnellwahl: ein Tipp statt Zeitrad (Feld bleibt frei editierbar) */
+(function(){
+  var box=$('zeitChips');
+  ['06:00','07:00','08:00','09:00','10:00','13:00','15:00','17:00'].forEach(function(z){
+    var b=document.createElement('button');
+    b.type='button'; b.className='btn ghost'; b.textContent=z;
+    b.style.padding='6px 9px'; b.style.fontSize='12.5px';
+    b.onclick=function(){
+      $('f_zzeit').value = ($('f_zzeit').value===z) ? '' : z;   // nochmal tippen = löschen
+      zeitChipsMarkieren();
+      if(!$('f_zdatum').value) $('f_zdatum').value=heute();     // Zeit ohne Datum ergibt selten Sinn
+    };
+    box.appendChild(b);
+  });
+  var frei=document.createElement('span');
+  frei.className='mini'; frei.style.background='none'; frei.style.padding='4px 0';
+  frei.textContent='oder frei eintippen ↑';
+  box.appendChild(frei);
+})();
+function zeitChipsMarkieren(){
+  var v=$('f_zzeit').value;
+  Array.prototype.forEach.call($('zeitChips').querySelectorAll('button'),function(b){
+    var an=b.textContent===v;
+    b.style.background=an?'var(--rot)':'#fff';
+    b.style.color=an?'#fff':'var(--ink)';
+  });
+}
+$('f_zzeit').addEventListener('change',zeitChipsMarkieren);
 
 /* Von-wo/Wohin: Auswahl oder freier Text */
 function ortToggle(w){
@@ -427,8 +465,9 @@ function card(r){
       ueber = zd<nun;
     }
     h+='<div class="a-ziel'+(ueber?' ueber':'')+'">📅 Abholen: '
-      +(r.zielDatum?esc(fmtD(r.zielDatum)):'')
-      +(r.zielZeit?(r.zielDatum?' · ':'')+esc(r.zielZeit)+' Uhr':'')
+      +(r.zielDatum?esc(fmtDWT(r.zielDatum)):'')
+      +(r.zielZeit ? (r.zielDatum?' · ':'')+'<b>'+esc(r.zielZeit)+' Uhr</b>'
+                   : (r.zielDatum?' · <span style="font-weight:400">Zeit noch offen</span>':''))
       +(ueber?' – ÜBERFÄLLIG':'')+'</div>';
   }
   if(fotoKeys.length){
