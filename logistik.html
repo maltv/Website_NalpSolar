@@ -6,13 +6,11 @@
 <title>NalpSolar · Logistik</title>
 <meta name="theme-color" content="#ffffff">
 <script>
-  /* eigenes Gate: Code = PLZ Sedrun, eigener Schlüssel -> Sandro sieht NUR Logistik */
-  window.NALP_GATE_CODE  = '7188';
-  window.NALP_GATE_KEY   = 'nalp_logistik_unlock_v1';
-  window.NALP_GATE_TITEL = 'Logistik';
-  window.NALP_GATE_SUB   = 'Code eingeben (Tipp: PLZ Sedrun)';
+  /* Echter Login (Firebase Auth) statt Zahlen-Gate – Konten verwaltet Victor
+     in der Firebase Console (Authentication -> Nutzer). */
+  window.NALP_AUTH_TITEL = 'Logistik';
 </script>
-<script src="assets/js/nalp-gate.js"></script>
+<script src="assets/js/nalp-auth.js"></script>
 <style>
   /* STRABAG-CI: Weiss, Rot #D72622, Arial */
   :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
@@ -69,6 +67,8 @@
   .a-badge.dr{ background:var(--rot); color:#fff; }
   .a-badge.ok{ background:var(--gruen); color:#fff; }
   .a-meta{ font-size:12.5px; color:var(--mut); margin-top:6px; }
+  .a-ziel{ font-size:13.5px; font-weight:800; margin-top:6px; }
+  .a-ziel.ueber{ color:var(--rot); }
   .a-meta .ort{ color:var(--ink); font-weight:800; }
   .a-meta .ort b{ color:var(--rot); }
   .a-fotos{ display:flex; gap:8px; margin-top:9px; flex-wrap:wrap; }
@@ -105,7 +105,7 @@
 </header>
 <main>
   <div class="box">
-    <h2>➕ Neuer Auftrag / Abholung melden</h2>
+    <h2 id="formTitel">➕ Neuer Auftrag / Abholung melden</h2>
     <label class="fl">Was ist zu tun?</label>
     <textarea id="f_text" placeholder="z.B. Modulträgerstapel fertig, kann abgeholt werden"></textarea>
     <div class="row2">
@@ -134,6 +134,16 @@
     </div>
     <div class="row2">
       <div>
+        <label class="fl">Abholen am (optional)</label>
+        <input type="date" id="f_zdatum">
+      </div>
+      <div>
+        <label class="fl">Uhrzeit (optional)</label>
+        <input type="time" id="f_zzeit">
+      </div>
+    </div>
+    <div class="row2">
+      <div>
         <label class="fl">Gemeldet von</label>
         <input id="f_von" placeholder="Name / Kürzel">
       </div>
@@ -145,7 +155,10 @@
     <label class="fl">Foto (optional)</label>
     <input type="file" id="f_foto" accept="image/*" capture="environment">
     <div id="fotoPrev"></div>
-    <div style="margin-top:12px"><button class="btn" id="btnSave" onclick="speichern()">📤 Auftrag melden</button></div>
+    <div style="margin-top:12px">
+      <button class="btn" id="btnSave" onclick="speichern()">📤 Auftrag melden</button>
+      <button class="btn ghost" id="btnCancel" style="display:none" onclick="bearbeitenAbbrechen()">✖ Abbrechen</button>
+    </div>
     <div id="status"></div>
   </div>
 
@@ -157,7 +170,8 @@
 
   <div class="mini" style="margin-top:18px">
     Einträge kann jeder erfassen (Mike, Samuel, Victor …). Sandro Schuoler hakt ab, wenn erledigt –
-    mit Kommentar und Foto. Daten liegen in der Baustellen-Datenbank (Firebase).
+    mit Kommentar und Foto. Daten liegen geschützt in der Baustellen-Datenbank (nur mit Login).
+    · <a href="#" onclick="nalpAuth.logout();return false;">Abmelden</a>
   </div>
 </main>
 
@@ -206,6 +220,8 @@ function waText(r){
   t+=r.text+'\n';
   var v=r.vonOrt||'', n=r.nachOrt||'';
   if(v||n) t+='📍 '+(v||'?')+(n?' → '+n:'')+'\n';
+  if(r.zielDatum||r.zielZeit)
+    t+='📅 Abholen: '+(r.zielDatum?fmtD(r.zielDatum):'')+(r.zielZeit?' um '+r.zielZeit+' Uhr':'')+'\n';
   t+='Gemeldet: '+(r.von||'—')+', '+fmtD(r.datum)+' '+fmtZeit(r.ts)+' Uhr\n';
   t+='Abhaken: '+SEITE;
   return t;
@@ -260,24 +276,59 @@ $('f_foto').addEventListener('change',function(){
   });
 });
 
-/* ---------- REST ---------- */
-function apiGet(p){ return fetch(DB+'/'+p+'.json',{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }); }
-function apiPost(p,body){ return fetch(DB+'/'+p+'.json',{method:'POST',body:JSON.stringify(body)})
+/* ---------- REST (mit Login-Token, siehe nalp-auth.js) ---------- */
+function apiGet(p){ return nalpAuth.fetch(DB+'/'+p+'.json',{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }); }
+function apiPost(p,body){ return nalpAuth.fetch(DB+'/'+p+'.json',{method:'POST',body:JSON.stringify(body)})
   .then(function(r){ return r.ok?r.json():null; }).then(function(j){ return j&&j.name?j.name:null; }); }
-function apiPatch(p,body){ return fetch(DB+'/'+p+'.json',{method:'PATCH',body:JSON.stringify(body)})
+function apiPatch(p,body){ return nalpAuth.fetch(DB+'/'+p+'.json',{method:'PATCH',body:JSON.stringify(body)})
   .then(function(r){ return r.ok; }); }
-function apiPut(p,body){ return fetch(DB+'/'+p+'.json',{method:'PUT',body:JSON.stringify(body)})
+function apiPut(p,body){ return nalpAuth.fetch(DB+'/'+p+'.json',{method:'PUT',body:JSON.stringify(body)})
   .then(function(r){ return r.ok; }); }
 
-/* ---------- Speichern ---------- */
+/* ---------- Speichern (neu ODER Bearbeiten-Modus) ---------- */
+var editKey=null;
+function formReset(){
+  $('f_text').value=''; $('f_prio').checked=false;
+  $('f_von_sel').value=''; $('f_nach_sel').value='';
+  $('f_von_txt').value=''; $('f_nach_txt').value=''; ortToggle('von'); ortToggle('nach');
+  $('f_zdatum').value=''; $('f_zzeit').value='';
+  $('f_foto').value=''; $('fotoPrev').innerHTML=''; fotoDataNeu=null;
+  $('status').textContent=''; $('btnSave').disabled=false;
+  editKey=null;
+  $('formTitel').textContent='➕ Neuer Auftrag / Abholung melden';
+  $('btnSave').textContent='📤 Auftrag melden';
+  $('btnCancel').style.display='none';
+}
 function speichern(){
   var text=$('f_text').value.trim(), von=$('f_von').value.trim();
   if(!text){ toast('Bitte beschreiben, was zu tun ist.',true); return; }
   if(!von){ toast('Bitte Namen angeben.',true); return; }
   setVon(von);
   $('btnSave').disabled=true; $('status').textContent='Speichere …';
+
+  if(editKey){
+    // bestehenden Auftrag ändern (Fotos/Kommentare bleiben unangetastet)
+    var k=editKey;
+    var upd={ text:text, vonOrt:ortVal('von'), nachOrt:ortVal('nach'), von:von,
+              prio:$('f_prio').checked?'dringend':'normal',
+              zielDatum:$('f_zdatum').value||'', zielZeit:$('f_zzeit').value||'',
+              geaendertVon:von, geaendertTs:Date.now() };
+    apiPatch(P_AUF+'/'+k, upd).then(function(ok){
+      if(!ok) throw 0;
+      if(!fotoDataNeu) return true;
+      return fotoSpeichern(k, fotoDataNeu, von);
+    }).then(function(){
+      formReset(); toast('Auftrag aktualisiert ✔'); laden(false);
+    }).catch(function(){
+      $('status').textContent=''; $('btnSave').disabled=false;
+      toast('Speichern fehlgeschlagen – Empfang?',true);
+    });
+    return;
+  }
+
   var rec={ text:text, vonOrt:ortVal('von'), nachOrt:ortVal('nach'), von:von,
             prio:$('f_prio').checked?'dringend':'normal',
+            zielDatum:$('f_zdatum').value||'', zielZeit:$('f_zzeit').value||'',
             datum:heute(), ts:Date.now(), status:'offen' };
   var recKopie=rec;
   apiPost(P_AUF,rec).then(function(key){
@@ -285,11 +336,7 @@ function speichern(){
     if(!fotoDataNeu) return key;
     return fotoSpeichern(key, fotoDataNeu, von).then(function(){ return key; });
   }).then(function(){
-    $('f_text').value=''; $('f_prio').checked=false;
-    $('f_von_sel').value=''; $('f_nach_sel').value='';
-    $('f_von_txt').value=''; $('f_nach_txt').value=''; ortToggle('von'); ortToggle('nach');
-    $('f_foto').value=''; $('fotoPrev').innerHTML=''; fotoDataNeu=null;
-    $('status').textContent=''; $('btnSave').disabled=false;
+    formReset();
     toast('Auftrag gemeldet ✔'); laden(false);
     waZeigen(recKopie);                              // WhatsApp/Anruf anbieten
   }).catch(function(){
@@ -297,6 +344,32 @@ function speichern(){
     toast('Speichern fehlgeschlagen – Empfang?',true);
   });
 }
+
+/* Bearbeiten: Eintrag ins Formular laden */
+function setOrtFeld(w, val){
+  var sel=$('f_'+w+'_sel'), txt=$('f_'+w+'_txt');
+  var std=['IP Tal 1','IP Tal 4','IP Berg'];
+  if(!val){ sel.value=''; txt.value=''; }
+  else if(std.indexOf(val)>=0){ sel.value=val; txt.value=''; }
+  else { sel.value='anderer'; txt.value=val; }
+  ortToggle(w);
+}
+function bearbeiten(k){
+  var r=eintraege[k]; if(!r) return;
+  editKey=k;
+  $('f_text').value=r.text||'';
+  setOrtFeld('von', r.vonOrt||r.ort||'');
+  setOrtFeld('nach', r.nachOrt||'');
+  $('f_von').value=r.von||getVon();
+  $('f_prio').checked=r.prio==='dringend';
+  $('f_zdatum').value=r.zielDatum||'';
+  $('f_zzeit').value=r.zielZeit||'';
+  $('formTitel').textContent='✏️ Auftrag bearbeiten';
+  $('btnSave').textContent='💾 Änderungen speichern';
+  $('btnCancel').style.display='';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+function bearbeitenAbbrechen(){ formReset(); }
 function fotoSpeichern(auftragKey, data, von){
   return apiPost(P_FOTO,{auftrag:auftragKey, von:von, ts:Date.now(), data:data})
     .then(function(fk){ if(!fk) throw 0; return apiPut(P_AUF+'/'+auftragKey+'/fotos/'+fk, true); });
@@ -318,7 +391,13 @@ function render(){
     var r=eintraege[k]; if(!r||!r.text) return;
     r._k=k; (r.status==='erledigt'?done:offen).push(r);
   });
-  offen.sort(function(a,b){ return (b.prio==='dringend')-(a.prio==='dringend') || (b.ts||0)-(a.ts||0); });
+  // dringend zuoberst, dann nach Abholtermin (nächster zuerst), Rest nach Meldung
+  function zielKey(r){ return r.zielDatum ? (r.zielDatum+' '+(r.zielZeit||'23:59')) : '9999-99-99'; }
+  offen.sort(function(a,b){
+    return (b.prio==='dringend')-(a.prio==='dringend')
+      || (zielKey(a)<zielKey(b)?-1:zielKey(a)>zielKey(b)?1:0)
+      || (b.ts||0)-(a.ts||0);
+  });
   done.sort(function(a,b){ return (b.erledigtTs||b.ts||0)-(a.erledigtTs||a.ts||0); });
   $('listOffen').innerHTML = offen.length ? offen.map(card).join('') : '<div class="leer">Nichts offen – alles abgeholt. 👍</div>';
   $('listDone').innerHTML  = done.length ? done.map(card).join('') : '<div class="leer">Noch nichts erledigt.</div>';
@@ -332,7 +411,21 @@ function card(r){
   h+= don ? '<span class="a-badge ok">ERLEDIGT</span>' : (dr?'<span class="a-badge dr">DRINGEND</span>':'');
   h+='</div>';
   var ot=ortText(r);
-  h+='<div class="a-meta">'+(ot?'<span class="ort">📍 '+ot+'</span> · ':'')+esc(r.von||'—')+' · '+esc(fmtDZ(r.datum,r.ts))+'</div>';
+  h+='<div class="a-meta">'+(ot?'<span class="ort">📍 '+ot+'</span> · ':'')+esc(r.von||'—')+' · '+esc(fmtDZ(r.datum,r.ts))
+    +(r.geaendertTs?' · ✏️ bearbeitet':'')+'</div>';
+  if(r.zielDatum||r.zielZeit){
+    var ueber=false;
+    if(!don && r.zielDatum){
+      var jetzt=new Date();
+      var zd=r.zielDatum+' '+(r.zielZeit||'23:59');
+      var nun=heute()+' '+String(jetzt.getHours()).padStart(2,'0')+':'+String(jetzt.getMinutes()).padStart(2,'0');
+      ueber = zd<nun;
+    }
+    h+='<div class="a-ziel'+(ueber?' ueber':'')+'">📅 Abholen: '
+      +(r.zielDatum?esc(fmtD(r.zielDatum)):'')
+      +(r.zielZeit?(r.zielDatum?' · ':'')+esc(r.zielZeit)+' Uhr':'')
+      +(ueber?' – ÜBERFÄLLIG':'')+'</div>';
+  }
   if(fotoKeys.length){
     h+='<div class="a-fotos" id="af_'+k+'"><button class="btn ghost" onclick="fotosZeigen(\''+k+'\')">📷 '+fotoKeys.length+' Foto'+(fotoKeys.length>1?'s':'')+' anzeigen</button></div>';
   }
@@ -348,6 +441,7 @@ function card(r){
   } else {
     h+='<div class="a-act">'+
        '<button class="btn gruen" onclick="erledigen(\''+k+'\')">✅ Erledigt</button>'+
+       '<button class="btn ghost" onclick="bearbeiten(\''+k+'\')">✏️ Bearbeiten</button>'+
        '<button class="btn ghost" onclick="kommentieren(\''+k+'\')">💬 Kommentar</button>'+
        '<button class="btn ghost" onclick="fotoNach(\''+k+'\')">📷 Foto</button>'+
        '<a class="btn ghost" style="text-decoration:none" target="_blank" rel="noopener" href="https://wa.me/'+MELDE_NUMMER.replace(/[^0-9]/g,'')+'?text='+encodeURIComponent(waText(r))+'">📱 WhatsApp</a>'+
