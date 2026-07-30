@@ -212,113 +212,122 @@ var I18N={
   s1_sub:'Etikett von Mauchle fotografieren – ID, Stütze und Länge werden automatisch gelesen.',
   s1_btn_foto:'📷 Etikett fotografieren',
   lbl_id:'ID Tisch *', ph_id:'z.B. 995',
-  lbl_stuetze:'Stütze *', lbl_laenge:'Länge [mm] *', ph_laenge:'z.B. 2724',
+  lbl_stuetze:'Stütze S1–S4 *', lbl_laenge:'Länge [mm] *', ph_laenge:'z.B. 2724',
   lbl_typ:'Typ (optional)', ph_typ:'z.B. B', lbl_serie:'Serie (optional)', ph_serie:'z.B. 8',
   lbl_profil:'Profil (optional)', ph_profil:'z.B. RRK 180x6.0',
   lbl_bem:'Bemerkung (optional)', ph_bem:'z.B. Etikett unleserlich, Kratzer …', ph_bem_kurz:'optional',
-  lbl_von:'Erfasst von *', ph_von:'Name',
+  lbl_von:'Dein Name *', ph_von:'z.B. Jan K.',
   btn_speichern:'💾 Speichern',
-  hint_offline:'Ohne Internet wird lokal gespeichert und automatisch nachgesendet, sobald wieder Empfang da ist.',
+  hint_offline:'Kein Empfang? Wird im Handy gespeichert und später automatisch gesendet.',
   s2_titel:'🏗 Fortschritt Vormontage', s2_sub:'Primärkonstruktion vormontiert oder auf den Berg gegangen?',
-  lbl_was:'Was ist passiert? *',
+  lbl_was:'Was ist erledigt? *',
   btn_vormontiert:'🔧 Vormontiert', btn_vormontiert_sub:'im Tal gelagert',
   btn_berg:'⛰ Auf den Berg', btn_berg_sub:'hochtransportiert',
   hint_mehrere:'Mehrere auf einmal: IDs mit Komma trennen (z.B. 995, 996, 997)',
   s3_titel1:'🏷 Erfasste Stützen', s3_titel2:'🏗 Fortschritt',
   ph_suche:'Suchen (ID, Länge, Name) …', btn_csv:'⬇ CSV / Excel',
   th_id:'ID', th_st:'St.', th_laenge:'Länge', th_typ:'Typ', th_wer:'Wer', th_wann:'Wann', th_status:'Status',
-  badge_wartet:'wartet', badge_berg:'⛰ Berg', badge_vormontiert:'🔧 vormontiert',
-  netz_online:'online', netz_offline:'offline', netz_sendet:'sendet', netz_wartet:'wartet',
-  eintraege:'Einträge', gefiltert:'gefiltert', meldungen:'Meldungen',
-  z_vormontiert:'vormontiert', z_berg:'auf dem Berg',
+  badge_wartet:'wartet', badge_berg:'⛰ Auf dem Berg', badge_vormontiert:'🔧 vormontiert',
+  netz_online:'online', netz_offline:'offline',
+  netz_sendet:'sende {n} …', netz_offline_wartet:'offline · {n} wartet',
+  zaehler_eintraege:'{n} Einträge', zaehler_gefiltert:' (gefiltert)',
+  zaehler_meldungen:'{g} Meldungen · {v} vormontiert · {b} auf dem Berg',
   ocr_vorbereiten:'Bild wird vorbereitet …', ocr_lesen:'Etikett wird gelesen …',
   ocr_ok:'✔ Erkannt', ocr_pruefen:'– bitte kurz prüfen!',
   ocr_unlesbar:'Etikett nicht lesbar – bitte von Hand eintragen (Foto bleibt gespeichert).',
-  ocr_fehler:'Texterkennung nicht möglich – bitte von Hand eintragen.',
+  ocr_fehler:'Fotolesen nicht möglich – bitte von Hand eintragen.',
   ocr_fotofehler:'Foto konnte nicht gelesen werden.',
   err_id:'Bitte die ID eintragen.', err_stuetze:'Bitte S1–S4 wählen.',
   err_laenge:'Bitte die Länge eintragen.', err_name:'Bitte Namen eintragen.',
   err_art:'Bitte wählen: vormontiert oder auf den Berg.', err_ids:'Bitte mindestens eine ID eintragen.',
   ok_gespeichert:'Gespeichert ✔', ok_offline:'Offline gespeichert – wird später gesendet ✔',
+  ok_offline_n:'Offline gespeichert ({n}) – wird später gesendet ✔',
+  ok_ids:'Gespeichert ✔ {n} ID',
   ok_nachgesendet:'Offline-Einträge nachgesendet ✔',
-  err_kein_empfang:'Kein Empfang – lokal gespeichert, wird nachgesendet',
-  offline_hinweis:'Offline – zeigt nur lokale Einträge'
+  err_kein_empfang:'Kein Empfang – im Handy gespeichert, wird später gesendet',
+  offline_hinweis:'Offline – zeigt nur Einträge von diesem Handy'
  },
  en:{
-  kopf_titel:'🔧 Pre-assembly', tab_stuetze:'🏷 Support', tab_fortschritt:'🏗 Progress', tab_tabellen:'📋 Tables',
-  s1_titel:'🏷 Record support',
-  s1_sub:'Take a photo of the Mauchle label – ID, support and length are read automatically.',
+  kopf_titel:'🔧 Pre-assembly', tab_stuetze:'🏷 Post', tab_fortschritt:'🏗 Progress', tab_tabellen:'📋 Lists',
+  s1_titel:'🏷 Save post',
+  s1_sub:'Take a photo of the Mauchle label – ID, post and length are read automatically.',
   s1_btn_foto:'📷 Photo of label',
   lbl_id:'Table ID *', ph_id:'e.g. 995',
-  lbl_stuetze:'Support *', lbl_laenge:'Length [mm] *', ph_laenge:'e.g. 2724',
+  lbl_stuetze:'Post S1–S4 *', lbl_laenge:'Length [mm] *', ph_laenge:'e.g. 2724',
   lbl_typ:'Type (optional)', ph_typ:'e.g. B', lbl_serie:'Series (optional)', ph_serie:'e.g. 8',
   lbl_profil:'Profile (optional)', ph_profil:'e.g. RRK 180x6.0',
   lbl_bem:'Remark (optional)', ph_bem:'e.g. label unreadable, scratches …', ph_bem_kurz:'optional',
-  lbl_von:'Recorded by *', ph_von:'Name',
+  lbl_von:'Your name *', ph_von:'e.g. Jan K.',
   btn_speichern:'💾 Save',
-  hint_offline:'No internet? Data is stored on the phone and sent automatically when you have signal again.',
-  s2_titel:'🏗 Pre-assembly progress', s2_sub:'Primary construction pre-assembled or sent to the mountain?',
-  lbl_was:'What happened? *',
+  hint_offline:'No signal? Saved on the phone – sent automatically later.',
+  s2_titel:'🏗 Pre-assembly progress', s2_sub:'Main frame pre-assembled or sent to the mountain?',
+  lbl_was:'What is done? *',
   btn_vormontiert:'🔧 Pre-assembled', btn_vormontiert_sub:'stored in the valley',
-  btn_berg:'⛰ Sent to mountain', btn_berg_sub:'transported up',
+  btn_berg:'⛰ To the mountain', btn_berg_sub:'sent up',
   hint_mehrere:'Several at once: separate IDs with a comma (e.g. 995, 996, 997)',
-  s3_titel1:'🏷 Recorded supports', s3_titel2:'🏗 Progress',
+  s3_titel1:'🏷 Saved posts', s3_titel2:'🏗 Progress',
   ph_suche:'Search (ID, length, name) …', btn_csv:'⬇ CSV / Excel',
-  th_id:'ID', th_st:'Sup.', th_laenge:'Length', th_typ:'Type', th_wer:'By', th_wann:'When', th_status:'Status',
-  badge_wartet:'waiting', badge_berg:'⛰ Mountain', badge_vormontiert:'🔧 pre-assembled',
-  netz_online:'online', netz_offline:'offline', netz_sendet:'sending', netz_wartet:'waiting',
-  eintraege:'entries', gefiltert:'filtered', meldungen:'reports',
-  z_vormontiert:'pre-assembled', z_berg:'on the mountain',
+  th_id:'ID', th_st:'S1–S4', th_laenge:'Length', th_typ:'Type', th_wer:'Who', th_wann:'When', th_status:'Status',
+  badge_wartet:'waiting', badge_berg:'⛰ Sent up', badge_vormontiert:'🔧 pre-assembled',
+  netz_online:'online', netz_offline:'offline',
+  netz_sendet:'sending {n} …', netz_offline_wartet:'offline · {n} waiting',
+  zaehler_eintraege:'{n} entries', zaehler_gefiltert:' (filtered)',
+  zaehler_meldungen:'{g} reports · {v} pre-assembled · {b} on the mountain',
   ocr_vorbereiten:'Preparing photo …', ocr_lesen:'Reading label …',
-  ocr_ok:'✔ Detected', ocr_pruefen:'– please check!',
-  ocr_unlesbar:'Label not readable – please type it in (photo is saved).',
-  ocr_fehler:'Text recognition not possible – please type it in.',
-  ocr_fotofehler:'Photo could not be read.',
-  err_id:'Please enter the ID.', err_stuetze:'Please choose S1–S4.',
-  err_laenge:'Please enter the length.', err_name:'Please enter your name.',
-  err_art:'Please choose: pre-assembled or sent to the mountain.', err_ids:'Please enter at least one ID.',
+  ocr_ok:'✔ Found', ocr_pruefen:'– check it!',
+  ocr_unlesbar:'Label not readable – enter by hand (photo is saved).',
+  ocr_fehler:'Cannot read the text – enter by hand.',
+  ocr_fotofehler:'Could not read the photo.',
+  err_id:'Enter the ID.', err_stuetze:'Choose S1–S4.',
+  err_laenge:'Enter the length.', err_name:'Enter your name.',
+  err_art:'Choose: pre-assembled or to the mountain.', err_ids:'Enter at least one ID.',
   ok_gespeichert:'Saved ✔', ok_offline:'Saved offline – will be sent later ✔',
-  ok_nachgesendet:'Offline entries have been sent ✔',
+  ok_offline_n:'Saved offline ({n}) – will be sent later ✔',
+  ok_ids:'Saved ✔ {n} ID',
+  ok_nachgesendet:'Offline entries sent ✔',
   err_kein_empfang:'No signal – saved on the phone, will be sent later',
-  offline_hinweis:'Offline – showing local entries only'
+  offline_hinweis:'Offline – only entries from this phone'
  },
  pl:{
   kopf_titel:'🔧 Wstępny montaż', tab_stuetze:'🏷 Podpora', tab_fortschritt:'🏗 Postęp', tab_tabellen:'📋 Tabele',
   s1_titel:'🏷 Zapisz podporę',
-  s1_sub:'Zrób zdjęcie etykiety Mauchle – ID, podpora i długość zostaną odczytane automatycznie.',
+  s1_sub:'Zrób zdjęcie etykiety Mauchle – ID, podpora i długość odczytają się same.',
   s1_btn_foto:'📷 Zdjęcie etykiety',
   lbl_id:'ID stołu *', ph_id:'np. 995',
-  lbl_stuetze:'Podpora *', lbl_laenge:'Długość [mm] *', ph_laenge:'np. 2724',
+  lbl_stuetze:'Podpora S1–S4 *', lbl_laenge:'Długość [mm] *', ph_laenge:'np. 2724',
   lbl_typ:'Typ (opcjonalnie)', ph_typ:'np. B', lbl_serie:'Seria (opcjonalnie)', ph_serie:'np. 8',
   lbl_profil:'Profil (opcjonalnie)', ph_profil:'np. RRK 180x6.0',
   lbl_bem:'Uwaga (opcjonalnie)', ph_bem:'np. etykieta nieczytelna, zarysowania …', ph_bem_kurz:'opcjonalnie',
-  lbl_von:'Zapisał *', ph_von:'Imię',
+  lbl_von:'Imię i nazwisko *', ph_von:'np. Jan K.',
   btn_speichern:'💾 Zapisz',
-  hint_offline:'Bez internetu dane zapiszą się w telefonie i wyślą automatycznie, gdy będzie zasięg.',
-  s2_titel:'🏗 Postęp wstępnego montażu', s2_sub:'Konstrukcja zmontowana wstępnie czy wysłana w górę?',
-  lbl_was:'Co się stało? *',
+  hint_offline:'Bez internetu zapis zostaje w telefonie i wyśle się sam, gdy wróci zasięg.',
+  s2_titel:'🏗 Postęp wstępnego montażu', s2_sub:'Konstrukcja główna zmontowana czy wysłana na górę?',
+  lbl_was:'Co zrobiono? *',
   btn_vormontiert:'🔧 Zmontowana', btn_vormontiert_sub:'leży w dolinie',
-  btn_berg:'⛰ Wysłana w górę', btn_berg_sub:'wywieziona na górę',
+  btn_berg:'⛰ Na górę', btn_berg_sub:'wysłana na górę',
   hint_mehrere:'Kilka naraz: oddziel ID przecinkiem (np. 995, 996, 997)',
   s3_titel1:'🏷 Zapisane podpory', s3_titel2:'🏗 Postęp',
-  ph_suche:'Szukaj (ID, długość, imię) …', btn_csv:'⬇ CSV / Excel',
+  ph_suche:'Szukaj (ID, długość, imię i nazwisko) …', btn_csv:'⬇ CSV / Excel',
   th_id:'ID', th_st:'Pod.', th_laenge:'Długość', th_typ:'Typ', th_wer:'Kto', th_wann:'Kiedy', th_status:'Status',
-  badge_wartet:'czeka', badge_berg:'⛰ Góra', badge_vormontiert:'🔧 zmontowana',
-  netz_online:'online', netz_offline:'offline', netz_sendet:'wysyłanie', netz_wartet:'czeka',
-  eintraege:'wpisów', gefiltert:'filtr', meldungen:'zgłoszeń',
-  z_vormontiert:'zmontowane', z_berg:'na górze',
-  ocr_vorbereiten:'Przygotowanie zdjęcia …', ocr_lesen:'Odczyt etykiety …',
-  ocr_ok:'✔ Odczytano', ocr_pruefen:'– sprawdź proszę!',
-  ocr_unlesbar:'Etykieta nieczytelna – wpisz ręcznie (zdjęcie zostanie zapisane).',
-  ocr_fehler:'Odczyt tekstu niemożliwy – wpisz ręcznie.',
+  badge_wartet:'czeka', badge_berg:'⛰ Na górze', badge_vormontiert:'🔧 zmontowana',
+  netz_online:'online', netz_offline:'offline',
+  netz_sendet:'wysyłanie {n} …', netz_offline_wartet:'offline · w kolejce: {n}',
+  zaehler_eintraege:'Wpisy: {n}', zaehler_gefiltert:' (filtrowane)',
+  zaehler_meldungen:'Zgłoszenia: {g} · zmontowane: {v} · na górze: {b}',
+  ocr_vorbereiten:'Przygotowywanie zdjęcia …', ocr_lesen:'Odczyt etykiety …',
+  ocr_ok:'✔ Odczytano', ocr_pruefen:'– sprawdź!',
+  ocr_unlesbar:'Etykieta nieczytelna – wpisz ręcznie (zdjęcie zostaje zapisane).',
+  ocr_fehler:'Nie można odczytać tekstu – wpisz ręcznie.',
   ocr_fotofehler:'Nie udało się odczytać zdjęcia.',
-  err_id:'Podaj ID.', err_stuetze:'Wybierz S1–S4.',
-  err_laenge:'Podaj długość.', err_name:'Podaj imię.',
-  err_art:'Wybierz: zmontowana czy wysłana w górę.', err_ids:'Podaj przynajmniej jedno ID.',
-  ok_gespeichert:'Zapisano ✔', ok_offline:'Zapisano offline – wyślemy później ✔',
-  ok_nachgesendet:'Wpisy offline zostały wysłane ✔',
-  err_kein_empfang:'Brak zasięgu – zapisano w telefonie, wyślemy później',
-  offline_hinweis:'Offline – widoczne tylko wpisy lokalne'
+  err_id:'Wpisz ID.', err_stuetze:'Wybierz S1–S4.',
+  err_laenge:'Wpisz długość.', err_name:'Wpisz imię i nazwisko.',
+  err_art:'Wybierz: zmontowana albo na górę.', err_ids:'Wpisz co najmniej jedno ID.',
+  ok_gespeichert:'Zapisano ✔', ok_offline:'Zapisano offline – wyśle się później ✔',
+  ok_offline_n:'Zapisano offline ({n}) – wyśle się później ✔',
+  ok_ids:'Zapisano ✔ {n} ID',
+  ok_nachgesendet:'Wpisy offline wysłane ✔',
+  err_kein_empfang:'Brak zasięgu – zapisano w telefonie, wyśle się później',
+  offline_hinweis:'Offline – tylko wpisy z tego telefonu'
  }
 };
 var LS_LANG='nalp_lang_v1';
@@ -327,7 +336,11 @@ var lang=(function(){
   var n=(navigator.language||'de').slice(0,2).toLowerCase();
   return I18N[n]?n:'de';
 })();
-function T(k){ return (I18N[lang]&&I18N[lang][k]) || I18N.de[k] || k; }
+function T(k,v){
+  var t=(I18N[lang]&&I18N[lang][k]) || I18N.de[k] || k;
+  if(v) Object.keys(v).forEach(function(n){ t=t.split('{'+n+'}').join(v[n]); });
+  return t;
+}
 function setLang(l){
   if(!I18N[l]) return;
   lang=l;
@@ -375,8 +388,8 @@ function netzAn(){ return navigator.onLine!==false; }
 function netzMalen(){
   var p=pendLesen().length, e=$('netz');
   e.className = netzAn()?'':'off';
-  e.textContent = netzAn() ? (p?(T('netz_sendet')+' '+p+' …'):T('netz_online'))
-                           : (p?(T('netz_offline')+' · '+p+' '+T('netz_wartet')):T('netz_offline'));
+  e.textContent = netzAn() ? (p?T('netz_sendet',{n:p}):T('netz_online'))
+                           : (p?T('netz_offline_wartet',{n:p}):T('netz_offline'));
 }
 window.addEventListener('online', function(){ netzMalen(); pendSenden(); });
 window.addEventListener('offline', netzMalen);
@@ -547,11 +560,11 @@ function speichernFortschritt(){
   function fertig(){ $('p_id').value=''; $('p_bem').value=''; $('btnS2').disabled=false; }
   if(!netzAn()){
     recs.forEach(function(r){ pendAdd(P_FO,r); }); fertig();
-    toast(T('ok_offline')+' ('+recs.length+')'); return;
+    toast(T('ok_offline_n',{n:recs.length})); return;
   }
   Promise.all(recs.map(function(r){ return apiPost(P_FO,r); })).then(function(keys){
     if(keys.some(function(k){ return !k; })) throw 0;
-    fertig(); toast(T('ok_gespeichert')+' '+ids.length+'×'); laden(false);
+    fertig(); toast(T('ok_ids',{n:ids.length})); laden(false);
   }).catch(function(){
     recs.forEach(function(r){ pendAdd(P_FO,r); }); fertig(); toast(T('err_kein_empfang'),true);
   });
@@ -590,7 +603,7 @@ function renderTab(){
       +'<td>'+esc(r.von||'')+'</td><td>'+esc(fmtD(r.datum))+' '+fmtZ(r.ts)+'</td></tr>';
   });
   $('tab1').innerHTML=h;
-  $('z1').textContent=st.length+' '+T('eintraege')+(q?' ('+T('gefiltert')+')':'');
+  $('z1').textContent=T('zaehler_eintraege',{n:st.length})+(q?T('zaehler_gefiltert'):'');
 
   var fo=alleFortschritt();
   var hv=fo.filter(function(r){return r.art==='vormontiert';}).length;
@@ -604,7 +617,7 @@ function renderTab(){
        +'<td>'+esc(r.von||'')+'</td><td>'+esc(fmtD(r.datum))+' '+fmtZ(r.ts)+'</td></tr>';
   });
   $('tab2').innerHTML=h2;
-  $('z2').textContent=fo.length+' '+T('meldungen')+' · '+hv+' '+T('z_vormontiert')+' · '+hb+' '+T('z_berg');
+  $('z2').textContent=T('zaehler_meldungen',{g:fo.length,v:hv,b:hb});
 }
 function csvDl(name, kopf, zeilen){
   var lines=[kopf.join(';')].concat(zeilen.map(function(z){
