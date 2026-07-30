@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Einführung Vormontage · NalpSolar</title>
+<meta name="theme-color" content="#ffffff">
+<style>
+  :root { --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; }
+  body { min-height: 100vh; font-family: Arial, "Helvetica Neue", sans-serif; color: var(--ink); background: #f2f3f5; }
+  .topbar { background: #fff; border-bottom: 4px solid var(--rot); padding: 12px max(18px, env(safe-area-inset-left));
+            display: flex; align-items: center; gap: 14px; }
+  .logo img { height: 30px; display: block; }
+  .losnr { font-size: 12.5px; color: var(--mut); font-weight: 700; letter-spacing: .06em; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 26px 16px 40px; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  .sub { color: var(--mut); font-size: 14px; margin-bottom: 22px; line-height: 1.5; }
+  .btn { display: flex; align-items: center; gap: 14px; background: #fff; border: 1px solid var(--line);
+         border-left: 5px solid var(--rot); border-radius: 6px; padding: 18px; margin-bottom: 14px;
+         text-decoration: none; color: var(--ink); box-shadow: 0 1px 4px rgba(20,25,32,.07);
+         transition: transform .13s ease, box-shadow .13s ease; }
+  .btn:hover, .btn:active { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(20,25,32,.16); }
+  .btn .flag { font-size: 34px; line-height: 1; }
+  .btn .ttl { font-size: 18px; font-weight: 900; }
+  .btn .ttl::after { content: " →"; color: var(--rot); }
+  .btn .desc { font-size: 12.5px; color: var(--mut); margin-top: 2px; }
+  .note { font-size: 12px; color: var(--mut); margin-top: 18px; line-height: 1.6; }
+  .back { display: inline-block; margin-bottom: 18px; color: var(--rot); font-weight: 700; text-decoration: none; font-size: 13px; }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="logo"><img src="assets/img/strabag-logo.png" alt="STRABAG"></div>
+    <div class="losnr">NALPSOLAR · LOS B8-13</div>
+  </div>
+  <div class="wrap">
+    <a class="back" href="index.html">← Portal</a>
+    <h1>📘 Einführung Vormontage</h1>
+    <div class="sub">Baustellendossier für neue Mitarbeitende – Sicherheit, Pfähle S1–S4, Vormontage &amp; Bauablauf.<br>
+    Ausgabe 30.07.2026 · 23 Seiten A4 (PDF).</div>
+
+    <a class="btn" href="Einfuehrung_Vormontage/260730_Baustellendossier_NalpSolar.pdf">
+      <div class="flag">🇩🇪</div>
+      <div><div class="ttl">Deutsch</div><div class="desc">Baustellendossier NalpSolar – Originalfassung</div></div>
+    </a>
+
+    <a class="btn" href="Einfuehrung_Vormontage/260730_Baustellendossier_NalpSolar_PL.pdf">
+      <div class="flag">🇵🇱</div>
+      <div><div class="ttl">Polski</div><div class="desc">Dossier placu budowy NalpSolar – wersja polska (slajdy po niemiecku, podpisy po polsku)</div></div>
+    </a>
+
+    <div class="note">Unterweisung neuer Mitarbeitender immer dokumentieren (Nachweisblatt im Dossier).
+    Massgebend bei Abweichungen ist die deutsche Fassung. / W razie rozbieżności wiążąca jest wersja niemiecka.</div>
+  </div>
+</body>
+</html>
