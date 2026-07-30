@@ -714,7 +714,10 @@ function anwMalen(){
     T('anw_fortschritt',{n:fertig,g:anw.ids.length})+
     (anw.von?' · '+anw.von:'')+(anw.datum?' · '+fmtD(anw.datum):'');
   var h='';
-  if(anw.bem) h+='<div class="hint" style="font-size:13px;color:var(--ink);margin-bottom:8px">💬 '+esc(anw.bem)+'</div>';
+  if(anw.bem) h+='<div class="hint" style="font-size:13px;color:var(--ink);margin-bottom:8px;white-space:pre-line">💬 '+esc(anw.bem)+'</div>';
+  if(anw.bild) h+='<div style="margin:8px 0"><img src="'+esc(anw.bild)+'" alt="Plan" '+
+    'style="width:100%;border:1px solid var(--line);border-radius:6px;cursor:zoom-in" '+
+    'onclick="bildGross(this.src)"></div>';
   h+='<div class="tabWrap"><table>';
   anw.ids.forEach(function(id,i){
     var ok=!!anwOk[id];
@@ -726,6 +729,14 @@ function anwMalen(){
   });
   h+='</table></div>';
   box.innerHTML=h;
+}
+function bildGross(src){
+  var ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.94);'+
+    'display:flex;align-items:center;justify-content:center;padding:8px;overflow:auto';
+  ov.innerHTML='<img src="'+src+'" style="max-width:100%;height:auto;border-radius:6px">';
+  ov.onclick=function(){ document.body.removeChild(ov); };
+  document.body.appendChild(ov);
 }
 function anwHaken(id, setzen){
   var von=getVon()||'';
@@ -755,6 +766,7 @@ function anwSpeichern(){
   var von=$('a_von').value.trim(); if(von) setVon(von);
   var rec={ titel:$('a_titel').value.trim(), ids:ids, bem:$('a_bem').value.trim(),
             von:von, datum:$('a_datum').value||heute(), ts:Date.now() };
+  if(anw && anw.bild) rec.bild=anw.bild;         // Planbild des Auftrags behalten
   apiPut(P_ANW, rec).then(function(ok){
     if(!ok) throw 0;
     anw=rec; anwMalen(); $('anwEditBox').style.display='none';
