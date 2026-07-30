@@ -102,6 +102,7 @@
   <button id="t1" class="on" onclick="tab(1)"><span data-i18n="tab_stuetze">🏷 Stütze</span></button>
   <button id="t2" onclick="tab(2)"><span data-i18n="tab_fortschritt">🏗 Fortschritt</span></button>
   <button id="t3" onclick="tab(3)"><span data-i18n="tab_tabellen">📋 Tabellen</span></button>
+  <button id="t4" onclick="tab(4)"><span data-i18n="tab_auftrag">📌 Auftrag</span></button>
 </div>
 
 <main>
@@ -197,6 +198,42 @@
       <div style="margin-top:10px"><button class="btn ghost" onclick="csv2()" data-i18n="btn_csv">⬇ CSV / Excel</button></div>
     </div>
   </section>
+
+  <!-- ══════════ 4 · ARBEITSANWEISUNG ══════════ -->
+  <section id="s4" style="display:none">
+    <div class="box" style="border-left-color:var(--orange)">
+      <h2 data-i18n="s4_titel">📌 Arbeitsanweisung</h2>
+      <div class="sub" id="anwStand" data-i18n="s4_sub">Diese Tische in dieser Reihenfolge vormontieren.</div>
+      <div id="anwListe"><div class="hint" data-i18n="anw_leer">Zurzeit kein Auftrag.</div></div>
+      <div style="margin-top:10px">
+        <button class="btn ghost" onclick="anwLaden(true)" data-i18n="btn_aktualisieren">↻ Aktualisieren</button>
+      </div>
+    </div>
+
+    <!-- nur fuer die Bauleitung: Auftrag schreiben -->
+    <div class="box" id="anwEditBox" style="display:none;border-left-color:#63676d">
+      <h2>✏️ Auftrag schreiben <span style="font-weight:400;font-size:12px;color:var(--mut)">(nur Bauleitung)</span></h2>
+      <label class="fl">Titel / Auftrag</label>
+      <input id="a_titel" placeholder="z.B. Vormontage Bereich 26_2.1 – Prio">
+      <label class="fl">Tisch-IDs in der gewünschten Reihenfolge</label>
+      <textarea id="a_ids" style="min-height:70px" placeholder="z.B. 995, 1148, 2104, 384 …"></textarea>
+      <div class="hint">Komma, Leerzeichen oder Zeilenumbruch trennen. Reihenfolge = Arbeitsreihenfolge.</div>
+      <label class="fl">Hinweis für die Equipe (optional)</label>
+      <textarea id="a_bem" placeholder="z.B. zuerst alle S1, Passstücke liegen bei IP Tal 1"></textarea>
+      <div class="row2">
+        <div><label class="fl">Von</label><input id="a_von" placeholder="Name"></div>
+        <div><label class="fl">Gültig ab (optional)</label><input type="date" id="a_datum"></div>
+      </div>
+      <div style="margin-top:12px">
+        <button class="btn" onclick="anwSpeichern()">📤 Anweisung veröffentlichen</button>
+        <button class="btn ghost" onclick="anwLoeschen()">🗑 Aktuelle löschen</button>
+      </div>
+      <div class="hint">Ersetzt die aktuelle Anweisung für alle. Abgehakte Tische bleiben erhalten.</div>
+    </div>
+    <div style="text-align:center;margin-top:4px">
+      <button class="btn ghost" id="anwEditBtn" onclick="anwEditToggle()" style="opacity:.65">✏️ Auftrag schreiben</button>
+    </div>
+  </section>
 </main>
 <div id="toast"></div>
 
@@ -207,6 +244,10 @@
    Übersetzungen erstellt und gegengeprüft (Bau-Fachsprache, Handy-tauglich). */
 var I18N={
  de:{
+  tab_auftrag:'📌 Auftrag', s4_titel:'📌 Arbeitsanweisung',
+  s4_sub:'Diese Tische in dieser Reihenfolge vormontieren.',
+  anw_leer:'Zurzeit kein Auftrag.', anw_fortschritt:'{n} von {g} erledigt',
+  btn_aktualisieren:'↻ Aktualisieren', ok_aktualisiert:'Aktualisiert ✔',
   kopf_titel:'🔧 Vormontage', tab_stuetze:'🏷 Stütze', tab_fortschritt:'🏗 Fortschritt', tab_tabellen:'📋 Tabellen',
   s1_titel:'🏷 Stütze erfassen',
   s1_sub:'Etikett von Mauchle fotografieren – ID, Stütze und Länge werden automatisch gelesen.',
@@ -248,6 +289,10 @@ var I18N={
   offline_hinweis:'Offline – zeigt nur Einträge von diesem Handy'
  },
  en:{
+  tab_auftrag:'📌 Job', s4_titel:'📌 Work order',
+  s4_sub:'Pre-assemble these tables in this order.',
+  anw_leer:'No job at the moment.', anw_fortschritt:'{n} of {g} done',
+  btn_aktualisieren:'↻ Refresh', ok_aktualisiert:'Updated ✔',
   kopf_titel:'🔧 Pre-assembly', tab_stuetze:'🏷 Post', tab_fortschritt:'🏗 Progress', tab_tabellen:'📋 Lists',
   s1_titel:'🏷 Save post',
   s1_sub:'Take a photo of the Mauchle label – ID, post and length are read automatically.',
@@ -289,6 +334,10 @@ var I18N={
   offline_hinweis:'Offline – only entries from this phone'
  },
  pl:{
+  tab_auftrag:'📌 Zlecenie', s4_titel:'📌 Zlecenie pracy',
+  s4_sub:'Zmontuj te stoły w tej kolejności.',
+  anw_leer:'Brak zlecenia.', anw_fortschritt:'Gotowe: {n} z {g}',
+  btn_aktualisieren:'↻ Odśwież', ok_aktualisiert:'Zaktualizowano ✔',
   kopf_titel:'🔧 Wstępny montaż', tab_stuetze:'🏷 Podpora', tab_fortschritt:'🏗 Postęp', tab_tabellen:'📋 Tabele',
   s1_titel:'🏷 Zapisz podporę',
   s1_sub:'Zrób zdjęcie etykiety Mauchle – ID, podpora i długość odczytają się same.',
@@ -360,7 +409,8 @@ function setLang(l){
 }
 
 var DB='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app';
-var P_ST='vormontage/stuetzen', P_FO='vormontage/fortschritt', P_BILD='vormontage/etiketten';
+// Pfade unter 'erfassung/' – die Datenbank-Regeln geben nur diesen Zweig frei
+var P_ST='erfassung/vm_stuetzen', P_FO='erfassung/vm_fortschritt', P_BILD='erfassung/vm_etiketten';
 var LS_VON='nalp_erfasser_v1', LS_PEND='nalp_vormontage_pending_v1';
 var stuetzen={}, fortschritt={}, art=null, fotoData=null;
 
@@ -376,11 +426,12 @@ function getVon(){ try{ return localStorage.getItem(LS_VON)||''; }catch(e){ retu
 function setVon(v){ try{ localStorage.setItem(LS_VON,v||''); }catch(e){} }
 
 function tab(n){
-  [1,2,3].forEach(function(i){
+  [1,2,3,4].forEach(function(i){
     $('s'+i).style.display = i===n?'':'none';
     $('t'+i).classList.toggle('on', i===n);
   });
   if(n===3) laden(false);
+  if(n===4) anwLaden(false);
 }
 
 /* ---------- Netz-Anzeige + Offline-Warteschlange ---------- */
@@ -637,6 +688,86 @@ function csv2(){
     alleFortschritt().map(function(r){ return [r.tischId, r.art==='berg'?'auf den Berg':'vormontiert', r.bem, r.von, fmtD(r.datum), fmtZ(r.ts)]; }));
 }
 
+/* ══════════ Arbeitsanweisung (Reihenfolge der Tische) ══════════
+   Bauleitung schreibt eine Liste von Tisch-IDs in Reihenfolge; die Equipe
+   sieht sie im Reiter und hakt erledigte Tische ab (fuer alle sichtbar). */
+var P_ANW='erfassung/vm_anweisung', P_ANWOK='erfassung/vm_anweisung_erledigt';
+var anw=null, anwOk={};
+
+function anwLaden(manuell){
+  if(!netzAn()){ if(manuell) toast(T('offline_hinweis'),true); anwMalen(); return; }
+  Promise.all([apiGet(P_ANW), apiGet(P_ANWOK)]).then(function(r){
+    anw=r[0]||null; anwOk=r[1]||{};
+    anwMalen();
+    if(manuell) toast(T('ok_aktualisiert'));
+  }).catch(function(){ if(manuell) toast(T('offline_hinweis'),true); });
+}
+function anwMalen(){
+  var box=$('anwListe');
+  if(!anw || !anw.ids || !anw.ids.length){
+    box.innerHTML='<div class="hint">'+T('anw_leer')+'</div>';
+    $('anwStand').textContent=T('s4_sub');
+    return;
+  }
+  var fertig=anw.ids.filter(function(id){ return anwOk[id]; }).length;
+  $('anwStand').textContent=(anw.titel?anw.titel+' · ':'')+
+    T('anw_fortschritt',{n:fertig,g:anw.ids.length})+
+    (anw.von?' · '+anw.von:'')+(anw.datum?' · '+fmtD(anw.datum):'');
+  var h='';
+  if(anw.bem) h+='<div class="hint" style="font-size:13px;color:var(--ink);margin-bottom:8px">💬 '+esc(anw.bem)+'</div>';
+  h+='<div class="tabWrap"><table>';
+  anw.ids.forEach(function(id,i){
+    var ok=!!anwOk[id];
+    h+='<tr'+(ok?' style="opacity:.5"':'')+'>'
+      +'<td style="width:34px;font-weight:900;color:var(--mut)">'+(i+1)+'.</td>'
+      +'<td style="font-size:19px;font-weight:900'+(ok?';text-decoration:line-through':'')+'">'+esc(id)+'</td>'
+      +'<td style="text-align:right"><button class="btn '+(ok?'ghost':'gruen')+'" style="padding:9px 12px"'
+      +' onclick="anwHaken(\''+esc(id)+'\','+(ok?'false':'true')+')">'+(ok?'↺':'✔')+'</button></td></tr>';
+  });
+  h+='</table></div>';
+  box.innerHTML=h;
+}
+function anwHaken(id, setzen){
+  var von=getVon()||'';
+  if(setzen){
+    anwOk[id]={von:von, ts:Date.now()};
+    apiPut(P_ANWOK+'/'+encodeURIComponent(id), {von:von, ts:Date.now()})
+      .then(function(ok){ if(!ok) toast(T('err_kein_empfang'),true); });
+  } else {
+    delete anwOk[id];
+    fetch(DB+'/'+P_ANWOK+'/'+encodeURIComponent(id)+'.json',{method:'DELETE'})
+      .catch(function(){ toast(T('err_kein_empfang'),true); });
+  }
+  anwMalen();
+}
+function anwEditToggle(){
+  var b=$('anwEditBox');
+  var auf=b.style.display!=='none';
+  b.style.display=auf?'none':'';
+  if(!auf && anw){
+    $('a_titel').value=anw.titel||''; $('a_ids').value=(anw.ids||[]).join(', ');
+    $('a_bem').value=anw.bem||''; $('a_von').value=anw.von||getVon(); $('a_datum').value=anw.datum||'';
+  }
+}
+function anwSpeichern(){
+  var ids=$('a_ids').value.split(/[^0-9A-Za-z_.-]+/).map(function(x){return x.trim();}).filter(Boolean);
+  if(!ids.length){ toast(T('err_ids'),true); return; }
+  var von=$('a_von').value.trim(); if(von) setVon(von);
+  var rec={ titel:$('a_titel').value.trim(), ids:ids, bem:$('a_bem').value.trim(),
+            von:von, datum:$('a_datum').value||heute(), ts:Date.now() };
+  apiPut(P_ANW, rec).then(function(ok){
+    if(!ok) throw 0;
+    anw=rec; anwMalen(); $('anwEditBox').style.display='none';
+    toast(T('ok_gespeichert')+' · '+ids.length+' ID');
+  }).catch(function(){ toast(T('err_kein_empfang'),true); });
+}
+function anwLoeschen(){
+  if(!confirm('Aktuelle Arbeitsanweisung für alle löschen?')) return;
+  fetch(DB+'/'+P_ANW+'.json',{method:'DELETE'}).then(function(){
+    anw=null; anwMalen(); toast(T('ok_gespeichert'));
+  }).catch(function(){ toast(T('err_kein_empfang'),true); });
+}
+
 /* ---------- Start ---------- */
 setLang(lang);
 $('f_von').value=getVon(); $('p_von').value=getVon();
@@ -645,6 +776,7 @@ setInterval(function(){ if(netzAn()) laden(false); }, 90000);
 var qs=location.search;
 if(qs.indexOf('f=fortschritt')>=0) tab(2);
 else if(qs.indexOf('f=tabelle')>=0) tab(3);
+else if(qs.indexOf('f=auftrag')>=0) tab(4);
 if(qs.indexOf('lang=pl')>=0) setLang('pl');
 else if(qs.indexOf('lang=en')>=0) setLang('en');
 </script>
