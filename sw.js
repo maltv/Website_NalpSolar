@@ -1,9 +1,16 @@
 'use strict';
-var CACHE = 'nalpsolar-v67';
+var CACHE = 'nalpsolar-v69';
 var PRECACHE = [
   './index.html',
   './logistik.html',
   './lieferscheine.html',
+  './vormontage.html',
+  // Offline-Texterkennung fuer die Etiketten (laeuft ohne Internet im Tal)
+  './assets/js/tesseract/tesseract.min.js',
+  './assets/js/tesseract/worker.min.js',
+  './assets/js/tesseract/tesseract-core-simd-lstm.wasm.js',
+  './assets/js/tesseract/tesseract-core-lstm.wasm.js',
+  './assets/js/tesseract/eng.traineddata.gz',
   './assets/img/hero.jpg',
   './assets/img/strabag-logo.png',
   './stahlbau.html',
@@ -18,6 +25,7 @@ var PRECACHE = [
   './erfassungen.html',
   './viewer3d.html',
   './assets/js/nalp-gate.js',
+  './assets/js/nalp-auth.js',
   './assets/js/nalp-stahlteile.js',
   './assets/js/nalp-status.js',
   './uploads/tables/modultische_status.json',
