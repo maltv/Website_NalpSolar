@@ -99,7 +99,7 @@
       <button class="m6" id="b6" onclick="messen('6.35')">🟡 6.35 mm<small>Steigung 6.35 mm</small></button>
     </div>
     <div class="row" style="margin-top:10px">
-      <button class="btn ghost" onclick="pfahlWaehlen()">🎯 anderer Pfahl</button>
+      <button class="btn ghost" onclick="tischWaehlen()">🎯 anderer Tisch</button>
       <button class="btn ghost" onclick="letzteRueckgaengig()">↶ letzte zurück</button>
     </div>
     <label class="fl">Erfasst von</label>
@@ -133,7 +133,8 @@
 var DB='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app';
 var P_GEW='erfassung/gewinde';
 var LS_VON='nalp_erfasser_v1', LS_PEND='nalp_gewinde_pending_v1';
-var pfaehle=[], geo=null, bild=null, messungen={}, pos=null, ziel=null, zielManuell=null;
+var pfaehle=[], tische=[], tischGeo={}, geo=null, bild=null, messungen={}, pos=null,
+    ziel=null, zielManuell=null;
 var zoomNah=false;   // ohne GPS Uebersicht, bei erstem Fix -> Nahbereich
 
 function $(id){ return document.getElementById(id); }
@@ -181,6 +182,22 @@ function pendSenden(){
 window.addEventListener('online', function(){ netzMalen(); pendSenden(); });
 window.addEventListener('offline', netzMalen);
 
+/* Alle Pfaehle eines Tisches gehoeren zusammen -> ein Eintrag je Tisch */
+function tischeBauen(){
+  var map={};
+  pfaehle.forEach(function(p){
+    var t=map[p[0]] || (map[p[0]]={id:p[0], typ:p[4]||'', pkt:[], lat:0, lon:0});
+    t.pkt.push([p[2],p[3]]);
+    if(!t.typ && p[4]) t.typ=p[4];
+  });
+  tische=Object.keys(map).map(function(k){
+    var t=map[k];
+    t.lat=t.pkt.reduce(function(a,q){return a+q[0];},0)/t.pkt.length;
+    t.lon=t.pkt.reduce(function(a,q){return a+q[1];},0)/t.pkt.length;
+    return t;
+  });
+}
+
 function laden(){
   if(!netzAn()){ malen(); return; }
   apiGet(P_GEW).then(function(j){
@@ -188,7 +205,7 @@ function laden(){
     Object.keys(j||{}).forEach(function(k){
       var m=j[k]; if(!m||!m.tischId) return;
       m._k=k;
-      messungen[m.tischId+'-'+m.stuetze]=m;      // letzte Messung gewinnt
+      messungen[String(m.tischId)]=m;             // je Tisch eine Messung
     });
     malen(); listeMalen(); statMalen();
   }).catch(function(){});
@@ -208,22 +225,32 @@ if(navigator.geolocation){
   }, function(){ $('zSub').textContent='Kein GPS – bitte Standort erlauben'; },
      {enableHighAccuracy:true, maximumAge:3000, timeout:20000});
 }
+function tischAbstand(t){                    // kuerzester Abstand zu einem Pfahl
+  var b=1e9;
+  for(var i=0;i<t.pkt.length;i++){
+    var d=meter(pos.lat,pos.lon,t.pkt[i][0],t.pkt[i][1]);
+    if(d<b) b=d;
+  }
+  return b;
+}
 function zielSuchen(){
   if(zielManuell){ ziel=zielManuell; zielMalen(); return; }
-  if(!pos||!pfaehle.length) return;
+  if(!pos||!tische.length) return;
   var best=null, bd=1e9;
-  pfaehle.forEach(function(p){
-    var d=meter(pos.lat,pos.lon,p[2],p[3]);
-    if(d<bd){ bd=d; best=p; }
+  tische.forEach(function(t){
+    var d=tischAbstand(t);
+    if(d<bd){ bd=d; best=t; }
   });
-  ziel=best; ziel._d=bd; zielMalen();
+  ziel=best; if(ziel) ziel._d=bd;
+  zielMalen();
 }
 function zielMalen(){
   if(!ziel){ return; }
-  var key=ziel[0]+'-'+ziel[1], m=messungen[key];
-  var inf=pfahlInfo(ziel[4]);
-  $('zTisch').textContent=ziel[0];
-  $('zSub').textContent='Pfahl '+ziel[1]+(zielManuell?'  (von Hand gewählt)':'');
+  var key=ziel.id, m=messungen[key];
+  var inf=pfahlInfo(ziel.typ);
+  $('zTisch').textContent='Tisch '+ziel.id;
+  $('zSub').textContent='alle '+ziel.pkt.length+' Pfähle dieses Tisches'
+    +(zielManuell?'  ·  von Hand gewählt':'');
   var zt=$('zTyp'); zt.style.display='';
   zt.textContent='Typ '+inf.typ+(inf.laenge?' · '+inf.laenge:'');
   zt.style.background = inf.typ==='E' ? '#5b3fa8' : (inf.typ==='C'||inf.typ==='D' ? '#0f7b6c' : '#63676d');
@@ -231,20 +258,20 @@ function zielMalen(){
   $('zDist').innerHTML = (d!=null?('Entfernung <b>'+d+' m</b>'):'') +
      (pos&&pos.acc?('  ·  GPS ±'+Math.round(pos.acc)+' m'):'');
   // Ist der TYP in der Umgebung eindeutig? (GPS-Ungenauigkeit vs. enge Pfahlabstaende)
-  var umkreis = Math.max(8, (pos&&pos.acc)?pos.acc:8);
+  var umkreis = Math.max(10, (pos&&pos.acc)?pos.acc:10);
   var typen={};
-  if(pos) pfaehle.forEach(function(p){
-    if(meter(pos.lat,pos.lon,p[2],p[3])<=umkreis){
-      var t=String(p[4]||'?').charAt(0).toUpperCase();
-      typen[t]=(typen[t]||0)+1;
+  if(pos) tische.forEach(function(t){
+    if(tischAbstand(t)<=umkreis){
+      var k=String(t.typ||'?').charAt(0).toUpperCase();
+      typen[k]=(typen[k]||0)+1;
     }
   });
   var tListe=Object.keys(typen);
   var w=$('zWarn');
   if(tListe.length>1){
     w.style.display=''; w.style.background='#fff3d6'; w.style.borderColor='#e0a800'; w.style.color='#7a5200';
-    w.textContent='⚠ Im Umkreis von '+Math.round(umkreis)+' m stehen Pfähle von Typ '+tListe.join(' und ')
-      +' – bitte den Pfahl von Hand wählen, damit der Typ stimmt.';
+    w.textContent='⚠ Im Umkreis von '+Math.round(umkreis)+' m stehen Tische vom Typ '+tListe.join(' und ')
+      +' – bitte den Tisch von Hand wählen, damit der Typ stimmt.';
     return;
   }
   if(m){
@@ -252,20 +279,20 @@ function zielMalen(){
     w.textContent='✔ schon erfasst: '+m.gewinde+' mm ('+(m.von||'')+', '+fmtZ(m.ts)+')';
   } else if(d!=null && d>25){
     w.style.display=''; w.style.background='#fff3d6'; w.style.borderColor='#e0a800'; w.style.color='#7a5200';
-    w.textContent='Weit vom nächsten Pfahl entfernt ('+d+' m) – bitte prüfen oder Pfahl von Hand wählen.';
+    w.textContent='Weit vom nächsten Tisch entfernt ('+d+' m) – bitte prüfen oder Tisch von Hand wählen.';
   } else { w.style.display='none'; }
   $('b5').disabled=$('b6').disabled=!ziel;
 }
 
 /* ---------- Messen ---------- */
 function messen(g){
-  if(!ziel){ toast('Kein Pfahl erkannt',true); return; }
+  if(!ziel){ toast('Kein Tisch erkannt',true); return; }
   var von=$('f_von').value.trim();
   if(!von){ toast('Bitte Namen eintragen',true); $('f_von').focus(); return; }
   setVon(von);
-  var key=ziel[0]+'-'+ziel[1];
-  if(messungen[key] && !confirm('Pfahl '+key+' ist schon mit '+messungen[key].gewinde+' mm erfasst.\nÜberschreiben?')) return;
-  var rec={ tischId:ziel[0], stuetze:ziel[1], typ:ziel[4]||'', gewinde:g,
+  var key=ziel.id;
+  if(messungen[key] && !confirm('Tisch '+key+' ist schon mit '+messungen[key].gewinde+' mm erfasst.\nÜberschreiben?')) return;
+  var rec={ tischId:ziel.id, stuetze:'alle', typ:ziel.typ||'', gewinde:g,
             lat:pos?+pos.lat.toFixed(6):null, lon:pos?+pos.lon.toFixed(6):null,
             acc:pos?Math.round(pos.acc):null, dist:ziel._d!=null?Math.round(ziel._d):null,
             von:von, datum:heute(), ts:Date.now() };
@@ -273,7 +300,7 @@ function messen(g){
   zielManuell=null;
   malen(); listeMalen(); statMalen(); zielMalen();
   if(navigator.vibrate) navigator.vibrate(60);
-  toast('✔ '+key+' · '+g+' mm');
+  toast('✔ Tisch '+key+' · '+g+' mm');
   if(!netzAn()){ var a=pendLesen(); a.push(rec); pendSchreiben(a); return; }
   apiPost(P_GEW,rec).then(function(k){
     if(!k) throw 0;
@@ -287,20 +314,20 @@ function letzteRueckgaengig(){
   var alle=Object.keys(messungen).map(function(k){ return messungen[k]; })
     .sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
   if(!alle.length){ toast('Nichts zum Zurücknehmen',true); return; }
-  var m=alle[0], key=m.tischId+'-'+m.stuetze;
-  if(!confirm('Letzte Messung löschen?\n'+key+' · '+m.gewinde+' mm')) return;
+  var m=alle[0], key=String(m.tischId);
+  if(!confirm('Letzte Messung löschen?\nTisch '+key+' · '+m.gewinde+' mm')) return;
   delete messungen[key];
   if(m._k) fetch(DB+'/'+P_GEW+'/'+m._k+'.json',{method:'DELETE'}).catch(function(){});
   malen(); listeMalen(); statMalen(); zielMalen();
   toast('Zurückgenommen');
 }
-function pfahlWaehlen(){
+function tischWaehlen(){
   if(!pos){ toast('Noch kein GPS',true); return; }
-  var nah=pfaehle.map(function(p){ return {p:p, d:meter(pos.lat,pos.lon,p[2],p[3])}; })
+  var nah=tische.map(function(t){ return {p:t, d:tischAbstand(t)}; })
     .sort(function(a,b){ return a.d-b.d; }).slice(0,8);
-  var txt='Welcher Pfahl?\n\n'+nah.map(function(x,i){
-    var k=x.p[0]+'-'+x.p[1];
-    return (i+1)+') '+k+'  ('+Math.round(x.d)+' m'+(messungen[k]?', schon erfasst':'')+')';
+  var txt='Welcher Tisch?\n\n'+nah.map(function(x,i){
+    var k=x.p.id, ty=String(x.p.typ||'?').charAt(0);
+    return (i+1)+') Tisch '+k+' (Typ '+ty+', '+Math.round(x.d)+' m'+(messungen[k]?', schon erfasst':'')+')';
   }).join('\n')+'\n\nNummer eingeben:';
   var a=prompt(txt,'1');
   if(a===null) return;
@@ -341,22 +368,31 @@ function malen(){
     var sh=hM/(geo.maxN-geo.minN)*geo.h;
     try{ c.drawImage(bild,sx,sy,sw,sh,0,0,br,430); }catch(e){}
   }
-  // Pfaehle
-  var r = zoomNah ? 7 : 2.4;
-  pfaehle.forEach(function(p){
-    var q=lv95(p[2],p[3]), s=P(q.E,q.N);
-    if(s.x<-20||s.x>br+20||s.y<-20||s.y>450) return;
-    var m=messungen[p[0]+'-'+p[1]];
-    c.beginPath(); c.arc(s.x,s.y,r,0,6.283);
-    c.fillStyle = m ? (m.gewinde==='5'?'#1565c0':'#e0a800') : 'rgba(150,157,166,.85)';
-    c.fill();
-    if(zoomNah){ c.lineWidth=1.5; c.strokeStyle='rgba(255,255,255,.9)'; c.stroke(); }
-    if(zoomNah && ziel && p[0]===ziel[0] && p[1]===ziel[1]){
-      c.beginPath(); c.arc(s.x,s.y,13,0,6.283);
+  // Tische (Flaeche aus den Pfahlpunkten)
+  tische.forEach(function(t){
+    var m=messungen[t.id];
+    var pts=t.pkt.map(function(q){ var v=lv95(q[0],q[1]); return P(v.E,v.N); });
+    var mx=pts.reduce(function(a,q){return a+q.x;},0)/pts.length;
+    var my=pts.reduce(function(a,q){return a+q.y;},0)/pts.length;
+    if(mx<-40||mx>br+40||my<-40||my>470) return;
+    var farbe = m ? (m.gewinde==='5'?'#1565c0':'#e0a800') : 'rgba(150,157,166,.85)';
+    if(zoomNah && pts.length>2){
+      // Flaeche ueber die Pfahlpunkte (im Uhrzeigersinn um den Mittelpunkt)
+      var srt=pts.slice().sort(function(a,b){
+        return Math.atan2(a.y-my,a.x-mx)-Math.atan2(b.y-my,b.x-mx); });
+      c.beginPath(); srt.forEach(function(q,i){ i?c.lineTo(q.x,q.y):c.moveTo(q.x,q.y); }); c.closePath();
+      c.fillStyle = m ? (m.gewinde==='5'?'rgba(21,101,192,.75)':'rgba(224,168,0,.8)')
+                      : 'rgba(150,157,166,.55)';
+      c.fill(); c.lineWidth=2; c.strokeStyle='rgba(255,255,255,.9)'; c.stroke();
+    } else {
+      c.beginPath(); c.arc(mx,my,zoomNah?8:3,0,6.283); c.fillStyle=farbe; c.fill();
+    }
+    if(zoomNah && ziel && t.id===ziel.id){
+      c.beginPath(); c.arc(mx,my,20,0,6.283);
       c.strokeStyle='#D72622'; c.lineWidth=3.5; c.stroke();
-      c.font='700 12px Arial'; c.fillStyle='#fff'; c.strokeStyle='rgba(0,0,0,.65)';
-      c.lineWidth=3; c.textAlign='center';
-      c.strokeText(p[0]+'-'+p[1], s.x, s.y-18); c.fillText(p[0]+'-'+p[1], s.x, s.y-18);
+      c.font='800 14px Arial'; c.textAlign='center';
+      c.strokeStyle='rgba(0,0,0,.7)'; c.lineWidth=3.5;
+      c.strokeText(t.id, mx, my-26); c.fillStyle='#fff'; c.fillText(t.id, mx, my-26);
     }
   });
   // eigene Position
@@ -391,7 +427,7 @@ function listeMalen(){
   var a=alleMessungen().slice(0,8);
   $('letzte').innerHTML = a.length ? a.map(function(m){
     var f=m.gewinde==='5'?'#1565c0':'#e0a800';
-    return '<div><b>'+esc(m.tischId)+'-'+esc(m.stuetze)+'</b> · '
+    return '<div><b>Tisch '+esc(m.tischId)+'</b> · '
       +'<span style="color:'+f+';font-weight:900">'+esc(m.gewinde)+' mm</span> · '
       +esc(m.typ?('Typ '+String(m.typ).charAt(0)):'')+' · '+esc(m.von||'')+' '+fmtZ(m.ts)+'</div>';
   }).join('') : '<div style="color:var(--mut)">noch nichts erfasst</div>';
@@ -400,14 +436,13 @@ function statMalen(){
   var a=alleMessungen();
   var n5=a.filter(function(m){return m.gewinde==='5';}).length;
   var n6=a.length-n5;
-  var tische={}; a.forEach(function(m){ tische[m.tischId]=1; });
-  $('stat').textContent = a.length+' Pfähle erfasst · '+n5+'× 5 mm · '+n6+'× 6.35 mm · '
-    +Object.keys(tische).length+' Tische';
+  $('stat').textContent = a.length+' von '+(tische.length||'…')+' Tischen erfasst · '
+    +n5+'× 5 mm · '+n6+'× 6.35 mm';
 }
 function csv(){
-  var kopf=['TischID','Stuetze','Typ','Gewinde_mm','Datum','Zeit','Erfasst_von','lat','lon','GPS_m','Abstand_m'];
+  var kopf=['TischID','Typ','Gewinde_mm','Gilt_fuer','Datum','Zeit','Erfasst_von','lat','lon','GPS_m','Abstand_m'];
   var zeilen=alleMessungen().map(function(m){
-    return [m.tischId,m.stuetze,m.typ,m.gewinde,m.datum,fmtZ(m.ts),m.von,m.lat,m.lon,m.acc,m.dist];
+    return [m.tischId,m.typ,m.gewinde,'alle Pfähle des Tisches',m.datum,fmtZ(m.ts),m.von,m.lat,m.lon,m.acc,m.dist];
   });
   var lines=[kopf.join(';')].concat(zeilen.map(function(z){
     return z.map(function(v){ return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'; }).join(';'); }));
@@ -425,7 +460,7 @@ fetch('uploads/perimeter_geo.json').then(function(r){ return r.json(); }).then(f
   im.src='assets/img/perimeter.jpg';
 }).catch(function(){});
 fetch('uploads/pfaehle.json').then(function(r){ return r.json(); }).then(function(p){
-  pfaehle=p; zielSuchen(); malen();
+  pfaehle=p; tischeBauen(); zielSuchen(); malen(); statMalen();
   if(!pos) $('zSub').textContent='Warte auf GPS …';
 }).catch(function(){ $('zSub').textContent='Pfahldaten konnten nicht geladen werden'; });
 laden();
