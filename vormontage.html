@@ -79,6 +79,10 @@
   .badge.v{ background:#e3f0ff; color:var(--blau); }
   .badge.b{ background:#e8f5ec; color:#12703f; }
   .badge.p{ background:#fff1cf; color:#7a5200; }
+  .badge.ok{ background:var(--gruen); color:#fff; }
+  .bar{ position:relative; background:#edeff2; border-radius:4px; height:13px; min-width:70px; overflow:hidden; }
+  .bar i{ position:absolute; top:0; left:0; bottom:0; background:var(--gruen); border-radius:4px; }
+  .bar i.teils{ background:var(--orange); }
   #toast{ position:fixed; left:50%; bottom:20px; transform:translateX(-50%) translateY(90px);
           background:#0f5c33; color:#fff; font-weight:700; padding:12px 18px; border-radius:8px;
           font-size:15px; transition:transform .25s; z-index:70; max-width:92%; text-align:center; }
@@ -184,6 +188,11 @@
 
   <!-- ══════════ 3 · TABELLEN ══════════ -->
   <section id="s3" style="display:none">
+    <div class="box" style="border-left-color:var(--gruen)">
+      <h2 data-i18n="s3_titel0">🧾 Bestellbatches – geliefert?</h2>
+      <div class="sub" data-i18n="batch_sub">Bestellte Stützen (Mauchle Batch 1–10) im Vergleich mit den erfassten Stützen. Zeile antippen zeigt, was noch fehlt.</div>
+      <div class="tabWrap"><table id="tab0"></table></div>
+    </div>
     <div class="box">
       <h2 data-i18n="s3_titel1">🏷 Erfasste Stützen</h2>
       <div class="zaehler" id="z1">–</div>
@@ -238,6 +247,7 @@
 <div id="toast"></div>
 
 <script src="assets/js/tesseract/tesseract.min.js"></script>
+<script src="assets/js/nalp-passstueck-daten.js"></script>
 <script>
 'use strict';
 /* ══════════ Sprachen DE / EN / PL ══════════
@@ -266,6 +276,10 @@ var I18N={
   btn_berg:'⛰ Auf den Berg', btn_berg_sub:'hochtransportiert',
   hint_mehrere:'Mehrere auf einmal: IDs mit Komma trennen (z.B. 995, 996, 997)',
   s3_titel1:'🏷 Erfasste Stützen', s3_titel2:'🏗 Fortschritt',
+  s3_titel0:'🧾 Bestellbatches – geliefert?',
+  batch_sub:'Bestellte Stützen (Mauchle Batch 1–10) im Vergleich mit den erfassten Stützen. Zeile antippen zeigt, was noch fehlt.',
+  th_batch:'Batch', th_erfasst:'Erfasst',
+  badge_komplett:'✔ komplett geliefert', badge_offen:'{n} fehlt', batch_fehlt:'Fehlt:',
   ph_suche:'Suchen (ID, Länge, Name) …', btn_csv:'⬇ CSV / Excel',
   th_id:'ID', th_st:'St.', th_laenge:'Länge', th_typ:'Typ', th_wer:'Wer', th_wann:'Wann', th_status:'Status',
   badge_wartet:'wartet', badge_berg:'⛰ Auf dem Berg', badge_vormontiert:'🔧 vormontiert',
@@ -311,6 +325,10 @@ var I18N={
   btn_berg:'⛰ To the mountain', btn_berg_sub:'sent up',
   hint_mehrere:'Several at once: separate IDs with a comma (e.g. 995, 996, 997)',
   s3_titel1:'🏷 Saved posts', s3_titel2:'🏗 Progress',
+  s3_titel0:'🧾 Order batches – delivered?',
+  batch_sub:'Ordered posts (Mauchle batch 1–10) compared with the saved posts. Tap a row to see what is still missing.',
+  th_batch:'Batch', th_erfasst:'Saved',
+  badge_komplett:'✔ fully delivered', badge_offen:'{n} missing', batch_fehlt:'Missing:',
   ph_suche:'Search (ID, length, name) …', btn_csv:'⬇ CSV / Excel',
   th_id:'ID', th_st:'S1–S4', th_laenge:'Length', th_typ:'Type', th_wer:'Who', th_wann:'When', th_status:'Status',
   badge_wartet:'waiting', badge_berg:'⛰ Sent up', badge_vormontiert:'🔧 pre-assembled',
@@ -356,6 +374,10 @@ var I18N={
   btn_berg:'⛰ Na górę', btn_berg_sub:'wysłana na górę',
   hint_mehrere:'Kilka naraz: oddziel ID przecinkiem (np. 995, 996, 997)',
   s3_titel1:'🏷 Zapisane podpory', s3_titel2:'🏗 Postęp',
+  s3_titel0:'🧾 Partie zamówień – dostarczone?',
+  batch_sub:'Zamówione podpory (Mauchle partia 1–10) w porównaniu z zapisanymi podporami. Dotknij wiersza, aby zobaczyć czego brakuje.',
+  th_batch:'Partia', th_erfasst:'Zapisane',
+  badge_komplett:'✔ dostarczona w całości', badge_offen:'brakuje: {n}', batch_fehlt:'Brakuje:',
   ph_suche:'Szukaj (ID, długość, imię i nazwisko) …', btn_csv:'⬇ CSV / Excel',
   th_id:'ID', th_st:'Pod.', th_laenge:'Długość', th_typ:'Typ', th_wer:'Kto', th_wann:'Kiedy', th_status:'Status',
   badge_wartet:'czeka', badge_berg:'⛰ Na górze', badge_vormontiert:'🔧 zmontowana',
@@ -669,7 +691,56 @@ function renderTab(){
   });
   $('tab2').innerHTML=h2;
   $('z2').textContent=T('zaehler_meldungen',{g:fo.length,v:hv,b:hb});
+  renderBatches();
 }
+
+/* ---------- Bestellbatches: komplett geliefert? ----------
+   Vergleicht die gueltigen Bestellpositionen (NALP_PS_DATEN.bestellungen,
+   Mauchle Batch 1-10) mit den erfassten Stuetzen. Eine Position gilt als
+   geliefert, sobald Tisch + Stuetze einmal erfasst wurde. */
+var batchAuf={};
+function normId(x){ var s=String(x==null?'':x).trim(); return /^\d+$/.test(s)?String(parseInt(s,10)):s; }
+function batchPositionen(){
+  var best=(window.NALP_PS_DATEN&&window.NALP_PS_DATEN.bestellungen)||[];
+  var map={};
+  best.forEach(function(o){
+    if(o[6]!==1) return;                     // ersetzte Positionen nicht zaehlen
+    var key=normId(o[0])+'-'+o[1];
+    (map[o[3]]=map[o[3]]||{})[key]=true;
+  });
+  return map;
+}
+function renderBatches(){
+  var el=$('tab0'); if(!el) return;
+  var map=batchPositionen();
+  var bs=Object.keys(map).map(Number).sort(function(a,b){return a-b;});
+  if(!bs.length){ el.innerHTML=''; return; }
+  var da={};
+  alleStuetzen().forEach(function(r){
+    da[normId(r.tischId)+'-'+String(r.stuetze||'').trim().toUpperCase()]=true;
+  });
+  var h='<tr><th>'+T('th_batch')+'</th><th>'+T('th_erfasst')+'</th><th></th><th>'+T('th_status')+'</th></tr>';
+  bs.forEach(function(b){
+    var keys=Object.keys(map[b]), n=keys.length;
+    var fehlt=keys.filter(function(k){ return !da[k]; });
+    var ok=n-fehlt.length, voll=!fehlt.length, pz=Math.round(ok/n*100);
+    h+='<tr style="cursor:pointer" onclick="batchToggle('+b+')">'
+      +'<td><b>'+b+'</b></td><td style="white-space:nowrap">'+ok+' / '+n+'</td>'
+      +'<td style="width:34%"><div class="bar"><i class="'+(voll?'':'teils')+'" style="width:'+pz+'%"></i></div></td>'
+      +'<td>'+(voll?'<span class="badge ok">'+T('badge_komplett')+'</span>'
+                   :'<span class="badge p">'+T('badge_offen',{n:fehlt.length})+'</span>')+'</td></tr>';
+    if(batchAuf[b] && fehlt.length){
+      fehlt.sort(function(x,y){
+        var px=x.split('-'), py=y.split('-');
+        return (Number(px[0])-Number(py[0])) || (px[1]<py[1]?-1:1);
+      });
+      h+='<tr><td></td><td colspan="3" style="font-size:12px;color:var(--mut);line-height:1.6">'
+        +T('batch_fehlt')+' '+fehlt.join(', ')+'</td></tr>';
+    }
+  });
+  el.innerHTML=h;
+}
+function batchToggle(b){ batchAuf[b]=!batchAuf[b]; renderBatches(); }
 function csvDl(name, kopf, zeilen){
   var lines=[kopf.join(';')].concat(zeilen.map(function(z){
     return z.map(function(v){ return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'; }).join(';');
