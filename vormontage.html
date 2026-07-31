@@ -74,6 +74,16 @@
   th{ font-size:11px; text-transform:uppercase; color:var(--mut); letter-spacing:.03em; }
   tr.pend td{ background:#fff8e6; }
   .tabWrap{ overflow-x:auto; }
+  /* nur ~10 Zeilen zeigen, der Rest ist scrollbar */
+  .tabScroll{ max-height:430px; overflow-y:auto; overscroll-behavior:contain;
+        border:1px solid var(--line); border-radius:6px; }
+  .tabScroll table th{ position:sticky; top:0; background:#fff; z-index:1; }
+  .klapp{ display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
+  .klapp h2{ flex:1; }
+  .klapp .pfeil{ font-size:15px; color:var(--mut); transition:transform .15s; }
+  .zu .pfeil{ transform:rotate(-90deg); }
+  .zu .kInhalt{ display:none; }
+  .kInhalt{ margin-top:6px; }
   .zaehler{ font-size:12.5px; color:var(--mut); margin:2px 0 8px; }
   .badge{ display:inline-block; font-size:10px; font-weight:900; padding:2px 6px; border-radius:4px; }
   .badge.v{ background:#e3f0ff; color:var(--blau); }
@@ -188,23 +198,29 @@
 
   <!-- ══════════ 3 · TABELLEN ══════════ -->
   <section id="s3" style="display:none">
-    <div class="box" style="border-left-color:var(--gruen)">
-      <h2 data-i18n="s3_titel0">🧾 Bestellbatches – geliefert?</h2>
-      <div class="sub" data-i18n="batch_sub">Bestellte Stützen (Mauchle Batch 1–10) im Vergleich mit den erfassten Stützen. Zeile antippen zeigt, was noch fehlt.</div>
-      <div class="tabWrap"><table id="tab0"></table></div>
+    <div class="box" id="box0" style="border-left-color:var(--gruen)">
+      <div class="klapp" onclick="klapp('box0')"><h2 data-i18n="s3_titel0">🧾 Bestellbatches – geliefert?</h2><span class="pfeil">▾</span></div>
+      <div class="kInhalt">
+        <div class="sub" data-i18n="batch_sub">Bestellte Stützen (Mauchle Batch 1–10) im Vergleich mit den erfassten Stützen. Zeile antippen zeigt, was noch fehlt.</div>
+        <div class="tabWrap"><table id="tab0"></table></div>
+      </div>
     </div>
-    <div class="box">
-      <h2 data-i18n="s3_titel1">🏷 Erfasste Stützen</h2>
+    <div class="box zu" id="box1">
+      <div class="klapp" onclick="klapp('box1')"><h2 data-i18n="s3_titel1">🏷 Erfasste Stützen</h2><span class="pfeil">▾</span></div>
       <div class="zaehler" id="z1">–</div>
-      <input id="q1" data-i18n-ph="ph_suche" placeholder="Suchen (ID, Länge, Name) …" oninput="renderTab()" style="margin-bottom:8px">
-      <div class="tabWrap"><table id="tab1"></table></div>
-      <div style="margin-top:10px"><button class="btn ghost" onclick="csv1()" data-i18n="btn_csv">⬇ CSV / Excel</button></div>
+      <div class="kInhalt">
+        <input id="q1" data-i18n-ph="ph_suche" placeholder="Suchen (ID, Länge, Name) …" oninput="renderTab()" style="margin-bottom:8px">
+        <div class="tabScroll"><table id="tab1"></table></div>
+        <div style="margin-top:10px"><button class="btn ghost" onclick="csv1()" data-i18n="btn_csv">⬇ CSV / Excel</button></div>
+      </div>
     </div>
-    <div class="box blau">
-      <h2 data-i18n="s3_titel2">🏗 Fortschritt</h2>
+    <div class="box blau zu" id="box2">
+      <div class="klapp" onclick="klapp('box2')"><h2 data-i18n="s3_titel2">🏗 Fortschritt</h2><span class="pfeil">▾</span></div>
       <div class="zaehler" id="z2">–</div>
-      <div class="tabWrap"><table id="tab2"></table></div>
-      <div style="margin-top:10px"><button class="btn ghost" onclick="csv2()" data-i18n="btn_csv">⬇ CSV / Excel</button></div>
+      <div class="kInhalt">
+        <div class="tabScroll"><table id="tab2"></table></div>
+        <div style="margin-top:10px"><button class="btn ghost" onclick="csv2()" data-i18n="btn_csv">⬇ CSV / Excel</button></div>
+      </div>
     </div>
   </section>
 
@@ -278,7 +294,7 @@ var I18N={
   s3_titel1:'🏷 Erfasste Stützen', s3_titel2:'🏗 Fortschritt',
   s3_titel0:'🧾 Bestellbatches – geliefert?',
   batch_sub:'Bestellte Stützen (Mauchle Batch 1–10) im Vergleich mit den erfassten Stützen. Zeile antippen zeigt, was noch fehlt.',
-  th_batch:'Batch', th_erfasst:'Erfasst',
+  th_lieferung:'Lieferung', th_batch:'Batch', th_erfasst:'Erfasst',
   badge_komplett:'✔ komplett geliefert', badge_offen:'{n} fehlt', batch_fehlt:'Fehlt:',
   ph_suche:'Suchen (ID, Länge, Name) …', btn_csv:'⬇ CSV / Excel',
   th_id:'ID', th_st:'St.', th_laenge:'Länge', th_typ:'Typ', th_wer:'Wer', th_wann:'Wann', th_status:'Status',
@@ -327,7 +343,7 @@ var I18N={
   s3_titel1:'🏷 Saved posts', s3_titel2:'🏗 Progress',
   s3_titel0:'🧾 Order batches – delivered?',
   batch_sub:'Ordered posts (Mauchle batch 1–10) compared with the saved posts. Tap a row to see what is still missing.',
-  th_batch:'Batch', th_erfasst:'Saved',
+  th_lieferung:'Delivery', th_batch:'Batch', th_erfasst:'Saved',
   badge_komplett:'✔ fully delivered', badge_offen:'{n} missing', batch_fehlt:'Missing:',
   ph_suche:'Search (ID, length, name) …', btn_csv:'⬇ CSV / Excel',
   th_id:'ID', th_st:'S1–S4', th_laenge:'Length', th_typ:'Type', th_wer:'Who', th_wann:'When', th_status:'Status',
@@ -376,7 +392,7 @@ var I18N={
   s3_titel1:'🏷 Zapisane podpory', s3_titel2:'🏗 Postęp',
   s3_titel0:'🧾 Partie zamówień – dostarczone?',
   batch_sub:'Zamówione podpory (Mauchle partia 1–10) w porównaniu z zapisanymi podporami. Dotknij wiersza, aby zobaczyć czego brakuje.',
-  th_batch:'Partia', th_erfasst:'Zapisane',
+  th_lieferung:'Dostawa', th_batch:'Partia', th_erfasst:'Zapisane',
   badge_komplett:'✔ dostarczona w całości', badge_offen:'brakuje: {n}', batch_fehlt:'Brakuje:',
   ph_suche:'Szukaj (ID, długość, imię i nazwisko) …', btn_csv:'⬇ CSV / Excel',
   th_id:'ID', th_st:'Pod.', th_laenge:'Długość', th_typ:'Typ', th_wer:'Kto', th_wann:'Kiedy', th_status:'Status',
@@ -446,6 +462,8 @@ function fmtZ(ts){ if(!ts) return ''; var d=new Date(ts);
   return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
 function getVon(){ try{ return localStorage.getItem(LS_VON)||''; }catch(e){ return ''; } }
 function setVon(v){ try{ localStorage.setItem(LS_VON,v||''); }catch(e){} }
+
+function klapp(id){ $(id).classList.toggle('zu'); }
 
 function tab(n){
   [1,2,3,4].forEach(function(i){
@@ -679,15 +697,35 @@ function renderTab(){
   $('z1').textContent=T('zaehler_eintraege',{n:st.length})+(q?T('zaehler_gefiltert'):'');
 
   var fo=alleFortschritt();
-  var hv=fo.filter(function(r){return r.art==='vormontiert';}).length;
-  var hb=fo.filter(function(r){return r.art==='berg';}).length;
+  // Tische, die auf den Berg gegangen sind: aeltere Vormontage-Meldungen
+  // werden durchgestrichen und als "auf den Berg" gekennzeichnet
+  var bergTs={};
+  fo.forEach(function(r){
+    if(r.art==='berg'){
+      var k=String(r.tischId||'').trim();
+      if(!bergTs[k] || (r.ts||0)>bergTs[k]) bergTs[k]=r.ts||0;
+    }
+  });
+  var hb=Object.keys(bergTs).length;                       // Tische auf dem Berg
+  var imTal={};
+  fo.forEach(function(r){
+    var k=String(r.tischId||'').trim();
+    if(r.art==='vormontiert' && !bergTs[k]) imTal[k]=true;
+  });
+  var hv=Object.keys(imTal).length;                        // noch im Tal
   var h2='<tr><th>'+T('th_id')+'</th><th>'+T('th_status')+'</th><th>'+T('th_wer')+'</th><th>'+T('th_wann')+'</th></tr>';
   fo.slice(0,300).forEach(function(r){
-    h2+='<tr'+(r._pend?' class="pend"':'')+'><td><b>'+esc(r.tischId)+'</b>'
+    var k=String(r.tischId||'').trim();
+    var ueberholt = r.art==='vormontiert' && bergTs[k];    // spaeter auf den Berg gegangen
+    var stat = r.art==='berg' || ueberholt
+      ? '<span class="badge b">'+T('badge_berg')+'</span>'
+      : '<span class="badge v">'+T('badge_vormontiert')+'</span>';
+    h2+='<tr'+(r._pend?' class="pend"':'')+(ueberholt?' style="opacity:.6"':'')+'>'
+       +'<td><b'+(ueberholt?' style="text-decoration:line-through"':'')+'>'+esc(r.tischId)+'</b>'
        +(r._pend?' <span class="badge p">'+T('badge_wartet')+'</span>':'')+'</td>'
-       +'<td>'+(r.art==='berg'?'<span class="badge b">'+T('badge_berg')+'</span>'
-                              :'<span class="badge v">'+T('badge_vormontiert')+'</span>')+'</td>'
-       +'<td>'+esc(r.von||'')+'</td><td>'+esc(fmtD(r.datum))+' '+fmtZ(r.ts)+'</td></tr>';
+       +'<td>'+stat+'</td>'
+       +'<td>'+esc(r.von||'')+'</td><td'+(ueberholt?' style="text-decoration:line-through"':'')+'>'
+       +esc(fmtD(r.datum))+' '+fmtZ(r.ts)+'</td></tr>';
   });
   $('tab2').innerHTML=h2;
   $('z2').textContent=T('zaehler_meldungen',{g:fo.length,v:hv,b:hb});
@@ -699,6 +737,37 @@ function renderTab(){
    Mauchle Batch 1-10) mit den erfassten Stuetzen. Eine Position gilt als
    geliefert, sobald Tisch + Stuetze einmal erfasst wurde. */
 var batchAuf={};
+/* Liefertermine der Bestellbatches – alle Angaben aus Mails belegt:
+   1: Mail Victor 08.05.  ·  3/4/8: Bestellmails (Liefertermin)  ·  5: Maeder
+   18.06. "Lieferung Batch 5"  ·  6: Maeder 07.07. "kommt diesen Mittwoch"
+   8 Ist: Victor 30.07. (komplett vor Ort)  ·  9/11/12/13: Bucheli 30.07. 10:52
+   Batch 10: laut F. Borner / Bucheli 30.07. gibt es keinen eigenen Batch 10. */
+var LIEFERUNG={
+  1:{soll:'2026-05-18'},
+  3:{soll:'2026-06-01'},
+  4:{soll:'2026-06-08'},
+  5:{soll:'2026-06-18', ist:'2026-06-18'},
+  6:{soll:'2026-07-08', ist:'2026-07-08'},
+  8:{soll:'2026-07-27', ist:'2026-07-30', spaet:true},
+  9:{soll:'2026-08-03', hinweis:'evtl. 1 Tag später'},
+  10:{hinweis:'kein eigener Batch (Bauleitung 30.07.)'},
+  11:{soll:'2026-08-10'},
+  12:{soll:'2026-08-17'},
+  13:{soll:'2026-08-24'}
+};
+function lieferText(b, voll){
+  var l=LIEFERUNG[b];
+  if(!l) return '<span style="color:var(--mut)">–</span>';
+  if(l.ist)   return '<b style="color:var(--gruen)">'+fmtD(l.ist)+'</b>'
+                     +(l.spaet?' <span style="color:var(--mut);font-size:11px">(Soll '+fmtD(l.soll)+')</span>':'');
+  if(l.soll){
+    var offen=!voll, heuteS=heute();
+    var farbe = offen && l.soll<heuteS ? 'var(--rot)' : 'var(--ink)';
+    return '<span style="color:'+farbe+'">'+fmtD(l.soll)+'</span>'
+      +(l.hinweis?' <span style="color:var(--mut);font-size:11px">'+esc(l.hinweis)+'</span>':'');
+  }
+  return '<span style="color:var(--mut);font-size:11px">'+esc(l.hinweis||'–')+'</span>';
+}
 function normId(x){ var s=String(x==null?'':x).trim(); return /^\d+$/.test(s)?String(parseInt(s,10)):s; }
 function batchPositionen(){
   var best=(window.NALP_PS_DATEN&&window.NALP_PS_DATEN.bestellungen)||[];
@@ -719,14 +788,16 @@ function renderBatches(){
   alleStuetzen().forEach(function(r){
     da[normId(r.tischId)+'-'+String(r.stuetze||'').trim().toUpperCase()]=true;
   });
-  var h='<tr><th>'+T('th_batch')+'</th><th>'+T('th_erfasst')+'</th><th></th><th>'+T('th_status')+'</th></tr>';
+  var h='<tr><th>'+T('th_batch')+'</th><th>'+T('th_lieferung')+'</th><th>'+T('th_erfasst')+'</th><th></th><th>'+T('th_status')+'</th></tr>';
   bs.forEach(function(b){
     var keys=Object.keys(map[b]), n=keys.length;
     var fehlt=keys.filter(function(k){ return !da[k]; });
     var ok=n-fehlt.length, voll=!fehlt.length, pz=Math.round(ok/n*100);
     h+='<tr style="cursor:pointer" onclick="batchToggle('+b+')">'
-      +'<td><b>'+b+'</b></td><td style="white-space:nowrap">'+ok+' / '+n+'</td>'
-      +'<td style="width:34%"><div class="bar"><i class="'+(voll?'':'teils')+'" style="width:'+pz+'%"></i></div></td>'
+      +'<td><b>'+b+'</b></td>'
+      +'<td style="white-space:nowrap;font-size:12.5px">'+lieferText(b,voll)+'</td>'
+      +'<td style="white-space:nowrap">'+ok+' / '+n+'</td>'
+      +'<td style="width:22%"><div class="bar"><i class="'+(voll?'':'teils')+'" style="width:'+pz+'%"></i></div></td>'
       +'<td>'+(voll?'<span class="badge ok">'+T('badge_komplett')+'</span>'
                    :'<span class="badge p">'+T('badge_offen',{n:fehlt.length})+'</span>')+'</td></tr>';
     if(batchAuf[b] && fehlt.length){
@@ -734,7 +805,7 @@ function renderBatches(){
         var px=x.split('-'), py=y.split('-');
         return (Number(px[0])-Number(py[0])) || (px[1]<py[1]?-1:1);
       });
-      h+='<tr><td></td><td colspan="3" style="font-size:12px;color:var(--mut);line-height:1.6">'
+      h+='<tr><td></td><td colspan="4" style="font-size:12px;color:var(--mut);line-height:1.6">'
         +T('batch_fehlt')+' '+fehlt.join(', ')+'</td></tr>';
     }
   });
