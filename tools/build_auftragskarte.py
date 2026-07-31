@@ -7,8 +7,9 @@ from PIL import Image, ImageDraw, ImageFont
 
 WEB = r"c:\Users\MaltVic\OneDrive - Strabag BRVZ GmbH\Claude_Projects\Nalps_Ultra_KI\Website_NalpSolar"
 ZIEL = os.path.join(WEB, "assets", "img", "auftrag_bereich22.png")
-FOLGE = json.load(io.open(r"C:\Users\MaltVic\AppData\Local\Temp\claude\folge22.json"))
-SPAETER = {"371", "370", "369"}
+FOLGE = json.load(io.open(r"C:\Users\MaltVic\AppData\Local\Temp\claude\folge22_gruppiert.json"))
+SPAETER = {"371", "370", "369"}                       # gelb: Montage ab Baupiste
+LIEFERUNG = {"349", "298", "297", "293", "292"}       # blau: kommt Di mit Batch 9+10
 
 tische = {t[0]: t for t in json.load(io.open(os.path.join(WEB, "uploads", "tables", "modultische_all.json"), encoding="utf-8"))}
 aus = [tische[i] for i in FOLGE if i in tische]
@@ -54,9 +55,10 @@ for nr, tid in enumerate([t[0] for t in aus], 1):
     dQe, dQn = math.sin(aQ) * BREITE_TISCH / 2, math.cos(aQ) * BREITE_TISCH / 2
     ecken = [px(E + dLe + dQe, N + dLn + dQn), px(E + dLe - dQe, N + dLn - dQn),
              px(E - dLe - dQe, N - dLn - dQn), px(E - dLe + dQe, N - dLn + dQn)]
-    spaet = tid in SPAETER
-    d.polygon(ecken, fill=(255, 190, 60, 130) if spaet else (215, 38, 34, 130),
-              outline=(255, 210, 90) if spaet else (255, 255, 255))
+    if tid in SPAETER:      fuell, rand = (255, 190, 60, 130), (255, 210, 90)
+    elif tid in LIEFERUNG:  fuell, rand = (40, 120, 235, 140), (150, 200, 255)
+    else:                   fuell, rand = (215, 38, 34, 130), (255, 255, 255)
+    d.polygon(ecken, fill=fuell, outline=rand)
     # Nummer + ID, in die Tischachse gedreht (sonst ueberlappen die Reihen)
     cx, cy = px(E, N)
     label = "%d · %s" % (nr, tid)
@@ -74,14 +76,16 @@ for nr, tid in enumerate([t[0] for t in aus], 1):
     karte.paste(chip, (int(cx - chip.width / 2), int(cy - chip.height / 2)), chip)
 
 # Legende
-lh = 108
-d.rectangle([0, 0, BREITE, lh], fill=(255, 255, 255, 232))
-d.text((16, 10), "Bereich 2.2 · Reihenfolge Vormontage (1 → %d)" % len(aus), font=f(30), fill=(26, 26, 26))
-d.rectangle([16, 56, 44, 78], fill=(215, 38, 34, 200), outline=(255, 255, 255))
-d.text((54, 58), "zuerst vormontieren (oben → unten, Nord → Süd)", font=f(20, False), fill=(60, 60, 60))
-d.rectangle([16, 82, 44, 100], fill=(255, 190, 60, 220), outline=(200, 150, 40))
-d.text((54, 82), "371 / 370 / 369 – später (Montage ab Baupiste)", font=f(20, False), fill=(60, 60, 60))
-d.text((BREITE - 16, 62), "Norden ↑", font=f(22), fill=(60, 60, 60), anchor="ra")
+lh = 134
+d.rectangle([0, 0, BREITE, lh], fill=(255, 255, 255, 234))
+d.text((16, 8), "Bereich 2.2 · Vormontage – was ist da, was kommt noch", font=f(29), fill=(26, 26, 26))
+d.rectangle([16, 50, 44, 70], fill=(215, 38, 34, 200), outline=(255, 255, 255))
+d.text((54, 50), "Batch 8 – vollständig da, jetzt vormontieren (Reihenfolge 1 → …)", font=f(19, False), fill=(60, 60, 60))
+d.rectangle([16, 76, 44, 96], fill=(40, 120, 235, 220), outline=(150, 200, 255))
+d.text((54, 76), "kommt erst Di mit Batch 9 + 10 – NICHT suchen! Dann zuerst montieren", font=f(19, False), fill=(60, 60, 60))
+d.rectangle([16, 102, 44, 122], fill=(255, 190, 60, 220), outline=(200, 150, 40))
+d.text((54, 102), "371 / 370 / 369 – später, Montage ab Baupiste oben", font=f(19, False), fill=(60, 60, 60))
+d.text((BREITE - 16, 60), "Norden ↑", font=f(22), fill=(60, 60, 60), anchor="ra")
 
 os.makedirs(os.path.dirname(ZIEL), exist_ok=True)
 karte.save(ZIEL, quality=88)

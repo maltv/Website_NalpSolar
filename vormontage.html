@@ -719,11 +719,21 @@ function anwMalen(){
     'style="width:100%;border:1px solid var(--line);border-radius:6px;cursor:zoom-in" '+
     'onclick="bildGross(this.src)"></div>';
   h+='<div class="tabWrap"><table>';
+  var letzteGruppe=null;
   anw.ids.forEach(function(id,i){
     var ok=!!anwOk[id];
+    var b=(anw.badges&&anw.badges[id])||null;      // {txt, farbe, gruppe}
+    if(b && b.gruppe!==letzteGruppe){              // Zwischenüberschrift je Gruppe
+      letzteGruppe=b.gruppe;
+      h+='<tr><td colspan="3" style="padding-top:14px">'
+        +'<div style="background:'+esc(b.farbe)+';color:#fff;font-weight:900;font-size:12.5px;'
+        +'border-radius:6px;padding:7px 10px">'+esc(b.gruppe)+'</div></td></tr>';
+    } else if(!b && letzteGruppe!==null){ letzteGruppe=null; }
     h+='<tr'+(ok?' style="opacity:.5"':'')+'>'
       +'<td style="width:34px;font-weight:900;color:var(--mut)">'+(i+1)+'.</td>'
-      +'<td style="font-size:19px;font-weight:900'+(ok?';text-decoration:line-through':'')+'">'+esc(id)+'</td>'
+      +'<td style="font-size:19px;font-weight:900'+(ok?';text-decoration:line-through':'')+'">'+esc(id)
+      +(b?' <span style="font-size:11px;font-weight:800;background:'+esc(b.farbe)+';color:#fff;'
+          +'border-radius:4px;padding:2px 6px;vertical-align:2px">'+esc(b.txt)+'</span>':'')+'</td>'
       +'<td style="text-align:right"><button class="btn '+(ok?'ghost':'gruen')+'" style="padding:9px 12px"'
       +' onclick="anwHaken(\''+esc(id)+'\','+(ok?'false':'true')+')">'+(ok?'↺':'✔')+'</button></td></tr>';
   });
