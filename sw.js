@@ -1,10 +1,14 @@
 'use strict';
-var CACHE = 'nalpsolar-v74';
+var CACHE = 'nalpsolar-v75';
 var PRECACHE = [
   './index.html',
   './logistik.html',
   './lieferscheine.html',
   './vormontage.html',
+  './gewinde.html',
+  './uploads/pfaehle.json',
+  './uploads/perimeter_geo.json',
+  './assets/img/perimeter.jpg',
   // Offline-Texterkennung fuer die Etiketten (laeuft ohne Internet im Tal)
   './assets/js/tesseract/tesseract.min.js',
   './assets/js/tesseract/worker.min.js',

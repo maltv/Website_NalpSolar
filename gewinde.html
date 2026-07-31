@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NalpSolar · Gewinde-Inventur</title>
+<meta name="theme-color" content="#ffffff">
+<script>
+  window.NALP_GATE_CODE  = '6460';
+  window.NALP_GATE_KEY   = 'nalp_portal_unlock_v1';
+  window.NALP_GATE_TITEL = 'Gewinde-Inventur';
+  window.NALP_GATE_SUB   = 'Code eingeben / Enter code / Wpisz kod';
+</script>
+<script src="assets/js/nalp-gate.js"></script>
+<style>
+  :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
+         --blau:#1565c0; --gelb:#e0a800; --gruen:#1e9e5a; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body{ margin:0; background:#eef0f3; min-height:100vh; color:var(--ink);
+        font-family:Arial,"Helvetica Neue",sans-serif; }
+  header{ position:sticky; top:0; z-index:10; display:flex; align-items:center; gap:8px;
+          padding:9px 10px; background:#fff; border-bottom:4px solid var(--rot); }
+  header a.home{ color:var(--ink); text-decoration:none; font-size:20px; }
+  header .logo img{ height:20px; display:block; }
+  header h1{ font-size:14.5px; margin:0; flex:1; font-weight:800; }
+  #netz{ font-size:11px; font-weight:800; padding:3px 8px; border-radius:20px;
+         background:#e8f5ec; color:#12703f; white-space:nowrap; }
+  #netz.off{ background:#fdeaea; color:#a01c19; }
+  main{ max-width:720px; margin:0 auto; padding:10px 10px 80px; }
+  .box{ background:#fff; border:1px solid var(--line); border-left:5px solid var(--rot);
+        border-radius:6px; padding:12px; margin-bottom:11px; box-shadow:0 1px 4px rgba(20,25,32,.07); }
+
+  /* ── Zielpfahl gross anzeigen ── */
+  #ziel{ text-align:center; padding:14px 12px; }
+  #zTisch{ font-size:44px; font-weight:900; line-height:1; }
+  #zSub{ font-size:16px; font-weight:700; color:var(--mut); margin-top:6px; }
+  #zTyp{ display:inline-block; margin-top:9px; font-size:15px; font-weight:900; color:#fff;
+         background:var(--ink); border-radius:6px; padding:5px 12px; }
+  #zDist{ font-size:13.5px; color:var(--mut); margin-top:8px; }
+  #zDist b{ color:var(--ink); }
+  .warn{ background:#fff3d6; border:1.5px solid var(--gelb); border-radius:6px;
+         padding:8px 10px; font-size:13px; font-weight:700; color:#7a5200; margin-top:9px; }
+
+  /* ── Messknoepfe ── */
+  .mess{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:4px; }
+  .mess button{ border:none; border-radius:10px; padding:26px 8px; font-size:26px; font-weight:900;
+        color:#fff; cursor:pointer; line-height:1.15; box-shadow:0 2px 6px rgba(20,25,32,.2); }
+  .mess button small{ display:block; font-size:13px; font-weight:700; opacity:.92; margin-top:5px; }
+  .m5{ background:var(--blau); } .m6{ background:var(--gelb); color:#3a2b00 !important; }
+  .mess button[disabled]{ opacity:.45; }
+
+  select,input{ width:100%; background:#fff; border:1px solid #c9ccd2; border-radius:6px;
+        color:var(--ink); padding:10px; font-size:15px; font-family:inherit; }
+  label.fl{ display:block; font-size:11.5px; font-weight:700; color:var(--mut); margin:9px 0 4px;
+        text-transform:uppercase; letter-spacing:.04em; }
+  .btn{ display:inline-block; border:none; border-radius:6px; padding:10px 14px; font-size:14px;
+        font-weight:800; cursor:pointer; color:#fff; background:var(--rot); }
+  .btn.ghost{ background:#fff; color:var(--ink); border:1px solid #c9ccd2; font-weight:700; }
+  .row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+
+  /* ── Karte ── */
+  #kartenBox{ padding:0; overflow:hidden; }
+  #karte{ width:100%; display:block; background:#dfe3e8; touch-action:none; }
+  .kbar{ display:flex; gap:8px; align-items:center; padding:8px 10px; border-top:1px solid var(--line);
+        font-size:12px; color:var(--mut); flex-wrap:wrap; }
+  .pkt{ display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:4px; vertical-align:-1px; }
+  .zaehler{ font-size:12.5px; color:var(--mut); }
+  .liste{ font-size:13px; }
+  .liste div{ padding:5px 0; border-bottom:1px solid var(--line); }
+  #toast{ position:fixed; left:50%; bottom:18px; transform:translateX(-50%) translateY(90px);
+          background:#0f5c33; color:#fff; font-weight:800; padding:13px 20px; border-radius:8px;
+          font-size:16px; transition:transform .25s; z-index:70; max-width:92%; text-align:center; }
+  #toast.on{ transform:translateX(-50%) translateY(0); }
+  #toast.err{ background:var(--rot); }
+</style>
+</head>
+<body>
+<header>
+  <a class="home" href="index.html" title="Start">🏠</a>
+  <div class="logo"><img src="assets/img/strabag-logo.png" alt="STRABAG"></div>
+  <h1>🔩 Gewinde-Inventur</h1>
+  <span id="netz">online</span>
+</header>
+
+<main>
+  <!-- Zielpfahl -->
+  <div class="box" id="ziel">
+    <div id="zTisch">–</div>
+    <div id="zSub">Standort wird gesucht …</div>
+    <div id="zTyp" style="display:none"></div>
+    <div id="zDist"></div>
+    <div class="warn" id="zWarn" style="display:none"></div>
+  </div>
+
+  <!-- Messung -->
+  <div class="box">
+    <div class="mess">
+      <button class="m5" id="b5" onclick="messen('5')">🔵 5 mm<small>Steigung 5 mm</small></button>
+      <button class="m6" id="b6" onclick="messen('6.35')">🟡 6.35 mm<small>Steigung 6.35 mm</small></button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn ghost" onclick="pfahlWaehlen()">🎯 anderer Pfahl</button>
+      <button class="btn ghost" onclick="letzteRueckgaengig()">↶ letzte zurück</button>
+    </div>
+    <label class="fl">Erfasst von</label>
+    <input id="f_von" placeholder="Name">
+    <div class="zaehler" id="stat" style="margin-top:8px">–</div>
+  </div>
+
+  <!-- Karte -->
+  <div class="box" id="kartenBox">
+    <canvas id="karte" height="430"></canvas>
+    <div class="kbar">
+      <span><span class="pkt" style="background:#9aa0a8"></span>offen</span>
+      <span><span class="pkt" style="background:#1565c0"></span>5 mm</span>
+      <span><span class="pkt" style="background:#e0a800"></span>6.35 mm</span>
+      <span style="flex:1"></span>
+      <button class="btn ghost" id="zoomBtn" onclick="zoomWechsel()">🔍 Übersicht</button>
+    </div>
+  </div>
+
+  <!-- letzte Messungen -->
+  <div class="box" style="border-left-color:#8a8e94">
+    <div class="row"><b style="flex:1">Zuletzt erfasst</b>
+      <button class="btn ghost" onclick="csv()">⬇ CSV</button></div>
+    <div class="liste" id="letzte" style="margin-top:6px">–</div>
+  </div>
+</main>
+<div id="toast"></div>
+
+<script>
+'use strict';
+var DB='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app';
+var P_GEW='erfassung/gewinde';
+var LS_VON='nalp_erfasser_v1', LS_PEND='nalp_gewinde_pending_v1';
+var pfaehle=[], geo=null, bild=null, messungen={}, pos=null, ziel=null, zielManuell=null;
+var zoomNah=false;   // ohne GPS Uebersicht, bei erstem Fix -> Nahbereich
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+function toast(t,err){ var e=$('toast'); e.textContent=t; e.className='on'+(err?' err':'');
+  setTimeout(function(){ e.className=err?'err':''; },2600); }
+function heute(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fmtZ(ts){ var d=new Date(ts); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function getVon(){ try{ return localStorage.getItem(LS_VON)||''; }catch(e){ return ''; } }
+function setVon(v){ try{ localStorage.setItem(LS_VON,v||''); }catch(e){} }
+
+/* Pfahllänge nach Tischtyp (Angabe V. Malt): E = 3.0 m, C/D = 2.5 m */
+function pfahlInfo(typ){
+  var t=String(typ||'').charAt(0).toUpperCase();
+  if(t==='E') return {typ:t, laenge:'3.0 m'};
+  if(t==='C'||t==='D') return {typ:t, laenge:'2.5 m'};
+  return {typ:t||'?', laenge:''};
+}
+
+/* ---------- Daten ---------- */
+function apiGet(p){ return fetch(DB+'/'+p+'.json',{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }); }
+function apiPost(p,body){ return fetch(DB+'/'+p+'.json',{method:'POST',body:JSON.stringify(body)})
+  .then(function(r){ return r.ok?r.json():null; }).then(function(j){ return j&&j.name?j.name:null; }); }
+
+function netzAn(){ return navigator.onLine!==false; }
+function pendLesen(){ try{ return JSON.parse(localStorage.getItem(LS_PEND)||'[]'); }catch(e){ return []; } }
+function pendSchreiben(a){ try{ localStorage.setItem(LS_PEND,JSON.stringify(a.slice(-500))); }catch(e){} netzMalen(); }
+function netzMalen(){
+  var p=pendLesen().length, e=$('netz');
+  e.className=netzAn()?'':'off';
+  e.textContent=netzAn()?(p?('sende '+p+' …'):'online'):(p?('offline · '+p+' wartet'):'offline');
+}
+function pendSenden(){
+  var a=pendLesen(); if(!a.length||!netzAn()) return;
+  a.reduce(function(k,rec){
+    return k.then(function(rest){
+      return apiPost(P_GEW,rec).then(function(key){ return key?rest:rest.concat([rec]); })
+        .catch(function(){ return rest.concat([rec]); });
+    });
+  }, Promise.resolve([])).then(function(rest){
+    pendSchreiben(rest);
+    if(!rest.length){ toast('Offline-Messungen gesendet ✔'); laden(); }
+  });
+}
+window.addEventListener('online', function(){ netzMalen(); pendSenden(); });
+window.addEventListener('offline', netzMalen);
+
+function laden(){
+  if(!netzAn()){ malen(); return; }
+  apiGet(P_GEW).then(function(j){
+    messungen={};
+    Object.keys(j||{}).forEach(function(k){
+      var m=j[k]; if(!m||!m.tischId) return;
+      m._k=k;
+      messungen[m.tischId+'-'+m.stuetze]=m;      // letzte Messung gewinnt
+    });
+    malen(); listeMalen(); statMalen();
+  }).catch(function(){});
+}
+
+/* ---------- GPS ---------- */
+function meter(lat1,lon1,lat2,lon2){
+  var dy=(lat2-lat1)*111320, dx=(lon2-lon1)*111320*Math.cos(lat1*Math.PI/180);
+  return Math.sqrt(dx*dx+dy*dy);
+}
+if(navigator.geolocation){
+  navigator.geolocation.watchPosition(function(p){
+    var ersterFix=!pos;
+    pos={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
+    if(ersterFix){ zoomNah=true; $('zoomBtn').textContent='🔍 Übersicht'; }
+    zielSuchen(); malen();
+  }, function(){ $('zSub').textContent='Kein GPS – bitte Standort erlauben'; },
+     {enableHighAccuracy:true, maximumAge:3000, timeout:20000});
+}
+function zielSuchen(){
+  if(zielManuell){ ziel=zielManuell; zielMalen(); return; }
+  if(!pos||!pfaehle.length) return;
+  var best=null, bd=1e9;
+  pfaehle.forEach(function(p){
+    var d=meter(pos.lat,pos.lon,p[2],p[3]);
+    if(d<bd){ bd=d; best=p; }
+  });
+  ziel=best; ziel._d=bd; zielMalen();
+}
+function zielMalen(){
+  if(!ziel){ return; }
+  var key=ziel[0]+'-'+ziel[1], m=messungen[key];
+  var inf=pfahlInfo(ziel[4]);
+  $('zTisch').textContent=ziel[0];
+  $('zSub').textContent='Pfahl '+ziel[1]+(zielManuell?'  (von Hand gewählt)':'');
+  var zt=$('zTyp'); zt.style.display='';
+  zt.textContent='Typ '+inf.typ+(inf.laenge?' · '+inf.laenge:'');
+  zt.style.background = inf.typ==='E' ? '#5b3fa8' : (inf.typ==='C'||inf.typ==='D' ? '#0f7b6c' : '#63676d');
+  var d=ziel._d!=null?Math.round(ziel._d):null;
+  $('zDist').innerHTML = (d!=null?('Entfernung <b>'+d+' m</b>'):'') +
+     (pos&&pos.acc?('  ·  GPS ±'+Math.round(pos.acc)+' m'):'');
+  // Ist der TYP in der Umgebung eindeutig? (GPS-Ungenauigkeit vs. enge Pfahlabstaende)
+  var umkreis = Math.max(8, (pos&&pos.acc)?pos.acc:8);
+  var typen={};
+  if(pos) pfaehle.forEach(function(p){
+    if(meter(pos.lat,pos.lon,p[2],p[3])<=umkreis){
+      var t=String(p[4]||'?').charAt(0).toUpperCase();
+      typen[t]=(typen[t]||0)+1;
+    }
+  });
+  var tListe=Object.keys(typen);
+  var w=$('zWarn');
+  if(tListe.length>1){
+    w.style.display=''; w.style.background='#fff3d6'; w.style.borderColor='#e0a800'; w.style.color='#7a5200';
+    w.textContent='⚠ Im Umkreis von '+Math.round(umkreis)+' m stehen Pfähle von Typ '+tListe.join(' und ')
+      +' – bitte den Pfahl von Hand wählen, damit der Typ stimmt.';
+    return;
+  }
+  if(m){
+    w.style.display=''; w.style.background='#e8f5ec'; w.style.borderColor='#1e9e5a'; w.style.color='#12703f';
+    w.textContent='✔ schon erfasst: '+m.gewinde+' mm ('+(m.von||'')+', '+fmtZ(m.ts)+')';
+  } else if(d!=null && d>25){
+    w.style.display=''; w.style.background='#fff3d6'; w.style.borderColor='#e0a800'; w.style.color='#7a5200';
+    w.textContent='Weit vom nächsten Pfahl entfernt ('+d+' m) – bitte prüfen oder Pfahl von Hand wählen.';
+  } else { w.style.display='none'; }
+  $('b5').disabled=$('b6').disabled=!ziel;
+}
+
+/* ---------- Messen ---------- */
+function messen(g){
+  if(!ziel){ toast('Kein Pfahl erkannt',true); return; }
+  var von=$('f_von').value.trim();
+  if(!von){ toast('Bitte Namen eintragen',true); $('f_von').focus(); return; }
+  setVon(von);
+  var key=ziel[0]+'-'+ziel[1];
+  if(messungen[key] && !confirm('Pfahl '+key+' ist schon mit '+messungen[key].gewinde+' mm erfasst.\nÜberschreiben?')) return;
+  var rec={ tischId:ziel[0], stuetze:ziel[1], typ:ziel[4]||'', gewinde:g,
+            lat:pos?+pos.lat.toFixed(6):null, lon:pos?+pos.lon.toFixed(6):null,
+            acc:pos?Math.round(pos.acc):null, dist:ziel._d!=null?Math.round(ziel._d):null,
+            von:von, datum:heute(), ts:Date.now() };
+  messungen[key]=rec;                       // sofort sichtbar
+  zielManuell=null;
+  malen(); listeMalen(); statMalen(); zielMalen();
+  if(navigator.vibrate) navigator.vibrate(60);
+  toast('✔ '+key+' · '+g+' mm');
+  if(!netzAn()){ var a=pendLesen(); a.push(rec); pendSchreiben(a); return; }
+  apiPost(P_GEW,rec).then(function(k){
+    if(!k) throw 0;
+    rec._k=k;
+  }).catch(function(){
+    var a=pendLesen(); a.push(rec); pendSchreiben(a);
+    toast('Kein Empfang – lokal gespeichert',true);
+  });
+}
+function letzteRueckgaengig(){
+  var alle=Object.keys(messungen).map(function(k){ return messungen[k]; })
+    .sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+  if(!alle.length){ toast('Nichts zum Zurücknehmen',true); return; }
+  var m=alle[0], key=m.tischId+'-'+m.stuetze;
+  if(!confirm('Letzte Messung löschen?\n'+key+' · '+m.gewinde+' mm')) return;
+  delete messungen[key];
+  if(m._k) fetch(DB+'/'+P_GEW+'/'+m._k+'.json',{method:'DELETE'}).catch(function(){});
+  malen(); listeMalen(); statMalen(); zielMalen();
+  toast('Zurückgenommen');
+}
+function pfahlWaehlen(){
+  if(!pos){ toast('Noch kein GPS',true); return; }
+  var nah=pfaehle.map(function(p){ return {p:p, d:meter(pos.lat,pos.lon,p[2],p[3])}; })
+    .sort(function(a,b){ return a.d-b.d; }).slice(0,8);
+  var txt='Welcher Pfahl?\n\n'+nah.map(function(x,i){
+    var k=x.p[0]+'-'+x.p[1];
+    return (i+1)+') '+k+'  ('+Math.round(x.d)+' m'+(messungen[k]?', schon erfasst':'')+')';
+  }).join('\n')+'\n\nNummer eingeben:';
+  var a=prompt(txt,'1');
+  if(a===null) return;
+  var i=parseInt(a,10)-1;
+  if(isNaN(i)||i<0||i>=nah.length){ toast('Ungültig',true); return; }
+  zielManuell=nah[i].p; zielManuell._d=nah[i].d; ziel=zielManuell; zielMalen(); malen();
+}
+
+/* ---------- Karte ---------- */
+function lv95(lat,lon){                   // WGS84 -> LV95 (Naeherung swisstopo)
+  var p=(lat*3600-169028.66)/10000, l=(lon*3600-26782.5)/10000;
+  return { E:2600072.37+211455.93*l-10938.51*l*p-0.36*l*p*p-44.54*l*l*l,
+           N:1200147.07+308807.95*p+3745.25*l*l+76.63*p*p-194.56*l*l*p+119.79*p*p*p };
+}
+function malen(){
+  var cv=$('karte'); if(!cv||!geo) return;
+  var br=cv.clientWidth||360;
+  cv.width=br*(window.devicePixelRatio||1);
+  cv.height=430*(window.devicePixelRatio||1);
+  cv.style.height='430px';
+  var c=cv.getContext('2d');
+  c.setTransform(window.devicePixelRatio||1,0,0,window.devicePixelRatio||1,0,0);
+  c.clearRect(0,0,br,430);
+
+  // Ausschnitt in LV95 bestimmen
+  var mitte = pos ? lv95(pos.lat,pos.lon) : {E:(geo.minE+geo.maxE)/2, N:(geo.minN+geo.maxN)/2};
+  var spann = zoomNah ? 90 : Math.max(geo.maxE-geo.minE, geo.maxN-geo.minN);
+  var mPerPx = spann/br;
+  var hM = 430*mPerPx;
+  var vE = mitte.E-spann/2, vN = mitte.N-hM/2;
+  function P(E,N){ return { x:(E-vE)/mPerPx, y:430-(N-vN)/mPerPx }; }
+
+  // Luftbild
+  if(bild){
+    var sx=(vE-geo.minE)/(geo.maxE-geo.minE)*geo.w;
+    var sy=(geo.maxN-(vN+hM))/(geo.maxN-geo.minN)*geo.h;
+    var sw=spann/(geo.maxE-geo.minE)*geo.w;
+    var sh=hM/(geo.maxN-geo.minN)*geo.h;
+    try{ c.drawImage(bild,sx,sy,sw,sh,0,0,br,430); }catch(e){}
+  }
+  // Pfaehle
+  var r = zoomNah ? 7 : 2.4;
+  pfaehle.forEach(function(p){
+    var q=lv95(p[2],p[3]), s=P(q.E,q.N);
+    if(s.x<-20||s.x>br+20||s.y<-20||s.y>450) return;
+    var m=messungen[p[0]+'-'+p[1]];
+    c.beginPath(); c.arc(s.x,s.y,r,0,6.283);
+    c.fillStyle = m ? (m.gewinde==='5'?'#1565c0':'#e0a800') : 'rgba(150,157,166,.85)';
+    c.fill();
+    if(zoomNah){ c.lineWidth=1.5; c.strokeStyle='rgba(255,255,255,.9)'; c.stroke(); }
+    if(zoomNah && ziel && p[0]===ziel[0] && p[1]===ziel[1]){
+      c.beginPath(); c.arc(s.x,s.y,13,0,6.283);
+      c.strokeStyle='#D72622'; c.lineWidth=3.5; c.stroke();
+      c.font='700 12px Arial'; c.fillStyle='#fff'; c.strokeStyle='rgba(0,0,0,.65)';
+      c.lineWidth=3; c.textAlign='center';
+      c.strokeText(p[0]+'-'+p[1], s.x, s.y-18); c.fillText(p[0]+'-'+p[1], s.x, s.y-18);
+    }
+  });
+  // eigene Position
+  if(pos){
+    var q=lv95(pos.lat,pos.lon), s=P(q.E,q.N);
+    if(pos.acc && zoomNah){
+      c.beginPath(); c.arc(s.x,s.y,Math.max(6,pos.acc/mPerPx),0,6.283);
+      c.fillStyle='rgba(21,101,192,.16)'; c.fill();
+    }
+    c.beginPath(); c.arc(s.x,s.y,7,0,6.283);
+    c.fillStyle='#1565c0'; c.fill(); c.lineWidth=3; c.strokeStyle='#fff'; c.stroke();
+  }
+  // Massstab
+  c.font='700 11px Arial'; c.textAlign='left';
+  c.fillStyle='rgba(255,255,255,.9)'; c.fillRect(6,406,118,18);
+  c.fillStyle='#1a1a1a';
+  c.fillText(zoomNah?'Ausschnitt 90 m':'ganzer Perimeter', 11, 419);
+}
+function zoomWechsel(){
+  zoomNah=!zoomNah;
+  $('zoomBtn').textContent = zoomNah?'🔍 Übersicht':'🎯 Nahbereich';
+  malen();
+}
+window.addEventListener('resize', malen);
+
+/* ---------- Liste + Zähler ---------- */
+function alleMessungen(){
+  return Object.keys(messungen).map(function(k){ return messungen[k]; })
+    .sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+}
+function listeMalen(){
+  var a=alleMessungen().slice(0,8);
+  $('letzte').innerHTML = a.length ? a.map(function(m){
+    var f=m.gewinde==='5'?'#1565c0':'#e0a800';
+    return '<div><b>'+esc(m.tischId)+'-'+esc(m.stuetze)+'</b> · '
+      +'<span style="color:'+f+';font-weight:900">'+esc(m.gewinde)+' mm</span> · '
+      +esc(m.typ?('Typ '+String(m.typ).charAt(0)):'')+' · '+esc(m.von||'')+' '+fmtZ(m.ts)+'</div>';
+  }).join('') : '<div style="color:var(--mut)">noch nichts erfasst</div>';
+}
+function statMalen(){
+  var a=alleMessungen();
+  var n5=a.filter(function(m){return m.gewinde==='5';}).length;
+  var n6=a.length-n5;
+  var tische={}; a.forEach(function(m){ tische[m.tischId]=1; });
+  $('stat').textContent = a.length+' Pfähle erfasst · '+n5+'× 5 mm · '+n6+'× 6.35 mm · '
+    +Object.keys(tische).length+' Tische';
+}
+function csv(){
+  var kopf=['TischID','Stuetze','Typ','Gewinde_mm','Datum','Zeit','Erfasst_von','lat','lon','GPS_m','Abstand_m'];
+  var zeilen=alleMessungen().map(function(m){
+    return [m.tischId,m.stuetze,m.typ,m.gewinde,m.datum,fmtZ(m.ts),m.von,m.lat,m.lon,m.acc,m.dist];
+  });
+  var lines=[kopf.join(';')].concat(zeilen.map(function(z){
+    return z.map(function(v){ return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'; }).join(';'); }));
+  var b=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(b);
+  a.download='Gewinde_Inventur_'+heute()+'.csv'; a.click();
+}
+
+/* ---------- Start ---------- */
+$('f_von').value=getVon();
+netzMalen(); pendSenden();
+fetch('uploads/perimeter_geo.json').then(function(r){ return r.json(); }).then(function(g){
+  geo=g;
+  var im=new Image(); im.onload=function(){ bild=im; malen(); };
+  im.src='assets/img/perimeter.jpg';
+}).catch(function(){});
+fetch('uploads/pfaehle.json').then(function(r){ return r.json(); }).then(function(p){
+  pfaehle=p; zielSuchen(); malen();
+  if(!pos) $('zSub').textContent='Warte auf GPS …';
+}).catch(function(){ $('zSub').textContent='Pfahldaten konnten nicht geladen werden'; });
+laden();
+setInterval(function(){ if(netzAn()) laden(); }, 60000);
+</script>
+</body>
+</html>
