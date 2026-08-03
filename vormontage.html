@@ -1194,14 +1194,15 @@ function anwMalen(){
     +'<canvas id="anwKarte" style="width:100%;border:1px solid var(--line);border-radius:6px;'
     +'cursor:zoom-in" onclick="karteGross()"></canvas>'
     +'<div style="font-size:11.5px;color:var(--mut);margin-top:5px;line-height:1.7">'
-    +'<span style="display:inline-block;width:11px;height:11px;background:#c9ccd2;'
-    +'border:1px solid #fff;border-radius:2px;margin-right:4px"></span>offen &nbsp; '
+    +'<span style="display:inline-block;width:11px;height:11px;background:#fff;'
+    +'border:1px solid #c9ccd2;border-radius:2px;margin-right:4px"></span>offen &nbsp; '
     +'<span style="display:inline-block;width:11px;height:11px;background:#e08a00;'
     +'border-radius:2px;margin-right:4px"></span>vormontiert &nbsp; '
     +'<span style="display:inline-block;width:11px;height:11px;background:#1e9e5a;'
-    +'border-radius:2px;margin-right:4px"></span>auf dem Berg<br>'
-    +'Fläche: <b style="color:#D72622">rot</b> = Batch 8 vor Ort · '
-    +'<b style="color:#1565c0">blau</b> = kommt Dienstag</div></div>';
+    +'border-radius:2px;margin-right:4px"></span>auf dem Berg &nbsp; '
+    +'<span style="display:inline-block;width:11px;height:11px;background:#1565c0;'
+    +'border-radius:2px;margin-right:4px"></span>noch nicht da<br>'
+    +'Nummer = Arbeitsreihenfolge (Liste unten) · <b>Karte antippen: gross mit Tisch-IDs</b></div></div>';
   h+='<div class="tabWrap"><table>';
   var letzteGruppe=null;
   anw.ids.forEach(function(id,i){
@@ -1264,6 +1265,21 @@ function akStatus(){
 function anwKarteMalen(){
   var cv=document.getElementById('anwKarte');
   if(!cv || !anw || !anw.ids) return;
+  anwKarteZeichnen(cv, cv.clientWidth||360, window.devicePixelRatio||1, false, null);
+}
+/* Antippen: grosse Version mit vollen Tisch-IDs (Uebersicht zeigt nur Nummern) */
+function karteGross(){
+  if(!anw || !anw.ids) return;
+  var cv=document.createElement('canvas');
+  anwKarteZeichnen(cv, 1100, 2, true, function(){
+    try{ bildGross(cv.toDataURL('image/png')); }catch(e){}
+  });
+}
+/* Karte zeichnen. Uebersicht (gross=false): Tischflaechen in Statusfarbe,
+   darauf nur die kleine Auftragsnummer – bei dicht stehenden Tischen bleibt
+   das lesbar. Grossansicht (gross=true): zusaetzlich die Tisch-IDs,
+   in die Tischachse gedreht. */
+function anwKarteZeichnen(cv, br, dpr, gross, fertigCb){
   akDatenLaden(function(){
     if(!akPfaehle||!akGeo) return;
     // Tische des Auftrags mit ihren Pfahlpunkten
@@ -1277,13 +1293,14 @@ function anwKarteMalen(){
 
     // Ausschnitt (LV95) mit Rand
     var alle=[]; liste.forEach(function(t){ t.pkt.forEach(function(q){ alle.push(akLv95(q[0],q[1])); }); });
-    var minE=Math.min.apply(null,alle.map(function(v){return v.E;}))-25;
-    var maxE=Math.max.apply(null,alle.map(function(v){return v.E;}))+25;
-    var minN=Math.min.apply(null,alle.map(function(v){return v.N;}))-25;
-    var maxN=Math.max.apply(null,alle.map(function(v){return v.N;}))+25;
-    var br=cv.clientWidth||360, dpr=window.devicePixelRatio||1;
+    var rand=15;
+    var minE=Math.min.apply(null,alle.map(function(v){return v.E;}))-rand;
+    var maxE=Math.max.apply(null,alle.map(function(v){return v.E;}))+rand;
+    var minN=Math.min.apply(null,alle.map(function(v){return v.N;}))-rand;
+    var maxN=Math.max.apply(null,alle.map(function(v){return v.N;}))+rand;
     var hoehe=Math.round(br*(maxN-minN)/(maxE-minE));
-    cv.width=br*dpr; cv.height=hoehe*dpr; cv.style.height=hoehe+'px';
+    cv.width=br*dpr; cv.height=hoehe*dpr;
+    if(!gross) cv.style.height=hoehe+'px';
     var c=cv.getContext('2d');
     c.setTransform(dpr,0,0,dpr,0,0);
     c.clearRect(0,0,br,hoehe);
@@ -1297,48 +1314,60 @@ function anwKarteMalen(){
       try{ c.drawImage(akBild,sx,sy,sw,sh,0,0,br,hoehe); }catch(e){}
     }
     var st=akStatus();
-    liste.sort(function(a,b){ return a.nr-b.nr; }).forEach(function(t){
+    liste.sort(function(a,b){ return a.nr-b.nr; });
+    // 1. Durchgang: alle Tischflaechen, Farbe = Status (blau = noch nicht da)
+    liste.forEach(function(t){
       var pts=t.pkt.map(function(q){ var v=akLv95(q[0],q[1]); return P(v.E,v.N); });
       var mx=pts.reduce(function(a,q){return a+q.x;},0)/pts.length;
       var my=pts.reduce(function(a,q){return a+q.y;},0)/pts.length;
-      var b=(anw.badges&&anw.badges[t.id])||null;      // blau = kommt erst
-      var flaeche = b ? 'rgba(21,101,192,.55)' : 'rgba(215,38,34,.5)';
+      t.pp=pts; t.mx=mx; t.my=my;
+      var b=(anw.badges&&anw.badges[t.id])||null, zu=st[t.id];
+      var flaeche = b ? 'rgba(21,101,192,.6)'
+        : zu==='berg' ? 'rgba(30,158,90,.65)'
+        : zu==='vormontiert' ? 'rgba(224,138,0,.65)'
+        : 'rgba(255,255,255,.6)';
       if(pts.length>2){
         var srt=pts.slice().sort(function(a,q){
           return Math.atan2(a.y-my,a.x-mx)-Math.atan2(q.y-my,q.x-mx); });
         c.beginPath(); srt.forEach(function(q,i){ i?c.lineTo(q.x,q.y):c.moveTo(q.x,q.y); }); c.closePath();
         c.fillStyle=flaeche; c.fill();
-        c.lineWidth=1.6; c.strokeStyle='rgba(255,255,255,.9)'; c.stroke();
+        c.lineWidth=gross?2:1.2; c.strokeStyle='rgba(255,255,255,.9)'; c.stroke();
       }
-      // Beschriftung: Hintergrund nach Arbeitsfortschritt
-      var zu=st[t.id];
-      var bg = zu==='berg' ? '#1e9e5a' : (zu==='vormontiert' ? '#e08a00' : 'rgba(255,255,255,.94)');
-      var fg = zu ? '#fff' : '#1a1a1a';
-      var txt=t.nr+' · '+t.id;
-      c.font='700 12px Arial';
-      var tw=c.measureText(txt).width, pw=tw+12, ph=19;
-      // Beschriftung in die Tischachse drehen (Punktepaar mit groesstem Abstand)
-      var w1=0, w2=0, dmax=-1;
-      for(var i=0;i<pts.length;i++) for(var j=i+1;j<pts.length;j++){
-        var dd=(pts[i].x-pts[j].x)*(pts[i].x-pts[j].x)+(pts[i].y-pts[j].y)*(pts[i].y-pts[j].y);
-        if(dd>dmax){ dmax=dd; w1=i; w2=j; }
+    });
+    // 2. Durchgang: Beschriftungen ueber allen Flaechen; frueheste Nummer zuoberst
+    liste.slice().reverse().forEach(function(t){
+      var pts=t.pp;
+      var b=(anw.badges&&anw.badges[t.id])||null, zu=st[t.id];
+      var bg = b ? '#1565c0'
+        : zu==='berg' ? '#1e9e5a'
+        : zu==='vormontiert' ? '#e08a00'
+        : 'rgba(255,255,255,.95)';
+      var fg = (b||zu) ? '#fff' : '#1a1a1a';
+      var txt = gross ? t.nr+' · '+t.id : String(t.nr);
+      c.font = gross ? '800 16px Arial' : '800 11px Arial';
+      var tw=c.measureText(txt).width, pw=tw+(gross?14:9), ph=gross?24:16;
+      var wi=0;
+      if(gross){
+        // in die Tischachse drehen (Punktepaar mit groesstem Abstand)
+        var w1=0, w2=0, dmax=-1;
+        for(var i=0;i<pts.length;i++) for(var j=i+1;j<pts.length;j++){
+          var dd=(pts[i].x-pts[j].x)*(pts[i].x-pts[j].x)+(pts[i].y-pts[j].y)*(pts[i].y-pts[j].y);
+          if(dd>dmax){ dmax=dd; w1=i; w2=j; }
+        }
+        wi=Math.atan2(pts[w2].y-pts[w1].y, pts[w2].x-pts[w1].x);
+        if(wi>Math.PI/2) wi-=Math.PI;
+        if(wi<-Math.PI/2) wi+=Math.PI;
       }
-      var wi=Math.atan2(pts[w2].y-pts[w1].y, pts[w2].x-pts[w1].x);
-      if(wi>Math.PI/2) wi-=Math.PI;
-      if(wi<-Math.PI/2) wi+=Math.PI;
-      c.save(); c.translate(mx,my); c.rotate(wi);
-      if(c.roundRect){ c.beginPath(); c.roundRect(-pw/2,-ph/2,pw,ph,5); c.fillStyle=bg; c.fill(); }
+      c.save(); c.translate(t.mx,t.my); c.rotate(wi);
+      if(c.roundRect){ c.beginPath(); c.roundRect(-pw/2,-ph/2,pw,ph,gross?6:4); c.fillStyle=bg; c.fill(); }
       else { c.fillStyle=bg; c.fillRect(-pw/2,-ph/2,pw,ph); }
-      if(!zu){ c.lineWidth=1; c.strokeStyle='rgba(0,0,0,.25)'; c.stroke&&c.stroke(); }
+      c.lineWidth=1; c.strokeStyle='rgba(0,0,0,.3)'; c.stroke();
       c.fillStyle=fg; c.textAlign='center'; c.textBaseline='middle';
       c.fillText(txt,0,1);
       c.restore(); c.textBaseline='alphabetic';
     });
+    if(fertigCb) fertigCb();
   });
-}
-function karteGross(){
-  var cv=document.getElementById('anwKarte'); if(!cv) return;
-  try{ bildGross(cv.toDataURL('image/png')); }catch(e){}
 }
 
 function bildGross(src){
