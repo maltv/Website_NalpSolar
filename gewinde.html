@@ -26,6 +26,10 @@
   #netz{ font-size:11px; font-weight:800; padding:3px 8px; border-radius:20px;
          background:#e8f5ec; color:#12703f; white-space:nowrap; }
   #netz.off{ background:#fdeaea; color:#a01c19; }
+  .tabs{ display:flex; background:#fff; border-bottom:1px solid var(--line); position:sticky; top:52px; z-index:9; }
+  .tabs button{ flex:1; border:none; background:none; padding:11px 6px; font-size:13.5px; font-weight:800;
+        color:var(--mut); cursor:pointer; border-bottom:3px solid transparent; }
+  .tabs button.on{ color:var(--rot); border-bottom-color:var(--rot); }
   main{ max-width:720px; margin:0 auto; padding:10px 10px 80px; }
   .box{ background:#fff; border:1px solid var(--line); border-left:5px solid var(--rot);
         border-radius:6px; padding:12px; margin-bottom:11px; box-shadow:0 1px 4px rgba(20,25,32,.07); }
@@ -92,7 +96,13 @@
   <span id="netz">online</span>
 </header>
 
+<div class="tabs">
+  <button id="tg1" class="on" onclick="tabG(1)">🔩 Pfahlgewinde</button>
+  <button id="tg2" onclick="tabG(2)">🧰 Muffen & Köpfe</button>
+</div>
+
 <main>
+<section id="sPf">
   <!-- Zielpfahl -->
   <div class="box" id="ziel">
     <div id="zTisch">–</div>
@@ -120,6 +130,62 @@
     <div class="zaehler" id="stat" style="margin-top:8px">–</div>
   </div>
 
+  <!-- letzte Pfahl-Messungen -->
+  <div class="box" style="border-left-color:#8a8e94">
+    <div class="row"><b style="flex:1">Zuletzt erfasst</b>
+      <button class="btn ghost" onclick="csv()">⬇ CSV</button></div>
+    <div class="liste" id="letzte" style="margin-top:6px">–</div>
+  </div>
+</section>
+
+<section id="sMat" style="display:none">
+  <!-- Muffen / Pfahlkoepfe am Lagerort erfassen -->
+  <div class="box" style="border-left-color:var(--blau)">
+    <div style="font-size:15.5px;font-weight:800">🧰 Muffen & Pfahlköpfe erfassen</div>
+    <div style="font-size:12px;color:var(--mut);margin-top:4px;line-height:1.45">
+      Wo liegt welches Material? Standort kommt vom GPS – am Lagerort erfassen,
+      dann Gewinde antippen zum Speichern.</div>
+    <label class="fl">Was liegt hier? *</label>
+    <div class="sBtns" style="margin-top:2px">
+      <button type="button" id="ma_m" onclick="setMatArt('muffe')">⚪ Muffe<small>Verbindungsmuffe</small></button>
+      <button type="button" id="ma_k" onclick="setMatArt('pfahlkopf')">🔩 Pfahlkopf<small>Kopfplatte</small></button>
+    </div>
+    <div class="row" style="margin-top:4px">
+      <div style="flex:1">
+        <label class="fl">Anzahl *</label>
+        <div class="row" style="flex-wrap:nowrap">
+          <button class="btn ghost" onclick="anz(-1)" style="padding:10px 16px;font-size:18px">−</button>
+          <input id="m_anz" inputmode="numeric" value="1" style="width:auto;flex:1;text-align:center;font-weight:900">
+          <button class="btn ghost" onclick="anz(1)" style="padding:10px 16px;font-size:18px">+</button>
+        </div>
+      </div>
+      <div style="flex:1">
+        <label class="fl">Typ (optional)</label>
+        <input id="m_typ" placeholder="z.B. R38">
+      </div>
+    </div>
+    <label class="fl">Erfasst von *</label>
+    <input id="m_von" placeholder="Name">
+    <label class="fl">Gewinde antippen = speichern</label>
+    <div class="mess">
+      <button class="m5" id="mb5" onclick="matMessen('5')">🔵 5 mm<small>Steigung 5 mm</small></button>
+      <button class="m6" id="mb6" onclick="matMessen('6.35')">🟡 6.35 mm<small>Steigung 6.35 mm</small></button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <span class="zaehler" id="m_gps" style="flex:1">Warte auf GPS …</span>
+      <button class="btn ghost" onclick="matRueckgaengig()">↶ letzte zurück</button>
+    </div>
+    <div class="zaehler" id="matStat" style="margin-top:6px">–</div>
+  </div>
+
+  <!-- letzte Material-Erfassungen -->
+  <div class="box" style="border-left-color:#8a8e94">
+    <div class="row"><b style="flex:1">Zuletzt abgelegt</b>
+      <button class="btn ghost" onclick="matCsv()">⬇ CSV</button></div>
+    <div class="liste" id="matLetzte" style="margin-top:6px">–</div>
+  </div>
+</section>
+
   <!-- Karte -->
   <div class="box" id="kartenBox">
     <canvas id="karte" height="430"></canvas>
@@ -127,16 +193,11 @@
       <span><span class="pkt" style="background:#9aa0a8"></span>offen</span>
       <span><span class="pkt" style="background:#1565c0"></span>5 mm</span>
       <span><span class="pkt" style="background:#e0a800"></span>6.35 mm</span>
+      <span>◼ Muffen</span>
+      <span>▲ Köpfe</span>
       <span style="flex:1"></span>
       <button class="btn ghost" id="zoomBtn" onclick="zoomWechsel()">🔍 Übersicht</button>
     </div>
-  </div>
-
-  <!-- letzte Messungen -->
-  <div class="box" style="border-left-color:#8a8e94">
-    <div class="row"><b style="flex:1">Zuletzt erfasst</b>
-      <button class="btn ghost" onclick="csv()">⬇ CSV</button></div>
-    <div class="liste" id="letzte" style="margin-top:6px">–</div>
   </div>
 </main>
 <div id="toast"></div>
@@ -144,11 +205,19 @@
 <script>
 'use strict';
 var DB='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app';
-var P_GEW='erfassung/gewinde';
+var P_GEW='erfassung/gewinde', P_MAT='erfassung/gewinde_material';
 var LS_VON='nalp_erfasser_v1', LS_PEND='nalp_gewinde_pending_v1';
 var pfaehle=[], tische=[], tischGeo={}, geo=null, bild=null, messungen={}, pos=null,
     ziel=null, zielManuell=null, stuetzeSel=null;
+var material={}, matArt=null;
 var zoomNah=false;   // ohne GPS Uebersicht, bei erstem Fix -> Nahbereich
+
+function tabG(n){
+  $('sPf').style.display = n===1?'':'none';
+  $('sMat').style.display = n===2?'':'none';
+  $('tg1').classList.toggle('on', n===1);
+  $('tg2').classList.toggle('on', n===2);
+}
 
 function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
@@ -180,12 +249,14 @@ function netzMalen(){
   e.className=netzAn()?'':'off';
   e.textContent=netzAn()?(p?('sende '+p+' …'):'online'):(p?('offline · '+p+' wartet'):'offline');
 }
+function pendAdd(pfad,rec){ var a=pendLesen(); a.push({pfad:pfad,rec:rec}); pendSchreiben(a); }
 function pendSenden(){
   var a=pendLesen(); if(!a.length||!netzAn()) return;
-  a.reduce(function(k,rec){
+  a.reduce(function(k,item){
+    var pfad=item.pfad||P_GEW, rec=item.rec||item;   // alte Eintraege ohne Pfad -> Pfahlmessung
     return k.then(function(rest){
-      return apiPost(P_GEW,rec).then(function(key){ return key?rest:rest.concat([rec]); })
-        .catch(function(){ return rest.concat([rec]); });
+      return apiPost(pfad,rec).then(function(key){ return key?rest:rest.concat([item]); })
+        .catch(function(){ return rest.concat([item]); });
     });
   }, Promise.resolve([])).then(function(rest){
     pendSchreiben(rest);
@@ -215,7 +286,8 @@ function tischeBauen(){
 
 function laden(){
   if(!netzAn()){ malen(); return; }
-  apiGet(P_GEW).then(function(j){
+  Promise.all([apiGet(P_GEW),apiGet(P_MAT)]).then(function(r){
+    var j=r[0];
     messungen={};
     Object.keys(j||{}).forEach(function(k){
       var m=j[k]; if(!m||!m.tischId||!m.stuetze) return;
@@ -223,7 +295,12 @@ function laden(){
       m._k=k;
       messungen[String(m.tischId)+'-'+String(m.stuetze).toUpperCase()]=m;  // letzte Messung gewinnt
     });
-    malen(); listeMalen(); statMalen(); zielMalen();
+    material={};
+    Object.keys(r[1]||{}).forEach(function(k){
+      var m=r[1][k]; if(!m||!m.art) return;
+      m._k=k; material[k]=m;
+    });
+    malen(); listeMalen(); statMalen(); zielMalen(); matListeMalen();
   }).catch(function(){});
 }
 
@@ -237,6 +314,7 @@ if(navigator.geolocation){
     var ersterFix=!pos;
     pos={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
     if(ersterFix){ zoomNah=true; $('zoomBtn').textContent='🔍 Übersicht'; }
+    $('m_gps').textContent='📍 Standort da · GPS ±'+Math.round(pos.acc)+' m';
     zielSuchen(); malen();
   }, function(){ $('zSub').textContent='Kein GPS – bitte Standort erlauben'; },
      {enableHighAccuracy:true, maximumAge:3000, timeout:20000});
@@ -339,7 +417,7 @@ function messen(g){
   if(!stuetzeSel){ toast('Bitte Pfahl S1–S4 wählen',true); return; }
   var von=$('f_von').value.trim();
   if(!von){ toast('Bitte Namen eintragen',true); $('f_von').focus(); return; }
-  setVon(von);
+  setVon(von); $('m_von').value=von;
   var key=ziel.id+'-'+stuetzeSel;
   if(messungen[key] && !confirm('Pfahl '+key+' ist schon mit '+messungen[key].gewinde+' mm erfasst.\nÜberschreiben?')) return;
   var rec={ tischId:ziel.id, stuetze:stuetzeSel, typ:ziel.typ||'', gewinde:g,
@@ -353,14 +431,84 @@ function messen(g){
   malen(); listeMalen(); statMalen(); zielMalen();
   if(navigator.vibrate) navigator.vibrate(60);
   toast('✔ '+key+' · '+g+' mm');
-  if(!netzAn()){ var a=pendLesen(); a.push(rec); pendSchreiben(a); return; }
+  if(!netzAn()){ pendAdd(P_GEW,rec); return; }
   apiPost(P_GEW,rec).then(function(k){
     if(!k) throw 0;
     rec._k=k;
   }).catch(function(){
-    var a=pendLesen(); a.push(rec); pendSchreiben(a);
+    pendAdd(P_GEW,rec);
     toast('Kein Empfang – lokal gespeichert',true);
   });
+}
+
+/* ---------- Muffen & Pfahlkoepfe (Materiallager nach GPS) ---------- */
+function setMatArt(a){
+  matArt=(matArt===a)?null:a;
+  $('ma_m').classList.toggle('on', matArt==='muffe');
+  $('ma_k').classList.toggle('on', matArt==='pfahlkopf');
+}
+function anz(d){ $('m_anz').value=Math.max(1,(parseInt($('m_anz').value,10)||1)+d); }
+function matName(a){ return a==='muffe'?'Muffe':'Pfahlkopf'; }
+function alleMat(){
+  return Object.keys(material).map(function(k){ return material[k]; })
+    .sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+}
+function matMessen(g){
+  if(!matArt){ toast('Bitte wählen: Muffe oder Pfahlkopf',true); return; }
+  if(!pos){ toast('Noch kein GPS – Standort nötig',true); return; }
+  var von=$('m_von').value.trim();
+  if(!von){ toast('Bitte Namen eintragen',true); $('m_von').focus(); return; }
+  setVon(von); $('f_von').value=von;
+  var n=Math.max(1,parseInt($('m_anz').value,10)||1);
+  var rec={ art:matArt, gewinde:g, anzahl:n, typ:$('m_typ').value.trim(),
+            lat:+pos.lat.toFixed(6), lon:+pos.lon.toFixed(6), acc:Math.round(pos.acc),
+            von:von, datum:heute(), ts:Date.now() };
+  material['loc_'+rec.ts]=rec;              // sofort sichtbar
+  matListeMalen(); malen();
+  if(navigator.vibrate) navigator.vibrate(60);
+  toast('✔ '+n+'× '+matName(matArt)+' · '+g+' mm');
+  if(!netzAn()){ pendAdd(P_MAT,rec); return; }
+  apiPost(P_MAT,rec).then(function(k){
+    if(!k) throw 0;
+    rec._k=k;
+  }).catch(function(){
+    pendAdd(P_MAT,rec);
+    toast('Kein Empfang – lokal gespeichert',true);
+  });
+}
+function matRueckgaengig(){
+  var a=alleMat();
+  if(!a.length){ toast('Nichts zum Zurücknehmen',true); return; }
+  var m=a[0];
+  if(!confirm('Letzte Ablage löschen?\n'+m.anzahl+'× '+matName(m.art)+' · '+m.gewinde+' mm')) return;
+  Object.keys(material).forEach(function(k){ if(material[k]===m) delete material[k]; });
+  if(m._k) fetch(DB+'/'+P_MAT+'/'+m._k+'.json',{method:'DELETE'}).catch(function(){});
+  matListeMalen(); malen();
+  toast('Zurückgenommen');
+}
+function matListeMalen(){
+  if(!$('matLetzte')) return;
+  var a=alleMat();
+  $('matLetzte').innerHTML = a.length ? a.slice(0,8).map(function(m){
+    var f=m.gewinde==='5'?'#1565c0':'#e0a800';
+    return '<div>'+(m.art==='muffe'?'◼':'▲')+' <b>'+esc(m.anzahl)+'× '+matName(m.art)+'</b> · '
+      +'<span style="color:'+f+';font-weight:900">'+esc(m.gewinde)+' mm</span>'
+      +(m.typ?' · '+esc(m.typ):'')+' · '+esc(m.von||'')+' '+fmtZ(m.ts)+'</div>';
+  }).join('') : '<div style="color:var(--mut)">noch nichts abgelegt</div>';
+  var mu=0, ko=0;
+  a.forEach(function(m){ if(m.art==='muffe') mu+=(+m.anzahl||0); else ko+=(+m.anzahl||0); });
+  $('matStat').textContent = a.length+' Ablagen · '+mu+' Muffen · '+ko+' Pfahlköpfe';
+}
+function matCsv(){
+  var kopf=['Art','Typ','Gewinde_mm','Anzahl','Datum','Zeit','Erfasst_von','lat','lon','GPS_m'];
+  var zeilen=alleMat().map(function(m){
+    return [matName(m.art),m.typ,m.gewinde,m.anzahl,m.datum,fmtZ(m.ts),m.von,m.lat,m.lon,m.acc];
+  });
+  var lines=[kopf.join(';')].concat(zeilen.map(function(z){
+    return z.map(function(v){ return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'; }).join(';'); }));
+  var b=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(b);
+  a.download='Gewinde_Material_'+heute()+'.csv'; a.click();
 }
 function letzteRueckgaengig(){
   var alle=Object.keys(messungen).map(function(k){ return messungen[k]; })
@@ -457,6 +605,24 @@ function malen(){
       c.strokeText(lbl, mx, my-26); c.fillStyle='#fff'; c.fillText(lbl, mx, my-26);
     }
   });
+  // Material: Muffen = Quadrat, Pfahlkoepfe = Dreieck (Farbe = Gewinde)
+  alleMat().forEach(function(m){
+    if(m.lat==null||m.lon==null) return;
+    var v=lv95(m.lat,m.lon), s=P(v.E,v.N);
+    if(s.x<-20||s.x>br+20||s.y<-20||s.y>450) return;
+    var r=zoomNah?8:4;
+    c.beginPath();
+    if(m.art==='muffe'){ c.rect(s.x-r,s.y-r,2*r,2*r); }
+    else { c.moveTo(s.x,s.y-r-1); c.lineTo(s.x+r,s.y+r-1); c.lineTo(s.x-r,s.y+r-1); c.closePath(); }
+    c.fillStyle = m.gewinde==='5'?'#1565c0':'#e0a800';
+    c.fill(); c.lineWidth=1.5; c.strokeStyle='#fff'; c.stroke();
+    if(zoomNah && m.anzahl>1){
+      c.font='800 11px Arial'; c.textAlign='center';
+      c.strokeStyle='rgba(0,0,0,.7)'; c.lineWidth=3;
+      c.strokeText(m.anzahl+'×', s.x, s.y-r-4);
+      c.fillStyle='#fff'; c.fillText(m.anzahl+'×', s.x, s.y-r-4);
+    }
+  });
   // eigene Position
   if(pos){
     var q=lv95(pos.lat,pos.lon), s=P(q.E,q.N);
@@ -517,8 +683,9 @@ function csv(){
 }
 
 /* ---------- Start ---------- */
-$('f_von').value=getVon();
-netzMalen(); pendSenden();
+$('f_von').value=getVon(); $('m_von').value=getVon();
+netzMalen(); pendSenden(); matListeMalen();
+if(location.search.indexOf('f=material')>=0) tabG(2);
 fetch('uploads/perimeter_geo.json').then(function(r){ return r.json(); }).then(function(g){
   geo=g;
   var im=new Image(); im.onload=function(){ bild=im; malen(); };
