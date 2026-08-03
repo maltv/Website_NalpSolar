@@ -365,6 +365,11 @@ body.game-on #gameVignette, body.game-on #gameGrain { display:block; }
   border-radius:14px; font-size:12px; font-weight:800; letter-spacing:.02em;
   backdrop-filter:blur(6px); font-variant-numeric:tabular-nums;
 }
+/* ── Legende Bohrpunkte (Teil der Hauptlegende) ── */
+#bohrLeg {
+  display:none; margin-top:5px; padding-top:5px; line-height:1.65;
+  border-top:1px solid rgba(255,255,255,.16);
+}
 /* Canvas transparent in AR mode */
 body.ar-mode #canvas3d { background:transparent!important; }
 body.ar-mode #canvas3d canvas { background:transparent!important; }
@@ -427,6 +432,7 @@ body.ar-mode { background:transparent!important; }
   <button class="tb-btn active" id="btnErdung"  onclick="toggleLayer('erdung')">🟠 Erdung</button>
   <button class="tb-btn active" id="btnL26"     onclick="toggleLayer('leitungen26')">🟩 Leitungen 26/27</button>
   <button class="tb-btn active" id="btnTische"  onclick="toggleTische()">🟨 Modultische</button>
+  <button class="tb-btn" id="btnBohr" onclick="toggleBohr()">⛏ Bohrpunkte</button>
   <button class="tb-btn active" id="btnWorkers" onclick="toggleWorkers()">👷 Bauarbeiter</button>
   <button class="tb-btn active" id="btnCows"    onclick="toggleCows()">🐄 Kühe</button>
   <button class="tb-btn active" id="btnVeg"     onclick="toggleVegetation()">🌿 Vegetation</button>
@@ -483,6 +489,7 @@ body.ar-mode { background:transparent!important; }
   <div class="leg"><div class="leg-dot" style="background:rgba(140,210,140,.7)"></div>Terrain</div>
   <div class="leg"><div class="leg-dot" style="background:rgba(80,160,255,.7);border:1px solid #ffd700"></div>Modultische</div>
   <div class="leg" style="opacity:.85">▨ schraffiert/durchscheinend = Leitung noch nicht gebaut (Stand 23.07.)</div>
+  <div id="bohrLeg"></div>
 </div>
 
 <div id="orbitHint">📍 Orbit-Punkt gesetzt</div>
@@ -1109,6 +1116,98 @@ async function loadTische(){
     : ' | kein Baustand – alle sichtbar'));
   if(baustand && typeof flashMsg==='function')
     flashMsg('🏗 Baustand '+baustand.stand+': '+(nPk+nMt)+' Tische gestellt ('+nPk+' leere PK, '+nMt+' mit Modulträger)');
+}
+
+/* ── Bohrebene: jeder Pfahl einzeln, Farbe = Baufortschritt ─────────
+   Quelle: uploads/tables/bohrstand.json (tools/build_bohrstand.py aus dem
+   Nalpi-Bohrpunkt-Export). Zeigt den Stand auch dort, wo noch kein Tisch
+   steht – 4 Pfähle je Tisch, Höhe aus IST_H/SOLL_H. */
+var bohrGroup=null, bohrOn=false, bohrDaten=null, bohrLaedt=false;
+var BOHR_FARBE=[0x9aa3b0, 0xf2c200, 0xe07b00, 0x37a2e0, 0x2ea44f];
+var BOHR_HOCH =[0.35,     1.15,     1.00,     1.00,     1.00];
+
+async function loadBohrpunkte(){
+  if(bohrGroup || bohrLaedt) return;
+  bohrLaedt=true;
+  var d=null;
+  try{
+    var r=await fetch('uploads/tables/bohrstand.json',{cache:'no-store'});
+    if(r.ok) d=await r.json();
+  }catch(e){}
+  bohrLaedt=false;
+  if(!d || !d.punkte || !d.punkte.length){
+    if(typeof flashMsg==='function') flashMsg('⛏ Keine Bohrdaten gefunden');
+    return;
+  }
+  bohrDaten=d;
+  bohrGroup=new THREE.Group();
+  bohrGroup.renderOrder=6;
+
+  var nach=[[],[],[],[],[]];
+  d.punkte.forEach(function(p){
+    var st=p[5]|0; if(st<0||st>4) st=0;
+    nach[st].push(p);
+  });
+
+  var geom=new THREE.CylinderGeometry(0.12,0.12,1,7);   // Einheitshöhe, je Status skaliert
+  var m4=new THREE.Matrix4();
+  for(var st=0; st<5; st++){
+    var list=nach[st];
+    if(!list.length) continue;
+    var hoch=BOHR_HOCH[st];
+    var mat=new THREE.MeshPhongMaterial({
+      color:BOHR_FARBE[st], emissive:new THREE.Color(BOHR_FARBE[st]).multiplyScalar(0.22),
+      shininess:35, transparent:st===0, opacity:st===0?0.55:1
+    });
+    var im=new THREE.InstancedMesh(geom, mat, list.length);
+    im.userData.status=st;
+    for(var i=0;i<list.length;i++){
+      var p=list[i];                                   // [tid, s, E, N, H, status, nachbohrungen]
+      var H=(typeof p[4]==='number') ? p[4] : OZ;
+      m4.makeScale(1,hoch,1);
+      m4.setPosition(p[2]-OE, (H-OZ)+hoch/2-0.55, -(p[3]-ON));
+      im.setMatrixAt(i,m4);
+    }
+    im.instanceMatrix.needsUpdate=true;
+    bohrGroup.add(im);
+  }
+  bohrGroup.visible=bohrOn;
+  scene.add(bohrGroup);
+
+  var s=d.summe||{};
+  console.info('Bohrpunkte '+(d.stand||'?')+': '+d.punkte.length+' Pfähle', s);
+}
+
+window.toggleBohr=function(){
+  bohrOn=!bohrOn;
+  var b=document.getElementById('btnBohr');
+  if(b) b.classList.toggle('active',bohrOn);
+  var leg=document.getElementById('bohrLeg');
+  if(leg) leg.style.display=bohrOn?'block':'none';
+  if(bohrOn && !bohrGroup){
+    loadBohrpunkte().then(function(){
+      if(bohrGroup) bohrGroup.visible=bohrOn;
+      if(bohrDaten && bohrOn) bohrLegende();
+    });
+    return;
+  }
+  if(bohrGroup) bohrGroup.visible=bohrOn;
+  if(bohrOn) bohrLegende();
+};
+
+function bohrLegende(){
+  var leg=document.getElementById('bohrLeg');
+  if(!leg || !bohrDaten) return;
+  var s=bohrDaten.summe||{}, nm=bohrDaten.legende||['Geplant','Abgesteckt','Gebohrt','Vermessen','Injiziert'];
+  var h='<b>⛏ Bohrstand '+(bohrDaten.stand||'')+'</b><br>';
+  for(var i=4;i>=0;i--){
+    var n=s[nm[i]]||0;
+    if(!n) continue;
+    h+='<span style="display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;'
+      +'background:#'+('000000'+BOHR_FARBE[i].toString(16)).slice(-6)+'"></span>'+nm[i]+' '+n+'<br>';
+  }
+  leg.innerHTML=h;
+  leg.style.display='block';
 }
 
 window.toggleTische=function(){
@@ -5256,6 +5355,15 @@ async function init(){
     try{ spawnCows(4); }catch(e){ console.warn('cows',e); }
     try{ spawnSamuel(); }catch(e){ console.warn('samuel',e); }
     try{ renderStahlteile(); }catch(e){ console.warn('stahlteile',e); }   // jetzt mit Terrain-Höhe
+    // Direktlinks: viewer3d.html#bohr = Bohrebene an, #tisch=350 = gleich hinfliegen
+    try{
+      if(/bohr/i.test(location.hash)) toggleBohr();
+      var mt=/tisch=([A-Za-z0-9_-]+)/i.exec(location.hash);
+      if(mt){
+        var fld=document.getElementById('tischSearch');
+        if(fld){ fld.value=mt[1]; setTimeout(searchTisch,300); }
+      }
+    }catch(e){ console.warn('hash',e); }
     try{ menziPlan(); standorteTick(); setInterval(standorteTick,60000); }catch(e){ console.warn('menzi',e); }
     // Umgebung: Vegetation, Kletterer, Pneukran-Strasse, Wetter
     try{ spawnVegetation(workerArea); }catch(e){ console.warn('veg',e); }

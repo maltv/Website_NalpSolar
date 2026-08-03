@@ -3,3 +3,6 @@
 assets/js/nalp-baupiste-chaos.js
 *.full.html
 _test_*.html
+
+# Nalpi-Rohexporte der Automatik (nur lokal, Ergebnis liegt in uploads/tables/*.json)
+uploads/_nalpi/

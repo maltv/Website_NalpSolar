@@ -1,11 +1,12 @@
 'use strict';
-var CACHE = 'nalpsolar-v79';
+var CACHE = 'nalpsolar-v81';
 var PRECACHE = [
   './index.html',
   './logistik.html',
   './lieferscheine.html',
   './vormontage.html',
   './gewinde.html',
+  './pfahlkopf.html',
   './uploads/pfaehle.json',
   './uploads/perimeter_geo.json',
   './assets/img/perimeter.jpg',
@@ -50,6 +51,7 @@ var PRECACHE = [
   './uploads/tables/modultische.json',
   './uploads/tables/modultische_all.json',
   './uploads/tables/baustand.json',
+  './uploads/tables/bohrstand.json',
   './uploads/road.json',
   './uploads/bauablauf.json',
   './game.html',
