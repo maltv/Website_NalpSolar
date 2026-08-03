@@ -67,6 +67,12 @@
   #ocrPrev img{ max-width:100%; max-height:190px; border-radius:6px; border:1px solid var(--line); }
   #ocrStatus{ font-size:13px; font-weight:700; margin-top:8px; min-height:18px; }
   #ocrStatus.ok{ color:var(--gruen); } #ocrStatus.err{ color:var(--rot); }
+  #abgleich{ margin-top:6px; font-size:13px; line-height:1.7; }
+  #abgleich .gut{ color:var(--gruen); font-weight:800; }
+  #abgleich .warn{ color:var(--orange); font-weight:800; }
+  #abgleich .neutral{ color:var(--mut); }
+  #abgleich button{ border:1px solid #c9ccd2; background:#fff; border-radius:6px; padding:5px 10px;
+    font-weight:800; font-size:13px; cursor:pointer; margin:2px 4px 0 0; }
   .hint{ font-size:11.5px; color:var(--mut); margin-top:6px; line-height:1.5; }
 
   table{ width:100%; border-collapse:collapse; font-size:13px; }
@@ -132,6 +138,7 @@
         data-i18n="s1_btn_foto">📷 Etikett fotografieren</button>
       <div id="ocrPrev"></div>
       <div id="ocrStatus"></div>
+      <div id="abgleich"></div>
 
       <label class="fl" data-i18n="lbl_id">ID Tisch *</label>
       <input id="f_id" inputmode="numeric" data-i18n-ph="ph_id" placeholder="z.B. 995">
@@ -310,6 +317,10 @@ var I18N={
   ocr_unlesbar:'Etikett nicht lesbar – bitte von Hand eintragen (Foto bleibt gespeichert).',
   ocr_fehler:'Fotolesen nicht möglich – bitte von Hand eintragen.',
   ocr_fotofehler:'Foto konnte nicht gelesen werden.',
+  ab_ok:'✔ passt zur Bestellung', ab_diff:'⚠ weicht von der Bestellung ab – Etikett prüfen',
+  ab_best:'Bestellt: {l} mm (Batch {b}, {a})',
+  ab_keine:'Keine gültige Bestellposition zu {id}-{st} (Batch 1–10) – ID prüfen.',
+  ab_kand:'Zur Länge passende Bestellpositionen:', btn_uebern:'übernehmen',
   err_id:'Bitte die ID eintragen.', err_stuetze:'Bitte S1–S4 wählen.',
   err_laenge:'Bitte die Länge eintragen.', err_name:'Bitte Namen eintragen.',
   err_art:'Bitte wählen: vormontiert oder auf den Berg.', err_ids:'Bitte mindestens eine ID eintragen.',
@@ -359,6 +370,10 @@ var I18N={
   ocr_unlesbar:'Label not readable – enter by hand (photo is saved).',
   ocr_fehler:'Cannot read the text – enter by hand.',
   ocr_fotofehler:'Could not read the photo.',
+  ab_ok:'✔ matches the order', ab_diff:'⚠ differs from the order – check the label',
+  ab_best:'Ordered: {l} mm (batch {b}, {a})',
+  ab_keine:'No valid order position for {id}-{st} (batch 1–10) – check the ID.',
+  ab_kand:'Order positions matching this length:', btn_uebern:'use',
   err_id:'Enter the ID.', err_stuetze:'Choose S1–S4.',
   err_laenge:'Enter the length.', err_name:'Enter your name.',
   err_art:'Choose: pre-assembled or to the mountain.', err_ids:'Enter at least one ID.',
@@ -408,6 +423,10 @@ var I18N={
   ocr_unlesbar:'Etykieta nieczytelna – wpisz ręcznie (zdjęcie zostaje zapisane).',
   ocr_fehler:'Nie można odczytać tekstu – wpisz ręcznie.',
   ocr_fotofehler:'Nie udało się odczytać zdjęcia.',
+  ab_ok:'✔ zgadza się z zamówieniem', ab_diff:'⚠ różni się od zamówienia – sprawdź etykietę',
+  ab_best:'Zamówione: {l} mm (partia {b}, {a})',
+  ab_keine:'Brak pozycji zamówienia dla {id}-{st} (partie 1–10) – sprawdź ID.',
+  ab_kand:'Pozycje zamówienia pasujące do długości:', btn_uebern:'przejmij',
   err_id:'Wpisz ID.', err_stuetze:'Wybierz S1–S4.',
   err_laenge:'Wpisz długość.', err_name:'Wpisz imię i nazwisko.',
   err_art:'Wybierz: zmontowana albo na górę.', err_ids:'Wpisz co najmniej jedno ID.',
@@ -522,40 +541,83 @@ function apiPut(p,body){ return fetch(DB+'/'+p+'.json',{method:'PUT',body:JSON.s
   });
 })();
 var stuetzeSel='';
-function setStuetze(s){
-  stuetzeSel=(stuetzeSel===s)?'':s;
+function setStuetze(s){ stuetzeSetzen(stuetzeSel===s?'':s); }
+function stuetzeSetzen(s){
+  stuetzeSel=s;
   ['S1','S2','S3','S4'].forEach(function(x){ $('sb_'+x).classList.toggle('on', x===stuetzeSel); });
+  abgleich();
 }
 
 /* ---------- Foto + Offline-Texterkennung ---------- */
-function bildVerkleinern(file, maxPx, q, cb){
-  var img=new Image();
-  img.onload=function(){
-    var w=img.width,h=img.height;
-    if(w>maxPx||h>maxPx){ if(w>h){ h=Math.round(h*maxPx/w); w=maxPx; } else { w=Math.round(w*maxPx/h); h=maxPx; } }
-    var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
-    cv.getContext('2d').drawImage(img,0,0,w,h);
-    cb(cv.toDataURL('image/jpeg',q));
-  };
-  img.onerror=function(){ cb(null); };
-  img.src=URL.createObjectURL(file);
+function bildLaden(file, cb){
+  var url=URL.createObjectURL(file), img=new Image();
+  img.onload=function(){ URL.revokeObjectURL(url); cb(img); };
+  img.onerror=function(){ URL.revokeObjectURL(url); cb(null); };
+  img.src=url;
+}
+function jpegAusBild(img, maxPx, q){
+  var w=img.width,h=img.height;
+  if(w>maxPx||h>maxPx){ if(w>h){ h=Math.round(h*maxPx/w); w=maxPx; } else { w=Math.round(w*maxPx/h); h=maxPx; } }
+  var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+  cv.getContext('2d').drawImage(img,0,0,w,h);
+  return cv.toDataURL('image/jpeg',q);
+}
+/* Graustufen + Kontrastspreizung (2%/98%-Perzentile) – macht die Erkennung auf
+   Baustellenfotos (Schatten, Gegenlicht, schräg) deutlich treffsicherer */
+function ocrCanvas(img, maxPx){
+  var w=img.width,h=img.height;
+  if(w>maxPx||h>maxPx){ if(w>h){ h=Math.round(h*maxPx/w); w=maxPx; } else { w=Math.round(w*maxPx/h); h=maxPx; } }
+  var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+  var c=cv.getContext('2d'); c.drawImage(img,0,0,w,h);
+  var d=c.getImageData(0,0,w,h), p=d.data, hist=new Uint32Array(256), i, g;
+  for(i=0;i<p.length;i+=4){ g=(p[i]*299+p[i+1]*587+p[i+2]*114)/1000|0; p[i]=g; hist[g]++; }
+  var n=p.length/4, lo=0, hi=255, s=0;
+  for(i=0;i<256;i++){ s+=hist[i]; if(s>=n*0.02){ lo=i; break; } }
+  s=0; for(i=255;i>=0;i--){ s+=hist[i]; if(s>=n*0.02){ hi=i; break; } }
+  var f = hi>lo ? 255/(hi-lo) : 1;
+  for(i=0;i<p.length;i+=4){
+    g=(p[i]-lo)*f; g=g<0?0:(g>255?255:g);
+    p[i]=p[i+1]=p[i+2]=g;
+  }
+  c.putImageData(d,0,0);
+  return cv;
+}
+/* Otsu-Schwellwert – 2. Versuch, wenn der Graustufen-Durchgang nichts findet */
+function binarisieren(cv){
+  var c=cv.getContext('2d'), d=c.getImageData(0,0,cv.width,cv.height), p=d.data;
+  var hist=new Uint32Array(256), i;
+  for(i=0;i<p.length;i+=4) hist[p[i]]++;
+  var n=p.length/4, sum=0; for(i=0;i<256;i++) sum+=i*hist[i];
+  var sumB=0, wB=0, varMax=-1, t=127;
+  for(i=0;i<256;i++){
+    wB+=hist[i]; if(!wB) continue;
+    var wF=n-wB; if(!wF) break;
+    sumB+=i*hist[i];
+    var mB=sumB/wB, mF=(sum-sumB)/wF, v=wB*wF*(mB-mF)*(mB-mF);
+    if(v>varMax){ varMax=v; t=i; }
+  }
+  for(i=0;i<p.length;i+=4){ var g=p[i]>t?255:0; p[i]=p[i+1]=p[i+2]=g; }
+  c.putImageData(d,0,0);
+  return cv;
 }
 $('f_foto').addEventListener('change',function(){
   var f=this.files&&this.files[0]; if(!f) return;
+  this.value='';                               // gleiches Etikett gleich nochmals wählbar
   $('ocrStatus').className=''; $('ocrStatus').textContent=T('ocr_vorbereiten');
-  bildVerkleinern(f, 1500, 0.75, function(data){
-    if(!data){ $('ocrStatus').className='err'; $('ocrStatus').textContent=T('ocr_fotofehler'); return; }
-    fotoData=data;
-    $('ocrPrev').innerHTML='<img src="'+data+'">';
-    ocrLesen(data);
+  $('abgleich').innerHTML='';
+  bildLaden(f, function(img){
+    if(!img){ $('ocrStatus').className='err'; $('ocrStatus').textContent=T('ocr_fotofehler'); return; }
+    fotoData=jpegAusBild(img, 1500, 0.75);
+    $('ocrPrev').innerHTML='<img src="'+fotoData+'">';
+    ocrLesen(img);
   });
 });
 
-var ocrWorker=null;
+var ocrWorker=null, ocrBereit=null;
 function ocrWorkerHolen(){
-  if(ocrWorker) return Promise.resolve(ocrWorker);
+  if(ocrBereit) return ocrBereit;
   if(typeof Tesseract==='undefined') return Promise.reject(new Error('OCR fehlt'));
-  return Tesseract.createWorker('eng', 1, {
+  ocrBereit=Tesseract.createWorker('eng', 1, {
     workerPath:'assets/js/tesseract/worker.min.js',
     corePath:'assets/js/tesseract/',
     langPath:'assets/js/tesseract/',
@@ -564,42 +626,118 @@ function ocrWorkerHolen(){
       if(m.status==='recognizing text')
         $('ocrStatus').textContent=T('ocr_lesen')+' '+Math.round((m.progress||0)*100)+'%';
     }
-  }).then(function(w){ ocrWorker=w; return w; });
+  }).then(function(w){
+    // Etikett = ein zusammenhängender Textblock: PSM 6 ist schneller und genauer
+    // als die volle Seitenanalyse; Zeichensatz auf Etikett-Zeichen begrenzt.
+    return w.setParameters({
+      tessedit_pageseg_mode:'6',
+      user_defined_dpi:'300',
+      preserve_interword_spaces:'1',
+      tessedit_char_whitelist:'0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_.:,/x() '
+    }).then(function(){ ocrWorker=w; return w; });
+  });
+  ocrBereit.catch(function(){ ocrBereit=null; });   // Fehlstart: beim nächsten Foto neu versuchen
+  return ocrBereit;
 }
-function ocrLesen(dataUrl){
+function ocrLesen(img){
+  var t0=Date.now();
   $('ocrStatus').className=''; $('ocrStatus').textContent=T('ocr_lesen');
-  ocrWorkerHolen().then(function(w){ return w.recognize(dataUrl); })
-    .then(function(res){
+  var cv=ocrCanvas(img, 1600);
+  ocrWorkerHolen().then(function(w){
+    return w.recognize(cv).then(function(res){
       var tr=etikettLesen((res&&res.data&&res.data.text)||'');
-      if(tr.id||tr.laenge){
-        if(tr.id) $('f_id').value=tr.id;
-        if(tr.stuetze) setStuetze(tr.stuetze);
-        if(tr.laenge) $('f_len').value=tr.laenge;
-        if(tr.typ) $('f_typ').value=tr.typ;
-        if(tr.serie) $('f_serie').value=tr.serie;
-        if(tr.profil) $('f_profil').value=tr.profil;
-        $('ocrStatus').className='ok';
-        $('ocrStatus').textContent=T('ocr_ok')+': '+(tr.id||'?')+(tr.stuetze?'-'+tr.stuetze:'')
-          +(tr.laenge?'-'+tr.laenge+' mm':'')+' '+T('ocr_pruefen');
-      } else {
-        $('ocrStatus').className='err'; $('ocrStatus').textContent=T('ocr_unlesbar');
-      }
-    })
-    .catch(function(){ $('ocrStatus').className='err'; $('ocrStatus').textContent=T('ocr_fehler'); });
+      if(tr.id||tr.laenge) return tr;
+      return w.recognize(binarisieren(cv)).then(function(res2){
+        return etikettLesen((res2&&res2.data&&res2.data.text)||'');
+      });
+    });
+  }).then(function(tr){
+    if(tr.id||tr.laenge){
+      if(tr.id) $('f_id').value=tr.id;
+      if(tr.stuetze) stuetzeSetzen(tr.stuetze);
+      if(tr.laenge) $('f_len').value=tr.laenge;
+      if(tr.typ) $('f_typ').value=tr.typ;
+      if(tr.serie) $('f_serie').value=tr.serie;
+      if(tr.profil) $('f_profil').value=tr.profil;
+      $('ocrStatus').className='ok';
+      $('ocrStatus').textContent=T('ocr_ok')+': '+(tr.id||'?')+(tr.stuetze?'-'+tr.stuetze:'')
+        +(tr.laenge?'-'+tr.laenge+' mm':'')+' ('+((Date.now()-t0)/1000).toFixed(1)+' s) '+T('ocr_pruefen');
+      abgleich();
+      if(!tr.id) $('f_id').focus();
+      else if(!tr.laenge) $('f_len').focus();
+    } else {
+      $('ocrStatus').className='err'; $('ocrStatus').textContent=T('ocr_unlesbar');
+      abgleich();
+    }
+  })
+  .catch(function(){ $('ocrStatus').className='err'; $('ocrStatus').textContent=T('ocr_fehler'); });
 }
-/* Etikett Mauchle: "Position 995-S1-2724 / Serie 8 / Typ B / Länge 2724mm / Profil RRK 180x6.0" */
+/* Etikett Mauchle: "Position 995-S1-2724 / Serie 8 / Typ B / Länge 2724mm / Profil RRK 180x6.0"
+   Tolerant gegen typische Lesefehler: Trennstrich als _ ~ : . gelesen,
+   S als 5/s, O/Q statt 0, I/l statt 1. */
+function zahlFix(s){ return String(s).replace(/[OoQ]/g,'0').replace(/[Il]/g,'1'); }
 function etikettLesen(t){
   var o={}, s=String(t).replace(/[|]/g,'1').replace(/\s+/g,' ');
-  var m=s.match(/(\d{2,5})\s*[-–—]\s*[S5]\s*([1-4])\s*[-–—]\s*(\d{3,5})/i);
-  if(m){ o.id=m[1]; o.stuetze='S'+m[2]; o.laenge=m[3]; }
-  if(!o.id){ var mp=s.match(/Position\s*:?\s*(\d{2,5})/i); if(mp) o.id=mp[1]; }
-  if(!o.stuetze){ var ms=s.match(/[-\s][S5]\s*([1-4])[-\s]/i); if(ms) o.stuetze='S'+ms[1]; }
-  var ml=s.match(/L[äaà]nge\s*:?\s*(\d{3,5})\s*m?m?/i); if(ml) o.laenge=ml[1];
+  var SEP='\\s*[-–—_~:.]\\s*';
+  var m=s.match(new RegExp('(\\d{2,5})'+SEP+'[S5s]\\s*([1-4])'+SEP+'([0-9OoQIl]{3,5})'));
+  if(m){ o.id=m[1]; o.stuetze='S'+m[2]; o.laenge=zahlFix(m[3]); }
+  if(!o.id){ var mp=s.match(/Pos\w*\s*:?\s*(\d{2,5})/i); if(mp) o.id=mp[1]; }
+  if(!o.stuetze){ var ms=s.match(/[-\s][S5s]\s*([1-4])[-\s]/); if(ms) o.stuetze='S'+ms[1]; }
+  var ml=s.match(/L[äaàeií]?nge\s*:?\s*([0-9OoQIl]{3,5})\s*m?m?/i); if(ml) o.laenge=zahlFix(ml[1]);
   var mt=s.match(/\bTyp\s*:?\s*([A-Ea-e])\b/); if(mt) o.typ=mt[1].toUpperCase();
   var mse=s.match(/\bSerie\s*:?\s*(\w{1,6})/i); if(mse) o.serie=mse[1];
   var mpr=s.match(/Profil\s*:?\s*([A-Z]{2,4}\s?\d{2,3}\s?[x×]\s?[\d.,]+)/i); if(mpr) o.profil=mpr[1];
+  if(o.laenge){ var L=parseInt(o.laenge,10); if(!(L>=100&&L<=6000)) delete o.laenge; }
   return o;
 }
+
+/* ---------- Live-Abgleich mit den Bestellbatches (Mauchle 1–10) ----------
+   Erkanntes/eingetipptes Etikett wird sofort gegen die gültigen Bestell-
+   positionen geprüft: passt die Länge? Gibt es die Position überhaupt? */
+var BEST_IDX=null;
+function bestIdx(){
+  if(BEST_IDX) return BEST_IDX;
+  BEST_IDX={};
+  ((window.NALP_PS_DATEN&&window.NALP_PS_DATEN.bestellungen)||[]).forEach(function(o){
+    if(o[6]!==1) return;                       // ersetzte Positionen ignorieren
+    var k=normId(o[0])+'-'+o[1];
+    if(!BEST_IDX[k] || o[3]>BEST_IDX[k][3]) BEST_IDX[k]=o;   // neuester Batch gewinnt
+  });
+  return BEST_IDX;
+}
+function abgleich(){
+  var el=$('abgleich'); if(!el) return;
+  el.innerHTML='';
+  var id=normId($('f_id').value), st=stuetzeSel;
+  var len=parseInt(String($('f_len').value).replace(/\D/g,''),10);
+  if(id && st){
+    var o=bestIdx()[id+'-'+st];
+    if(!o){ el.innerHTML='<span class="neutral">'+T('ab_keine',{id:esc(id),st:st})+'</span>'; return; }
+    var info=T('ab_best',{l:o[2], b:o[3], a:esc(o[5])});
+    if(isFinite(len) && Math.abs(len-o[2])<=1)
+      el.innerHTML='<span class="gut">'+T('ab_ok')+'</span> · '+info;
+    else
+      el.innerHTML='<span class="warn">'+T('ab_diff')+'</span> · '+info
+        +' <button type="button" onclick="lenUebernehmen('+o[2]+')">'+T('btn_uebern')+'</button>';
+    return;
+  }
+  if(isFinite(len) && len>=100){
+    var kand=[], IDX=bestIdx();
+    Object.keys(IDX).forEach(function(k){ if(Math.abs(IDX[k][2]-len)<=1) kand.push(k); });
+    if(kand.length && kand.length<=4){
+      el.innerHTML='<span class="neutral">'+T('ab_kand')+'</span> '+kand.map(function(k){
+        return '<button type="button" onclick="posUebernehmen(\''+esc(k)+'\')">'+esc(k)+'</button>';
+      }).join('');
+    }
+  }
+}
+function lenUebernehmen(l){ $('f_len').value=Math.round(l); abgleich(); }
+function posUebernehmen(k){
+  var p=k.split('-');
+  $('f_id').value=p[0]; stuetzeSetzen(p[1]);
+}
+$('f_id').addEventListener('input', abgleich);
+$('f_len').addEventListener('input', abgleich);
 
 /* ---------- Speichern ---------- */
 function speichernStuetze(){
@@ -618,7 +756,9 @@ function speichernStuetze(){
   function fertig(){
     ['f_id','f_len','f_typ','f_serie','f_profil','f_bem','f_foto'].forEach(function(i){ $(i).value=''; });
     $('ocrPrev').innerHTML=''; $('ocrStatus').textContent=''; $('ocrStatus').className='';
+    $('abgleich').innerHTML=''; stuetzeSetzen('');
     fotoData=null; $('btnS1').disabled=false;
+    window.scrollTo(0,0);                      // Foto-Knopf fürs nächste Etikett gleich wieder oben
   }
   if(!netzAn()){ pendAdd(P_ST, rec); fertig(); toast(T('ok_offline')); return; }
   apiPost(P_ST,rec).then(function(key){
@@ -1065,6 +1205,9 @@ function anwLoeschen(){
 setLang(lang);
 $('f_von').value=getVon(); $('p_von').value=getVon();
 netzMalen(); pendSenden(); laden(false);
+// OCR-Worker im Hintergrund vorladen: das erste Foto braucht dann keine
+// Ladezeit mehr fürs WASM-Modul und die Sprachdaten (vorher 5–10 s extra)
+setTimeout(function(){ ocrWorkerHolen().catch(function(){}); }, 1500);
 setInterval(function(){ if(netzAn()) laden(false); }, 90000);
 var qs=location.search;
 if(qs.indexOf('f=fortschritt')>=0) tab(2);
