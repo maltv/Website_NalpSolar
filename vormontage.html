@@ -73,6 +73,30 @@
   #abgleich .neutral{ color:var(--mut); }
   #abgleich button{ border:1px solid #c9ccd2; background:#fff; border-radius:6px; padding:5px 10px;
     font-weight:800; font-size:13px; cursor:pointer; margin:2px 4px 0 0; }
+
+  /* Live-Scanner: Kamera bleibt offen, Etikett wird laufend gelesen */
+  #scanOv{ position:fixed; inset:0; z-index:60; background:#000; display:none; }
+  #scanVid{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .sc-rahmen{ position:absolute; left:4%; right:4%; top:44%; height:34%; transform:translateY(-50%);
+    border:3px solid rgba(255,255,255,.95); border-radius:12px;
+    box-shadow:0 0 0 2000px rgba(0,0,0,.45); pointer-events:none; }
+  .sc-rahmen.treffer{ border-color:var(--gruen); }
+  .sc-top{ position:absolute; top:calc(10px + env(safe-area-inset-top)); right:10px; display:flex; gap:8px; }
+  .sc-top button{ border:none; border-radius:10px; background:rgba(255,255,255,.18); color:#fff;
+    font-size:22px; padding:10px 14px; cursor:pointer; }
+  .sc-unten{ position:absolute; left:0; right:0; bottom:0;
+    padding:14px 14px calc(14px + env(safe-area-inset-bottom));
+    display:flex; flex-direction:column; gap:10px; }
+  #scStatus{ color:#fff; font-weight:800; font-size:15px; text-align:center;
+    text-shadow:0 1px 4px #000; min-height:20px; }
+  #scTreffer{ background:#fff; border-radius:10px; padding:12px; }
+  #scWerte{ font-size:22px; font-weight:900; text-align:center; }
+  #scAb{ font-size:13px; text-align:center; margin-top:4px; line-height:1.5; }
+  #scAb .gut{ color:var(--gruen); font-weight:800; } #scAb .warn{ color:var(--orange); font-weight:800; }
+  #scAb .neutral{ color:var(--mut); }
+  .sc-btns{ display:flex; gap:8px; margin-top:10px; }
+  .sc-btns .btn{ flex:1; }
+  #scManuell{ background:rgba(255,255,255,.92); color:var(--ink); }
   .hint{ font-size:11.5px; color:var(--mut); margin-top:6px; line-height:1.5; }
 
   table{ width:100%; border-collapse:collapse; font-size:13px; }
@@ -132,10 +156,11 @@
   <section id="s1">
     <div class="box">
       <h2 data-i18n="s1_titel">🏷 Stütze erfassen</h2>
-      <div class="sub" data-i18n="s1_sub">Etikett von Mauchle fotografieren – ID, Stütze und Länge werden automatisch gelesen.</div>
+      <div class="sub" data-i18n="s1_sub">Etikett von Mauchle vor die Kamera halten – ID, Stütze und Länge werden automatisch gelesen.</div>
       <input type="file" id="f_foto" accept="image/*" capture="environment" style="display:none">
-      <button class="btn gross" onclick="document.getElementById('f_foto').click()"
-        data-i18n="s1_btn_foto">📷 Etikett fotografieren</button>
+      <button class="btn gross" onclick="scanStart()" data-i18n="s1_btn_scan">📷 Etikett scannen (Kamera bleibt offen)</button>
+      <button class="btn ghost" style="width:100%;margin-top:8px" onclick="document.getElementById('f_foto').click()"
+        data-i18n="s1_btn_foto">🖼 Einzelfoto aufnehmen</button>
       <div id="ocrPrev"></div>
       <div id="ocrStatus"></div>
       <div id="abgleich"></div>
@@ -269,6 +294,28 @@
     </div>
   </section>
 </main>
+
+<!-- Live-Scanner: Kamera bleibt offen, Etikett wird laufend gelesen -->
+<div id="scanOv">
+  <video id="scanVid" autoplay playsinline muted></video>
+  <div class="sc-rahmen" id="scRahmen"></div>
+  <div class="sc-top">
+    <button id="scLicht" style="display:none" title="Licht">💡</button>
+    <button onclick="scanEnde()" title="Schliessen">✕</button>
+  </div>
+  <div class="sc-unten">
+    <div id="scStatus" data-i18n="sc_suchen">Etikett in den Rahmen halten – wird automatisch gelesen …</div>
+    <div id="scTreffer" style="display:none">
+      <div id="scWerte"></div>
+      <div id="scAb"></div>
+      <div class="sc-btns">
+        <button class="btn gruen" onclick="scanUebernehmen()" data-i18n="sc_ok">✔ Übernehmen</button>
+        <button class="btn ghost" onclick="scanWeiter()" data-i18n="sc_nochmal">↻ Weiter scannen</button>
+      </div>
+    </div>
+    <button class="btn" id="scManuell" onclick="scanManuell()" data-i18n="sc_manuell">✍ Manuell erfassen</button>
+  </div>
+</div>
 <div id="toast"></div>
 
 <script src="assets/js/tesseract/tesseract.min.js"></script>
@@ -285,8 +332,12 @@ var I18N={
   btn_aktualisieren:'↻ Aktualisieren', ok_aktualisiert:'Aktualisiert ✔',
   kopf_titel:'🔧 Vormontage', tab_stuetze:'🏷 Stütze', tab_fortschritt:'🏗 Fortschritt', tab_tabellen:'📋 Tabellen',
   s1_titel:'🏷 Stütze erfassen',
-  s1_sub:'Etikett von Mauchle fotografieren – ID, Stütze und Länge werden automatisch gelesen.',
-  s1_btn_foto:'📷 Etikett fotografieren',
+  s1_sub:'Etikett von Mauchle vor die Kamera halten – ID, Stütze und Länge werden automatisch gelesen.',
+  s1_btn_scan:'📷 Etikett scannen (Kamera bleibt offen)',
+  s1_btn_foto:'🖼 Einzelfoto aufnehmen',
+  sc_suchen:'Etikett in den Rahmen halten – wird automatisch gelesen …',
+  sc_ok:'✔ Übernehmen', sc_nochmal:'↻ Weiter scannen', sc_manuell:'✍ Manuell erfassen',
+  sc_kamera:'Kamera nicht verfügbar – bitte Einzelfoto machen oder von Hand eintragen.',
   lbl_id:'ID Tisch *', ph_id:'z.B. 995',
   lbl_stuetze:'Stütze S1–S4 *', lbl_laenge:'Länge [mm] *', ph_laenge:'z.B. 2724',
   lbl_typ:'Typ (optional)', ph_typ:'z.B. B', lbl_serie:'Serie (optional)', ph_serie:'z.B. 8',
@@ -338,8 +389,12 @@ var I18N={
   btn_aktualisieren:'↻ Refresh', ok_aktualisiert:'Updated ✔',
   kopf_titel:'🔧 Pre-assembly', tab_stuetze:'🏷 Post', tab_fortschritt:'🏗 Progress', tab_tabellen:'📋 Lists',
   s1_titel:'🏷 Save post',
-  s1_sub:'Take a photo of the Mauchle label – ID, post and length are read automatically.',
-  s1_btn_foto:'📷 Photo of label',
+  s1_sub:'Hold the Mauchle label in front of the camera – ID, post and length are read automatically.',
+  s1_btn_scan:'📷 Scan label (camera stays on)',
+  s1_btn_foto:'🖼 Take a single photo',
+  sc_suchen:'Hold the label inside the frame – it is read automatically …',
+  sc_ok:'✔ Use it', sc_nochmal:'↻ Keep scanning', sc_manuell:'✍ Enter by hand',
+  sc_kamera:'Camera not available – take a single photo or enter by hand.',
   lbl_id:'Table ID *', ph_id:'e.g. 995',
   lbl_stuetze:'Post S1–S4 *', lbl_laenge:'Length [mm] *', ph_laenge:'e.g. 2724',
   lbl_typ:'Type (optional)', ph_typ:'e.g. B', lbl_serie:'Series (optional)', ph_serie:'e.g. 8',
@@ -391,8 +446,12 @@ var I18N={
   btn_aktualisieren:'↻ Odśwież', ok_aktualisiert:'Zaktualizowano ✔',
   kopf_titel:'🔧 Wstępny montaż', tab_stuetze:'🏷 Podpora', tab_fortschritt:'🏗 Postęp', tab_tabellen:'📋 Tabele',
   s1_titel:'🏷 Zapisz podporę',
-  s1_sub:'Zrób zdjęcie etykiety Mauchle – ID, podpora i długość odczytają się same.',
-  s1_btn_foto:'📷 Zdjęcie etykiety',
+  s1_sub:'Trzymaj etykietę Mauchle przed kamerą – ID, podpora i długość odczytają się same.',
+  s1_btn_scan:'📷 Skanuj etykietę (kamera zostaje włączona)',
+  s1_btn_foto:'🖼 Zrób pojedyncze zdjęcie',
+  sc_suchen:'Trzymaj etykietę w ramce – odczyta się sama …',
+  sc_ok:'✔ Przejmij', sc_nochmal:'↻ Skanuj dalej', sc_manuell:'✍ Wpisz ręcznie',
+  sc_kamera:'Kamera niedostępna – zrób pojedyncze zdjęcie albo wpisz ręcznie.',
   lbl_id:'ID stołu *', ph_id:'np. 995',
   lbl_stuetze:'Podpora S1–S4 *', lbl_laenge:'Długość [mm] *', ph_laenge:'np. 2724',
   lbl_typ:'Typ (opcjonalnie)', ph_typ:'np. B', lbl_serie:'Seria (opcjonalnie)', ph_serie:'np. 8',
@@ -564,12 +623,9 @@ function jpegAusBild(img, maxPx, q){
 }
 /* Graustufen + Kontrastspreizung (2%/98%-Perzentile) – macht die Erkennung auf
    Baustellenfotos (Schatten, Gegenlicht, schräg) deutlich treffsicherer */
-function ocrCanvas(img, maxPx){
-  var w=img.width,h=img.height;
-  if(w>maxPx||h>maxPx){ if(w>h){ h=Math.round(h*maxPx/w); w=maxPx; } else { w=Math.round(w*maxPx/h); h=maxPx; } }
-  var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
-  var c=cv.getContext('2d'); c.drawImage(img,0,0,w,h);
-  var d=c.getImageData(0,0,w,h), p=d.data, hist=new Uint32Array(256), i, g;
+function kontrastGrau(cv){
+  var c=cv.getContext('2d');
+  var d=c.getImageData(0,0,cv.width,cv.height), p=d.data, hist=new Uint32Array(256), i, g;
   for(i=0;i<p.length;i+=4){ g=(p[i]*299+p[i+1]*587+p[i+2]*114)/1000|0; p[i]=g; hist[g]++; }
   var n=p.length/4, lo=0, hi=255, s=0;
   for(i=0;i<256;i++){ s+=hist[i]; if(s>=n*0.02){ lo=i; break; } }
@@ -581,6 +637,13 @@ function ocrCanvas(img, maxPx){
   }
   c.putImageData(d,0,0);
   return cv;
+}
+function ocrCanvas(img, maxPx){
+  var w=img.width,h=img.height;
+  if(w>maxPx||h>maxPx){ if(w>h){ h=Math.round(h*maxPx/w); w=maxPx; } else { w=Math.round(w*maxPx/h); h=maxPx; } }
+  var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+  cv.getContext('2d').drawImage(img,0,0,w,h);
+  return kontrastGrau(cv);
 }
 /* Otsu-Schwellwert – 2. Versuch, wenn der Graustufen-Durchgang nichts findet */
 function binarisieren(cv){
@@ -623,6 +686,7 @@ function ocrWorkerHolen(){
     langPath:'assets/js/tesseract/',
     cacheMethod:'none',
     logger:function(m){
+      if(scan.aktiv) return;                   // beim Live-Scannen keinen Fortschritt ins Formular schreiben
       if(m.status==='recognizing text')
         $('ocrStatus').textContent=T('ocr_lesen')+' '+Math.round((m.progress||0)*100)+'%';
     }
@@ -738,6 +802,132 @@ function posUebernehmen(k){
 }
 $('f_id').addEventListener('input', abgleich);
 $('f_len').addEventListener('input', abgleich);
+
+/* ---------- Live-Scanner ----------
+   Kamera bleibt offen, der Rahmenausschnitt wird laufend gelesen.
+   Angenommen wird ein Treffer, sobald er zu einer gültigen Bestellposition
+   passt ODER zweimal hintereinander gleich gelesen wurde – dann nur noch
+   mit ✔ bestätigen. Einzelfoto und Handeingabe bleiben als Ausweg. */
+var scan={aktiv:false, stream:null, letzter:null, wert:null, foto:null};
+function abspielen(v){ try{ var p=v.play(); if(p&&p.catch) p.catch(function(){}); }catch(e){} }
+function scanStart(){
+  if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)){ scanKeineKamera(); return; }
+  ocrWorkerHolen().catch(function(){});
+  navigator.mediaDevices.getUserMedia({audio:false,
+    video:{facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080}}})
+  .then(function(stream){
+    scan.stream=stream; scan.aktiv=true; scan.letzter=null; scan.wert=null; scan.foto=null;
+    $('scanOv').style.display='block';
+    $('scTreffer').style.display='none';
+    $('scStatus').style.display=''; $('scStatus').textContent=T('sc_suchen');
+    $('scRahmen').classList.remove('treffer');
+    var v=$('scanVid'); v.srcObject=stream; abspielen(v);
+    scanLicht(stream);
+    setTimeout(scanLoop, 350);
+  })
+  .catch(function(){ scanKeineKamera(); });
+}
+function scanKeineKamera(){ toast(T('sc_kamera'),true); try{ $('f_foto').click(); }catch(e){} }
+function scanLicht(stream){
+  var b=$('scLicht'); b.style.display='none'; b.onclick=null;
+  try{
+    var tr=stream.getVideoTracks()[0];
+    var caps=tr.getCapabilities?tr.getCapabilities():{};
+    if(!caps.torch) return;
+    var an=false;
+    b.style.display=''; b.style.opacity=.6;
+    b.onclick=function(){ an=!an; b.style.opacity=an?1:.6;
+      tr.applyConstraints({advanced:[{torch:an}]}).catch(function(){}); };
+  }catch(e){}
+}
+function scanEnde(){
+  scan.aktiv=false; scan.wert=null;
+  if(scan.stream){ scan.stream.getTracks().forEach(function(t){ t.stop(); }); scan.stream=null; }
+  $('scanVid').srcObject=null;
+  $('scanOv').style.display='none';
+}
+/* Rahmenausschnitt aus dem Video holen (klein = schnelle Erkennung) */
+function scanGrab(){
+  var v=$('scanVid');
+  if(!v.videoWidth) return null;
+  var vw=v.videoWidth, vh=v.videoHeight;
+  var cw=Math.round(vw*0.92), ch=Math.round(vh*0.42), cx=(vw-cw)/2, cy=(vh-ch)/2;
+  var ziel=Math.min(1100, cw);
+  var cv=document.createElement('canvas');
+  cv.width=ziel; cv.height=Math.round(ch*ziel/cw);
+  cv.getContext('2d').drawImage(v, cx,cy,cw,ch, 0,0,cv.width,cv.height);
+  return kontrastGrau(cv);
+}
+function scanFoto(){
+  var v=$('scanVid'); if(!v.videoWidth) return null;
+  var maxPx=1500, w=v.videoWidth, h=v.videoHeight;
+  if(w>maxPx||h>maxPx){ if(w>h){ h=Math.round(h*maxPx/w); w=maxPx; } else { w=Math.round(w*maxPx/h); h=maxPx; } }
+  var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+  cv.getContext('2d').drawImage(v,0,0,w,h);
+  return cv.toDataURL('image/jpeg',0.75);
+}
+function scanLoop(){
+  if(!scan.aktiv || scan.wert) return;
+  var cv=scanGrab();
+  if(!cv){ setTimeout(scanLoop,200); return; }
+  ocrWorkerHolen().then(function(w){ return w.recognize(cv); })
+  .then(function(res){
+    if(!scan.aktiv || scan.wert) return;
+    var tr=etikettLesen((res&&res.data&&res.data.text)||'');
+    if(tr.id&&tr.stuetze&&tr.laenge){
+      var key=tr.id+'-'+tr.stuetze+'-'+tr.laenge;
+      var o=bestIdx()[normId(tr.id)+'-'+tr.stuetze];
+      var passt=o && Math.abs(parseInt(tr.laenge,10)-o[2])<=1;
+      if(passt || key===scan.letzter){ scanTreffer(tr); return; }
+      scan.letzter=key;                        // 1. Lesung: auf Bestätigung durch 2. Lesung warten
+      $('scStatus').textContent='… '+key+' ?';
+    } else if(tr.id||tr.laenge){
+      $('scStatus').textContent='… '+(tr.id||'?')+(tr.stuetze?'-'+tr.stuetze:'')+(tr.laenge?'-'+tr.laenge:'')+' …';
+    } else {
+      $('scStatus').textContent=T('sc_suchen');
+    }
+    setTimeout(scanLoop,150);
+  })
+  .catch(function(){ if(scan.aktiv&&!scan.wert) setTimeout(scanLoop,600); });
+}
+function scanTreffer(tr){
+  scan.wert=tr; scan.foto=scanFoto();
+  try{ $('scanVid').pause(); }catch(e){}
+  try{ if(navigator.vibrate) navigator.vibrate(80); }catch(e){}
+  $('scRahmen').classList.add('treffer');
+  $('scStatus').style.display='none';
+  var o=bestIdx()[normId(tr.id)+'-'+tr.stuetze], ab;
+  if(o){
+    ab = Math.abs(parseInt(tr.laenge,10)-o[2])<=1
+      ? '<span class="gut">'+T('ab_ok')+'</span> · '+T('ab_best',{l:o[2],b:o[3],a:esc(o[5])})
+      : '<span class="warn">'+T('ab_diff')+'</span> · '+T('ab_best',{l:o[2],b:o[3],a:esc(o[5])});
+  } else ab='<span class="neutral">'+T('ab_keine',{id:esc(tr.id),st:tr.stuetze})+'</span>';
+  $('scWerte').textContent=tr.id+'-'+tr.stuetze+'-'+tr.laenge+' mm'+(tr.typ?' · Typ '+tr.typ:'');
+  $('scAb').innerHTML=ab;
+  $('scTreffer').style.display='';
+}
+function scanUebernehmen(){
+  var tr=scan.wert; if(!tr) return;
+  if(scan.foto){ fotoData=scan.foto; $('ocrPrev').innerHTML='<img src="'+fotoData+'">'; }
+  $('f_id').value=tr.id; stuetzeSetzen(tr.stuetze); $('f_len').value=tr.laenge;
+  if(tr.typ) $('f_typ').value=tr.typ;
+  if(tr.serie) $('f_serie').value=tr.serie;
+  if(tr.profil) $('f_profil').value=tr.profil;
+  $('ocrStatus').className='ok';
+  $('ocrStatus').textContent=T('ocr_ok')+': '+tr.id+'-'+tr.stuetze+'-'+tr.laenge+' mm '+T('ocr_pruefen');
+  abgleich();
+  scanEnde();
+  if(!$('f_von').value) $('f_von').focus();
+}
+function scanWeiter(){
+  scan.wert=null; scan.foto=null; scan.letzter=null;
+  $('scRahmen').classList.remove('treffer');
+  $('scTreffer').style.display='none';
+  $('scStatus').style.display=''; $('scStatus').textContent=T('sc_suchen');
+  abspielen($('scanVid'));
+  setTimeout(scanLoop,250);
+}
+function scanManuell(){ scanEnde(); $('f_id').focus(); }
 
 /* ---------- Speichern ---------- */
 function speichernStuetze(){
