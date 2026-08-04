@@ -240,6 +240,8 @@
     <!-- nur fuer die Bauleitung: Auftrag schreiben -->
     <div class="box" id="anwEditBox" style="display:none;border-left-color:#63676d">
       <h2>✏️ Auftrag schreiben <span style="font-weight:400;font-size:12px;color:var(--mut)">(nur Bauleitung)</span></h2>
+      <label class="fl">Welcher Auftrag</label>
+      <select id="a_nr" onchange="anwEditWahl()"></select>
       <label class="fl">Titel / Auftrag</label>
       <input id="a_titel" placeholder="z.B. Vormontage Bereich 26_2.1 – Prio">
       <label class="fl">Tisch-IDs in der gewünschten Reihenfolge</label>
@@ -275,6 +277,7 @@ var I18N={
   tab_auftrag:'📌 Auftrag', s4_titel:'📌 Arbeitsanweisung',
   s4_sub:'Diese Tische in dieser Reihenfolge vormontieren.',
   anw_leer:'Zurzeit kein Auftrag.', anw_fortschritt:'{n} von {g} erledigt',
+  anw_auftraege:'Aufträge', leg_offen:'offen', leg_vormontiert:'vormontiert', leg_berg:'auf dem Berg',
   btn_aktualisieren:'↻ Aktualisieren', ok_aktualisiert:'Aktualisiert ✔',
   kopf_titel:'🔧 Vormontage', tab_stuetze:'🏷 Stütze', tab_fortschritt:'🏗 Fortschritt', tab_tabellen:'📋 Tabellen',
   s1_titel:'🏷 Stütze erfassen',
@@ -324,6 +327,7 @@ var I18N={
   tab_auftrag:'📌 Job', s4_titel:'📌 Work order',
   s4_sub:'Pre-assemble these tables in this order.',
   anw_leer:'No job at the moment.', anw_fortschritt:'{n} of {g} done',
+  anw_auftraege:'jobs', leg_offen:'open', leg_vormontiert:'pre-assembled', leg_berg:'sent up the mountain',
   btn_aktualisieren:'↻ Refresh', ok_aktualisiert:'Updated ✔',
   kopf_titel:'🔧 Pre-assembly', tab_stuetze:'🏷 Post', tab_fortschritt:'🏗 Progress', tab_tabellen:'📋 Lists',
   s1_titel:'🏷 Save post',
@@ -373,6 +377,7 @@ var I18N={
   tab_auftrag:'📌 Zlecenie', s4_titel:'📌 Zlecenie pracy',
   s4_sub:'Zmontuj te stoły w tej kolejności.',
   anw_leer:'Brak zlecenia.', anw_fortschritt:'Gotowe: {n} z {g}',
+  anw_auftraege:'zlecenia', leg_offen:'otwarte', leg_vormontiert:'wstępnie zmontowane', leg_berg:'wysłane w góry',
   btn_aktualisieren:'↻ Odśwież', ok_aktualisiert:'Zaktualizowano ✔',
   kopf_titel:'🔧 Wstępny montaż', tab_stuetze:'🏷 Podpora', tab_fortschritt:'🏗 Postęp', tab_tabellen:'📋 Tabele',
   s1_titel:'🏷 Zapisz podporę',
@@ -837,64 +842,125 @@ function csv2(){
    Bauleitung schreibt eine Liste von Tisch-IDs in Reihenfolge; die Equipe
    sieht sie im Reiter und hakt erledigte Tische ab (fuer alle sichtbar). */
 var P_ANW='erfassung/vm_anweisung', P_ANWOK='erfassung/vm_anweisung_erledigt';
-var anw=null, anwOk={};
+var anwAlle=[], anw=null, anwOk={};    // anw = erster Auftrag (Editor-Vorgabe)
 
 function anwLaden(manuell){
   if(!netzAn()){ if(manuell) toast(T('offline_hinweis'),true); anwMalen(); return; }
   Promise.all([apiGet(P_ANW), apiGet(P_ANWOK)]).then(function(r){
-    anw=r[0]||null; anwOk=r[1]||{};
+    var d=r[0]||null;
+    anwAlle = d ? (d.auftraege && d.auftraege.length ? d.auftraege : (d.ids ? [d] : [])) : [];
+    anw = anwAlle[0] || null;
+    anwOk=r[1]||{};
     anwMalen();
     if(manuell) toast(T('ok_aktualisiert'));
   }).catch(function(){ if(manuell) toast(T('offline_hinweis'),true); });
 }
 function anwMalen(){
   var box=$('anwListe');
-  if(!anw || !anw.ids || !anw.ids.length){
+  if(!anwAlle.length){
     box.innerHTML='<div class="hint">'+T('anw_leer')+'</div>';
     $('anwStand').textContent=T('s4_sub');
     return;
   }
-  var fertig=anw.ids.filter(function(id){ return anwOk[id]; }).length;
-  $('anwStand').textContent=(anw.titel?anw.titel+' · ':'')+
-    T('anw_fortschritt',{n:fertig,g:anw.ids.length})+
-    (anw.von?' · '+anw.von:'')+(anw.datum?' · '+fmtD(anw.datum):'');
-  var h='';
-  if(anw.bem) h+='<div class="hint" style="font-size:13px;color:var(--ink);margin-bottom:8px;white-space:pre-line">💬 '+esc(anw.bem)+'</div>';
-  h+='<div style="margin:8px 0">'
-    +'<canvas id="anwKarte" style="width:100%;border:1px solid var(--line);border-radius:6px;'
-    +'cursor:zoom-in" onclick="karteGross()"></canvas>'
-    +'<div style="font-size:11.5px;color:var(--mut);margin-top:5px;line-height:1.7">'
-    +'<span style="display:inline-block;width:11px;height:11px;background:#c9ccd2;'
-    +'border:1px solid #fff;border-radius:2px;margin-right:4px"></span>offen &nbsp; '
-    +'<span style="display:inline-block;width:11px;height:11px;background:#e08a00;'
-    +'border-radius:2px;margin-right:4px"></span>vormontiert &nbsp; '
-    +'<span style="display:inline-block;width:11px;height:11px;background:#1e9e5a;'
-    +'border-radius:2px;margin-right:4px"></span>auf dem Berg<br>'
-    +'Fläche: <b style="color:#D72622">rot</b> = Batch 8 vor Ort · '
-    +'<b style="color:#1565c0">blau</b> = kommt Dienstag</div></div>';
-  h+='<div class="tabWrap"><table>';
-  var letzteGruppe=null;
-  anw.ids.forEach(function(id,i){
-    var ok=!!anwOk[id];
-    var b=(anw.badges&&anw.badges[id])||null;      // {txt, farbe, gruppe}
-    if(b && b.gruppe!==letzteGruppe){              // Zwischenüberschrift je Gruppe
-      letzteGruppe=b.gruppe;
-      h+='<tr><td colspan="3" style="padding-top:14px">'
-        +'<div style="background:'+esc(b.farbe)+';color:#fff;font-weight:900;font-size:12.5px;'
-        +'border-radius:6px;padding:7px 10px">'+esc(b.gruppe)+'</div></td></tr>';
-    } else if(!b && letzteGruppe!==null){ letzteGruppe=null; }
-    h+='<tr'+(ok?' style="opacity:.5"':'')+'>'
-      +'<td style="width:34px;font-weight:900;color:var(--mut)">'+(i+1)+'.</td>'
-      +'<td style="font-size:19px;font-weight:900'+(ok?';text-decoration:line-through':'')+'">'+esc(id)
-      +(b?' <span style="font-size:11px;font-weight:800;background:'+esc(b.farbe)+';color:#fff;'
-          +'border-radius:4px;padding:2px 6px;vertical-align:2px">'+esc(b.txt)+'</span>':'')+'</td>'
-      +'<td style="text-align:right"><button class="btn '+(ok?'ghost':'gruen')+'" style="padding:9px 12px"'
-      +' onclick="anwHaken(\''+esc(id)+'\','+(ok?'false':'true')+')">'+(ok?'↺':'✔')+'</button></td></tr>';
+  var alleIds=[], fertigAlle=0;
+  anwAlle.forEach(function(a){
+    (a.ids||[]).forEach(function(id){ alleIds.push(id); if(anwOk[id]) fertigAlle++; });
   });
-  h+='</table></div>';
+  $('anwStand').textContent=T('anw_fortschritt',{n:fertigAlle,g:alleIds.length})
+    +(anwAlle.length>1?' · '+anwAlle.length+' '+T('anw_auftraege'):'');
+
+  // neuester Auftrag zuoberst, aeltere darunter (eingeklappt)
+  var reihen=anwAlle.map(function(a,i){ return i; }).reverse();
+  var h='';
+  reihen.forEach(function(ai,pos){ h+=anwBlock(anwAlle[ai], ai, pos===0); });
   box.innerHTML=h;
-  anwKarteMalen();
+  reihen.forEach(function(ai,pos){ if(pos===0) anwKartenAlle(ai); });
 }
+
+/* Ein Auftrag = Kopf + je Arbeitsgruppe eine Karte mit Liste. */
+function anwGruppen(a){
+  var g=[], akt=null;
+  (a.ids||[]).forEach(function(id,i){
+    var b=(a.badges&&a.badges[id])||null;
+    var titel=(b&&b.gruppe)||'';
+    if(!akt || akt.titel!==titel){
+      akt={ titel:titel, gfarbe:(b&&(b.gfarbe||b.farbe))||'#63676d', zeilen:[] };
+      g.push(akt);
+    }
+    akt.zeilen.push({ id:id, nr:i+1, b:b });
+  });
+  return g;
+}
+
+function anwBlock(a, ai, aktuell){
+  var ids=a.ids||[];
+  var fertig=ids.filter(function(id){ return anwOk[id]; }).length;
+  var offen=ids.length-fertig;
+  // nur der aktuelle (neueste) Auftrag ist offen; alles Aeltere eingeklappt
+  var zu = (a.zu===true) || (a.zu!==false && (!aktuell || offen===0));
+  var h='<div class="anwAuftrag" style="margin:'+(aktuell?'2px':'18px')+' 0 0;'
+    +'border:1px solid var(--line);border-radius:8px;overflow:hidden">'
+    +'<div onclick="anwKlapp('+ai+')" style="cursor:pointer;background:#f4f5f7;padding:10px 12px;'
+    +'display:flex;align-items:center;gap:9px">'
+    +'<span style="font-size:17px">'+(offen?'📌':'✅')+'</span>'
+    +'<span style="flex:1"><b style="font-size:14.5px">'+esc(a.titel||('Auftrag '+(ai+1)))+'</b>'
+    +'<span style="display:block;font-size:11.5px;color:var(--mut);margin-top:1px">'
+    + T('anw_fortschritt',{n:fertig,g:ids.length})
+    + (a.von?' · '+esc(a.von):'') + (a.datum?' · '+fmtD(a.datum):'') + '</span></span>'
+    +'<span style="font-size:13px;color:var(--mut)">'+(zu?'▾':'▴')+'</span></div>'
+    +'<div id="anwBody'+ai+'" style="padding:10px 12px'+(zu?';display:none':'')+'">';
+
+  if(a.bem) h+='<div class="hint" style="font-size:13px;color:var(--ink);margin-bottom:8px;'
+    +'white-space:pre-line">💬 '+esc(a.bem)+'</div>';
+
+  h+='<div style="font-size:11.5px;color:var(--mut);margin:2px 0 8px;line-height:1.7">'
+    +'<span style="display:inline-block;width:11px;height:11px;background:#c9ccd2;'
+    +'border:1px solid #fff;border-radius:2px;margin-right:4px"></span>'+T('leg_offen')+' &nbsp; '
+    +'<span style="display:inline-block;width:11px;height:11px;background:#e08a00;'
+    +'border-radius:2px;margin-right:4px"></span>'+T('leg_vormontiert')+' &nbsp; '
+    +'<span style="display:inline-block;width:11px;height:11px;background:#1e9e5a;'
+    +'border-radius:2px;margin-right:4px"></span>'+T('leg_berg')
+    +(a.legende?'<br>'+esc(a.legende):'')+'</div>';
+
+  anwGruppen(a).forEach(function(gr,gi){
+    if(gr.titel){
+      h+='<div style="background:'+esc(gr.gfarbe)+';color:#fff;font-weight:900;font-size:12.5px;'
+        +'border-radius:6px;padding:7px 10px;margin:14px 0 6px">'+esc(gr.titel)+'</div>';
+    }
+    h+='<canvas id="anwKarte'+ai+'_'+gi+'" style="width:100%;border:1px solid var(--line);'
+      +'border-radius:6px;cursor:zoom-in;margin-bottom:6px" '
+      +'onclick="karteGross('+ai+','+gi+')"></canvas>';
+    h+='<div class="tabWrap"><table>';
+    gr.zeilen.forEach(function(z){
+      var ok=!!anwOk[z.id], b=z.b;
+      h+='<tr'+(ok?' style="opacity:.5"':'')+'>'
+        +'<td style="width:34px;font-weight:900;color:var(--mut)">'+z.nr+'.</td>'
+        +'<td style="font-size:19px;font-weight:900'+(ok?';text-decoration:line-through':'')+'">'+esc(z.id)
+        +(b&&b.txt?' <span style="font-size:11px;font-weight:800;background:'+esc(b.farbe)+';color:#fff;'
+            +'border-radius:4px;padding:2px 6px;vertical-align:2px">'+esc(b.txt)+'</span>':'')+'</td>'
+        +'<td style="text-align:right"><button class="btn '+(ok?'ghost':'gruen')+'" style="padding:9px 12px"'
+        +' onclick="anwHaken(\''+esc(z.id)+'\','+(ok?'false':'true')+')">'+(ok?'↺':'✔')+'</button></td></tr>';
+    });
+    h+='</table></div>';
+  });
+  h+='</div></div>';
+  return h;
+}
+
+function anwKartenAlle(ai){
+  var a=anwAlle[ai]; if(!a) return;
+  anwGruppen(a).forEach(function(gr,gi){ anwKarteMalen(ai,gi); });
+}
+
+function anwKlapp(ai){
+  var b=document.getElementById('anwBody'+ai);
+  if(!b) return;
+  var zu=b.style.display==='none';
+  b.style.display=zu?'':'none';
+  if(anwAlle[ai]) anwAlle[ai].zu=!zu;
+  if(zu) anwKartenAlle(ai);          // Karten erst beim Aufklappen zeichnen
+}
+
 /* ---------- Auftragskarte live ---------- */
 var akPfaehle=null, akGeo=null, akBild=null;
 function akDatenLaden(cb){
@@ -931,13 +997,18 @@ function akStatus(){
   });
   return st;
 }
-function anwKarteMalen(){
-  var cv=document.getElementById('anwKarte');
-  if(!cv || !anw || !anw.ids) return;
+function anwKarteMalen(ai, gi, zielCv, zielBr){
+  ai=ai||0; gi=gi||0;
+  var a=anwAlle[ai];
+  if(!a || !a.ids) return;
+  var gr=anwGruppen(a)[gi];
+  if(!gr) return;
+  var cv=zielCv || document.getElementById('anwKarte'+ai+'_'+gi);
+  if(!cv || (!zielCv && !cv.clientWidth)) return;
   akDatenLaden(function(){
     if(!akPfaehle||!akGeo) return;
     // Tische des Auftrags mit ihren Pfahlpunkten
-    var wanted={}; anw.ids.forEach(function(id,i){ wanted[String(id)]={nr:i+1, pkt:[]}; });
+    var wanted={}; gr.zeilen.forEach(function(z){ wanted[String(z.id)]={nr:z.nr, pkt:[]}; });
     akPfaehle.forEach(function(p){
       var t=wanted[String(p[0])]; if(t) t.pkt.push([p[2],p[3]]);
     });
@@ -947,11 +1018,18 @@ function anwKarteMalen(){
 
     // Ausschnitt (LV95) mit Rand
     var alle=[]; liste.forEach(function(t){ t.pkt.forEach(function(q){ alle.push(akLv95(q[0],q[1])); }); });
-    var minE=Math.min.apply(null,alle.map(function(v){return v.E;}))-25;
-    var maxE=Math.max.apply(null,alle.map(function(v){return v.E;}))+25;
-    var minN=Math.min.apply(null,alle.map(function(v){return v.N;}))-25;
-    var maxN=Math.max.apply(null,alle.map(function(v){return v.N;}))+25;
-    var br=cv.clientWidth||360, dpr=window.devicePixelRatio||1;
+    var rand=liste.length<=8?14:22;
+    var minE=Math.min.apply(null,alle.map(function(v){return v.E;}))-rand;
+    var maxE=Math.max.apply(null,alle.map(function(v){return v.E;}))+rand;
+    var minN=Math.min.apply(null,alle.map(function(v){return v.N;}))-rand;
+    var maxN=Math.max.apply(null,alle.map(function(v){return v.N;}))+rand;
+    if(maxN-minN < (maxE-minE)*0.42){          // sehr flacher Ausschnitt -> aufpolstern
+      var mN=(maxN+minN)/2, hh=(maxE-minE)*0.21;
+      minN=mN-hh; maxN=mN+hh;
+    }
+    var br=zielBr||cv.clientWidth||360;
+    var dpr=zielBr?1:(window.devicePixelRatio||1);
+    var sk=zielBr?Math.max(1,zielBr/430):1;          // Schrift in der Grossansicht mitskalieren
     var hoehe=Math.round(br*(maxN-minN)/(maxE-minE));
     cv.width=br*dpr; cv.height=hoehe*dpr; cv.style.height=hoehe+'px';
     var c=cv.getContext('2d');
@@ -971,22 +1049,23 @@ function anwKarteMalen(){
       var pts=t.pkt.map(function(q){ var v=akLv95(q[0],q[1]); return P(v.E,v.N); });
       var mx=pts.reduce(function(a,q){return a+q.x;},0)/pts.length;
       var my=pts.reduce(function(a,q){return a+q.y;},0)/pts.length;
-      var b=(anw.badges&&anw.badges[t.id])||null;      // blau = kommt erst
-      var flaeche = b ? 'rgba(21,101,192,.55)' : 'rgba(215,38,34,.5)';
+      var b=(a.badges&&a.badges[t.id])||null;
+      var flaeche = (b&&b.kfarbe) ? b.kfarbe : (b ? 'rgba(21,101,192,.55)' : 'rgba(215,38,34,.5)');
       if(pts.length>2){
         var srt=pts.slice().sort(function(a,q){
           return Math.atan2(a.y-my,a.x-mx)-Math.atan2(q.y-my,q.x-mx); });
         c.beginPath(); srt.forEach(function(q,i){ i?c.lineTo(q.x,q.y):c.moveTo(q.x,q.y); }); c.closePath();
         c.fillStyle=flaeche; c.fill();
-        c.lineWidth=1.6; c.strokeStyle='rgba(255,255,255,.9)'; c.stroke();
+        c.lineWidth=1.6*sk; c.strokeStyle='rgba(255,255,255,.9)'; c.stroke();
       }
       // Beschriftung: Hintergrund nach Arbeitsfortschritt
       var zu=st[t.id];
       var bg = zu==='berg' ? '#1e9e5a' : (zu==='vormontiert' ? '#e08a00' : 'rgba(255,255,255,.94)');
       var fg = zu ? '#fff' : '#1a1a1a';
       var txt=t.nr+' · '+t.id;
-      c.font='700 12px Arial';
-      var tw=c.measureText(txt).width, pw=tw+12, ph=19;
+      var fs=Math.round((zielBr?12:11)*sk);
+      c.font='700 '+fs+'px Arial';
+      var tw=c.measureText(txt).width, pw=tw+8*sk, ph=Math.round((zielBr?19:16)*sk);
       // Beschriftung in die Tischachse drehen (Punktepaar mit groesstem Abstand)
       var w1=0, w2=0, dmax=-1;
       for(var i=0;i<pts.length;i++) for(var j=i+1;j<pts.length;j++){
@@ -997,7 +1076,7 @@ function anwKarteMalen(){
       if(wi>Math.PI/2) wi-=Math.PI;
       if(wi<-Math.PI/2) wi+=Math.PI;
       c.save(); c.translate(mx,my); c.rotate(wi);
-      if(c.roundRect){ c.beginPath(); c.roundRect(-pw/2,-ph/2,pw,ph,5); c.fillStyle=bg; c.fill(); }
+      if(c.roundRect){ c.beginPath(); c.roundRect(-pw/2,-ph/2,pw,ph,4*sk); c.fillStyle=bg; c.fill(); }
       else { c.fillStyle=bg; c.fillRect(-pw/2,-ph/2,pw,ph); }
       if(!zu){ c.lineWidth=1; c.strokeStyle='rgba(0,0,0,.25)'; c.stroke&&c.stroke(); }
       c.fillStyle=fg; c.textAlign='center'; c.textBaseline='middle';
@@ -1006,9 +1085,17 @@ function anwKarteMalen(){
     });
   });
 }
-function karteGross(){
-  var cv=document.getElementById('anwKarte'); if(!cv) return;
-  try{ bildGross(cv.toDataURL('image/png')); }catch(e){}
+function karteGross(ai, gi){
+  ai=ai||0; gi=gi||0;
+  var tmp=document.createElement('canvas');
+  anwKarteMalen(ai, gi, tmp, 1600);                 // scharfe Fassung zum Zoomen
+  setTimeout(function(){                            // Bild/Daten sind ggf. async geladen
+    try{ bildGross(tmp.toDataURL('image/png')); }
+    catch(e){
+      var cv=document.getElementById('anwKarte'+ai+'_'+gi);
+      if(cv) try{ bildGross(cv.toDataURL('image/png')); }catch(e2){}
+    }
+  }, 150);
 }
 
 function bildGross(src){
@@ -1036,28 +1123,55 @@ function anwEditToggle(){
   var b=$('anwEditBox');
   var auf=b.style.display!=='none';
   b.style.display=auf?'none':'';
-  if(!auf && anw){
-    $('a_titel').value=anw.titel||''; $('a_ids').value=(anw.ids||[]).join(', ');
-    $('a_bem').value=anw.bem||''; $('a_von').value=anw.von||getVon(); $('a_datum').value=anw.datum||'';
-  }
+  if(auf) return;
+  var sel=$('a_nr'), h='';
+  anwAlle.forEach(function(a,i){
+    h+='<option value="'+i+'">'+(i+1)+' · '+esc(a.titel||('Auftrag '+(i+1)))+'</option>';
+  });
+  h+='<option value="neu">＋ neuer Auftrag</option>';
+  sel.innerHTML=h;
+  sel.value=anwAlle.length?'0':'neu';
+  anwEditWahl();
+}
+function anwEditWahl(){
+  var v=$('a_nr').value, a=(v==='neu')?null:anwAlle[parseInt(v,10)];
+  $('a_titel').value=a?(a.titel||''):'';
+  $('a_ids').value=a?(a.ids||[]).join(', '):'';
+  $('a_bem').value=a?(a.bem||''):'';
+  $('a_von').value=(a&&a.von)||getVon();
+  $('a_datum').value=(a&&a.datum)||'';
 }
 function anwSpeichern(){
   var ids=$('a_ids').value.split(/[^0-9A-Za-z_.-]+/).map(function(x){return x.trim();}).filter(Boolean);
   if(!ids.length){ toast(T('err_ids'),true); return; }
   var von=$('a_von').value.trim(); if(von) setVon(von);
+  var v=$('a_nr')?$('a_nr').value:'0';
+  var idx=(v==='neu')?-1:parseInt(v,10);
+  var alt=(idx>=0)?anwAlle[idx]:null;
   var rec={ titel:$('a_titel').value.trim(), ids:ids, bem:$('a_bem').value.trim(),
             von:von, datum:$('a_datum').value||heute(), ts:Date.now() };
-  if(anw && anw.bild) rec.bild=anw.bild;         // Planbild des Auftrags behalten
-  apiPut(P_ANW, rec).then(function(ok){
+  if(alt && alt.badges) rec.badges=alt.badges;   // Gruppen/Badges des Auftrags behalten
+  if(alt && alt.legende) rec.legende=alt.legende;
+  var neu=anwAlle.slice();
+  if(idx>=0) neu[idx]=rec; else neu.push(rec);
+  apiPut(P_ANW, {auftraege:neu}).then(function(ok){
     if(!ok) throw 0;
-    anw=rec; anwMalen(); $('anwEditBox').style.display='none';
+    anwAlle=neu; anw=anwAlle[0]; anwMalen(); $('anwEditBox').style.display='none';
     toast(T('ok_gespeichert')+' · '+ids.length+' ID');
   }).catch(function(){ toast(T('err_kein_empfang'),true); });
 }
 function anwLoeschen(){
-  if(!confirm('Aktuelle Arbeitsanweisung für alle löschen?')) return;
-  fetch(DB+'/'+P_ANW+'.json',{method:'DELETE'}).then(function(){
-    anw=null; anwMalen(); toast(T('ok_gespeichert'));
+  var v=$('a_nr')?$('a_nr').value:'0';
+  if(v==='neu'){ $('anwEditBox').style.display='none'; return; }
+  var idx=parseInt(v,10), a=anwAlle[idx];
+  if(!a) return;
+  if(!confirm('Auftrag «'+(a.titel||('Auftrag '+(idx+1)))+'» für alle löschen?')) return;
+  var neu=anwAlle.slice(); neu.splice(idx,1);
+  var ziel = neu.length ? apiPut(P_ANW,{auftraege:neu})
+                        : fetch(DB+'/'+P_ANW+'.json',{method:'DELETE'}).then(function(){return true;});
+  ziel.then(function(){
+    anwAlle=neu; anw=anwAlle[0]||null; anwMalen(); $('anwEditBox').style.display='none';
+    toast(T('ok_gespeichert'));
   }).catch(function(){ toast(T('err_kein_empfang'),true); });
 }
 
