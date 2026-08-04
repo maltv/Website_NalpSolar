@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v83';
+var CACHE = 'nalpsolar-v84';
 var PRECACHE = [
   './index.html',
   './sicherheit.html',
@@ -53,6 +53,19 @@ var PRECACHE = [
   './uploads/tables/modultische_all.json',
   './uploads/tables/baustand.json',
   './uploads/tables/bohrstand.json',
+  './uploads/pk/A.meta.json',
+  './uploads/pk/A_lod.v.bin',
+  './uploads/pk/A_lod.f.bin',
+  './uploads/pk/B.meta.json',
+  './uploads/pk/B_lod.v.bin',
+  './uploads/pk/B_lod.f.bin',
+  './uploads/pk/D.meta.json',
+  './uploads/pk/D_lod.v.bin',
+  './uploads/pk/D_lod.f.bin',
+  './uploads/pk/E.meta.json',
+  './uploads/pk/E_lod.v.bin',
+  './uploads/pk/E_lod.f.bin',
+  './pk-modell.html',
   './uploads/road.json',
   './uploads/bauablauf.json',
   './game.html',

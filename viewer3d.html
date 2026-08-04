@@ -433,6 +433,7 @@ body.ar-mode { background:transparent!important; }
   <button class="tb-btn active" id="btnL26"     onclick="toggleLayer('leitungen26')">🟩 Leitungen 26/27</button>
   <button class="tb-btn active" id="btnTische"  onclick="toggleTische()">🟨 Modultische</button>
   <button class="tb-btn" id="btnBohr" onclick="toggleBohr()">⛏ Bohrpunkte</button>
+  <button class="tb-btn" id="btnPk" onclick="togglePkModelle()">🏗 Echte PK-Modelle</button>
   <button class="tb-btn active" id="btnWorkers" onclick="toggleWorkers()">👷 Bauarbeiter</button>
   <button class="tb-btn active" id="btnCows"    onclick="toggleCows()">🐄 Kühe</button>
   <button class="tb-btn active" id="btnVeg"     onclick="toggleVegetation()">🌿 Vegetation</button>
@@ -1099,7 +1100,9 @@ async function loadTische(){
 
     // Index for ID search (camera position = table centre)
     var item={ id:String(id).trim(), mesh:mesh, legs:legsForItem, lbl:null, shadow:shadow, x:px, z:pz,
-               bs:bs?bs.s:null, bsVis:bsVis };
+               bs:bs?bs.s:null, bsVis:bsVis,
+               // fuer die echten PK-Modelle (IFC): Hoehe, Azimut, Typbuchstabe
+               y:py, az:azR, typ:(t.length>6 && t[6]) ? String(t[6]).charAt(0).toUpperCase() : '' };
     tischeIndex[String(id).trim()]={ pos:new THREE.Vector3(px,py,pz), lbl:null, it:item };
     tischeItems.push(item);
     // fürs Antippen (Verbindungslinien zu erfassten Stahlteilen)
@@ -1117,6 +1120,139 @@ async function loadTische(){
   if(baustand && typeof flashMsg==='function')
     flashMsg('🏗 Baustand '+baustand.stand+': '+(nPk+nMt)+' Tische gestellt ('+nPk+' leere PK, '+nMt+' mit Modulträger)');
 }
+
+/* ── Echte Primärkonstruktionen (Tekla-IFC von MAAG, via ILF) ───────
+   Statt der Platzhalter-Fläche das richtige Stahlbaumodell – aus
+   Leistungsgründen nur für die Tische in Kameranähe (der Rest bleibt
+   Platzhalter). Geometrie: uploads/pk/<Typ>_lod.*.bin (Träger + Riegel),
+   Nullpunkt = Mitte Modulträgerfläche, +Y talwärts (tools/build_pk_modelle.py). */
+var pkOn=false, pkGeo={}, pkMesh={}, pkLaeuft=false, pkLetzte=0, pkGezeigt={};
+var PK_TYPEN=['A','B','D','E'];      // Typ C liegt (noch) nicht als Modell vor
+var PK_MAX=70;                       // gleichzeitig dargestellte Modelle
+var PK_RADIUS=260;                   // m um die Kamera
+
+function pkBin(url, Typ){
+  return fetch(url).then(function(r){
+    if(!r.ok) throw new Error(url+' '+r.status);
+    return r.arrayBuffer();
+  }).then(function(b){ return new Typ(b); });
+}
+
+function pkGeoLaden(typ){
+  return Promise.all([
+    pkBin('uploads/pk/'+typ+'_lod.v.bin', Float32Array),
+    pkBin('uploads/pk/'+typ+'_lod.f.bin', Uint32Array)
+  ]).then(function(r){
+    var g=new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(r[0],3));
+    g.setIndex(new THREE.BufferAttribute(r[1],1));
+    g.computeVertexNormals();
+    return g;
+  });
+}
+
+async function pkLaden(){
+  if(pkLaeuft || Object.keys(pkMesh).length) return;
+  pkLaeuft=true;
+  var mat=new THREE.MeshPhongMaterial({color:0xb9c7d6, specular:0x54636f, shininess:45,
+                                       side:THREE.DoubleSide});
+  for(var i=0;i<PK_TYPEN.length;i++){
+    var typ=PK_TYPEN[i];
+    try{
+      var g=await pkGeoLaden(typ);
+      pkGeo[typ]=g;
+      var im=new THREE.InstancedMesh(g, mat, PK_MAX);
+      im.count=0;
+      im.frustumCulled=false;
+      im.renderOrder=5;
+      im.visible=pkOn;
+      scene.add(im);
+      pkMesh[typ]=im;
+    }catch(e){ console.warn('PK-Modell '+typ+':',e); }
+  }
+  pkLaeuft=false;
+}
+
+/* Nächstgelegene gestellte Tische mit Modell zeigen, deren Platzhalter ausblenden */
+var _pkM=new THREE.Matrix4();
+function pkAktualisieren(force){
+  if(!pkOn || !tischeItems || !tischeItems.length) return;
+  var jetzt=performance.now();
+  if(!force && jetzt-pkLetzte<500) return;
+  pkLetzte=jetzt;
+
+  var cx=camera.position.x, cz=camera.position.z, r2=PK_RADIUS*PK_RADIUS;
+  var nah=[];
+  for(var i=0;i<tischeItems.length;i++){
+    var it=tischeItems[i];
+    if(!it.bsVis || !pkMesh[it.typ]) continue;         // nur gestellte Tische mit Modell
+    var dx=it.x-cx, dz=it.z-cz, d2=dx*dx+dz*dz;
+    if(d2>r2) continue;
+    nah.push([d2,it]);
+  }
+  nah.sort(function(a,b){ return a[0]-b[0]; });
+  if(nah.length>PK_MAX) nah.length=PK_MAX;
+
+  var zaehler={}, neu={};
+  PK_TYPEN.forEach(function(t){ zaehler[t]=0; });
+  for(var k=0;k<nah.length;k++){
+    var t2=nah[k][1], im2=pkMesh[t2.typ];
+    var ca=Math.cos(t2.az), sa=Math.sin(t2.az);
+    // Modellachsen -> Weltachsen: X = Längsachse, Modell -Y = Blickrichtung der
+    // Module (talwärts, = Azimut), Z = Höhe. Geprüft an der Modellgeometrie:
+    // oberer Flächenrand liegt bei +Y (Bergseite), Fläche fällt nach -Y.
+    _pkM.set(-ca, -sa, 0, t2.x,
+               0,   0, 1, t2.y,
+             -sa,  ca, 0, t2.z,
+               0,   0, 0, 1);
+    im2.setMatrixAt(zaehler[t2.typ]++, _pkM);
+    neu[t2.id]=t2;
+  }
+  PK_TYPEN.forEach(function(t){
+    var im3=pkMesh[t];
+    if(!im3) return;
+    im3.count=zaehler[t];
+    im3.instanceMatrix.needsUpdate=true;
+  });
+
+  // Platzhalter der ersetzten Tische aus-, die anderen wieder einblenden
+  Object.keys(pkGezeigt).forEach(function(id){
+    if(!neu[id]){
+      var alt=pkGezeigt[id];
+      alt.mesh.visible=alt.bsVis;
+      alt.legs.forEach(function(l){ l.visible=alt.bsVis; });
+      delete pkGezeigt[id];
+    }
+  });
+  Object.keys(neu).forEach(function(id){
+    var it2=neu[id];
+    it2.mesh.visible=false;
+    it2.legs.forEach(function(l){ l.visible=false; });
+    pkGezeigt[id]=it2;
+  });
+}
+
+window.togglePkModelle=function(){
+  pkOn=!pkOn;
+  var b=document.getElementById('btnPk');
+  if(b) b.classList.toggle('active',pkOn);
+  if(pkOn){
+    pkLaden().then(function(){
+      PK_TYPEN.forEach(function(t){ if(pkMesh[t]) pkMesh[t].visible=true; });
+      pkAktualisieren(true);
+      if(typeof flashMsg==='function')
+        flashMsg('🏗 Echte Primärkonstruktionen (Typ A/B/D/E) – die nächsten '+PK_MAX+' Tische');
+    });
+    return;
+  }
+  PK_TYPEN.forEach(function(t){ if(pkMesh[t]) pkMesh[t].visible=false; });
+  Object.keys(pkGezeigt).forEach(function(id){        // Platzhalter zurückholen
+    var it=pkGezeigt[id];
+    it.mesh.visible=it.bsVis;
+    it.legs.forEach(function(l){ l.visible=it.bsVis; });
+    delete pkGezeigt[id];
+  });
+};
 
 /* ── Bohrebene: jeder Pfahl einzeln, Farbe = Baufortschritt ─────────
    Quelle: uploads/tables/bohrstand.json (tools/build_bohrstand.py aus dem
@@ -5120,6 +5256,7 @@ function animate(){
   updateBauablauf(gdt);
   updateTischLinks();
   updateStahlLabels();
+  if(pkOn) pkAktualisieren(false);      // echte PK-Modelle der Kamera nachführen
   updateCrane(gdt);
   updatePG(gdt);
   updateRain(gdt);
@@ -5358,6 +5495,7 @@ async function init(){
     // Direktlinks: viewer3d.html#bohr = Bohrebene an, #tisch=350 = gleich hinfliegen
     try{
       if(/bohr/i.test(location.hash)) toggleBohr();
+      if(/pk/i.test(location.hash)) togglePkModelle();
       var mt=/tisch=([A-Za-z0-9_-]+)/i.exec(location.hash);
       if(mt){
         var fld=document.getElementById('tischSearch');

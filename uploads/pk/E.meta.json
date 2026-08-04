@@ -1,0 +1,76 @@
+{
+ "typ": "E",
+ "quelle": "NalpSolar_51_PL_0354_A1_MT-3D-Ges-10er-E_250612.ifc",
+ "nullpunkt": "Mitte Modultraegerflaeche (X Laengsachse, +Y talwaerts, Z Hoehe)",
+ "bbox": {
+  "min": [
+   -6.227,
+   -0.763,
+   -5.713
+  ],
+  "max": [
+   6.227,
+   2.633,
+   1.202
+  ]
+ },
+ "modulflaeche": {
+  "laenge": 12.454,
+  "breite_hor": 1.367,
+  "hoehe": 2.272
+ },
+ "stufen": {
+  "haupt": {
+   "vCount": 31968,
+   "fCount": 62752
+  },
+  "schrauben": {
+   "vCount": 66268,
+   "fCount": 125846
+  },
+  "lod": {
+   "vCount": 5756,
+   "fCount": 11304
+  }
+ },
+ "pfaehle": [
+  [
+   -3.697,
+   -0.238,
+   -5.033
+  ],
+  [
+   -3.697,
+   2.119,
+   -3.415
+  ],
+  [
+   3.697,
+   -0.238,
+   -5.033
+  ],
+  [
+   3.697,
+   2.119,
+   -3.415
+  ]
+ ],
+ "teile": {
+  "Bolt assembly": 339,
+  "Weld": 330,
+  "BLE": 240,
+  "Gewindestift M5": 20,
+  "Konsole": 18,
+  "Bohrpfal": 16,
+  "Träger": 15,
+  "Stirnplatte": 14,
+  "Markierung": 10,
+  "Mutter": 8,
+  "Auflageträger": 6,
+  "Knotenblech": 6,
+  "Stütze": 4,
+  "Ringschr": 4,
+  "Futter": 2,
+  "Stummel": 1
+ }
+}
