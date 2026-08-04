@@ -1117,10 +1117,26 @@ function anwKarteMalen(ai, gi, zielCv, zielBr){
       c.fillStyle='#fff'; c.fillRect(bx, by, bw, 3*sk);
       c.font='800 '+(9.5*sk).toFixed(1)+'px Arial'; c.textAlign='left'; c.textBaseline='alphabetic';
       c.fillText(mWahl+' m', bx, by-4*sk);
+
+      if(akQuelle){                                   // woher das Luftbild stammt
+        c.font='700 '+(8.5*sk).toFixed(1)+'px Arial'; c.textAlign='right';
+        c.fillStyle='rgba(0,0,0,.45)';
+        var qw=c.measureText(akQuelle).width+8*sk;
+        c.fillRect(br-pad-qw, hoehe-pad-12*sk, qw, 14*sk);
+        c.fillStyle='rgba(255,255,255,.92)';
+        c.fillText(akQuelle, br-pad-4*sk, hoehe-pad-2.5*sk);
+      }
     }
 
     // Luftbild: scharfer WMS-Ausschnitt (offline aus dem Cache), sonst Perimeterbild
-    akLuftbild(minE,minN,maxE,maxN, Math.round(br*dpr), Math.round(hoehe*dpr), function(im){
+    akOrthoZeichnen(c,minE,minN,maxE,maxN,br,hoehe,function(fertig){
+     if(fertig){
+      c.fillStyle='rgba(12,18,26,.14)'; c.fillRect(0,0,br,hoehe);
+      inhalt();
+      return;
+     }
+     akLuftbild(minE,minN,maxE,maxN, Math.round(br*dpr), Math.round(hoehe*dpr), function(im){
+      akQuelle = im ? 'swisstopo SWISSIMAGE' : '';
       if(im){ try{ c.drawImage(im,0,0,br,hoehe); }catch(e){} }
       else if(akBild && akGeo){
         var sx=(minE-akGeo.minE)/(akGeo.maxE-akGeo.minE)*akGeo.w;
@@ -1131,13 +1147,50 @@ function anwKarteMalen(ai, gi, zielCv, zielBr){
       }
       c.fillStyle='rgba(12,18,26,.20)'; c.fillRect(0,0,br,hoehe);   // Bild beruhigen
       inhalt();
+     });
     });
   });
 }
 
-/* Luftbild-Ausschnitt vom swisstopo-WMS (SWISSIMAGE, 10 cm). Der Service Worker
-   legt geo.admin.ch-Antworten im Cache ab -> einmal mit Netz geladen, danach
-   auch im Tal ohne Empfang verfuegbar. Ohne Netz: null -> Perimeterbild. */
+/* Bildquellen fuer die Karte, in dieser Reihenfolge:
+   1. Drohnen-Orthofoto der Baustelle (uploads/ortho/, ~5 cm/px, liegt lokal
+      auf der Website -> auch offline scharf)
+   2. swisstopo-WMS SWISSIMAGE (nur online, wird vom Service Worker gecacht)
+   3. das grobe Perimeterbild (Notfall) */
+var akOrtho=null, akOrthoBild={}, akQuelle='';
+function akOrthoLaden(cb){
+  if(akOrtho!==null){ cb(); return; }
+  fetch('uploads/ortho/index.json').then(function(r){ return r.ok?r.json():[]; })
+    .then(function(j){ akOrtho=j||[]; cb(); })
+    .catch(function(){ akOrtho=[]; cb(); });
+}
+/* passenden Ortho-Ausschnitt suchen und den Bildausschnitt zeichnen */
+function akOrthoZeichnen(c,minE,minN,maxE,maxN,br,hoehe,cb){
+  akOrthoLaden(function(){
+    var tr=null;
+    (akOrtho||[]).forEach(function(o){
+      if(minE>=o.minE && maxE<=o.maxE && minN>=o.minN && maxN<=o.maxN) tr=o;
+    });
+    if(!tr){ cb(false); return; }
+    var im=akOrthoBild[tr.datei];
+    if(im==='fehler'){ cb(false); return; }
+    if(!im){
+      var neu=new Image();
+      neu.onload=function(){ akOrthoBild[tr.datei]=neu; akOrthoZeichnen(c,minE,minN,maxE,maxN,br,hoehe,cb); };
+      neu.onerror=function(){ akOrthoBild[tr.datei]='fehler'; cb(false); };
+      akOrthoBild[tr.datei]=null;
+      neu.src='uploads/ortho/'+tr.datei;
+      return;
+    }
+    var sx=(minE-tr.minE)/(tr.maxE-tr.minE)*tr.w;
+    var sy=(tr.maxN-maxN)/(tr.maxN-tr.minN)*tr.h;
+    var sw=(maxE-minE)/(tr.maxE-tr.minE)*tr.w;
+    var sh=(maxN-minN)/(tr.maxN-tr.minN)*tr.h;
+    try{ c.drawImage(im,sx,sy,sw,sh,0,0,br,hoehe); akQuelle='Drohne 22.04.2026'; cb(true); }
+    catch(e){ cb(false); }
+  });
+}
+
 var akWms={};
 function akLuftbild(minE,minN,maxE,maxN,wPx,hPx,cb){
   var maxSeite=2000;
