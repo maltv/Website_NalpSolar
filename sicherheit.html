@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>NalpSolar · Sicherheit – Notfall &amp; Konzepte</title>
+<meta name="theme-color" content="#8f1114">
+<script src="assets/js/nalp-gate.js"></script>
+<style>
+  :root{
+    --bg:#eef1f5; --card:#fff; --line:rgba(10,22,38,.12); --txt:#14202e; --muted:#5b6b7c;
+    --rot:#d63a3f; --rot-d:#8f1114; --blue:#0b5fff; --green:#1c8a4a; --amber:#e8a012;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;}
+  body{background:var(--bg);color:var(--txt);font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;line-height:1.45;}
+  .wrap{max-width:820px;margin:0 auto;padding:0 14px 60px;}
+
+  .top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    padding:10px 14px calc(10px + env(safe-area-inset-top));margin:0 -14px 14px;
+    color:#fde8e8;background:radial-gradient(120% 160% at 0 0,#b3181c,#5c0a0c);box-shadow:0 2px 14px rgba(0,0,0,.3);}
+  .top .brand{font-size:10px;letter-spacing:.22em;font-weight:800;color:#ffc340;text-transform:uppercase;}
+  .top h1{font-size:16px;font-weight:900;margin:1px 0 0;color:#fff;}
+  .home{border:0;border-radius:11px;padding:10px 14px;font-weight:800;font-size:14px;color:#fff;cursor:pointer;
+    background:linear-gradient(135deg,#0b5fff,#2196F3);white-space:nowrap;}
+
+  h2{font-size:15px;font-weight:900;margin:26px 0 10px;display:flex;align-items:center;gap:8px;}
+  .lead{font-size:13.5px;color:var(--muted);margin:-4px 0 12px;}
+
+  /* Notruf-Buttons */
+  .callgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+  .call{display:flex;flex-direction:column;justify-content:center;gap:2px;text-decoration:none;border-radius:14px;
+    padding:14px 16px;color:#fff;box-shadow:0 6px 18px rgba(140,20,25,.22);}
+  .call .nr{font-size:26px;font-weight:900;line-height:1;}
+  .call .lb{font-size:12.5px;font-weight:700;opacity:.95;}
+  .call.haupt{background:linear-gradient(135deg,#e2331f,#a30f16);}
+  .call.person{background:linear-gradient(135deg,#233b54,#12304f);}
+  .call.person .nr{font-size:19px;}
+  .call:active{transform:scale(.985);}
+  .mini{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+  .mini a{flex:1 1 130px;text-align:center;text-decoration:none;color:var(--txt);background:var(--card);
+    border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12.5px;font-weight:700;}
+  .mini a b{font-size:15px;}
+
+  .warn{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--rot);border-radius:12px;
+    padding:12px 14px;margin:12px 0 0;box-shadow:0 4px 12px rgba(10,22,38,.05);}
+  .warn.amber{border-left-color:var(--amber);} .warn.green{border-left-color:var(--green);} .warn.blue{border-left-color:var(--blue);}
+  .warn .wt{font-size:14px;font-weight:900;}
+  .warn .wb{font-size:13px;color:#2a3a49;margin-top:5px;}
+  .warn ul{margin:6px 0 0;padding-left:18px;} .warn li{font-size:13px;margin:3px 0;}
+
+  table.info{width:100%;border-collapse:separate;border-spacing:0;background:var(--card);border-radius:14px;overflow:hidden;
+    border:1px solid var(--line);box-shadow:0 4px 12px rgba(10,22,38,.05);}
+  table.info th{background:#f6f7f9;text-align:left;font-size:12px;color:var(--muted);padding:9px 12px;border-bottom:1px solid var(--line);}
+  table.info td{font-size:13px;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top;}
+  table.info tr:last-child td{border-bottom:0;}
+  table.info td:first-child{font-weight:800;width:34%;}
+
+  /* Dokument-Karten */
+  .docs{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+  .doc{display:flex;flex-direction:column;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:12px;box-shadow:0 4px 12px rgba(10,22,38,.05);text-decoration:none;color:var(--txt);}
+  .doc .dt{font-size:14.5px;font-weight:900;}
+  .doc .ds{font-size:12px;color:var(--muted);line-height:1.45;}
+  .doc .dm{margin-top:auto;display:flex;justify-content:space-between;align-items:center;gap:8px;}
+  .doc .rev{font-size:10.5px;font-weight:800;color:#fff;background:#5b6b7c;border-radius:6px;padding:2px 7px;white-space:nowrap;}
+  .doc.neu .rev{background:var(--green);}
+  .doc .go{font-size:13px;font-weight:900;color:var(--rot);}
+  .doc:active{transform:scale(.99);}
+
+  .src{font-size:11px;color:var(--muted);margin-top:22px;line-height:1.6;border-top:1px solid var(--line);padding-top:12px;}
+  @media(max-width:560px){ .docs{grid-template-columns:1fr;} .callgrid{grid-template-columns:1fr 1fr;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="top">
+  <button class="home" onclick="location.href='index.html'">🏠 Start</button>
+  <div>
+    <div class="brand">NalpSolar · STRABAG B8-13</div>
+    <h1>🦺 Sicherheit – Notfall &amp; Konzepte</h1>
+  </div>
+</div>
+
+<h2>🚨 Notruf</h2>
+<p class="lead">Im Notfall: <b>1. Ruhe bewahren → 2. Überlegen → 3. Handeln.</b> Absichern &amp; sich selbst schützen → Alarmieren → Erste Hilfe → Rettung einweisen. <b>Immer auch die Bauführung informieren.</b></p>
+<div class="callgrid">
+  <a class="call haupt" href="tel:144"><span class="nr">144</span><span class="lb">Sanität</span></a>
+  <a class="call haupt" href="tel:1414"><span class="nr">1414</span><span class="lb">REGA Helikopter</span></a>
+  <a class="call person" href="tel:+41768352175"><span class="nr">076 835 21 75</span><span class="lb">Bauführer Victor Malt</span></a>
+  <a class="call person" href="tel:+41768330866"><span class="nr">076 833 08 66</span><span class="lb">Arbeitssicherheit (SIBE) S. Gäumann</span></a>
+</div>
+<div class="mini">
+  <a href="tel:118"><b>118</b><br>Feuerwehr</a>
+  <a href="tel:117"><b>117</b><br>Polizei</a>
+  <a href="tel:112"><b>112</b><br>Europanotruf</a>
+  <a href="tel:145"><b>145</b><br>Vergiftung</a>
+  <a href="tel:+41763120377"><b>076 312 03 77</b><br>STRABAG Hotline</a>
+  <a href="tel:+41819492244"><b>081 949 22 44</b><br>Arzt Dr. Schnabel</a>
+  <a href="tel:+41819265111"><b>081 926 51 11</b><br>Spital Ilanz</a>
+</div>
+<div class="warn">
+  <div class="wt">Alarmieren – das gehört in die Meldung</div>
+  <div class="wb"><b>Wo?</b> · <b>Wer?</b> · <b>Was?</b> · <b>Wann?</b> · <b>Wie viele?</b> · <b>Gefahren?</b> · <b>Rückrufnummer</b></div>
+</div>
+
+<h2>📍 Notfall-Infrastruktur</h2>
+<table class="info">
+  <tr><th>Was</th><th>Wo</th></tr>
+  <tr><td>Sammelplatz</td><td>Berg: <b>IP Berg</b> · Tal: <b>IP Tal 1</b></td></tr>
+  <tr><td>Erste Hilfe / Sanitätsraum</td><td>Container, oberer Stock (Berg und Tal)</td></tr>
+  <tr><td>Defibrillator (AED)</td><td>Berg: <b>Container, oberer Stock</b> · Tal: <b>Haupteingang Axpo Hydro Surselva / Camping Viva</b> (SiKo zusätzl.: Betriebsgebäude KVR, Eingang Ost) – im Tal-Container ist <b>kein</b> AED!</td></tr>
+  <tr><td>Heli-Landeplätze Berg</td><td>LP 1: 2'701'950 / 1'166'095 · LP 2: 2'701'743 / 1'166'247 (25 m hindernisfrei halten)</td></tr>
+  <tr><td>Heli-Landeplätze Tal</td><td>LP 1: 2'701'551 / 1'170'238 · LP 2: 2'702'535 / 1'170'663 (IP Tal 4)</td></tr>
+  <tr><td>Rettungsfahrzeug Berg</td><td>Gator/UTV mit Rettungsbarre + Erste-Hilfe-Set, ständig am IP Berg</td></tr>
+  <tr><td>Funk ohne Handyempfang</td><td>Zuerst <b>Kraftwerksteuerstelle KVR («KSS», Kanal 4)</b>, dann <b>Zentrale (Kanal 1)</b></td></tr>
+</table>
+<div class="warn amber">
+  <div class="wt">Rettungsweg-Regel</div>
+  <div class="wb">Gearbeitet wird nur, wenn <b>mindestens ein Rettungsweg</b> (Heli oder Strasse) verfügbar ist – bei Schlechtwetter fliegt kein Heli. Zufahrten und Landeplätze freihalten; die Seilbahn ist <b>kein</b> Rettungsweg. Notfallkarte immer dabei haben – das Notfallkonzept hängt an den Containern Tal + Berg.</div>
+</div>
+
+<h2>📄 Sicherheits- &amp; Rettungskonzepte</h2>
+<p class="lead">Die gültigen Konzepte als PDF – zum Nachlesen und Vorzeigen (Suva, UBB, Bauherr).</p>
+<div class="docs">
+  <a class="doc neu" href="Sicherheit/psaga-siko-v1-20260701.pdf" target="_blank">
+    <div class="dt">SiKo PSAgA – Montage Modultische</div>
+    <div class="ds">Sicherheitskonzept Arbeiten mit Absturzgefahr (Hebebühne, Branach-Leiter, Auffanggurt). Ersteller: S. Gäumann. Steilhang-Ergänzung ist beim SIBE in Erarbeitung (Stand 24.07.2026).</div>
+    <div class="dm"><span class="rev">V1.0 · 01.07.2026</span><span class="go">PDF öffnen →</span></div>
+  </a>
+  <a class="doc" href="Sicherheit/uebergeordnetes-siko-be6010-a4.pdf" target="_blank">
+    <div class="dt">Übergeordnetes Sicherheitskonzept</div>
+    <div class="ds">BE_6010 – übergeordnetes SiKo des Projekts NalpSolar (Grundregeln, Organisation, Alarmierung).</div>
+    <div class="dm"><span class="rev">Rev. A4</span><span class="go">PDF öffnen →</span></div>
+  </a>
+  <a class="doc" href="Sicherheit/notfallkonzept-berg-20260506.pdf" target="_blank">
+    <div class="dt">Notfallkonzept Berg</div>
+    <div class="ds">FO 2.4-07: Notfallorganisation, Nummern, Anfahrts- und Übersichtspläne – hängt auch am Container Berg.</div>
+    <div class="dm"><span class="rev">06.05.2026</span><span class="go">PDF öffnen →</span></div>
+  </a>
+  <a class="doc" href="Sicherheit/notfallkonzept-ip-tal-20260506.pdf" target="_blank">
+    <div class="dt">Notfallkonzept IP Tal</div>
+    <div class="ds">FO 2.4-07: Notfallorganisation, Nummern, Anfahrts- und Übersichtspläne – hängt auch am Container Tal.</div>
+    <div class="dm"><span class="rev">06.05.2026</span><span class="go">PDF öffnen →</span></div>
+  </a>
+  <a class="doc" href="Sicherheit/siko-lawinen-be6020-a1.pdf" target="_blank">
+    <div class="dt">SiKo Lawinen</div>
+    <div class="ds">BE_6020 – Sicherheitskonzept Lawinengefahr (Wintermonate).</div>
+    <div class="dm"><span class="rev">Rev. A1 · 11.03.2025</span><span class="go">PDF öffnen →</span></div>
+  </a>
+  <a class="doc" href="Sicherheit/unterweisung-sicherheitstag-20260527.pdf" target="_blank">
+    <div class="dt">Unterweisung Sicherheitstag 2026</div>
+    <div class="ds">Folien der Einführungsveranstaltung vom 27.05.2026 (Grundregeln, Notfall, PSAgA, Gefahren, Umwelt).</div>
+    <div class="dm"><span class="rev">27.05.2026</span><span class="go">PDF öffnen →</span></div>
+  </a>
+</div>
+
+<h2>⚠️ Gefahrenbeurteilung &amp; Massnahmenplanung</h2>
+<p class="lead">Die aktuellen Gefahren-/Massnahmenpläne je Bereich (Stand 07.05.2026).</p>
+<div class="docs">
+  <a class="doc" href="Sicherheit/gefahren-massnahmen-berg-20260507.pdf" target="_blank">
+    <div class="dt">Berg</div>
+    <div class="ds">Gefahrenbeurteilung und Massnahmenplanung Baustelle Berg.</div>
+    <div class="dm"><span class="rev">07.05.2026</span><span class="go">PDF öffnen →</span></div>
+  </a>
+  <a class="doc" href="Sicherheit/gefahren-massnahmen-montage-berg-20260507.pdf" target="_blank">
+    <div class="dt">Montage Berg</div>
+    <div class="ds">Gefahrenbeurteilung und Massnahmenplanung Montage am Berg (Stahlbau/Module).</div>
+    <div class="dm"><span class="rev">07.05.2026</span><span class="go">PDF öffnen →</span></div>
+  </a>
+  <a class="doc" href="Sicherheit/gefahren-massnahmen-tal-20260507.pdf" target="_blank">
+    <div class="dt">Tal</div>
+    <div class="ds">Gefahrenbeurteilung und Massnahmenplanung IP Tal (Vormontage, Logistik).</div>
+    <div class="dm"><span class="rev">07.05.2026</span><span class="go">PDF öffnen →</span></div>
+  </a>
+  <a class="doc" href="Sicherheit/fo-2-1-22-instruktion-temporaere-arbeitskraefte.pdf" target="_blank">
+    <div class="dt">Formular: Instruktion temporäre Arbeitskräfte</div>
+    <div class="ds">FO 2.1-22 – bei Verleihpersonal ausfüllen und unterschreiben lassen; zusätzlich Kopie des persönlichen Sicherheitspasses ablegen.</div>
+    <div class="dm"><span class="rev">FO 2.1-22</span><span class="go">PDF öffnen →</span></div>
+  </a>
+</div>
+
+<h2>✅ Grundregeln – gelten für alle, immer</h2>
+<div class="warn green">
+  <ul>
+    <li><b>PSA ab der ersten Minute:</b> Helm, hohe Sicherheitsschuhe (S3), Warnkleidung EN 20471, schnittfeste Handschuhe; je nach Arbeit Schutzbrille + Gehörschutz (Schlagschrauber!).</li>
+    <li><b>Wir stoppen die Arbeiten bei Gefahr</b> – jeder darf und muss STOPP sagen.</li>
+    <li><b>Keine Alleinarbeit</b> bei gefährlichen Arbeiten – immer zu zweit.</li>
+    <li><b>Nie unter schwebenden Lasten.</b> Nur definierte Anschlagpunkte, geprüfte Anschlagmittel.</li>
+    <li><b>Baumaschinen haben immer Vortritt</b> – Blickkontakt mit dem Maschinisten, toter Winkel!</li>
+    <li><b>Kein Alkohol. Rauchen strikt verboten.</b></li>
+    <li>Mängel und Beinaheunfälle <b>sofort melden</b>. Baustellensprache ist Deutsch.</li>
+    <li>Hebebühne, Branach-Leiter, Stapler, Baumaschinen: <b>nur mit Ausbildung / separater Unterweisung</b>.</li>
+  </ul>
+</div>
+<div class="warn blue">
+  <div class="wt">PSAgA – Arbeiten mit Absturzgefahr (Kurzfassung)</div>
+  <div class="wb">Montagepunkte auf 4.1–6.0 m → ab 2 m gilt Absturzgefahr. <b>Kollektivschutz zuerst: Hebebühne</b> (Ausbildung Kat. 3b, im Korb Auffanggurt + am Korb fixiert). <b>Branach-Leiter</b> nur nach separater Unterweisung, nur mit Gurt und am Seil; andere Leitern an der Primärkonstruktion sind <b>verboten</b>. Details im SiKo PSAgA V1.0 (oben).</div>
+</div>
+
+<p class="src">
+  Quellen: Notfallkonzept Berg + Notfallkonzept IP Tal (FO 2.4-07, Stand 06.05.2026) – Nummern 29.07.2026 koordinatengenau verifiziert ·
+  SiKo PSAgA NalpSolar V1.0 (01.07.2026, S. Gäumann) · Übergeordnetes SiKo BE_6010 Rev. A4 ·
+  Gefahrenbeurteilung/Massnahmenplanung Berg / Montage Berg / Tal (07.05.2026) · Sicherheitstag 27.05.2026 ·
+  FO 2.1-22 · Baustellendossier NalpSolar Ausgabe 30.07.2026 (Register 2).
+  Ablage Originale: Dropbox …\04 Projekt-Q-mangement\06 SGU\.
+</p>
+</div>
+</body>
+</html>
