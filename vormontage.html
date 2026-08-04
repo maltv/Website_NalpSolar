@@ -1005,106 +1005,202 @@ function anwKarteMalen(ai, gi, zielCv, zielBr){
   if(!gr) return;
   var cv=zielCv || document.getElementById('anwKarte'+ai+'_'+gi);
   if(!cv || (!zielCv && !cv.clientWidth)) return;
-  akDatenLaden(function(){
-    if(!akPfaehle||!akGeo) return;
-    // Tische des Auftrags mit ihren Pfahlpunkten
-    var wanted={}; gr.zeilen.forEach(function(z){ wanted[String(z.id)]={nr:z.nr, pkt:[]}; });
-    akPfaehle.forEach(function(p){
-      var t=wanted[String(p[0])]; if(t) t.pkt.push([p[2],p[3]]);
-    });
-    var liste=Object.keys(wanted).map(function(id){ var t=wanted[id]; t.id=id; return t; })
-      .filter(function(t){ return t.pkt.length; });
-    if(!liste.length) return;
 
-    // Ausschnitt (LV95) mit Rand
+  akDatenLaden(function(){
+    if(!akPfaehle) return;
+    // Tische dieser Gruppe mit ihren Pfahlpunkten
+    var wanted={}; gr.zeilen.forEach(function(z){ wanted[String(z.id)]={nr:z.nr, id:String(z.id), pkt:[]}; });
+    akPfaehle.forEach(function(q){ var t=wanted[String(q[0])]; if(t) t.pkt.push([q[2],q[3]]); });
+    var liste=[]; Object.keys(wanted).forEach(function(k){ if(wanted[k].pkt.length) liste.push(wanted[k]); });
+    if(!liste.length) return;
+    liste.sort(function(x,y){ return x.nr-y.nr; });
+
+    // Ausschnitt in LV95, immer im Format 16:10 (auf dem Handy gut sichtbar)
     var alle=[]; liste.forEach(function(t){ t.pkt.forEach(function(q){ alle.push(akLv95(q[0],q[1])); }); });
-    var rand=liste.length<=8?14:22;
-    var minE=Math.min.apply(null,alle.map(function(v){return v.E;}))-rand;
-    var maxE=Math.max.apply(null,alle.map(function(v){return v.E;}))+rand;
-    var minN=Math.min.apply(null,alle.map(function(v){return v.N;}))-rand;
-    var maxN=Math.max.apply(null,alle.map(function(v){return v.N;}))+rand;
-    if(maxN-minN < (maxE-minE)*0.42){          // sehr flacher Ausschnitt -> aufpolstern
-      var mN=(maxN+minN)/2, hh=(maxE-minE)*0.21;
-      minN=mN-hh; maxN=mN+hh;
-    }
-    var br=zielBr||cv.clientWidth||360;
-    var dpr=zielBr?1:(window.devicePixelRatio||1);
-    var sk=zielBr?Math.max(1,zielBr/430):1;          // Schrift in der Grossansicht mitskalieren
-    var hoehe=Math.round(br*(maxN-minN)/(maxE-minE));
-    cv.width=br*dpr; cv.height=hoehe*dpr; cv.style.height=hoehe+'px';
+    var eMin=Math.min.apply(null,alle.map(function(v){return v.E;}));
+    var eMax=Math.max.apply(null,alle.map(function(v){return v.E;}));
+    var nMin=Math.min.apply(null,alle.map(function(v){return v.N;}));
+    var nMax=Math.max.apply(null,alle.map(function(v){return v.N;}));
+    var cE=(eMin+eMax)/2, cN=(nMin+nMax)/2;
+    var rand=liste.length<=6?16:22;
+    var br_m=Math.max(eMax-eMin+2*rand, 45), ho_m=Math.max(nMax-nMin+2*rand, 30);
+    // Kartenformat folgt dem Gebiet (hochkant ist auf dem Handy voellig ok),
+    // nur in vernuenftigen Grenzen – sonst werden die Tische winzig.
+    var AR=Math.max(0.72, Math.min(1.9, br_m/ho_m));
+    if(br_m/ho_m > AR) ho_m=br_m/AR; else br_m=ho_m*AR;
+    var minE=cE-br_m/2, maxE=cE+br_m/2, minN=cN-ho_m/2, maxN=cN+ho_m/2;
+
+    // Zeichenflaeche
+    var br = zielBr || cv.clientWidth || 360;
+    var dpr = zielBr ? 1 : Math.min(window.devicePixelRatio||1, 2.5);
+    var hoehe = Math.round(br/AR);
+    var sk = br/430;                              // Schrift-/Linienskalierung
+    cv.width=Math.round(br*dpr); cv.height=Math.round(hoehe*dpr);
+    if(!zielCv) cv.style.height=hoehe+'px';
     var c=cv.getContext('2d');
     c.setTransform(dpr,0,0,dpr,0,0);
-    c.clearRect(0,0,br,hoehe);
+    c.fillStyle='#e9ecef'; c.fillRect(0,0,br,hoehe);
     function P(E,N){ return { x:(E-minE)/(maxE-minE)*br, y:hoehe-(N-minN)/(maxN-minN)*hoehe }; }
 
-    if(akBild){
-      var sx=(minE-akGeo.minE)/(akGeo.maxE-akGeo.minE)*akGeo.w;
-      var sy=(akGeo.maxN-maxN)/(akGeo.maxN-akGeo.minN)*akGeo.h;
-      var sw=(maxE-minE)/(akGeo.maxE-akGeo.minE)*akGeo.w;
-      var sh=(maxN-minN)/(akGeo.maxN-akGeo.minN)*akGeo.h;
-      try{ c.drawImage(akBild,sx,sy,sw,sh,0,0,br,hoehe); }catch(e){}
+    function inhalt(){
+      var st=akStatus();
+      liste.forEach(function(t){
+        var pts=t.pkt.map(function(q){ var v=akLv95(q[0],q[1]); return P(v.E,v.N); });
+        var mx=0,my=0; pts.forEach(function(q){ mx+=q.x; my+=q.y; }); mx/=pts.length; my/=pts.length;
+        var b=(a.badges&&a.badges[t.id])||null;
+        var zu=st[t.id];                                   // 'vormontiert' | 'berg' | undefined
+        var flaeche=(b&&b.kfarbe)||'rgba(215,38,34,.72)';
+        if(zu==='berg') flaeche='rgba(30,158,90,.78)';
+        else if(zu==='vormontiert') flaeche='rgba(224,138,0,.78)';
+
+        if(pts.length>2){
+          var srt=pts.slice().sort(function(u,v){
+            return Math.atan2(u.y-my,u.x-mx)-Math.atan2(v.y-my,v.x-mx); });
+          c.save();
+          c.shadowColor='rgba(0,0,0,.45)'; c.shadowBlur=6*sk; c.shadowOffsetY=1.5*sk;
+          c.beginPath(); srt.forEach(function(q,i){ i?c.lineTo(q.x,q.y):c.moveTo(q.x,q.y); }); c.closePath();
+          c.fillStyle=flaeche; c.fill();
+          c.restore();
+          c.lineWidth=2*sk; c.strokeStyle='#fff'; c.stroke();
+        }
+
+        // ID in der Tischflaeche, in die Tischachse gedreht
+        var w1=0,w2=0,dmax=-1;
+        for(var i=0;i<pts.length;i++) for(var j=i+1;j<pts.length;j++){
+          var dd=(pts[i].x-pts[j].x)*(pts[i].x-pts[j].x)+(pts[i].y-pts[j].y)*(pts[i].y-pts[j].y);
+          if(dd>dmax){ dmax=dd; w1=i; w2=j; }
+        }
+        var wi=Math.atan2(pts[w2].y-pts[w1].y, pts[w2].x-pts[w1].x);
+        if(wi>Math.PI/2) wi-=Math.PI;
+        if(wi<-Math.PI/2) wi+=Math.PI;
+        var lang=Math.sqrt(dmax);
+        var fs=Math.max(10*sk, Math.min(18*sk, lang*0.34));
+        c.save(); c.translate(mx,my); c.rotate(wi);
+        c.font='900 '+fs.toFixed(1)+'px Arial';
+        c.textAlign='center'; c.textBaseline='middle';
+        c.lineWidth=3.2*sk; c.strokeStyle='rgba(0,0,0,.55)'; c.lineJoin='round';
+        c.strokeText(t.id, 0, 0); c.fillStyle='#fff'; c.fillText(t.id, 0, 0);
+        c.restore();
+
+        // Reihenfolge-Nummer als Kreis am oberen Ende des Tisches
+        var kopf = pts[w1].y < pts[w2].y ? pts[w1] : pts[w2];
+        var kx=mx+(kopf.x-mx)*1.12, ky=my+(kopf.y-my)*1.12;
+        var r=Math.max(7.5*sk, Math.min(11*sk, lang*0.17));
+        c.beginPath(); c.arc(kx,ky,r,0,6.2832);
+        c.fillStyle = zu==='berg' ? '#1e9e5a' : (zu==='vormontiert' ? '#e08a00' : '#ffffff');
+        c.fill();
+        c.lineWidth=2*sk; c.strokeStyle=(b&&b.gfarbe)||'#D72622'; c.stroke();
+        c.font='900 '+(r*1.15).toFixed(1)+'px Arial';
+        c.textAlign='center'; c.textBaseline='middle';
+        c.fillStyle = zu ? '#fff' : '#1a1a1a';
+        c.fillText(String(t.nr), kx, ky+0.5*sk);
+      });
+
+      // Nordpfeil + Massstab
+      var pad=9*sk;
+      c.save();
+      c.translate(br-pad-11*sk, pad+13*sk);
+      c.fillStyle='rgba(255,255,255,.92)';
+      c.beginPath(); c.moveTo(0,-12*sk); c.lineTo(6*sk,8*sk); c.lineTo(0,4*sk); c.lineTo(-6*sk,8*sk);
+      c.closePath(); c.fill();
+      c.font='900 '+(9*sk).toFixed(1)+'px Arial'; c.textAlign='center';
+      c.strokeStyle='rgba(0,0,0,.5)'; c.lineWidth=2.5*sk; c.lineJoin='round';
+      c.strokeText('N',0,-14*sk); c.fillText('N',0,-14*sk);
+      c.restore();
+
+      var mStufen=[5,10,20,25,50,100], mPx=br/(maxE-minE);
+      var mWahl=mStufen[0];
+      for(var k=0;k<mStufen.length;k++){ if(mStufen[k]*mPx < br*0.34) mWahl=mStufen[k]; }
+      var bx=pad, by=hoehe-pad-6*sk, bw=mWahl*mPx;
+      c.fillStyle='rgba(0,0,0,.45)';
+      c.fillRect(bx-3*sk, by-13*sk, bw+6*sk, 20*sk);
+      c.fillStyle='#fff'; c.fillRect(bx, by, bw, 3*sk);
+      c.font='800 '+(9.5*sk).toFixed(1)+'px Arial'; c.textAlign='left'; c.textBaseline='alphabetic';
+      c.fillText(mWahl+' m', bx, by-4*sk);
     }
-    var st=akStatus();
-    liste.sort(function(a,b){ return a.nr-b.nr; }).forEach(function(t){
-      var pts=t.pkt.map(function(q){ var v=akLv95(q[0],q[1]); return P(v.E,v.N); });
-      var mx=pts.reduce(function(a,q){return a+q.x;},0)/pts.length;
-      var my=pts.reduce(function(a,q){return a+q.y;},0)/pts.length;
-      var b=(a.badges&&a.badges[t.id])||null;
-      var flaeche = (b&&b.kfarbe) ? b.kfarbe : (b ? 'rgba(21,101,192,.55)' : 'rgba(215,38,34,.5)');
-      if(pts.length>2){
-        var srt=pts.slice().sort(function(a,q){
-          return Math.atan2(a.y-my,a.x-mx)-Math.atan2(q.y-my,q.x-mx); });
-        c.beginPath(); srt.forEach(function(q,i){ i?c.lineTo(q.x,q.y):c.moveTo(q.x,q.y); }); c.closePath();
-        c.fillStyle=flaeche; c.fill();
-        c.lineWidth=1.6*sk; c.strokeStyle='rgba(255,255,255,.9)'; c.stroke();
+
+    // Luftbild: scharfer WMS-Ausschnitt (offline aus dem Cache), sonst Perimeterbild
+    akLuftbild(minE,minN,maxE,maxN, Math.round(br*dpr), Math.round(hoehe*dpr), function(im){
+      if(im){ try{ c.drawImage(im,0,0,br,hoehe); }catch(e){} }
+      else if(akBild && akGeo){
+        var sx=(minE-akGeo.minE)/(akGeo.maxE-akGeo.minE)*akGeo.w;
+        var sy=(akGeo.maxN-maxN)/(akGeo.maxN-akGeo.minN)*akGeo.h;
+        var sw=(maxE-minE)/(akGeo.maxE-akGeo.minE)*akGeo.w;
+        var sh=(maxN-minN)/(akGeo.maxN-akGeo.minN)*akGeo.h;
+        try{ c.drawImage(akBild,sx,sy,sw,sh,0,0,br,hoehe); }catch(e){}
       }
-      // Beschriftung: Hintergrund nach Arbeitsfortschritt
-      var zu=st[t.id];
-      var bg = zu==='berg' ? '#1e9e5a' : (zu==='vormontiert' ? '#e08a00' : 'rgba(255,255,255,.94)');
-      var fg = zu ? '#fff' : '#1a1a1a';
-      var txt=t.nr+' · '+t.id;
-      var fs=Math.round((zielBr?12:11)*sk);
-      c.font='700 '+fs+'px Arial';
-      var tw=c.measureText(txt).width, pw=tw+8*sk, ph=Math.round((zielBr?19:16)*sk);
-      // Beschriftung in die Tischachse drehen (Punktepaar mit groesstem Abstand)
-      var w1=0, w2=0, dmax=-1;
-      for(var i=0;i<pts.length;i++) for(var j=i+1;j<pts.length;j++){
-        var dd=(pts[i].x-pts[j].x)*(pts[i].x-pts[j].x)+(pts[i].y-pts[j].y)*(pts[i].y-pts[j].y);
-        if(dd>dmax){ dmax=dd; w1=i; w2=j; }
-      }
-      var wi=Math.atan2(pts[w2].y-pts[w1].y, pts[w2].x-pts[w1].x);
-      if(wi>Math.PI/2) wi-=Math.PI;
-      if(wi<-Math.PI/2) wi+=Math.PI;
-      c.save(); c.translate(mx,my); c.rotate(wi);
-      if(c.roundRect){ c.beginPath(); c.roundRect(-pw/2,-ph/2,pw,ph,4*sk); c.fillStyle=bg; c.fill(); }
-      else { c.fillStyle=bg; c.fillRect(-pw/2,-ph/2,pw,ph); }
-      if(!zu){ c.lineWidth=1; c.strokeStyle='rgba(0,0,0,.25)'; c.stroke&&c.stroke(); }
-      c.fillStyle=fg; c.textAlign='center'; c.textBaseline='middle';
-      c.fillText(txt,0,1);
-      c.restore(); c.textBaseline='alphabetic';
+      c.fillStyle='rgba(12,18,26,.20)'; c.fillRect(0,0,br,hoehe);   // Bild beruhigen
+      inhalt();
     });
   });
 }
+
+/* Luftbild-Ausschnitt vom swisstopo-WMS (SWISSIMAGE, 10 cm). Der Service Worker
+   legt geo.admin.ch-Antworten im Cache ab -> einmal mit Netz geladen, danach
+   auch im Tal ohne Empfang verfuegbar. Ohne Netz: null -> Perimeterbild. */
+var akWms={};
+function akLuftbild(minE,minN,maxE,maxN,wPx,hPx,cb){
+  var maxSeite=2000;
+  var w=Math.min(maxSeite, Math.max(600, wPx)), h=Math.round(w*(hPx/wPx));
+  var key=[minE.toFixed(1),minN.toFixed(1),maxE.toFixed(1),maxN.toFixed(1),w].join('_');
+  if(akWms[key]!==undefined){ cb(akWms[key]); return; }
+  var url='https://wms.geo.admin.ch/?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0'
+        + '&LAYERS=ch.swisstopo.swissimage&STYLES=&CRS=EPSG:2056&FORMAT=image/jpeg'
+        + '&WIDTH='+w+'&HEIGHT='+h
+        + '&BBOX='+minE.toFixed(2)+','+minN.toFixed(2)+','+maxE.toFixed(2)+','+maxN.toFixed(2);
+  var im=new Image();
+  im.crossOrigin='anonymous';
+  im.onload=function(){ akWms[key]=im; cb(im); };
+  im.onerror=function(){ akWms[key]=null; cb(null); };
+  im.src=url;
+}
+
+/* Vollbild: scharfe Karte, verschiebbar und zoombar */
 function karteGross(ai, gi){
   ai=ai||0; gi=gi||0;
   var tmp=document.createElement('canvas');
-  anwKarteMalen(ai, gi, tmp, 1600);                 // scharfe Fassung zum Zoomen
-  setTimeout(function(){                            // Bild/Daten sind ggf. async geladen
-    try{ bildGross(tmp.toDataURL('image/png')); }
-    catch(e){
+  anwKarteMalen(ai, gi, tmp, 1600);
+  setTimeout(function(){
+    var src=null;
+    try{ src=tmp.toDataURL('image/jpeg',0.9); }catch(e){
       var cv=document.getElementById('anwKarte'+ai+'_'+gi);
-      if(cv) try{ bildGross(cv.toDataURL('image/png')); }catch(e2){}
+      if(cv) try{ src=cv.toDataURL('image/jpeg',0.9); }catch(e2){}
     }
-  }, 150);
+    if(src) bildGross(src);
+  }, 500);
 }
 
 function bildGross(src){
   var ov=document.createElement('div');
-  ov.style.cssText='position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.94);'+
-    'display:flex;align-items:center;justify-content:center;padding:8px;overflow:auto';
-  ov.innerHTML='<img src="'+src+'" style="max-width:100%;height:auto;border-radius:6px">';
-  ov.onclick=function(){ document.body.removeChild(ov); };
+  ov.style.cssText='position:fixed;inset:0;z-index:80;background:#0b0f14;overflow:auto;'+
+    '-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y pinch-zoom';
+  var img=document.createElement('img');
+  img.src=src;
+  img.style.cssText='display:block;width:100%;height:auto';       // Start: passend
+  img.ondblclick=function(e){ e.stopPropagation(); zoom(); };
+  var gross=false;
+  function zoom(){
+    gross=!gross;
+    img.style.width=gross?'250%':'100%';
+    img.style.maxWidth='none';
+  }
+  var leiste=document.createElement('div');
+  leiste.style.cssText='position:fixed;top:0;left:0;right:0;display:flex;gap:8px;padding:8px;'+
+    'background:linear-gradient(180deg,rgba(0,0,0,.75),rgba(0,0,0,0));z-index:81';
+  leiste.innerHTML='<button id="bgZoom" style="border:0;border-radius:8px;padding:9px 14px;'+
+    'font:800 14px Arial;background:#fff;color:#1a1a1a">🔍 Zoom</button>'+
+    '<span style="flex:1"></span>'+
+    '<button id="bgZu" style="border:0;border-radius:8px;padding:9px 14px;'+
+    'font:800 14px Arial;background:#D72622;color:#fff">✕ Schliessen</button>';
+  ov.appendChild(img);
   document.body.appendChild(ov);
+  document.body.appendChild(leiste);
+  function schliessen(){
+    try{ document.body.removeChild(ov); document.body.removeChild(leiste); }catch(e){}
+  }
+  leiste.querySelector('#bgZoom').onclick=zoom;
+  leiste.querySelector('#bgZu').onclick=schliessen;
+  ov.onclick=function(e){ if(e.target===ov) schliessen(); };
 }
 function anwHaken(id, setzen){
   var von=getVon()||'';
