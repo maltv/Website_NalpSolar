@@ -1,7 +1,14 @@
 'use strict';
-var CACHE = 'nalpsolar-v67';
+var CACHE = 'nalpsolar-v68';
 var PRECACHE = [
   './index.html',
+  './passstueck-scan.html',
+  './assets/js/nalp-scan-parse.js',
+  './assets/vendor/tesseract/tesseract.min.js',
+  './assets/vendor/tesseract/worker.min.js',
+  './assets/vendor/tesseract/tesseract-core-simd-lstm.wasm.js',
+  './assets/vendor/tesseract/tesseract-core-lstm.wasm.js',
+  './assets/vendor/tesseract/eng.traineddata.gz',
   './logistik.html',
   './lieferscheine.html',
   './assets/img/hero.jpg',
