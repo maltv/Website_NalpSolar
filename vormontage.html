@@ -101,6 +101,9 @@
   .kLeg .fl{ display:inline-block; width:15px; height:11px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
   .kLeg .fl.o{ background:#c9ccd2; } .kLeg .fl.v{ background:var(--orange); } .kLeg .fl.b{ background:var(--gruen); }
   .kBatch canvas{ width:100%; display:block; border:1px solid var(--line); border-radius:6px; cursor:zoom-in; }
+  .box.kBatch{ padding:8px; }                     /* mehr Platz fuer die Karte auf dem Handy */
+  .box.kBatch h2{ margin:2px 4px 2px; }
+  .box.kBatch .zaehler{ margin:0 4px 7px; }
   #toast{ position:fixed; left:50%; bottom:20px; transform:translateX(-50%) translateY(90px);
           background:#0f5c33; color:#fff; font-weight:700; padding:12px 18px; border-radius:8px;
           font-size:15px; transition:transform .25s; z-index:70; max-width:92%; text-align:center; }
@@ -266,7 +269,7 @@ var I18N={
   leg_ps:'Passstück erfasst', leg_ps_offen:'Passstück fehlt',
   leg_offen:'offen', leg_vormontiert:'vormontiert', leg_berg:'auf dem Berg',
   karte_stand:'{e}/{g} Passstücke · {v} vormontiert · {b} auf dem Berg',
-  karte_ohne:'ohne Koordinaten:',
+  karte_ohne:'ohne Koordinaten:', karte_tipp:'🔍 Antippen = Vollbild',
   btn_aktualisieren:'↻ Aktualisieren', ok_aktualisiert:'Aktualisiert ✔',
   kopf_titel:'🔧 Vormontage', tab_stuetze:'🏷 Stütze', tab_fortschritt:'🏗 Fortschritt', tab_tabellen:'📋 Tabellen',
   s1_titel:'🏷 Stütze erfassen',
@@ -318,7 +321,7 @@ var I18N={
   leg_ps:'fitting piece saved', leg_ps_offen:'fitting piece missing',
   leg_offen:'open', leg_vormontiert:'pre-assembled', leg_berg:'sent up the mountain',
   karte_stand:'{e}/{g} fitting pieces · {v} pre-assembled · {b} on the mountain',
-  karte_ohne:'no coordinates:',
+  karte_ohne:'no coordinates:', karte_tipp:'🔍 tap = full screen',
   btn_aktualisieren:'↻ Refresh', ok_aktualisiert:'Updated ✔',
   kopf_titel:'🔧 Pre-assembly', tab_stuetze:'🏷 Post', tab_fortschritt:'🏗 Progress', tab_tabellen:'📋 Lists',
   s1_titel:'🏷 Save post',
@@ -370,7 +373,7 @@ var I18N={
   leg_ps:'podpora zapisana', leg_ps_offen:'brak podpory',
   leg_offen:'otwarte', leg_vormontiert:'wstępnie zmontowane', leg_berg:'wysłane w góry',
   karte_stand:'Podpory: {e}/{g} · zmontowane: {v} · na górze: {b}',
-  karte_ohne:'bez współrzędnych:',
+  karte_ohne:'bez współrzędnych:', karte_tipp:'🔍 dotknij = pełny ekran',
   btn_aktualisieren:'↻ Odśwież', ok_aktualisiert:'Zaktualizowano ✔',
   kopf_titel:'🔧 Wstępny montaż', tab_stuetze:'🏷 Podpora', tab_fortschritt:'🏗 Postęp', tab_tabellen:'📋 Tabele',
   s1_titel:'🏷 Zapisz podporę',
@@ -863,7 +866,10 @@ function kartenMalen(){
   if(!wrap) return;
   if($('s4').style.display==='none') return;
   kGrp=kartenGruppen();
-  var lbls=Object.keys(kGrp).sort(function(a,b){ return parseInt(b,10)-parseInt(a,10); });
+  // nur die aktuellen Batches zeigen (8 und 9+10) - aeltere sind durch
+  var lbls=Object.keys(kGrp)
+    .filter(function(l){ return parseInt(l,10)>=8; })
+    .sort(function(a,b){ return parseInt(b,10)-parseInt(a,10); });
   var st=akStatus(), da=psErfasst();
   wrap.innerHTML='';
   lbls.forEach(function(lbl){
@@ -878,7 +884,7 @@ function kartenMalen(){
     var box=document.createElement('div');
     box.className='box kBatch';
     box.innerHTML='<h2>Batch '+esc(lbl)+'</h2>'
-      +'<div class="zaehler">'+T('karte_stand',{e:e,g:keys.length,v:nv,b:nb})+'</div>'
+      +'<div class="zaehler">'+T('karte_stand',{e:e,g:keys.length,v:nv,b:nb})+' · '+T('karte_tipp')+'</div>'
       +'<canvas></canvas>';
     wrap.appendChild(box);
     var cv=box.querySelector('canvas');
@@ -969,9 +975,9 @@ function batchKarteMalen(keys, cv, zielBr){
 
     // Zeichenflaeche
     var br = zielBr || cv.clientWidth || 360;
-    var dpr = zielBr ? 1 : Math.min(window.devicePixelRatio||1, 2.5);
+    var dpr = zielBr ? 1 : Math.min(window.devicePixelRatio||1, 3);
     var hoehe = Math.round(br/AR);
-    var sk = br/430;                              // Schrift-/Linienskalierung
+    var sk = Math.max(br/430, 0.95);              // Schrift-/Linienskalierung (Handy nicht zu klein)
     cv.width=Math.round(br*dpr); cv.height=Math.round(hoehe*dpr);
     if(!zielBr) cv.style.height=hoehe+'px';
     var c=cv.getContext('2d');
@@ -1010,7 +1016,7 @@ function batchKarteMalen(keys, cv, zielBr){
         if(wi>Math.PI/2) wi-=Math.PI;
         if(wi<-Math.PI/2) wi+=Math.PI;
         var lang=Math.sqrt(dmax);
-        var fs=Math.max(10*sk, Math.min(18*sk, lang*0.34));
+        var fs=Math.max(11.5*sk, Math.min(19*sk, lang*0.38));
         c.save(); c.translate(mx,my); c.rotate(wi);
         c.font='900 '+fs.toFixed(1)+'px Arial';
         c.textAlign='center'; c.textBaseline='middle';
@@ -1019,7 +1025,7 @@ function batchKarteMalen(keys, cv, zielBr){
         c.restore();
 
         // Bohrpunkte: blau = Passstueck erfasst, hell = fehlt
-        var pr=Math.max(3.4, 4.8*sk);
+        var pr=Math.max(4.3, 5*sk);
         pts.forEach(function(q){
           c.beginPath(); c.arc(q.x,q.y,pr,0,6.2832);
           c.fillStyle = da[q.key] ? '#1565c0' : 'rgba(226,229,233,.95)';
