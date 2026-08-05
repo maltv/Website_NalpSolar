@@ -93,6 +93,14 @@
   .bar{ position:relative; background:#edeff2; border-radius:4px; height:13px; min-width:70px; overflow:hidden; }
   .bar i{ position:absolute; top:0; left:0; bottom:0; background:var(--gruen); border-radius:4px; }
   .bar i.teils{ background:var(--orange); }
+  /* Karten je Batch */
+  .kLeg{ display:flex; gap:13px; flex-wrap:wrap; font-size:12px; color:var(--mut); align-items:center; }
+  .kLeg .dot{ display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:5px;
+        vertical-align:-2px; border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.3); }
+  .kLeg .dot.g{ background:var(--gruen); } .kLeg .dot.o{ background:#cfd4da; }
+  .kLeg .fl{ display:inline-block; width:15px; height:11px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
+  .kLeg .fl.v{ background:rgba(21,101,192,.6); } .kLeg .fl.b{ background:rgba(30,158,90,.65); }
+  .kBatch canvas{ width:100%; display:block; border-radius:4px; background:#dfe3e8; }
   #toast{ position:fixed; left:50%; bottom:20px; transform:translateX(-50%) translateY(90px);
           background:#0f5c33; color:#fff; font-weight:700; padding:12px 18px; border-radius:8px;
           font-size:15px; transition:transform .25s; z-index:70; max-width:92%; text-align:center; }
@@ -118,7 +126,7 @@
   <button id="t1" class="on" onclick="tab(1)"><span data-i18n="tab_stuetze">🏷 Stütze</span></button>
   <button id="t2" onclick="tab(2)"><span data-i18n="tab_fortschritt">🏗 Fortschritt</span></button>
   <button id="t3" onclick="tab(3)"><span data-i18n="tab_tabellen">📋 Tabellen</span></button>
-  <button id="t4" onclick="tab(4)"><span data-i18n="tab_auftrag">📌 Auftrag</span></button>
+  <button id="t4" onclick="tab(4)"><span data-i18n="tab_auftrag">🗺 Karten</span></button>
 </div>
 
 <main>
@@ -226,40 +234,20 @@
     </div>
   </section>
 
-  <!-- ══════════ 4 · ARBEITSANWEISUNG ══════════ -->
+  <!-- ══════════ 4 · KARTEN JE BATCH ══════════ -->
   <section id="s4" style="display:none">
     <div class="box" style="border-left-color:var(--orange)">
-      <h2 data-i18n="s4_titel">📌 Arbeitsanweisung</h2>
-      <div class="sub" id="anwStand" data-i18n="s4_sub">Diese Tische in dieser Reihenfolge vormontieren.</div>
-      <div id="anwListe"><div class="hint" data-i18n="anw_leer">Zurzeit kein Auftrag.</div></div>
-      <div style="margin-top:10px">
-        <button class="btn ghost" onclick="anwLaden(true)" data-i18n="btn_aktualisieren">↻ Aktualisieren</button>
+      <h2 data-i18n="k_titel">🗺 Stand je Batch</h2>
+      <div class="sub" data-i18n="k_sub">Je Bohrpunkt: Passstück erfasst? Je Tischfläche: vormontiert oder schon auf dem Berg? Die Reihenfolge gibt die Bauleitung durch.</div>
+      <div class="kLeg">
+        <span><i class="dot g"></i><span data-i18n="leg_erf">Passstück erfasst</span></span>
+        <span><i class="dot o"></i><span data-i18n="leg_offen">Passstück fehlt</span></span>
+        <span><i class="fl v"></i><span data-i18n="leg_vorm">vormontiert (im Tal)</span></span>
+        <span><i class="fl b"></i><span data-i18n="leg_berg">auf dem Berg</span></span>
       </div>
+      <div style="margin-top:9px"><button class="btn ghost" onclick="kartenLaden(true)" data-i18n="btn_aktualisieren">↻ Aktualisieren</button></div>
     </div>
-
-    <!-- nur fuer die Bauleitung: Auftrag schreiben -->
-    <div class="box" id="anwEditBox" style="display:none;border-left-color:#63676d">
-      <h2>✏️ Auftrag schreiben <span style="font-weight:400;font-size:12px;color:var(--mut)">(nur Bauleitung)</span></h2>
-      <label class="fl">Titel / Auftrag</label>
-      <input id="a_titel" placeholder="z.B. Vormontage Bereich 26_2.1 – Prio">
-      <label class="fl">Tisch-IDs in der gewünschten Reihenfolge</label>
-      <textarea id="a_ids" style="min-height:70px" placeholder="z.B. 995, 1148, 2104, 384 …"></textarea>
-      <div class="hint">Komma, Leerzeichen oder Zeilenumbruch trennen. Reihenfolge = Arbeitsreihenfolge.</div>
-      <label class="fl">Hinweis für die Equipe (optional)</label>
-      <textarea id="a_bem" placeholder="z.B. zuerst alle S1, Passstücke liegen bei IP Tal 1"></textarea>
-      <div class="row2">
-        <div><label class="fl">Von</label><input id="a_von" placeholder="Name"></div>
-        <div><label class="fl">Gültig ab (optional)</label><input type="date" id="a_datum"></div>
-      </div>
-      <div style="margin-top:12px">
-        <button class="btn" onclick="anwSpeichern()">📤 Anweisung veröffentlichen</button>
-        <button class="btn ghost" onclick="anwLoeschen()">🗑 Aktuelle löschen</button>
-      </div>
-      <div class="hint">Ersetzt die aktuelle Anweisung für alle. Abgehakte Tische bleiben erhalten.</div>
-    </div>
-    <div style="text-align:center;margin-top:4px">
-      <button class="btn ghost" id="anwEditBtn" onclick="anwEditToggle()" style="opacity:.65">✏️ Auftrag schreiben</button>
-    </div>
+    <div id="kBoxen"></div>
   </section>
 </main>
 <div id="toast"></div>
@@ -272,9 +260,12 @@
    Übersetzungen erstellt und gegengeprüft (Bau-Fachsprache, Handy-tauglich). */
 var I18N={
  de:{
-  tab_auftrag:'📌 Auftrag', s4_titel:'📌 Arbeitsanweisung',
-  s4_sub:'Diese Tische in dieser Reihenfolge vormontieren.',
-  anw_leer:'Zurzeit kein Auftrag.', anw_fortschritt:'{n} von {g} erledigt',
+  tab_auftrag:'🗺 Karten', k_titel:'🗺 Stand je Batch',
+  k_sub:'Je Bohrpunkt: Passstück erfasst? Je Tischfläche: vormontiert oder schon auf dem Berg? Die Reihenfolge gibt die Bauleitung durch.',
+  leg_erf:'Passstück erfasst', leg_offen:'Passstück fehlt',
+  leg_vorm:'vormontiert (im Tal)', leg_berg:'auf dem Berg',
+  karte_stand:'{e}/{g} Passstücke · {v} vormontiert · {b} auf dem Berg',
+  karte_ohne:'ohne Koordinaten:',
   btn_aktualisieren:'↻ Aktualisieren', ok_aktualisiert:'Aktualisiert ✔',
   kopf_titel:'🔧 Vormontage', tab_stuetze:'🏷 Stütze', tab_fortschritt:'🏗 Fortschritt', tab_tabellen:'📋 Tabellen',
   s1_titel:'🏷 Stütze erfassen',
@@ -321,9 +312,12 @@ var I18N={
   offline_hinweis:'Offline – zeigt nur Einträge von diesem Handy'
  },
  en:{
-  tab_auftrag:'📌 Job', s4_titel:'📌 Work order',
-  s4_sub:'Pre-assemble these tables in this order.',
-  anw_leer:'No job at the moment.', anw_fortschritt:'{n} of {g} done',
+  tab_auftrag:'🗺 Maps', k_titel:'🗺 Status per batch',
+  k_sub:'Per drill point: fitting piece saved? Per table area: pre-assembled or already on the mountain? Site management passes on the work order.',
+  leg_erf:'fitting piece saved', leg_offen:'fitting piece missing',
+  leg_vorm:'pre-assembled (valley)', leg_berg:'on the mountain',
+  karte_stand:'{e}/{g} fitting pieces · {v} pre-assembled · {b} on the mountain',
+  karte_ohne:'no coordinates:',
   btn_aktualisieren:'↻ Refresh', ok_aktualisiert:'Updated ✔',
   kopf_titel:'🔧 Pre-assembly', tab_stuetze:'🏷 Post', tab_fortschritt:'🏗 Progress', tab_tabellen:'📋 Lists',
   s1_titel:'🏷 Save post',
@@ -370,9 +364,12 @@ var I18N={
   offline_hinweis:'Offline – only entries from this phone'
  },
  pl:{
-  tab_auftrag:'📌 Zlecenie', s4_titel:'📌 Zlecenie pracy',
-  s4_sub:'Zmontuj te stoły w tej kolejności.',
-  anw_leer:'Brak zlecenia.', anw_fortschritt:'Gotowe: {n} z {g}',
+  tab_auftrag:'🗺 Mapy', k_titel:'🗺 Stan wg partii',
+  k_sub:'Każdy punkt: podpora zapisana? Powierzchnia stołu: zmontowany czy już na górze? Kolejność podaje kierownictwo budowy.',
+  leg_erf:'podpora zapisana', leg_offen:'brak podpory',
+  leg_vorm:'zmontowany (dolina)', leg_berg:'na górze',
+  karte_stand:'Podpory: {e}/{g} · zmontowane: {v} · na górze: {b}',
+  karte_ohne:'bez współrzędnych:',
   btn_aktualisieren:'↻ Odśwież', ok_aktualisiert:'Zaktualizowano ✔',
   kopf_titel:'🔧 Wstępny montaż', tab_stuetze:'🏷 Podpora', tab_fortschritt:'🏗 Postęp', tab_tabellen:'📋 Tabele',
   s1_titel:'🏷 Zapisz podporę',
@@ -473,7 +470,7 @@ function tab(n){
     $('t'+i).classList.toggle('on', i===n);
   });
   if(n===3) laden(false);
-  if(n===4) anwLaden(false);
+  if(n===4) kartenLaden(false);
 }
 
 /* ---------- Netz-Anzeige + Offline-Warteschlange ---------- */
@@ -732,6 +729,7 @@ function renderTab(){
   $('tab2').innerHTML=h2;
   $('z2').textContent=T('zaehler_meldungen',{g:fo.length,v:hv,b:hb});
   renderBatches();
+  kartenMalen();
 }
 
 /* ---------- Bestellbatches: komplett geliefert? ----------
@@ -832,106 +830,135 @@ function csv2(){
     alleFortschritt().map(function(r){ return [r.tischId, r.art==='berg'?'auf den Berg':'vormontiert', r.bem, r.von, fmtD(r.datum), fmtZ(r.ts)]; }));
 }
 
-/* ══════════ Arbeitsanweisung (Reihenfolge der Tische) ══════════
-   Bauleitung schreibt eine Liste von Tisch-IDs in Reihenfolge; die Equipe
-   sieht sie im Reiter und hakt erledigte Tische ab (fuer alle sichtbar). */
-var P_ANW='erfassung/vm_anweisung', P_ANWOK='erfassung/vm_anweisung_erledigt';
-var anw=null, anwOk={};
+/* ══════════ Karten je Batch ══════════
+   Eine Karte pro Bestellbatch (9 und 10 zusammen): Luftbild, je Bohrpunkt
+   ein Punkt (gruen = Passstueck erfasst), Tischflaeche nach Fortschritt
+   (blau = vormontiert im Tal, gruen = auf dem Berg; Berg ueberschreibt).
+   Die Arbeitsreihenfolge gibt die Bauleitung muendlich durch - hier nur Stand. */
+var kGeo=null, kBild=null, kPf=null, kGeladen=false;
 
-function anwLaden(manuell){
-  if(!netzAn()){ if(manuell) toast(T('offline_hinweis'),true); anwMalen(); return; }
-  Promise.all([apiGet(P_ANW), apiGet(P_ANWOK)]).then(function(r){
-    anw=r[0]||null; anwOk=r[1]||{};
-    anwMalen();
-    if(manuell) toast(T('ok_aktualisiert'));
-  }).catch(function(){ if(manuell) toast(T('offline_hinweis'),true); });
+function lv95(lat,lon){                   // WGS84 -> LV95 (Naeherung swisstopo)
+  var p=(lat*3600-169028.66)/10000, l=(lon*3600-26782.5)/10000;
+  return { E:2600072.37+211455.93*l-10938.51*l*p-0.36*l*p*p-44.54*l*l*l,
+           N:1200147.07+308807.95*p+3745.25*l*l+76.63*p*p-194.56*l*l*p+119.79*p*p*p };
 }
-function anwMalen(){
-  var box=$('anwListe');
-  if(!anw || !anw.ids || !anw.ids.length){
-    box.innerHTML='<div class="hint">'+T('anw_leer')+'</div>';
-    $('anwStand').textContent=T('s4_sub');
-    return;
-  }
-  var fertig=anw.ids.filter(function(id){ return anwOk[id]; }).length;
-  $('anwStand').textContent=(anw.titel?anw.titel+' · ':'')+
-    T('anw_fortschritt',{n:fertig,g:anw.ids.length})+
-    (anw.von?' · '+anw.von:'')+(anw.datum?' · '+fmtD(anw.datum):'');
-  var h='';
-  if(anw.bem) h+='<div class="hint" style="font-size:13px;color:var(--ink);margin-bottom:8px;white-space:pre-line">💬 '+esc(anw.bem)+'</div>';
-  if(anw.bild) h+='<div style="margin:8px 0"><img src="'+esc(anw.bild)+'" alt="Plan" '+
-    'style="width:100%;border:1px solid var(--line);border-radius:6px;cursor:zoom-in" '+
-    'onclick="bildGross(this.src)"></div>';
-  h+='<div class="tabWrap"><table>';
-  var letzteGruppe=null;
-  anw.ids.forEach(function(id,i){
-    var ok=!!anwOk[id];
-    var b=(anw.badges&&anw.badges[id])||null;      // {txt, farbe, gruppe}
-    if(b && b.gruppe!==letzteGruppe){              // Zwischenüberschrift je Gruppe
-      letzteGruppe=b.gruppe;
-      h+='<tr><td colspan="3" style="padding-top:14px">'
-        +'<div style="background:'+esc(b.farbe)+';color:#fff;font-weight:900;font-size:12.5px;'
-        +'border-radius:6px;padding:7px 10px">'+esc(b.gruppe)+'</div></td></tr>';
-    } else if(!b && letzteGruppe!==null){ letzteGruppe=null; }
-    h+='<tr'+(ok?' style="opacity:.5"':'')+'>'
-      +'<td style="width:34px;font-weight:900;color:var(--mut)">'+(i+1)+'.</td>'
-      +'<td style="font-size:19px;font-weight:900'+(ok?';text-decoration:line-through':'')+'">'+esc(id)
-      +(b?' <span style="font-size:11px;font-weight:800;background:'+esc(b.farbe)+';color:#fff;'
-          +'border-radius:4px;padding:2px 6px;vertical-align:2px">'+esc(b.txt)+'</span>':'')+'</td>'
-      +'<td style="text-align:right"><button class="btn '+(ok?'ghost':'gruen')+'" style="padding:9px 12px"'
-      +' onclick="anwHaken(\''+esc(id)+'\','+(ok?'false':'true')+')">'+(ok?'↺':'✔')+'</button></td></tr>';
+function kartenLaden(manuell){
+  laden(manuell);                          // frische Erfassungen -> renderTab -> kartenMalen
+  if(kGeladen){ kartenMalen(); if(manuell) toast(T('ok_aktualisiert')); return; }
+  Promise.all([
+    fetch('uploads/perimeter_geo.json').then(function(r){ return r.json(); }),
+    fetch('uploads/pfaehle.json').then(function(r){ return r.json(); })
+  ]).then(function(r){
+    kGeo=r[0]; kPf={};
+    r[1].forEach(function(p){ kPf[normId(p[0])+'-'+p[1]]=p; });
+    kGeladen=true;
+    var im=new Image();
+    im.onload=function(){ kBild=im; kartenMalen(); };
+    im.src='assets/img/perimeter.jpg';
+    kartenMalen();
+  }).catch(function(){});
+}
+function kartenGruppen(){                 // Batch 9 + 10 gehoeren zusammen
+  var map=batchPositionen(), g={};
+  Object.keys(map).forEach(function(b){
+    var lbl=(b==='9'||b==='10')?'9+10':String(b);
+    g[lbl]=g[lbl]||{};
+    Object.keys(map[b]).forEach(function(k){ g[lbl][k]=true; });
   });
-  h+='</table></div>';
-  box.innerHTML=h;
+  return g;
 }
-function bildGross(src){
-  var ov=document.createElement('div');
-  ov.style.cssText='position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.94);'+
-    'display:flex;align-items:center;justify-content:center;padding:8px;overflow:auto';
-  ov.innerHTML='<img src="'+src+'" style="max-width:100%;height:auto;border-radius:6px">';
-  ov.onclick=function(){ document.body.removeChild(ov); };
-  document.body.appendChild(ov);
+function kartenMalen(){
+  var wrap=$('kBoxen');
+  if(!wrap || !kGeladen) return;
+  if($('s4').style.display==='none') return;
+  var erf={};
+  alleStuetzen().forEach(function(r){
+    erf[normId(r.tischId)+'-'+String(r.stuetze||'').trim().toUpperCase()]=true;
+  });
+  var fo={};                               // je Tisch: 'berg' schlaegt 'vormontiert'
+  alleFortschritt().forEach(function(r){
+    var k=normId(r.tischId);
+    if(r.art==='berg') fo[k]='berg';
+    else if(r.art==='vormontiert' && fo[k]!=='berg') fo[k]='vormontiert';
+  });
+  var grp=kartenGruppen();
+  var lbls=Object.keys(grp).sort(function(a,b){ return parseInt(b,10)-parseInt(a,10); });
+  wrap.innerHTML='';
+  lbls.forEach(function(lbl){ batchKarte(wrap, lbl, grp[lbl], erf, fo); });
 }
-function anwHaken(id, setzen){
-  var von=getVon()||'';
-  if(setzen){
-    anwOk[id]={von:von, ts:Date.now()};
-    apiPut(P_ANWOK+'/'+encodeURIComponent(id), {von:von, ts:Date.now()})
-      .then(function(ok){ if(!ok) toast(T('err_kein_empfang'),true); });
-  } else {
-    delete anwOk[id];
-    fetch(DB+'/'+P_ANWOK+'/'+encodeURIComponent(id)+'.json',{method:'DELETE'})
-      .catch(function(){ toast(T('err_kein_empfang'),true); });
+function batchKarte(wrap, lbl, keys, erf, fo){
+  // Tische mit Koordinaten sammeln
+  var tische={}, ohne={};
+  Object.keys(keys).forEach(function(k){
+    var p=kPf[k], i=k.lastIndexOf('-');
+    var tid=k.slice(0,i), s=k.slice(i+1);
+    if(!p){ ohne[tid]=true; return; }
+    (tische[tid]=tische[tid]||[]).push({s:s, key:k, v:lv95(p[2],p[3])});
+  });
+  var tids=Object.keys(tische);
+  // Zaehler
+  var g=Object.keys(keys).length, e=Object.keys(keys).filter(function(k){ return erf[k]; }).length;
+  var nv=0, nb=0;
+  tids.concat(Object.keys(ohne)).forEach(function(t){
+    if(fo[t]==='berg') nb++; else if(fo[t]==='vormontiert') nv++;
+  });
+  var box=document.createElement('div');
+  box.className='box kBatch';
+  box.innerHTML='<h2>Batch '+esc(lbl)+'</h2>'
+    +'<div class="zaehler">'+T('karte_stand',{e:e,g:g,v:nv,b:nb})+'</div>'
+    +'<canvas></canvas>'
+    +(Object.keys(ohne).length?'<div class="hint">'+T('karte_ohne')+' '+Object.keys(ohne).sort().join(', ')+'</div>':'');
+  wrap.appendChild(box);
+  if(!tids.length) return;
+  // Ausschnitt in LV95
+  var minE=1e12,maxE=-1e12,minN=1e12,maxN=-1e12;
+  tids.forEach(function(t){ tische[t].forEach(function(q){
+    if(q.v.E<minE)minE=q.v.E; if(q.v.E>maxE)maxE=q.v.E;
+    if(q.v.N<minN)minN=q.v.N; if(q.v.N>maxN)maxN=q.v.N;
+  }); });
+  minE-=22; maxE+=22; minN-=22; maxN+=22;
+  var cv=box.querySelector('canvas');
+  var br=cv.clientWidth||340;
+  var spanE=maxE-minE, spanN=maxN-minN;
+  var hoehe=Math.max(230, Math.min(560, Math.round(spanN/(spanE/br))));
+  var mPerPx=Math.max(spanE/br, spanN/hoehe);
+  var dpr=window.devicePixelRatio||1;
+  cv.width=br*dpr; cv.height=hoehe*dpr; cv.style.height=hoehe+'px';
+  var c=cv.getContext('2d');
+  c.setTransform(dpr,0,0,dpr,0,0);
+  var mitteE=(minE+maxE)/2, mitteN=(minN+maxN)/2;
+  var vE=mitteE-br*mPerPx/2, vN=mitteN-hoehe*mPerPx/2;
+  function P(E,N){ return { x:(E-vE)/mPerPx, y:hoehe-(N-vN)/mPerPx }; }
+  // Luftbild
+  if(kBild&&kGeo){
+    var sx=(vE-kGeo.minE)/(kGeo.maxE-kGeo.minE)*kGeo.w;
+    var sy=(kGeo.maxN-(vN+hoehe*mPerPx))/(kGeo.maxN-kGeo.minN)*kGeo.h;
+    var sw=br*mPerPx/(kGeo.maxE-kGeo.minE)*kGeo.w;
+    var sh=hoehe*mPerPx/(kGeo.maxN-kGeo.minN)*kGeo.h;
+    try{ c.drawImage(kBild,sx,sy,sw,sh,0,0,br,hoehe); }catch(e){}
   }
-  anwMalen();
-}
-function anwEditToggle(){
-  var b=$('anwEditBox');
-  var auf=b.style.display!=='none';
-  b.style.display=auf?'none':'';
-  if(!auf && anw){
-    $('a_titel').value=anw.titel||''; $('a_ids').value=(anw.ids||[]).join(', ');
-    $('a_bem').value=anw.bem||''; $('a_von').value=anw.von||getVon(); $('a_datum').value=anw.datum||'';
-  }
-}
-function anwSpeichern(){
-  var ids=$('a_ids').value.split(/[^0-9A-Za-z_.-]+/).map(function(x){return x.trim();}).filter(Boolean);
-  if(!ids.length){ toast(T('err_ids'),true); return; }
-  var von=$('a_von').value.trim(); if(von) setVon(von);
-  var rec={ titel:$('a_titel').value.trim(), ids:ids, bem:$('a_bem').value.trim(),
-            von:von, datum:$('a_datum').value||heute(), ts:Date.now() };
-  if(anw && anw.bild) rec.bild=anw.bild;         // Planbild des Auftrags behalten
-  apiPut(P_ANW, rec).then(function(ok){
-    if(!ok) throw 0;
-    anw=rec; anwMalen(); $('anwEditBox').style.display='none';
-    toast(T('ok_gespeichert')+' · '+ids.length+' ID');
-  }).catch(function(){ toast(T('err_kein_empfang'),true); });
-}
-function anwLoeschen(){
-  if(!confirm('Aktuelle Arbeitsanweisung für alle löschen?')) return;
-  fetch(DB+'/'+P_ANW+'.json',{method:'DELETE'}).then(function(){
-    anw=null; anwMalen(); toast(T('ok_gespeichert'));
-  }).catch(function(){ toast(T('err_kein_empfang'),true); });
+  // Tische
+  tids.forEach(function(t){
+    var pts=tische[t].map(function(q){ var s=P(q.v.E,q.v.N); s.key=q.key; return s; });
+    var mx=pts.reduce(function(a,q){return a+q.x;},0)/pts.length;
+    var my=pts.reduce(function(a,q){return a+q.y;},0)/pts.length;
+    if(pts.length>2){
+      var srt=pts.slice().sort(function(a,b){
+        return Math.atan2(a.y-my,a.x-mx)-Math.atan2(b.y-my,b.x-mx); });
+      c.beginPath(); srt.forEach(function(q,i){ i?c.lineTo(q.x,q.y):c.moveTo(q.x,q.y); }); c.closePath();
+      c.fillStyle = fo[t]==='berg' ? 'rgba(30,158,90,.55)'
+                  : fo[t]==='vormontiert' ? 'rgba(21,101,192,.55)' : 'rgba(255,255,255,.12)';
+      c.fill(); c.lineWidth=1.5; c.strokeStyle='rgba(255,255,255,.85)'; c.stroke();
+    }
+    pts.forEach(function(q){
+      c.beginPath(); c.arc(q.x,q.y,5.5,0,6.283);
+      c.fillStyle = erf[q.key] ? '#1e9e5a' : 'rgba(210,214,219,.92)';
+      c.fill(); c.lineWidth=1.8; c.strokeStyle='#fff'; c.stroke();
+    });
+    c.font='800 11px Arial'; c.textAlign='center';
+    c.strokeStyle='rgba(0,0,0,.75)'; c.lineWidth=3;
+    c.strokeText(t, mx, my+4); c.fillStyle='#fff'; c.fillText(t, mx, my+4);
+  });
 }
 
 /* ---------- Start ---------- */
@@ -939,10 +966,11 @@ setLang(lang);
 $('f_von').value=getVon(); $('p_von').value=getVon();
 netzMalen(); pendSenden(); laden(false);
 setInterval(function(){ if(netzAn()) laden(false); }, 90000);
+window.addEventListener('resize', function(){ kartenMalen(); });
 var qs=location.search;
 if(qs.indexOf('f=fortschritt')>=0) tab(2);
 else if(qs.indexOf('f=tabelle')>=0) tab(3);
-else if(qs.indexOf('f=auftrag')>=0) tab(4);
+else if(qs.indexOf('f=auftrag')>=0 || qs.indexOf('f=karte')>=0) tab(4);
 if(qs.indexOf('lang=pl')>=0) setLang('pl');
 else if(qs.indexOf('lang=en')>=0) setLang('en');
 </script>
