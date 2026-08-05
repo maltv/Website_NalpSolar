@@ -1,11 +1,13 @@
-'use strict';
-var CACHE = 'nalpsolar-v79';
+﻿'use strict';
+var CACHE = 'nalpsolar-v90';
 var PRECACHE = [
   './index.html',
+  './sicherheit.html',
   './logistik.html',
   './lieferscheine.html',
   './vormontage.html',
   './gewinde.html',
+  './pfahlkopf.html',
   './uploads/pfaehle.json',
   './uploads/perimeter_geo.json',
   './assets/img/perimeter.jpg',
@@ -50,8 +52,27 @@ var PRECACHE = [
   './uploads/tables/modultische.json',
   './uploads/tables/modultische_all.json',
   './uploads/tables/baustand.json',
+  './uploads/tables/bohrstand.json',
+  './uploads/tables/typen.json',
+  './uploads/ortho/index.json',
+  './uploads/ortho/vormontage_gebiete.jpg',
+  './uploads/pk/A.meta.json',
+  './uploads/pk/A_lod.v.bin',
+  './uploads/pk/A_lod.f.bin',
+  './uploads/pk/B.meta.json',
+  './uploads/pk/B_lod.v.bin',
+  './uploads/pk/B_lod.f.bin',
+  './uploads/pk/D.meta.json',
+  './uploads/pk/D_lod.v.bin',
+  './uploads/pk/D_lod.f.bin',
+  './uploads/pk/E.meta.json',
+  './uploads/pk/E_lod.v.bin',
+  './uploads/pk/E_lod.f.bin',
+  './pk-modell.html',
   './uploads/road.json',
   './uploads/bauablauf.json',
+  './bauprogramm.html',
+  './uploads/bauprogramm_gantt.json',
   './game.html',
   './manifest-game.json'
 ];

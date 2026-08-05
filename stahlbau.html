@@ -116,6 +116,32 @@
     .plans{grid-template-columns:1fr;}
     .cell .nm{font-size:22px;}
   }
+
+/* Schrauben-Rechner */
+.srBox { background:#fff; border:1px solid #e3e5e8; border-left:5px solid #D72622;
+         border-radius:8px; padding:14px 15px; margin:0 0 16px; }
+.srSub { font-size:12.5px; color:#63676d; margin-bottom:9px; line-height:1.5; }
+.srBox textarea { width:100%; min-height:58px; font:600 16px/1.4 Arial; padding:10px 11px;
+         border:1px solid #ccd0d5; border-radius:7px; resize:vertical; box-sizing:border-box; }
+.srBtns { display:flex; gap:8px; margin-top:9px; flex-wrap:wrap; }
+.srBtn { background:#D72622; color:#fff; border:0; border-radius:7px; padding:11px 18px;
+         font:800 14.5px Arial; cursor:pointer; }
+.srBtn.ghost { background:#fff; color:#1a1a1a; border:1px solid #ccd0d5; }
+.srKarte { margin-top:14px; border:1px solid #e3e5e8; border-radius:8px; overflow:hidden; }
+.srKopf { background:#1a1a1a; color:#fff; padding:11px 13px; }
+.srKopf b { font-size:15.5px; }
+.srKopf span { display:block; font-size:12px; opacity:.85; margin-top:2px; }
+.srTab { width:100%; border-collapse:collapse; font-size:13.5px; }
+.srTab th { background:#f4f5f7; text-align:left; padding:7px 10px; font-size:11.5px;
+            color:#63676d; text-transform:uppercase; letter-spacing:.03em; }
+.srTab td { padding:9px 10px; border-top:1px solid #eceef1; vertical-align:top; }
+.srTab td.n { text-align:right; font-weight:900; font-size:16px; white-space:nowrap; }
+.srTab tr.sum td { background:#fff8f8; font-weight:900; border-top:2px solid #D72622; }
+.srWo { display:block; font-size:11.5px; color:#63676d; margin-top:1px; }
+.srWarn { background:#fff4e5; border-left:4px solid #e08a00; padding:9px 11px;
+          font-size:12.5px; line-height:1.55; margin:10px 0 0; }
+.srFuss { font-size:11.5px; color:#63676d; padding:10px 13px; line-height:1.6;
+          border-top:1px solid #eceef1; background:#fafbfc; }
 </style>
 </head>
 <body>
@@ -130,6 +156,32 @@
 </div>
 
 <div class="wrap">
+
+  <!-- ══════ Schrauben für den Berg (ID-Rechner) ══════ -->
+  <div class="srBox">
+    <h2 style="margin:0 0 4px">🔩 Schrauben für den Berg</h2>
+    <div class="srSub">Tisch-IDs eintippen – du bekommst die Liste, was du für die
+      Montage am Berg mitnehmen musst.</div>
+    <textarea id="srIds" placeholder="z.B. 292 297 293   (Komma, Leerzeichen oder Zeile)"></textarea>
+    <div class="srBtns">
+      <button class="srBtn" onclick="srRechnen()">Liste erstellen</button>
+      <button class="srBtn ghost" onclick="srLeeren()">Leeren</button>
+    </div>
+    <div id="srOut"></div>
+  </div>
+
+  <!-- 3D-Modell der Primärkonstruktion (Tekla-IFC von MAAG über ILF) -->
+  <a href="pk-modell.html" style="display:flex;align-items:center;gap:12px;margin:0 0 16px;
+     padding:13px 15px;background:#fff;border:1px solid #e3e5e8;border-left:5px solid #D72622;
+     border-radius:8px;text-decoration:none;color:#1a1a1a">
+    <span style="font-size:30px;line-height:1">🏗️</span>
+    <span>
+      <span style="display:block;font-size:16px;font-weight:900">3D-Modell der Primärkonstruktion →</span>
+      <span style="display:block;font-size:12.5px;color:#63676d;margin-top:2px">
+        Typ A · B · D · E zum Drehen und Zoomen – mit Schrauben, Konsolen, Stirnplatten
+        (Werkstattmodell MAAG)</span>
+    </span>
+  </a>
 
   <!-- SCHRITT 1: Schraube erkennen -->
   <h2>1 · Welche Schraube? → welche Tabelle?</h2>
@@ -286,6 +338,249 @@ document.getElementById('src').innerHTML =
   'Zusammenstellung Stand 10.07.2026. Bei Unklarheit oder Sonderfall (z. B. 10.9-Schraube ausserhalb Fuss-/Kopfplatte): Bauleitung / Statik fragen.';
 
 if('serviceWorker' in navigator){ window.addEventListener('load',function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
+</script>
+
+<script>
+/* ══════════ Schrauben für den Berg ══════════
+   Eingabe: Tisch-IDs → Typ aus uploads/tables/typen.json (ILF-Belegungslisten,
+   tisch_typ + baujahr) → Schraubenliste je Typ.
+
+   Mengen Typ E 2026: Angabe V. Malt 05.08.2026; die Dimensionen decken sich mit
+   dem Plan Primaerkonstruktion_TypE_2026 (M36×150 / M30×130 / M27×120 8.8,
+   HV M27×100 10.9 an der Fussplatte).
+   Für die übrigen Typen sind die Stückzahlen noch nicht bestätigt – das Werkzeug
+   sagt das offen, statt zu schätzen. */
+var SR_TYPEN = null;
+
+var SR_REGELN = {
+  'E_2026': {
+    bestaetigt: true,
+    quelle: 'Angabe V. Malt 05.08.2026 · Plan Primärkonstruktion Typ E 2026',
+    pos: [
+      { anz:12, was:'M27×120 8.8',      wo:'Quertraversen',                      md:'1050 Nm (Tab. 1)' },
+      { anz:2,  was:'M36×150 8.8',      wo:'Stütze talseitig ↔ Fussplatte',      md:'mit Kontermutter, kein Drehmoment' },
+      { anz:2,  was:'M30×130 8.8',      wo:'Stütze bergseitig ↔ Fussplatte',     md:'mit Kontermutter, kein Drehmoment' },
+      { anz:16, was:'HV M27×100 10.9',  wo:'4 Fussplatten × 4 Schrauben',        md:'1250 Nm (Tab. 2)' },
+      { anz:2,  was:'Kontermutter M36',  wo:'zu den Stützen talseitig',           md:'nicht vergessen' },
+      { anz:2,  was:'Kontermutter M30',  wo:'zu den Stützen bergseitig',          md:'nicht vergessen' }
+    ]
+  }
+};
+
+/* Dimensionen, die laut Plänen im jeweiligen Typ vorkommen – als Hinweis, solange
+   die Stückzahlen für den Berg nicht bestätigt sind (Quelle: Pläne 24027-S-0-*,
+   am 10.07.2026 gegen die PDFs verifiziert). */
+var SR_DIM = {
+  'A_2026':'M24×100/75, M20×70, M12×50 · HV M20×75',
+  'B_2026':'M24×100, M16×65, M12×50 · HV M20×75',
+  'C_2026':'M30×120, M24×110/75, M20×80, M12×50 · HV M24×85',
+  'D_2026':'M30×130, M24×90, M12×50 · HV M24×85',
+  'A_2025':'M20×70/90, M12×45, M10×35 · HV M20×75',
+  'B_2025':'M24×100/90/80/75, M16×65/55, M12×45, M10×40 · HV M20×90',
+  'D_2025':'M30×130/120, M24×90, M12×45, M10×40 · HV M24×90',
+  'E_2025':'M36×150, M27×120/100, M12×45, M10×40 · HV M30×105'
+};
+
+function srTypenLaden(){
+  if(SR_TYPEN) return Promise.resolve(SR_TYPEN);
+  return fetch('uploads/tables/typen.json').then(function(r){ return r.json(); })
+    .then(function(j){ SR_TYPEN=j.typen||{}; return SR_TYPEN; });
+}
+
+function srLeeren(){
+  document.getElementById('srIds').value='';
+  document.getElementById('srOut').innerHTML='';
+}
+
+function srRechnen(){
+  var roh=document.getElementById('srIds').value||'';
+  var ids=roh.split(/[^0-9A-Za-z_.-]+/).map(function(x){return x.trim();}).filter(Boolean);
+  var out=document.getElementById('srOut');
+  if(!ids.length){ out.innerHTML='<div class="srWarn">Bitte mindestens eine Tisch-ID eingeben.</div>'; return; }
+  out.innerHTML='<div class="srSub">einen Moment …</div>';
+
+  srTypenLaden().then(function(typen){
+    var proTyp={}, unbekannt=[], doppelt=[], gesehen={};
+    ids.forEach(function(id){
+      if(gesehen[id]){ doppelt.push(id); return; }
+      gesehen[id]=1;
+      var t=typen[id];
+      if(!t){ unbekannt.push(id); return; }
+      (proTyp[t]=proTyp[t]||[]).push(id);
+    });
+
+    var typListe=Object.keys(proTyp).sort();
+    var summe={}, ohneRegel=[];
+    typListe.forEach(function(t){
+      var r=SR_REGELN[t];
+      if(!r){ ohneRegel.push(t); return; }
+      var n=proTyp[t].length;
+      r.pos.forEach(function(p){
+        var k=p.was+'|'+p.wo+'|'+p.md;
+        summe[k]=(summe[k]||0)+p.anz*n;
+      });
+    });
+
+    var h='<div class="srKarte" id="srKarte">';
+    h+='<div class="srKopf"><b>Schrauben für den Berg</b>'
+      +'<span>'+ids.length+' Konstruktion'+(ids.length===1?'':'en')+' · '
+      + typListe.map(function(t){ return proTyp[t].length+'× '+srTypName(t); }).join(' · ')
+      +' · '+srHeute()+'</span></div>';
+
+    typListe.forEach(function(t){
+      var r=SR_REGELN[t], n=proTyp[t].length;
+      h+='<table class="srTab"><thead><tr>'
+        +'<th style="width:52%">'+srTypName(t)+' · '+n+' Stück</th>'
+        +'<th style="text-align:right">je Konstr.</th><th style="text-align:right">gesamt</th>'
+        +'</tr></thead><tbody>';
+      h+='<tr><td colspan="3" style="padding:7px 10px;color:#63676d;font-size:12px">'
+        +'IDs: <b style="color:#1a1a1a">'+proTyp[t].join(', ')+'</b></td></tr>';
+      if(r){
+        r.pos.forEach(function(p){
+          h+='<tr><td><b>'+p.was+'</b><span class="srWo">'+p.wo+' · '+p.md+'</span></td>'
+            +'<td class="n" style="font-size:14px;font-weight:700">'+p.anz+'</td>'
+            +'<td class="n">'+(p.anz*n)+'</td></tr>';
+        });
+      } else {
+        h+='<tr><td colspan="3"><div class="srWarn" style="margin:0">'
+          +'Für <b>'+srTypName(t)+'</b> sind die Stückzahlen für die Bergmontage noch nicht '
+          +'bestätigt – bitte bei Victor holen, dann trage ich sie ein.'
+          +(SR_DIM[t]?'<br>Im Plan vorkommende Schrauben: '+SR_DIM[t]:'')
+          +'</div></td></tr>';
+      }
+      h+='</tbody></table>';
+    });
+
+    var keys=Object.keys(summe);
+    if(keys.length && typListe.length>1){
+      h+='<table class="srTab"><thead><tr><th style="width:52%">Total für alle IDs</th>'
+        +'<th></th><th style="text-align:right">gesamt</th></tr></thead><tbody>';
+      keys.forEach(function(k){
+        var teil=k.split('|');
+        h+='<tr class="sum"><td>'+teil[0]+'<span class="srWo">'+teil[1]+'</span></td>'
+          +'<td></td><td class="n">'+summe[k]+'</td></tr>';
+      });
+      h+='</tbody></table>';
+    }
+
+    if(unbekannt.length) h+='<div class="srWarn">Unbekannte ID'+(unbekannt.length>1?'s':'')
+      +': <b>'+unbekannt.join(', ')+'</b> – nicht in den Belegungslisten.</div>';
+    if(doppelt.length) h+='<div class="srWarn">Doppelt eingegeben (nur einmal gezählt): '
+      +doppelt.join(', ')+'</div>';
+
+    h+='<div class="srFuss">Anziehen: 8.8 innerhalb der Konstruktion nach Tabelle 1, '
+      +'HV 10.9 an Fuss-/Kopfplatte nach Tabelle 2 (siehe unten). '
+      +'Verbindungen mit Kontermutter werden <b>nicht</b> auf Drehmoment angezogen.<br>'
+      +'Typ aus den ILF-Belegungslisten (Stand 10.07.2026). In Nalpi steht bei manchen '
+      +'Tischen ein anderer Zusatz (z.B. E_KF2025) – für die Schrauben zählt der Jahrgang '
+      +'der Konstruktion.</div>';
+    h+='</div>';
+
+    h+='<div class="srBtns"><button class="srBtn" onclick="srBild()">📷 Als Bild speichern</button>'
+      +'<button class="srBtn ghost" onclick="window.print()">🖨 Drucken</button></div>';
+    out.innerHTML=h;
+    srLetzte={ ids:ids, proTyp:proTyp, summe:summe, typListe:typListe };
+  }).catch(function(e){
+    out.innerHTML='<div class="srWarn">Typenliste konnte nicht geladen werden. '
+      +'Einmal mit Internet öffnen, danach geht es auch offline.</div>';
+  });
+}
+
+function srTypName(t){
+  var m=/^([A-E])_?(\d{4})?/.exec(t||'');
+  if(!m) return t||'?';
+  return 'Typ '+m[1]+(m[2]?' '+m[2]:'');
+}
+function srHeute(){
+  var d=new Date();
+  return ('0'+d.getDate()).slice(-2)+'.'+('0'+(d.getMonth()+1)).slice(-2)+'.'+d.getFullYear();
+}
+
+/* ── Bild fürs Handy: die Liste als JPEG rendern ── */
+var srLetzte=null;
+function srBild(){
+  if(!srLetzte) return;
+  var breite=1000, zeilen=[], L=srLetzte;
+
+  L.typListe.forEach(function(t){
+    var r=SR_REGELN[t], n=L.proTyp[t].length;
+    zeilen.push({art:'kopf', txt:srTypName(t)+' · '+n+' Konstruktion'+(n===1?'':'en')});
+    zeilen.push({art:'ids', txt:L.proTyp[t].join(', ')});
+    if(r){
+      r.pos.forEach(function(p){
+        zeilen.push({art:'pos', was:p.was, wo:p.wo+' · '+p.md, je:p.anz, ges:p.anz*n});
+      });
+    } else {
+      zeilen.push({art:'warn', txt:'Stückzahlen für '+srTypName(t)+' noch nicht bestätigt'});
+    }
+  });
+  if(L.typListe.length>1){
+    zeilen.push({art:'kopf', txt:'Total für alle IDs'});
+    Object.keys(L.summe).forEach(function(k){
+      var teil=k.split('|');
+      zeilen.push({art:'pos', was:teil[0], wo:teil[1], je:'', ges:L.summe[k]});
+    });
+  }
+
+  var oben=150, zh=64, unten=120;
+  var hoehe=oben+zeilen.reduce(function(a,z){ return a+(z.art==='pos'?zh:(z.art==='kopf'?58:40)); },0)+unten;
+  var cv=document.createElement('canvas');
+  cv.width=breite; cv.height=hoehe;
+  var c=cv.getContext('2d');
+  c.fillStyle='#fff'; c.fillRect(0,0,breite,hoehe);
+  c.fillStyle='#D72622'; c.fillRect(0,0,breite,10);
+  c.fillStyle='#1a1a1a';
+  c.font='900 34px Arial'; c.fillText('Schrauben für den Berg', 34, 62);
+  c.font='600 18px Arial'; c.fillStyle='#63676d';
+  c.fillText(L.ids.length+' Konstruktionen · '+srHeute()+' · NalpSolar B8-13', 34, 92);
+  c.fillStyle='#eceef1'; c.fillRect(34,116,breite-68,2);
+
+  var y=oben;
+  zeilen.forEach(function(z){
+    if(z.art==='kopf'){
+      c.fillStyle='#1a1a1a'; c.font='900 24px Arial';
+      c.fillText(z.txt, 34, y+22); y+=58;
+    } else if(z.art==='ids'){
+      c.fillStyle='#63676d'; c.font='600 17px Arial';
+      c.fillText('IDs: '+z.txt, 34, y+14); y+=40;
+    } else if(z.art==='warn'){
+      c.fillStyle='#e08a00'; c.font='700 18px Arial';
+      c.fillText('⚠ '+z.txt, 34, y+16); y+=40;
+    } else {
+      c.fillStyle='#fafbfc'; c.fillRect(28,y-8,breite-56,zh-10);
+      c.fillStyle='#1a1a1a'; c.font='900 26px Arial';
+      c.fillText(z.was, 40, y+18);
+      c.fillStyle='#63676d'; c.font='500 15px Arial';
+      c.fillText(z.wo, 40, y+40);
+      c.textAlign='right';
+      c.fillStyle='#D72622'; c.font='900 32px Arial';
+      c.fillText(String(z.ges)+'×', breite-40, y+28);
+      if(z.je!==''){
+        c.fillStyle='#63676d'; c.font='600 14px Arial';
+        c.fillText('je Konstruktion '+z.je, breite-40, y+48);
+      }
+      c.textAlign='left';
+      y+=zh;
+    }
+  });
+
+  c.fillStyle='#63676d'; c.font='500 15px Arial';
+  c.fillText('8.8 innen = Tabelle 1 · HV 10.9 Fuss-/Kopfplatte = Tabelle 2 · Kontermutter = kein Drehmoment',
+             34, hoehe-64);
+  c.fillText('Typen aus den ILF-Belegungslisten · erstellt mit dem Baustellen-Portal', 34, hoehe-38);
+
+  cv.toBlob(function(blob){
+    var datei=new File([blob], 'Schrauben_Berg_'+srHeute().replace(/\./g,'')+'.jpg', {type:'image/jpeg'});
+    if(navigator.canShare && navigator.canShare({files:[datei]})){
+      navigator.share({files:[datei], title:'Schrauben für den Berg'}).catch(function(){});
+      return;
+    }
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    a.href=url; a.download=datei.name; a.click();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+  }, 'image/jpeg', 0.92);
+}
 </script>
 </body>
 </html>

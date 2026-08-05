@@ -97,10 +97,10 @@
   .kLeg{ display:flex; gap:13px; flex-wrap:wrap; font-size:12px; color:var(--mut); align-items:center; }
   .kLeg .dot{ display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:5px;
         vertical-align:-2px; border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.3); }
-  .kLeg .dot.g{ background:var(--gruen); } .kLeg .dot.o{ background:#cfd4da; }
+  .kLeg .dot.b{ background:var(--blau); } .kLeg .dot.o{ background:#cfd4da; }
   .kLeg .fl{ display:inline-block; width:15px; height:11px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
-  .kLeg .fl.v{ background:rgba(21,101,192,.6); } .kLeg .fl.b{ background:rgba(30,158,90,.65); }
-  .kBatch canvas{ width:100%; display:block; border-radius:4px; background:#dfe3e8; }
+  .kLeg .fl.o{ background:#c9ccd2; } .kLeg .fl.v{ background:var(--orange); } .kLeg .fl.b{ background:var(--gruen); }
+  .kBatch canvas{ width:100%; display:block; border:1px solid var(--line); border-radius:6px; cursor:zoom-in; }
   #toast{ position:fixed; left:50%; bottom:20px; transform:translateX(-50%) translateY(90px);
           background:#0f5c33; color:#fff; font-weight:700; padding:12px 18px; border-radius:8px;
           font-size:15px; transition:transform .25s; z-index:70; max-width:92%; text-align:center; }
@@ -240,9 +240,10 @@
       <h2 data-i18n="k_titel">🗺 Stand je Batch</h2>
       <div class="sub" data-i18n="k_sub">Je Bohrpunkt: Passstück erfasst? Je Tischfläche: vormontiert oder schon auf dem Berg? Die Reihenfolge gibt die Bauleitung durch.</div>
       <div class="kLeg">
-        <span><i class="dot g"></i><span data-i18n="leg_erf">Passstück erfasst</span></span>
-        <span><i class="dot o"></i><span data-i18n="leg_offen">Passstück fehlt</span></span>
-        <span><i class="fl v"></i><span data-i18n="leg_vorm">vormontiert (im Tal)</span></span>
+        <span><i class="dot b"></i><span data-i18n="leg_ps">Passstück erfasst</span></span>
+        <span><i class="dot o"></i><span data-i18n="leg_ps_offen">Passstück fehlt</span></span>
+        <span><i class="fl o"></i><span data-i18n="leg_offen">offen</span></span>
+        <span><i class="fl v"></i><span data-i18n="leg_vormontiert">vormontiert</span></span>
         <span><i class="fl b"></i><span data-i18n="leg_berg">auf dem Berg</span></span>
       </div>
       <div style="margin-top:9px"><button class="btn ghost" onclick="kartenLaden(true)" data-i18n="btn_aktualisieren">↻ Aktualisieren</button></div>
@@ -262,8 +263,8 @@ var I18N={
  de:{
   tab_auftrag:'🗺 Karten', k_titel:'🗺 Stand je Batch',
   k_sub:'Je Bohrpunkt: Passstück erfasst? Je Tischfläche: vormontiert oder schon auf dem Berg? Die Reihenfolge gibt die Bauleitung durch.',
-  leg_erf:'Passstück erfasst', leg_offen:'Passstück fehlt',
-  leg_vorm:'vormontiert (im Tal)', leg_berg:'auf dem Berg',
+  leg_ps:'Passstück erfasst', leg_ps_offen:'Passstück fehlt',
+  leg_offen:'offen', leg_vormontiert:'vormontiert', leg_berg:'auf dem Berg',
   karte_stand:'{e}/{g} Passstücke · {v} vormontiert · {b} auf dem Berg',
   karte_ohne:'ohne Koordinaten:',
   btn_aktualisieren:'↻ Aktualisieren', ok_aktualisiert:'Aktualisiert ✔',
@@ -314,8 +315,8 @@ var I18N={
  en:{
   tab_auftrag:'🗺 Maps', k_titel:'🗺 Status per batch',
   k_sub:'Per drill point: fitting piece saved? Per table area: pre-assembled or already on the mountain? Site management passes on the work order.',
-  leg_erf:'fitting piece saved', leg_offen:'fitting piece missing',
-  leg_vorm:'pre-assembled (valley)', leg_berg:'on the mountain',
+  leg_ps:'fitting piece saved', leg_ps_offen:'fitting piece missing',
+  leg_offen:'open', leg_vormontiert:'pre-assembled', leg_berg:'sent up the mountain',
   karte_stand:'{e}/{g} fitting pieces · {v} pre-assembled · {b} on the mountain',
   karte_ohne:'no coordinates:',
   btn_aktualisieren:'↻ Refresh', ok_aktualisiert:'Updated ✔',
@@ -366,8 +367,8 @@ var I18N={
  pl:{
   tab_auftrag:'🗺 Mapy', k_titel:'🗺 Stan wg partii',
   k_sub:'Każdy punkt: podpora zapisana? Powierzchnia stołu: zmontowany czy już na górze? Kolejność podaje kierownictwo budowy.',
-  leg_erf:'podpora zapisana', leg_offen:'brak podpory',
-  leg_vorm:'zmontowany (dolina)', leg_berg:'na górze',
+  leg_ps:'podpora zapisana', leg_ps_offen:'brak podpory',
+  leg_offen:'otwarte', leg_vormontiert:'wstępnie zmontowane', leg_berg:'wysłane w góry',
   karte_stand:'Podpory: {e}/{g} · zmontowane: {v} · na górze: {b}',
   karte_ohne:'bez współrzędnych:',
   btn_aktualisieren:'↻ Odśwież', ok_aktualisiert:'Zaktualizowano ✔',
@@ -665,6 +666,7 @@ function laden(manuell){
   if(!netzAn()){ renderTab(); if(manuell) toast(T('offline_hinweis'),true); return; }
   Promise.all([apiGet(P_ST),apiGet(P_FO)]).then(function(r){
     stuetzen=r[0]||{}; fortschritt=r[1]||{}; renderTab();
+    kartenMalen();                                             // Status-Farben nachziehen
   }).catch(function(){ renderTab(); });
 }
 function alleStuetzen(){
@@ -729,7 +731,6 @@ function renderTab(){
   $('tab2').innerHTML=h2;
   $('z2').textContent=T('zaehler_meldungen',{g:fo.length,v:hv,b:hb});
   renderBatches();
-  kartenMalen();
 }
 
 /* ---------- Bestellbatches: komplett geliefert? ----------
@@ -831,34 +832,16 @@ function csv2(){
 }
 
 /* ══════════ Karten je Batch ══════════
-   Eine Karte pro Bestellbatch (9 und 10 zusammen): Luftbild, je Bohrpunkt
-   ein Punkt (gruen = Passstueck erfasst), Tischflaeche nach Fortschritt
-   (blau = vormontiert im Tal, gruen = auf dem Berg; Berg ueberschreibt).
-   Die Arbeitsreihenfolge gibt die Bauleitung muendlich durch - hier nur Stand. */
-var kGeo=null, kBild=null, kPf=null, kGeladen=false;
-
-function lv95(lat,lon){                   // WGS84 -> LV95 (Naeherung swisstopo)
-  var p=(lat*3600-169028.66)/10000, l=(lon*3600-26782.5)/10000;
-  return { E:2600072.37+211455.93*l-10938.51*l*p-0.36*l*p*p-44.54*l*l*l,
-           N:1200147.07+308807.95*p+3745.25*l*l+76.63*p*p-194.56*l*l*p+119.79*p*p*p };
-}
+   Eine Karte pro Bestellbatch (Batch 9 und 10 gehoeren zusammen): je
+   Bohrpunkt zeigt ein Punkt, ob das Passstueck erfasst ist; die Tisch-
+   flaeche traegt den Fortschritt (orange = vormontiert, gruen = auf dem
+   Berg; Berg ueberschreibt). Die Arbeitsreihenfolge gibt die Bauleitung
+   muendlich durch - hier steht nur der Stand. */
 function kartenLaden(manuell){
-  laden(manuell);                          // frische Erfassungen -> renderTab -> kartenMalen
-  if(kGeladen){ kartenMalen(); if(manuell) toast(T('ok_aktualisiert')); return; }
-  Promise.all([
-    fetch('uploads/perimeter_geo.json').then(function(r){ return r.json(); }),
-    fetch('uploads/pfaehle.json').then(function(r){ return r.json(); })
-  ]).then(function(r){
-    kGeo=r[0]; kPf={};
-    r[1].forEach(function(p){ kPf[normId(p[0])+'-'+p[1]]=p; });
-    kGeladen=true;
-    var im=new Image();
-    im.onload=function(){ kBild=im; kartenMalen(); };
-    im.src='assets/img/perimeter.jpg';
-    kartenMalen();
-  }).catch(function(){});
+  laden(manuell);                        // frische Daten -> renderTab -> kartenMalen
+  if(manuell) toast(T('ok_aktualisiert'));
 }
-function kartenGruppen(){                 // Batch 9 + 10 gehoeren zusammen
+function kartenGruppen(){                // Batch 9 + 10 zusammen
   var map=batchPositionen(), g={};
   Object.keys(map).forEach(function(b){
     var lbl=(b==='9'||b==='10')?'9+10':String(b);
@@ -867,100 +850,339 @@ function kartenGruppen(){                 // Batch 9 + 10 gehoeren zusammen
   });
   return g;
 }
+function psErfasst(){                    // erfasste Passstuecke je tisch-stuetze
+  var da={};
+  alleStuetzen().forEach(function(r){
+    da[normId(r.tischId)+'-'+String(r.stuetze||'').trim().toUpperCase()]=true;
+  });
+  return da;
+}
+var kGrp={};                             // Batchgruppe -> Positionsschluessel
 function kartenMalen(){
   var wrap=$('kBoxen');
-  if(!wrap || !kGeladen) return;
+  if(!wrap) return;
   if($('s4').style.display==='none') return;
-  var erf={};
-  alleStuetzen().forEach(function(r){
-    erf[normId(r.tischId)+'-'+String(r.stuetze||'').trim().toUpperCase()]=true;
-  });
-  var fo={};                               // je Tisch: 'berg' schlaegt 'vormontiert'
-  alleFortschritt().forEach(function(r){
-    var k=normId(r.tischId);
-    if(r.art==='berg') fo[k]='berg';
-    else if(r.art==='vormontiert' && fo[k]!=='berg') fo[k]='vormontiert';
-  });
-  var grp=kartenGruppen();
-  var lbls=Object.keys(grp).sort(function(a,b){ return parseInt(b,10)-parseInt(a,10); });
+  kGrp=kartenGruppen();
+  var lbls=Object.keys(kGrp).sort(function(a,b){ return parseInt(b,10)-parseInt(a,10); });
+  var st=akStatus(), da=psErfasst();
   wrap.innerHTML='';
-  lbls.forEach(function(lbl){ batchKarte(wrap, lbl, grp[lbl], erf, fo); });
-}
-function batchKarte(wrap, lbl, keys, erf, fo){
-  // Tische mit Koordinaten sammeln
-  var tische={}, ohne={};
-  Object.keys(keys).forEach(function(k){
-    var p=kPf[k], i=k.lastIndexOf('-');
-    var tid=k.slice(0,i), s=k.slice(i+1);
-    if(!p){ ohne[tid]=true; return; }
-    (tische[tid]=tische[tid]||[]).push({s:s, key:k, v:lv95(p[2],p[3])});
-  });
-  var tids=Object.keys(tische);
-  // Zaehler
-  var g=Object.keys(keys).length, e=Object.keys(keys).filter(function(k){ return erf[k]; }).length;
-  var nv=0, nb=0;
-  tids.concat(Object.keys(ohne)).forEach(function(t){
-    if(fo[t]==='berg') nb++; else if(fo[t]==='vormontiert') nv++;
-  });
-  var box=document.createElement('div');
-  box.className='box kBatch';
-  box.innerHTML='<h2>Batch '+esc(lbl)+'</h2>'
-    +'<div class="zaehler">'+T('karte_stand',{e:e,g:g,v:nv,b:nb})+'</div>'
-    +'<canvas></canvas>'
-    +(Object.keys(ohne).length?'<div class="hint">'+T('karte_ohne')+' '+Object.keys(ohne).sort().join(', ')+'</div>':'');
-  wrap.appendChild(box);
-  if(!tids.length) return;
-  // Ausschnitt in LV95
-  var minE=1e12,maxE=-1e12,minN=1e12,maxN=-1e12;
-  tids.forEach(function(t){ tische[t].forEach(function(q){
-    if(q.v.E<minE)minE=q.v.E; if(q.v.E>maxE)maxE=q.v.E;
-    if(q.v.N<minN)minN=q.v.N; if(q.v.N>maxN)maxN=q.v.N;
-  }); });
-  minE-=22; maxE+=22; minN-=22; maxN+=22;
-  var cv=box.querySelector('canvas');
-  var br=cv.clientWidth||340;
-  var spanE=maxE-minE, spanN=maxN-minN;
-  var hoehe=Math.max(230, Math.min(560, Math.round(spanN/(spanE/br))));
-  var mPerPx=Math.max(spanE/br, spanN/hoehe);
-  var dpr=window.devicePixelRatio||1;
-  cv.width=br*dpr; cv.height=hoehe*dpr; cv.style.height=hoehe+'px';
-  var c=cv.getContext('2d');
-  c.setTransform(dpr,0,0,dpr,0,0);
-  var mitteE=(minE+maxE)/2, mitteN=(minN+maxN)/2;
-  var vE=mitteE-br*mPerPx/2, vN=mitteN-hoehe*mPerPx/2;
-  function P(E,N){ return { x:(E-vE)/mPerPx, y:hoehe-(N-vN)/mPerPx }; }
-  // Luftbild
-  if(kBild&&kGeo){
-    var sx=(vE-kGeo.minE)/(kGeo.maxE-kGeo.minE)*kGeo.w;
-    var sy=(kGeo.maxN-(vN+hoehe*mPerPx))/(kGeo.maxN-kGeo.minN)*kGeo.h;
-    var sw=br*mPerPx/(kGeo.maxE-kGeo.minE)*kGeo.w;
-    var sh=hoehe*mPerPx/(kGeo.maxN-kGeo.minN)*kGeo.h;
-    try{ c.drawImage(kBild,sx,sy,sw,sh,0,0,br,hoehe); }catch(e){}
-  }
-  // Tische
-  tids.forEach(function(t){
-    var pts=tische[t].map(function(q){ var s=P(q.v.E,q.v.N); s.key=q.key; return s; });
-    var mx=pts.reduce(function(a,q){return a+q.x;},0)/pts.length;
-    var my=pts.reduce(function(a,q){return a+q.y;},0)/pts.length;
-    if(pts.length>2){
-      var srt=pts.slice().sort(function(a,b){
-        return Math.atan2(a.y-my,a.x-mx)-Math.atan2(b.y-my,b.x-mx); });
-      c.beginPath(); srt.forEach(function(q,i){ i?c.lineTo(q.x,q.y):c.moveTo(q.x,q.y); }); c.closePath();
-      c.fillStyle = fo[t]==='berg' ? 'rgba(30,158,90,.55)'
-                  : fo[t]==='vormontiert' ? 'rgba(21,101,192,.55)' : 'rgba(255,255,255,.12)';
-      c.fill(); c.lineWidth=1.5; c.strokeStyle='rgba(255,255,255,.85)'; c.stroke();
-    }
-    pts.forEach(function(q){
-      c.beginPath(); c.arc(q.x,q.y,5.5,0,6.283);
-      c.fillStyle = erf[q.key] ? '#1e9e5a' : 'rgba(210,214,219,.92)';
-      c.fill(); c.lineWidth=1.8; c.strokeStyle='#fff'; c.stroke();
+  lbls.forEach(function(lbl){
+    var keys=Object.keys(kGrp[lbl]);
+    var tids={};
+    keys.forEach(function(k){ tids[k.slice(0,k.lastIndexOf('-'))]=true; });
+    var e=keys.filter(function(k){ return da[k]; }).length;
+    var nv=0, nb=0;
+    Object.keys(tids).forEach(function(t){
+      if(st[t]==='berg') nb++; else if(st[t]==='vormontiert') nv++;
     });
-    c.font='800 11px Arial'; c.textAlign='center';
-    c.strokeStyle='rgba(0,0,0,.75)'; c.lineWidth=3;
-    c.strokeText(t, mx, my+4); c.fillStyle='#fff'; c.fillText(t, mx, my+4);
+    var box=document.createElement('div');
+    box.className='box kBatch';
+    box.innerHTML='<h2>Batch '+esc(lbl)+'</h2>'
+      +'<div class="zaehler">'+T('karte_stand',{e:e,g:keys.length,v:nv,b:nb})+'</div>'
+      +'<canvas></canvas>';
+    wrap.appendChild(box);
+    var cv=box.querySelector('canvas');
+    cv.onclick=(function(l){ return function(){ batchKarteGross(l); }; })(lbl);
+    batchKarteMalen(kGrp[lbl], cv);
   });
 }
 
+/* ---------- Auftragskarte live ---------- */
+var akPfaehle=null, akGeo=null, akBild=null;
+function akDatenLaden(cb){
+  if(akPfaehle && akGeo && akBild) { cb(); return; }
+  Promise.all([
+    akPfaehle ? Promise.resolve(akPfaehle) : fetch('uploads/pfaehle.json').then(function(r){return r.json();}),
+    akGeo ? Promise.resolve(akGeo) : fetch('uploads/perimeter_geo.json').then(function(r){return r.json();})
+  ]).then(function(r){
+    akPfaehle=r[0]; akGeo=r[1];
+    if(akBild){ cb(); return; }
+    var im=new Image(); im.onload=function(){ akBild=im; cb(); }; im.onerror=function(){ cb(); };
+    im.src='assets/img/perimeter.jpg';
+  }).catch(function(){});
+}
+function akLv95(lat,lon){
+  var p=(lat*3600-169028.66)/10000, l=(lon*3600-26782.5)/10000;
+  return { E:2600072.37+211455.93*l-10938.51*l*p-0.36*l*p*p-44.54*l*l*l,
+           N:1200147.07+308807.95*p+3745.25*l*l+76.63*p*p-194.56*l*l*p+119.79*p*p*p };
+}
+/* Status je Tisch aus den Fortschritt-Meldungen */
+function akStatus(){
+  var st={};
+  Object.keys(fortschritt||{}).forEach(function(k){
+    var r=fortschritt[k]; if(!r||!r.tischId) return;
+    var id=normId(r.tischId);
+    if(r.art==='berg') st[id]='berg';
+    else if(st[id]!=='berg') st[id]='vormontiert';
+  });
+  pendLesen().forEach(function(p){          // offline erfasste mitzaehlen
+    if(p.pfad!==P_FO || !p.rec) return;
+    var id=normId(p.rec.tischId);
+    if(p.rec.art==='berg') st[id]='berg';
+    else if(st[id]!=='berg') st[id]='vormontiert';
+  });
+  return st;
+}
+function batchKarteMalen(keys, cv, zielBr){
+  if(!cv || (!zielBr && !cv.clientWidth)) return;
+
+  akDatenLaden(function(){
+    if(!akPfaehle) return;
+    // Tische dieses Batches mit ihren Bohrpunkten (je Stuetze)
+    var wanted={};
+    Object.keys(keys).forEach(function(k){
+      var i=k.lastIndexOf('-'), tid=k.slice(0,i);
+      (wanted[tid]=wanted[tid]||{id:tid, pf:{}}).pf[k.slice(i+1)]=null;
+    });
+    akPfaehle.forEach(function(q){
+      var t=wanted[normId(q[0])];
+      if(t && t.pf[q[1]]===null) t.pf[q[1]]=[q[2],q[3]];
+    });
+    var liste=[], ohne=[];
+    Object.keys(wanted).forEach(function(tid){
+      var t=wanted[tid], pk=[];
+      Object.keys(t.pf).forEach(function(s){ if(t.pf[s]) pk.push({s:s, ll:t.pf[s]}); });
+      if(pk.length){ t.pkt=pk.map(function(p){ return p.ll; }); t.pfl=pk; liste.push(t); }
+      else ohne.push(tid);
+    });
+    if(ohne.length && !zielBr && !cv._ohne){
+      cv._ohne=true;
+      cv.insertAdjacentHTML('afterend',
+        '<div class="hint">'+T('karte_ohne')+' '+ohne.sort().join(', ')+'</div>');
+    }
+    if(!liste.length) return;
+
+    // Ausschnitt in LV95, immer im Format 16:10 (auf dem Handy gut sichtbar)
+    var alle=[]; liste.forEach(function(t){ t.pkt.forEach(function(q){ alle.push(akLv95(q[0],q[1])); }); });
+    var eMin=Math.min.apply(null,alle.map(function(v){return v.E;}));
+    var eMax=Math.max.apply(null,alle.map(function(v){return v.E;}));
+    var nMin=Math.min.apply(null,alle.map(function(v){return v.N;}));
+    var nMax=Math.max.apply(null,alle.map(function(v){return v.N;}));
+    var cE=(eMin+eMax)/2, cN=(nMin+nMax)/2;
+    var rand=liste.length<=6?16:22;
+    var br_m=Math.max(eMax-eMin+2*rand, 45), ho_m=Math.max(nMax-nMin+2*rand, 30);
+    // Kartenformat folgt dem Gebiet (hochkant ist auf dem Handy voellig ok),
+    // nur in vernuenftigen Grenzen – sonst werden die Tische winzig.
+    var AR=Math.max(0.72, Math.min(1.9, br_m/ho_m));
+    if(br_m/ho_m > AR) ho_m=br_m/AR; else br_m=ho_m*AR;
+    var minE=cE-br_m/2, maxE=cE+br_m/2, minN=cN-ho_m/2, maxN=cN+ho_m/2;
+
+    // Zeichenflaeche
+    var br = zielBr || cv.clientWidth || 360;
+    var dpr = zielBr ? 1 : Math.min(window.devicePixelRatio||1, 2.5);
+    var hoehe = Math.round(br/AR);
+    var sk = br/430;                              // Schrift-/Linienskalierung
+    cv.width=Math.round(br*dpr); cv.height=Math.round(hoehe*dpr);
+    if(!zielBr) cv.style.height=hoehe+'px';
+    var c=cv.getContext('2d');
+    c.setTransform(dpr,0,0,dpr,0,0);
+    c.fillStyle='#e9ecef'; c.fillRect(0,0,br,hoehe);
+    function P(E,N){ return { x:(E-minE)/(maxE-minE)*br, y:hoehe-(N-minN)/(maxN-minN)*hoehe }; }
+
+    function inhalt(){
+      var st=akStatus(), da=psErfasst();
+      liste.forEach(function(t){
+        var pts=t.pfl.map(function(p){ var v=akLv95(p.ll[0],p.ll[1]); var q=P(v.E,v.N); q.key=t.id+'-'+p.s; return q; });
+        var mx=0,my=0; pts.forEach(function(q){ mx+=q.x; my+=q.y; }); mx/=pts.length; my/=pts.length;
+        var zu=st[t.id];                                   // 'vormontiert' | 'berg' | undefined
+        var flaeche='rgba(201,204,210,.5)';                // offen
+        if(zu==='berg') flaeche='rgba(30,158,90,.78)';
+        else if(zu==='vormontiert') flaeche='rgba(224,138,0,.78)';
+
+        if(pts.length>2){
+          var srt=pts.slice().sort(function(u,v){
+            return Math.atan2(u.y-my,u.x-mx)-Math.atan2(v.y-my,v.x-mx); });
+          c.save();
+          c.shadowColor='rgba(0,0,0,.45)'; c.shadowBlur=6*sk; c.shadowOffsetY=1.5*sk;
+          c.beginPath(); srt.forEach(function(q,i){ i?c.lineTo(q.x,q.y):c.moveTo(q.x,q.y); }); c.closePath();
+          c.fillStyle=flaeche; c.fill();
+          c.restore();
+          c.lineWidth=2*sk; c.strokeStyle='#fff'; c.stroke();
+        }
+
+        // ID in der Tischflaeche, in die Tischachse gedreht
+        var w1=0,w2=0,dmax=-1;
+        for(var i=0;i<pts.length;i++) for(var j=i+1;j<pts.length;j++){
+          var dd=(pts[i].x-pts[j].x)*(pts[i].x-pts[j].x)+(pts[i].y-pts[j].y)*(pts[i].y-pts[j].y);
+          if(dd>dmax){ dmax=dd; w1=i; w2=j; }
+        }
+        var wi=Math.atan2(pts[w2].y-pts[w1].y, pts[w2].x-pts[w1].x);
+        if(wi>Math.PI/2) wi-=Math.PI;
+        if(wi<-Math.PI/2) wi+=Math.PI;
+        var lang=Math.sqrt(dmax);
+        var fs=Math.max(10*sk, Math.min(18*sk, lang*0.34));
+        c.save(); c.translate(mx,my); c.rotate(wi);
+        c.font='900 '+fs.toFixed(1)+'px Arial';
+        c.textAlign='center'; c.textBaseline='middle';
+        c.lineWidth=3.2*sk; c.strokeStyle='rgba(0,0,0,.55)'; c.lineJoin='round';
+        c.strokeText(t.id, 0, 0); c.fillStyle='#fff'; c.fillText(t.id, 0, 0);
+        c.restore();
+
+        // Bohrpunkte: blau = Passstueck erfasst, hell = fehlt
+        var pr=Math.max(3.4, 4.8*sk);
+        pts.forEach(function(q){
+          c.beginPath(); c.arc(q.x,q.y,pr,0,6.2832);
+          c.fillStyle = da[q.key] ? '#1565c0' : 'rgba(226,229,233,.95)';
+          c.fill(); c.lineWidth=1.6*sk; c.strokeStyle='#fff'; c.stroke();
+        });
+      });
+
+      // Nordpfeil + Massstab
+      var pad=9*sk;
+      c.save();
+      c.translate(br-pad-11*sk, pad+13*sk);
+      c.fillStyle='rgba(255,255,255,.92)';
+      c.beginPath(); c.moveTo(0,-12*sk); c.lineTo(6*sk,8*sk); c.lineTo(0,4*sk); c.lineTo(-6*sk,8*sk);
+      c.closePath(); c.fill();
+      c.font='900 '+(9*sk).toFixed(1)+'px Arial'; c.textAlign='center';
+      c.strokeStyle='rgba(0,0,0,.5)'; c.lineWidth=2.5*sk; c.lineJoin='round';
+      c.strokeText('N',0,-14*sk); c.fillText('N',0,-14*sk);
+      c.restore();
+
+      var mStufen=[5,10,20,25,50,100], mPx=br/(maxE-minE);
+      var mWahl=mStufen[0];
+      for(var k=0;k<mStufen.length;k++){ if(mStufen[k]*mPx < br*0.34) mWahl=mStufen[k]; }
+      var bx=pad, by=hoehe-pad-6*sk, bw=mWahl*mPx;
+      c.fillStyle='rgba(0,0,0,.45)';
+      c.fillRect(bx-3*sk, by-13*sk, bw+6*sk, 20*sk);
+      c.fillStyle='#fff'; c.fillRect(bx, by, bw, 3*sk);
+      c.font='800 '+(9.5*sk).toFixed(1)+'px Arial'; c.textAlign='left'; c.textBaseline='alphabetic';
+      c.fillText(mWahl+' m', bx, by-4*sk);
+
+      if(akQuelle){                                   // woher das Luftbild stammt
+        c.font='700 '+(8.5*sk).toFixed(1)+'px Arial'; c.textAlign='right';
+        c.fillStyle='rgba(0,0,0,.45)';
+        var qw=c.measureText(akQuelle).width+8*sk;
+        c.fillRect(br-pad-qw, hoehe-pad-12*sk, qw, 14*sk);
+        c.fillStyle='rgba(255,255,255,.92)';
+        c.fillText(akQuelle, br-pad-4*sk, hoehe-pad-2.5*sk);
+      }
+    }
+
+    // Luftbild: scharfer WMS-Ausschnitt (offline aus dem Cache), sonst Perimeterbild
+    akOrthoZeichnen(c,minE,minN,maxE,maxN,br,hoehe,function(fertig){
+     if(fertig){
+      c.fillStyle='rgba(12,18,26,.14)'; c.fillRect(0,0,br,hoehe);
+      inhalt();
+      return;
+     }
+     akLuftbild(minE,minN,maxE,maxN, Math.round(br*dpr), Math.round(hoehe*dpr), function(im){
+      akQuelle = im ? 'swisstopo SWISSIMAGE' : '';
+      if(im){ try{ c.drawImage(im,0,0,br,hoehe); }catch(e){} }
+      else if(akBild && akGeo){
+        var sx=(minE-akGeo.minE)/(akGeo.maxE-akGeo.minE)*akGeo.w;
+        var sy=(akGeo.maxN-maxN)/(akGeo.maxN-akGeo.minN)*akGeo.h;
+        var sw=(maxE-minE)/(akGeo.maxE-akGeo.minE)*akGeo.w;
+        var sh=(maxN-minN)/(akGeo.maxN-akGeo.minN)*akGeo.h;
+        try{ c.drawImage(akBild,sx,sy,sw,sh,0,0,br,hoehe); }catch(e){}
+      }
+      c.fillStyle='rgba(12,18,26,.20)'; c.fillRect(0,0,br,hoehe);   // Bild beruhigen
+      inhalt();
+     });
+    });
+  });
+}
+
+/* Bildquellen fuer die Karte, in dieser Reihenfolge:
+   1. Drohnen-Orthofoto der Baustelle (uploads/ortho/, ~5 cm/px, liegt lokal
+      auf der Website -> auch offline scharf)
+   2. swisstopo-WMS SWISSIMAGE (nur online, wird vom Service Worker gecacht)
+   3. das grobe Perimeterbild (Notfall) */
+var akOrtho=null, akOrthoBild={}, akQuelle='';
+function akOrthoLaden(cb){
+  if(akOrtho!==null){ cb(); return; }
+  fetch('uploads/ortho/index.json').then(function(r){ return r.ok?r.json():[]; })
+    .then(function(j){ akOrtho=j||[]; cb(); })
+    .catch(function(){ akOrtho=[]; cb(); });
+}
+/* passenden Ortho-Ausschnitt suchen und den Bildausschnitt zeichnen */
+function akOrthoZeichnen(c,minE,minN,maxE,maxN,br,hoehe,cb){
+  akOrthoLaden(function(){
+    var tr=null;
+    (akOrtho||[]).forEach(function(o){
+      if(minE>=o.minE && maxE<=o.maxE && minN>=o.minN && maxN<=o.maxN) tr=o;
+    });
+    if(!tr){ cb(false); return; }
+    var im=akOrthoBild[tr.datei];
+    if(im==='fehler'){ cb(false); return; }
+    if(!im){
+      var neu=new Image();
+      neu.onload=function(){ akOrthoBild[tr.datei]=neu; akOrthoZeichnen(c,minE,minN,maxE,maxN,br,hoehe,cb); };
+      neu.onerror=function(){ akOrthoBild[tr.datei]='fehler'; cb(false); };
+      akOrthoBild[tr.datei]=null;
+      neu.src='uploads/ortho/'+tr.datei;
+      return;
+    }
+    var sx=(minE-tr.minE)/(tr.maxE-tr.minE)*tr.w;
+    var sy=(tr.maxN-maxN)/(tr.maxN-tr.minN)*tr.h;
+    var sw=(maxE-minE)/(tr.maxE-tr.minE)*tr.w;
+    var sh=(maxN-minN)/(tr.maxN-tr.minN)*tr.h;
+    try{ c.drawImage(im,sx,sy,sw,sh,0,0,br,hoehe); akQuelle='Drohne 22.04.2026'; cb(true); }
+    catch(e){ cb(false); }
+  });
+}
+
+var akWms={};
+function akLuftbild(minE,minN,maxE,maxN,wPx,hPx,cb){
+  var maxSeite=2000;
+  var w=Math.min(maxSeite, Math.max(600, wPx)), h=Math.round(w*(hPx/wPx));
+  var key=[minE.toFixed(1),minN.toFixed(1),maxE.toFixed(1),maxN.toFixed(1),w].join('_');
+  if(akWms[key]!==undefined){ cb(akWms[key]); return; }
+  var url='https://wms.geo.admin.ch/?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0'
+        + '&LAYERS=ch.swisstopo.swissimage&STYLES=&CRS=EPSG:2056&FORMAT=image/jpeg'
+        + '&WIDTH='+w+'&HEIGHT='+h
+        + '&BBOX='+minE.toFixed(2)+','+minN.toFixed(2)+','+maxE.toFixed(2)+','+maxN.toFixed(2);
+  var im=new Image();
+  im.crossOrigin='anonymous';
+  im.onload=function(){ akWms[key]=im; cb(im); };
+  im.onerror=function(){ akWms[key]=null; cb(null); };
+  im.src=url;
+}
+
+/* Vollbild: scharfe Karte, verschiebbar und zoombar */
+function batchKarteGross(lbl){
+  if(!kGrp[lbl]) return;
+  var tmp=document.createElement('canvas');
+  batchKarteMalen(kGrp[lbl], tmp, 1600);
+  setTimeout(function(){
+    var src=null;
+    try{ src=tmp.toDataURL('image/jpeg',0.9); }catch(e){}
+    if(src) bildGross(src);
+  }, 600);
+}
+
+function bildGross(src){
+  var ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;z-index:80;background:#0b0f14;overflow:auto;'+
+    '-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y pinch-zoom';
+  var img=document.createElement('img');
+  img.src=src;
+  img.style.cssText='display:block;width:100%;height:auto';       // Start: passend
+  img.ondblclick=function(e){ e.stopPropagation(); zoom(); };
+  var gross=false;
+  function zoom(){
+    gross=!gross;
+    img.style.width=gross?'250%':'100%';
+    img.style.maxWidth='none';
+  }
+  var leiste=document.createElement('div');
+  leiste.style.cssText='position:fixed;top:0;left:0;right:0;display:flex;gap:8px;padding:8px;'+
+    'background:linear-gradient(180deg,rgba(0,0,0,.75),rgba(0,0,0,0));z-index:81';
+  leiste.innerHTML='<button id="bgZoom" style="border:0;border-radius:8px;padding:9px 14px;'+
+    'font:800 14px Arial;background:#fff;color:#1a1a1a">🔍 Zoom</button>'+
+    '<span style="flex:1"></span>'+
+    '<button id="bgZu" style="border:0;border-radius:8px;padding:9px 14px;'+
+    'font:800 14px Arial;background:#D72622;color:#fff">✕ Schliessen</button>';
+  ov.appendChild(img);
+  document.body.appendChild(ov);
+  document.body.appendChild(leiste);
+  function schliessen(){
+    try{ document.body.removeChild(ov); document.body.removeChild(leiste); }catch(e){}
+  }
+  leiste.querySelector('#bgZoom').onclick=zoom;
+  leiste.querySelector('#bgZu').onclick=schliessen;
+  ov.onclick=function(e){ if(e.target===ov) schliessen(); };
+}
 /* ---------- Start ---------- */
 setLang(lang);
 $('f_von').value=getVon(); $('p_von').value=getVon();
