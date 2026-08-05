@@ -12,6 +12,7 @@
   window.NALP_GATE_SUB   = 'Code eingeben / Enter code / Wpisz kod';
 </script>
 <script src="assets/js/nalp-gate.js"></script>
+<link rel="stylesheet" href="assets/js/leaflet/leaflet.css">
 <style>
   :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
          --gruen:#1e9e5a; --blau:#1565c0; --orange:#e08a00; }
@@ -93,6 +94,23 @@
   .bar{ position:relative; background:#edeff2; border-radius:4px; height:13px; min-width:70px; overflow:hidden; }
   .bar i{ position:absolute; top:0; left:0; bottom:0; background:var(--gruen); border-radius:4px; }
   .bar i.teils{ background:var(--orange); }
+  /* Karten je Batch */
+  .kLeg{ display:flex; gap:13px; flex-wrap:wrap; font-size:12px; color:var(--mut); align-items:center; }
+  .kLeg .dot{ display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:5px;
+        vertical-align:-2px; border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.3); }
+  .kLeg .dot.b{ background:var(--blau); } .kLeg .dot.o{ background:#cfd4da; }
+  .kLeg .fl{ display:inline-block; width:15px; height:11px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
+  .kLeg .fl.o{ background:#c9ccd2; } .kLeg .fl.v{ background:var(--orange); } .kLeg .fl.b{ background:var(--gruen); }
+  .box.kBatch{ padding:8px; }                     /* mehr Platz fuer die Karte auf dem Handy */
+  .box.kBatch h2{ margin:2px 4px 2px; }
+  .box.kBatch .zaehler{ margin:0 4px 7px; }
+  .kmap{ height:64vh; min-height:300px; max-height:560px; border:1px solid var(--line);
+         border-radius:6px; background:#dfe3e8; }
+  .kLbl{ background:none; border:none; box-shadow:none; padding:0;
+         font:800 10px Arial; color:#fff; letter-spacing:.02em;
+         text-shadow:0 0 3px rgba(0,0,0,.95), 0 1px 2px rgba(0,0,0,.9); }
+  .kLbl:before{ display:none; }
+  .kLblAus .kLbl{ display:none; }
   #toast{ position:fixed; left:50%; bottom:20px; transform:translateX(-50%) translateY(90px);
           background:#0f5c33; color:#fff; font-weight:700; padding:12px 18px; border-radius:8px;
           font-size:15px; transition:transform .25s; z-index:70; max-width:92%; text-align:center; }
@@ -118,7 +136,7 @@
   <button id="t1" class="on" onclick="tab(1)"><span data-i18n="tab_stuetze">🏷 Stütze</span></button>
   <button id="t2" onclick="tab(2)"><span data-i18n="tab_fortschritt">🏗 Fortschritt</span></button>
   <button id="t3" onclick="tab(3)"><span data-i18n="tab_tabellen">📋 Tabellen</span></button>
-  <button id="t4" onclick="tab(4)"><span data-i18n="tab_auftrag">📌 Auftrag</span></button>
+  <button id="t4" onclick="tab(4)"><span data-i18n="tab_auftrag">🗺 Karten</span></button>
 </div>
 
 <main>
@@ -226,47 +244,27 @@
     </div>
   </section>
 
-  <!-- ══════════ 4 · ARBEITSANWEISUNG ══════════ -->
+  <!-- ══════════ 4 · KARTEN JE BATCH ══════════ -->
   <section id="s4" style="display:none">
     <div class="box" style="border-left-color:var(--orange)">
-      <h2 data-i18n="s4_titel">📌 Arbeitsanweisung</h2>
-      <div class="sub" id="anwStand" data-i18n="s4_sub">Diese Tische in dieser Reihenfolge vormontieren.</div>
-      <div id="anwListe"><div class="hint" data-i18n="anw_leer">Zurzeit kein Auftrag.</div></div>
-      <div style="margin-top:10px">
-        <button class="btn ghost" onclick="anwLaden(true)" data-i18n="btn_aktualisieren">↻ Aktualisieren</button>
+      <h2 data-i18n="k_titel">🗺 Stand je Batch</h2>
+      <div class="sub" data-i18n="k_sub">Je Bohrpunkt: Passstück erfasst? Je Tischfläche: vormontiert oder schon auf dem Berg?</div>
+      <div class="kLeg">
+        <span><i class="dot b"></i><span data-i18n="leg_ps">Passstück erfasst</span></span>
+        <span><i class="dot o"></i><span data-i18n="leg_ps_offen">Passstück fehlt</span></span>
+        <span><i class="fl o"></i><span data-i18n="leg_offen">offen</span></span>
+        <span><i class="fl v"></i><span data-i18n="leg_vormontiert">vormontiert</span></span>
+        <span><i class="fl b"></i><span data-i18n="leg_berg">auf dem Berg</span></span>
       </div>
+      <div style="margin-top:9px"><button class="btn ghost" onclick="kartenLaden(true)" data-i18n="btn_aktualisieren">↻ Aktualisieren</button></div>
     </div>
-
-    <!-- nur fuer die Bauleitung: Auftrag schreiben -->
-    <div class="box" id="anwEditBox" style="display:none;border-left-color:#63676d">
-      <h2>✏️ Auftrag schreiben <span style="font-weight:400;font-size:12px;color:var(--mut)">(nur Bauleitung)</span></h2>
-      <label class="fl">Welcher Auftrag</label>
-      <select id="a_nr" onchange="anwEditWahl()"></select>
-      <label class="fl">Titel / Auftrag</label>
-      <input id="a_titel" placeholder="z.B. Vormontage Bereich 26_2.1 – Prio">
-      <label class="fl">Tisch-IDs in der gewünschten Reihenfolge</label>
-      <textarea id="a_ids" style="min-height:70px" placeholder="z.B. 995, 1148, 2104, 384 …"></textarea>
-      <div class="hint">Komma, Leerzeichen oder Zeilenumbruch trennen. Reihenfolge = Arbeitsreihenfolge.</div>
-      <label class="fl">Hinweis für die Equipe (optional)</label>
-      <textarea id="a_bem" placeholder="z.B. zuerst alle S1, Passstücke liegen bei IP Tal 1"></textarea>
-      <div class="row2">
-        <div><label class="fl">Von</label><input id="a_von" placeholder="Name"></div>
-        <div><label class="fl">Gültig ab (optional)</label><input type="date" id="a_datum"></div>
-      </div>
-      <div style="margin-top:12px">
-        <button class="btn" onclick="anwSpeichern()">📤 Anweisung veröffentlichen</button>
-        <button class="btn ghost" onclick="anwLoeschen()">🗑 Aktuelle löschen</button>
-      </div>
-      <div class="hint">Ersetzt die aktuelle Anweisung für alle. Abgehakte Tische bleiben erhalten.</div>
-    </div>
-    <div style="text-align:center;margin-top:4px">
-      <button class="btn ghost" id="anwEditBtn" onclick="anwEditToggle()" style="opacity:.65">✏️ Auftrag schreiben</button>
-    </div>
+    <div id="kBoxen"></div>
   </section>
 </main>
 <div id="toast"></div>
 
 <script src="assets/js/tesseract/tesseract.min.js"></script>
+<script src="assets/js/leaflet/leaflet.js"></script>
 <script src="assets/js/nalp-passstueck-daten.js"></script>
 <script>
 'use strict';
@@ -274,10 +272,12 @@
    Übersetzungen erstellt und gegengeprüft (Bau-Fachsprache, Handy-tauglich). */
 var I18N={
  de:{
-  tab_auftrag:'📌 Auftrag', s4_titel:'📌 Arbeitsanweisung',
-  s4_sub:'Diese Tische in dieser Reihenfolge vormontieren.',
-  anw_leer:'Zurzeit kein Auftrag.', anw_fortschritt:'{n} von {g} erledigt',
-  anw_auftraege:'Aufträge', leg_offen:'offen', leg_vormontiert:'vormontiert', leg_berg:'auf dem Berg',
+  tab_auftrag:'🗺 Karten', k_titel:'🗺 Stand je Batch',
+  k_sub:'Je Bohrpunkt: Passstück erfasst? Je Tischfläche: vormontiert oder schon auf dem Berg?',
+  leg_ps:'Passstück erfasst', leg_ps_offen:'Passstück fehlt',
+  leg_offen:'offen', leg_vormontiert:'vormontiert', leg_berg:'auf dem Berg',
+  karte_stand:'{e}/{g} Passstücke · {v} vormontiert · {b} auf dem Berg',
+  karte_ohne:'ohne Koordinaten:',
   btn_aktualisieren:'↻ Aktualisieren', ok_aktualisiert:'Aktualisiert ✔',
   kopf_titel:'🔧 Vormontage', tab_stuetze:'🏷 Stütze', tab_fortschritt:'🏗 Fortschritt', tab_tabellen:'📋 Tabellen',
   s1_titel:'🏷 Stütze erfassen',
@@ -324,10 +324,12 @@ var I18N={
   offline_hinweis:'Offline – zeigt nur Einträge von diesem Handy'
  },
  en:{
-  tab_auftrag:'📌 Job', s4_titel:'📌 Work order',
-  s4_sub:'Pre-assemble these tables in this order.',
-  anw_leer:'No job at the moment.', anw_fortschritt:'{n} of {g} done',
-  anw_auftraege:'jobs', leg_offen:'open', leg_vormontiert:'pre-assembled', leg_berg:'sent up the mountain',
+  tab_auftrag:'🗺 Maps', k_titel:'🗺 Status per batch',
+  k_sub:'Per drill point: fitting piece saved? Per table area: pre-assembled or already on the mountain?',
+  leg_ps:'fitting piece saved', leg_ps_offen:'fitting piece missing',
+  leg_offen:'open', leg_vormontiert:'pre-assembled', leg_berg:'sent up the mountain',
+  karte_stand:'{e}/{g} fitting pieces · {v} pre-assembled · {b} on the mountain',
+  karte_ohne:'no coordinates:',
   btn_aktualisieren:'↻ Refresh', ok_aktualisiert:'Updated ✔',
   kopf_titel:'🔧 Pre-assembly', tab_stuetze:'🏷 Post', tab_fortschritt:'🏗 Progress', tab_tabellen:'📋 Lists',
   s1_titel:'🏷 Save post',
@@ -374,10 +376,12 @@ var I18N={
   offline_hinweis:'Offline – only entries from this phone'
  },
  pl:{
-  tab_auftrag:'📌 Zlecenie', s4_titel:'📌 Zlecenie pracy',
-  s4_sub:'Zmontuj te stoły w tej kolejności.',
-  anw_leer:'Brak zlecenia.', anw_fortschritt:'Gotowe: {n} z {g}',
-  anw_auftraege:'zlecenia', leg_offen:'otwarte', leg_vormontiert:'wstępnie zmontowane', leg_berg:'wysłane w góry',
+  tab_auftrag:'🗺 Mapy', k_titel:'🗺 Stan wg partii',
+  k_sub:'Każdy punkt: podpora zapisana? Powierzchnia stołu: zmontowany czy już na górze?',
+  leg_ps:'podpora zapisana', leg_ps_offen:'brak podpory',
+  leg_offen:'otwarte', leg_vormontiert:'wstępnie zmontowane', leg_berg:'wysłane w góry',
+  karte_stand:'Podpory: {e}/{g} · zmontowane: {v} · na górze: {b}',
+  karte_ohne:'bez współrzędnych:',
   btn_aktualisieren:'↻ Odśwież', ok_aktualisiert:'Zaktualizowano ✔',
   kopf_titel:'🔧 Wstępny montaż', tab_stuetze:'🏷 Podpora', tab_fortschritt:'🏗 Postęp', tab_tabellen:'📋 Tabele',
   s1_titel:'🏷 Zapisz podporę',
@@ -478,7 +482,7 @@ function tab(n){
     $('t'+i).classList.toggle('on', i===n);
   });
   if(n===3) laden(false);
-  if(n===4) anwLaden(false);
+  if(n===4) kartenLaden(false);
 }
 
 /* ---------- Netz-Anzeige + Offline-Warteschlange ---------- */
@@ -673,7 +677,6 @@ function laden(manuell){
   if(!netzAn()){ renderTab(); if(manuell) toast(T('offline_hinweis'),true); return; }
   Promise.all([apiGet(P_ST),apiGet(P_FO)]).then(function(r){
     stuetzen=r[0]||{}; fortschritt=r[1]||{}; renderTab();
-    if(document.getElementById('anwKarte')) anwKarteMalen();   // Status-Farben nachziehen
   }).catch(function(){ renderTab(); });
 }
 function alleStuetzen(){
@@ -738,6 +741,7 @@ function renderTab(){
   $('tab2').innerHTML=h2;
   $('z2').textContent=T('zaehler_meldungen',{g:fo.length,v:hv,b:hb});
   renderBatches();
+  kartenMalen();
 }
 
 /* ---------- Bestellbatches: komplett geliefert? ----------
@@ -838,144 +842,46 @@ function csv2(){
     alleFortschritt().map(function(r){ return [r.tischId, r.art==='berg'?'auf den Berg':'vormontiert', r.bem, r.von, fmtD(r.datum), fmtZ(r.ts)]; }));
 }
 
-/* ══════════ Arbeitsanweisung (Reihenfolge der Tische) ══════════
-   Bauleitung schreibt eine Liste von Tisch-IDs in Reihenfolge; die Equipe
-   sieht sie im Reiter und hakt erledigte Tische ab (fuer alle sichtbar). */
-var P_ANW='erfassung/vm_anweisung', P_ANWOK='erfassung/vm_anweisung_erledigt';
-var anwAlle=[], anw=null, anwOk={};    // anw = erster Auftrag (Editor-Vorgabe)
-
-function anwLaden(manuell){
-  if(!netzAn()){ if(manuell) toast(T('offline_hinweis'),true); anwMalen(); return; }
-  Promise.all([apiGet(P_ANW), apiGet(P_ANWOK)]).then(function(r){
-    var d=r[0]||null;
-    anwAlle = d ? (d.auftraege && d.auftraege.length ? d.auftraege : (d.ids ? [d] : [])) : [];
-    anw = anwAlle[0] || null;
-    anwOk=r[1]||{};
-    anwMalen();
-    if(manuell) toast(T('ok_aktualisiert'));
-  }).catch(function(){ if(manuell) toast(T('offline_hinweis'),true); });
+/* ══════════ Karten je Batch ══════════
+   Eine Karte pro Bestellbatch (Batch 9 und 10 gehoeren zusammen): je
+   Bohrpunkt zeigt ein Punkt, ob das Passstueck erfasst ist; die Tisch-
+   flaeche traegt den Fortschritt (orange = vormontiert, gruen = auf dem
+   Berg; Berg ueberschreibt). Die Arbeitsreihenfolge gibt die Bauleitung
+   muendlich durch - hier steht nur der Stand. */
+function kartenLaden(manuell){
+  kartenMalen();                         // Karten sofort bauen - Status kommt nach
+  laden(manuell);                        // frische Daten -> renderTab -> kartenMalen
+  if(manuell) toast(T('ok_aktualisiert'));
 }
-function anwMalen(){
-  var box=$('anwListe');
-  if(!anwAlle.length){
-    box.innerHTML='<div class="hint">'+T('anw_leer')+'</div>';
-    $('anwStand').textContent=T('s4_sub');
-    return;
-  }
-  var alleIds=[], fertigAlle=0;
-  anwAlle.forEach(function(a){
-    (a.ids||[]).forEach(function(id){ alleIds.push(id); if(anwOk[id]) fertigAlle++; });
-  });
-  $('anwStand').textContent=T('anw_fortschritt',{n:fertigAlle,g:alleIds.length})
-    +(anwAlle.length>1?' · '+anwAlle.length+' '+T('anw_auftraege'):'');
-
-  // neuester Auftrag zuoberst, aeltere darunter (eingeklappt)
-  var reihen=anwAlle.map(function(a,i){ return i; }).reverse();
-  var h='';
-  reihen.forEach(function(ai,pos){ h+=anwBlock(anwAlle[ai], ai, pos===0); });
-  box.innerHTML=h;
-  reihen.forEach(function(ai,pos){ if(pos===0) anwKartenAlle(ai); });
-}
-
-/* Ein Auftrag = Kopf + je Arbeitsgruppe eine Karte mit Liste. */
-function anwGruppen(a){
-  var g=[], akt=null;
-  (a.ids||[]).forEach(function(id,i){
-    var b=(a.badges&&a.badges[id])||null;
-    var titel=(b&&b.gruppe)||'';
-    if(!akt || akt.titel!==titel){
-      akt={ titel:titel, gfarbe:(b&&(b.gfarbe||b.farbe))||'#63676d', zeilen:[] };
-      g.push(akt);
-    }
-    akt.zeilen.push({ id:id, nr:i+1, b:b });
+function kartenGruppen(){                // Batch 9 + 10 zusammen
+  var map=batchPositionen(), g={};
+  Object.keys(map).forEach(function(b){
+    var lbl=(b==='9'||b==='10')?'9+10':String(b);
+    g[lbl]=g[lbl]||{};
+    Object.keys(map[b]).forEach(function(k){ g[lbl][k]=true; });
   });
   return g;
 }
-
-function anwBlock(a, ai, aktuell){
-  var ids=a.ids||[];
-  var fertig=ids.filter(function(id){ return anwOk[id]; }).length;
-  var offen=ids.length-fertig;
-  // nur der aktuelle (neueste) Auftrag ist offen; alles Aeltere eingeklappt
-  var zu = (a.zu===true) || (a.zu!==false && (!aktuell || offen===0));
-  var h='<div class="anwAuftrag" style="margin:'+(aktuell?'2px':'18px')+' 0 0;'
-    +'border:1px solid var(--line);border-radius:8px;overflow:hidden">'
-    +'<div onclick="anwKlapp('+ai+')" style="cursor:pointer;background:#f4f5f7;padding:10px 12px;'
-    +'display:flex;align-items:center;gap:9px">'
-    +'<span style="font-size:17px">'+(offen?'📌':'✅')+'</span>'
-    +'<span style="flex:1"><b style="font-size:14.5px">'+esc(a.titel||('Auftrag '+(ai+1)))+'</b>'
-    +'<span style="display:block;font-size:11.5px;color:var(--mut);margin-top:1px">'
-    + T('anw_fortschritt',{n:fertig,g:ids.length})
-    + (a.von?' · '+esc(a.von):'') + (a.datum?' · '+fmtD(a.datum):'') + '</span></span>'
-    +'<span style="font-size:13px;color:var(--mut)">'+(zu?'▾':'▴')+'</span></div>'
-    +'<div id="anwBody'+ai+'" style="padding:10px 12px'+(zu?';display:none':'')+'">';
-
-  if(a.bem) h+='<div class="hint" style="font-size:13px;color:var(--ink);margin-bottom:8px;'
-    +'white-space:pre-line">💬 '+esc(a.bem)+'</div>';
-
-  h+='<div style="font-size:11.5px;color:var(--mut);margin:2px 0 8px;line-height:1.7">'
-    +'<span style="display:inline-block;width:11px;height:11px;background:#c9ccd2;'
-    +'border:1px solid #fff;border-radius:2px;margin-right:4px"></span>'+T('leg_offen')+' &nbsp; '
-    +'<span style="display:inline-block;width:11px;height:11px;background:#e08a00;'
-    +'border-radius:2px;margin-right:4px"></span>'+T('leg_vormontiert')+' &nbsp; '
-    +'<span style="display:inline-block;width:11px;height:11px;background:#1e9e5a;'
-    +'border-radius:2px;margin-right:4px"></span>'+T('leg_berg')
-    +(a.legende?'<br>'+esc(a.legende):'')+'</div>';
-
-  anwGruppen(a).forEach(function(gr,gi){
-    if(gr.titel){
-      h+='<div style="background:'+esc(gr.gfarbe)+';color:#fff;font-weight:900;font-size:12.5px;'
-        +'border-radius:6px;padding:7px 10px;margin:14px 0 6px">'+esc(gr.titel)+'</div>';
-    }
-    h+='<canvas id="anwKarte'+ai+'_'+gi+'" style="width:100%;border:1px solid var(--line);'
-      +'border-radius:6px;cursor:zoom-in;margin-bottom:6px" '
-      +'onclick="karteGross('+ai+','+gi+')"></canvas>';
-    h+='<div class="tabWrap"><table>';
-    gr.zeilen.forEach(function(z){
-      var ok=!!anwOk[z.id], b=z.b;
-      h+='<tr'+(ok?' style="opacity:.5"':'')+'>'
-        +'<td style="width:34px;font-weight:900;color:var(--mut)">'+z.nr+'.</td>'
-        +'<td style="font-size:19px;font-weight:900'+(ok?';text-decoration:line-through':'')+'">'+esc(z.id)
-        +(b&&b.txt?' <span style="font-size:11px;font-weight:800;background:'+esc(b.farbe)+';color:#fff;'
-            +'border-radius:4px;padding:2px 6px;vertical-align:2px">'+esc(b.txt)+'</span>':'')+'</td>'
-        +'<td style="text-align:right"><button class="btn '+(ok?'ghost':'gruen')+'" style="padding:9px 12px"'
-        +' onclick="anwHaken(\''+esc(z.id)+'\','+(ok?'false':'true')+')">'+(ok?'↺':'✔')+'</button></td></tr>';
-    });
-    h+='</table></div>';
+function psErfasst(){                    // erfasste Passstuecke je tisch-stuetze
+  var da={};
+  alleStuetzen().forEach(function(r){
+    da[normId(r.tischId)+'-'+String(r.stuetze||'').trim().toUpperCase()]=true;
   });
-  h+='</div></div>';
-  return h;
+  return da;
 }
+var kGrp={};                             // Batchgruppe -> Positionsschluessel
+var kMaps={};                            // lbl -> {map, flaechen, punkte, nGesamt}
+var kPfaehle=null, kGeoPer=null, kOrtho=null;
 
-function anwKartenAlle(ai){
-  var a=anwAlle[ai]; if(!a) return;
-  anwGruppen(a).forEach(function(gr,gi){ anwKarteMalen(ai,gi); });
-}
-
-function anwKlapp(ai){
-  var b=document.getElementById('anwBody'+ai);
-  if(!b) return;
-  var zu=b.style.display==='none';
-  b.style.display=zu?'':'none';
-  if(anwAlle[ai]) anwAlle[ai].zu=!zu;
-  if(zu) anwKartenAlle(ai);          // Karten erst beim Aufklappen zeichnen
-}
-
-/* ---------- Auftragskarte live ---------- */
-var akPfaehle=null, akGeo=null, akBild=null;
-function akDatenLaden(cb){
-  if(akPfaehle && akGeo && akBild) { cb(); return; }
+function kDaten(cb){                     // Bohrpunkte + Kartenhintergruende einmal laden
+  if(kPfaehle && kGeoPer!==null && kOrtho!==null){ cb(); return; }
   Promise.all([
-    akPfaehle ? Promise.resolve(akPfaehle) : fetch('uploads/pfaehle.json').then(function(r){return r.json();}),
-    akGeo ? Promise.resolve(akGeo) : fetch('uploads/perimeter_geo.json').then(function(r){return r.json();})
-  ]).then(function(r){
-    akPfaehle=r[0]; akGeo=r[1];
-    if(akBild){ cb(); return; }
-    var im=new Image(); im.onload=function(){ akBild=im; cb(); }; im.onerror=function(){ cb(); };
-    im.src='assets/img/perimeter.jpg';
-  }).catch(function(){});
+    kPfaehle?Promise.resolve(kPfaehle):fetch('uploads/pfaehle.json').then(function(r){ return r.json(); }),
+    kGeoPer!==null?Promise.resolve(kGeoPer):fetch('uploads/perimeter_geo.json').then(function(r){ return r.ok?r.json():false; }).catch(function(){ return false; }),
+    kOrtho!==null?Promise.resolve(kOrtho):fetch('uploads/ortho/index.json').then(function(r){ return r.ok?r.json():[]; }).catch(function(){ return []; })
+  ]).then(function(r){ kPfaehle=r[0]; kGeoPer=r[1]; kOrtho=r[2]; cb(); }).catch(function(){});
 }
-function akLv95(lat,lon){
+function akLv95(lat,lon){                // WGS84 -> LV95 (Naeherung swisstopo)
   var p=(lat*3600-169028.66)/10000, l=(lon*3600-26782.5)/10000;
   return { E:2600072.37+211455.93*l-10938.51*l*p-0.36*l*p*p-44.54*l*l*l,
            N:1200147.07+308807.95*p+3745.25*l*l+76.63*p*p-194.56*l*l*p+119.79*p*p*p };
@@ -985,343 +891,121 @@ function akStatus(){
   var st={};
   Object.keys(fortschritt||{}).forEach(function(k){
     var r=fortschritt[k]; if(!r||!r.tischId) return;
-    var id=String(r.tischId).trim();
+    var id=normId(r.tischId);
     if(r.art==='berg') st[id]='berg';
     else if(st[id]!=='berg') st[id]='vormontiert';
   });
   pendLesen().forEach(function(p){          // offline erfasste mitzaehlen
     if(p.pfad!==P_FO || !p.rec) return;
-    var id=String(p.rec.tischId).trim();
+    var id=normId(p.rec.tischId);
     if(p.rec.art==='berg') st[id]='berg';
     else if(st[id]!=='berg') st[id]='vormontiert';
   });
   return st;
 }
-function anwKarteMalen(ai, gi, zielCv, zielBr){
-  ai=ai||0; gi=gi||0;
-  var a=anwAlle[ai];
-  if(!a || !a.ids) return;
-  var gr=anwGruppen(a)[gi];
-  if(!gr) return;
-  var cv=zielCv || document.getElementById('anwKarte'+ai+'_'+gi);
-  if(!cv || (!zielCv && !cv.clientWidth)) return;
 
-  akDatenLaden(function(){
-    if(!akPfaehle) return;
-    // Tische dieser Gruppe mit ihren Pfahlpunkten
-    var wanted={}; gr.zeilen.forEach(function(z){ wanted[String(z.id)]={nr:z.nr, id:String(z.id), pkt:[]}; });
-    akPfaehle.forEach(function(q){ var t=wanted[String(q[0])]; if(t) t.pkt.push([q[2],q[3]]); });
-    var liste=[]; Object.keys(wanted).forEach(function(k){ if(wanted[k].pkt.length) liste.push(wanted[k]); });
-    if(!liste.length) return;
-    liste.sort(function(x,y){ return x.nr-y.nr; });
+/* Leaflet-Minikarten: einmal bauen, danach nur noch Farben nachziehen -
+   so bleiben Zoom und Ausschnitt beim Aktualisieren erhalten. */
+function kartenMalen(){
+  var wrap=$('kBoxen');
+  if(!wrap || typeof L==='undefined') return;
+  if($('s4').style.display==='none') return;
+  kGrp=kartenGruppen();
+  // nur die aktuellen Batches zeigen (8 und 9+10) - aeltere sind durch
+  var lbls=Object.keys(kGrp)
+    .filter(function(l){ return parseInt(l,10)>=8; })
+    .sort(function(a,b){ return parseInt(b,10)-parseInt(a,10); });
+  kDaten(function(){
+    if(!kPfaehle) return;
+    lbls.forEach(function(lbl){ if(!kMaps[lbl]) kMapBauen(wrap,lbl); });
+    Object.keys(kMaps).forEach(function(l){ kMaps[l].map.invalidateSize(); });
+    kStatusMalen();
+  });
+}
+function kMapBauen(wrap,lbl){
+  var keys=Object.keys(kGrp[lbl]);
+  var pos={}; kPfaehle.forEach(function(q){ pos[normId(q[0])+'-'+q[1]]=q; });
+  var tische={}, ohne={};
+  keys.forEach(function(k){
+    var i=k.lastIndexOf('-'), tid=k.slice(0,i), s=k.slice(i+1);
+    var q=pos[k];
+    if(!q){ ohne[tid]=true; return; }
+    var v=akLv95(q[2],q[3]);
+    (tische[tid]=tische[tid]||[]).push({s:s, key:k, N:v.N, E:v.E});
+  });
+  if(!Object.keys(tische).length) return;
 
-    // Ausschnitt in LV95, immer im Format 16:10 (auf dem Handy gut sichtbar)
-    var alle=[]; liste.forEach(function(t){ t.pkt.forEach(function(q){ alle.push(akLv95(q[0],q[1])); }); });
-    var eMin=Math.min.apply(null,alle.map(function(v){return v.E;}));
-    var eMax=Math.max.apply(null,alle.map(function(v){return v.E;}));
-    var nMin=Math.min.apply(null,alle.map(function(v){return v.N;}));
-    var nMax=Math.max.apply(null,alle.map(function(v){return v.N;}));
-    var cE=(eMin+eMax)/2, cN=(nMin+nMax)/2;
-    var rand=liste.length<=6?16:22;
-    var br_m=Math.max(eMax-eMin+2*rand, 45), ho_m=Math.max(nMax-nMin+2*rand, 30);
-    // Kartenformat folgt dem Gebiet (hochkant ist auf dem Handy voellig ok),
-    // nur in vernuenftigen Grenzen – sonst werden die Tische winzig.
-    var AR=Math.max(0.72, Math.min(1.9, br_m/ho_m));
-    if(br_m/ho_m > AR) ho_m=br_m/AR; else br_m=ho_m*AR;
-    var minE=cE-br_m/2, maxE=cE+br_m/2, minN=cN-ho_m/2, maxN=cN+ho_m/2;
+  var sid=lbl.replace('+','_');
+  var box=document.createElement('div');
+  box.className='box kBatch';
+  box.innerHTML='<h2>Batch '+esc(lbl)+'</h2>'
+    +'<div class="zaehler" id="kz_'+sid+'">–</div>'
+    +'<div class="kmap" id="km_'+sid+'"></div>'
+    +(Object.keys(ohne).length?'<div class="hint" style="margin:6px 4px 0">'+T('karte_ohne')+' '
+      +Object.keys(ohne).sort().join(', ')+'</div>':'');
+  wrap.appendChild(box);
 
-    // Zeichenflaeche
-    var br = zielBr || cv.clientWidth || 360;
-    var dpr = zielBr ? 1 : Math.min(window.devicePixelRatio||1, 2.5);
-    var hoehe = Math.round(br/AR);
-    var sk = br/430;                              // Schrift-/Linienskalierung
-    cv.width=Math.round(br*dpr); cv.height=Math.round(hoehe*dpr);
-    if(!zielCv) cv.style.height=hoehe+'px';
-    var c=cv.getContext('2d');
-    c.setTransform(dpr,0,0,dpr,0,0);
-    c.fillStyle='#e9ecef'; c.fillRect(0,0,br,hoehe);
-    function P(E,N){ return { x:(E-minE)/(maxE-minE)*br, y:hoehe-(N-minN)/(maxN-minN)*hoehe }; }
+  var m=L.map('km_'+sid, { crs:L.CRS.Simple, attributionControl:false,
+                           zoomSnap:0.25, minZoom:-3, maxZoom:6 });
+  // zuerst den Ausschnitt setzen, dann zeichnen - sonst stimmen die Anker nicht
+  var bounds=[];
+  Object.keys(tische).forEach(function(tid){
+    tische[tid].forEach(function(p){ bounds.push([p.N,p.E]); });
+  });
+  var b=L.latLngBounds(bounds);
+  m.fitBounds(b.pad(0.12));
+  m.setMaxBounds(b.pad(1.2));
 
-    function inhalt(){
-      var st=akStatus();
-      liste.forEach(function(t){
-        var pts=t.pkt.map(function(q){ var v=akLv95(q[0],q[1]); return P(v.E,v.N); });
-        var mx=0,my=0; pts.forEach(function(q){ mx+=q.x; my+=q.y; }); mx/=pts.length; my/=pts.length;
-        var b=(a.badges&&a.badges[t.id])||null;
-        var zu=st[t.id];                                   // 'vormontiert' | 'berg' | undefined
-        var flaeche=(b&&b.kfarbe)||'rgba(215,38,34,.72)';
-        if(zu==='berg') flaeche='rgba(30,158,90,.78)';
-        else if(zu==='vormontiert') flaeche='rgba(224,138,0,.78)';
+  if(kGeoPer) L.imageOverlay('assets/img/perimeter.jpg',
+      [[kGeoPer.minN,kGeoPer.minE],[kGeoPer.maxN,kGeoPer.maxE]]).addTo(m);
+  (kOrtho||[]).forEach(function(o){          // Drohnen-Ortho scharf darueber
+    L.imageOverlay('uploads/ortho/'+o.datei, [[o.minN,o.minE],[o.maxN,o.maxE]]).addTo(m);
+  });
 
-        if(pts.length>2){
-          var srt=pts.slice().sort(function(u,v){
-            return Math.atan2(u.y-my,u.x-mx)-Math.atan2(v.y-my,v.x-mx); });
-          c.save();
-          c.shadowColor='rgba(0,0,0,.45)'; c.shadowBlur=6*sk; c.shadowOffsetY=1.5*sk;
-          c.beginPath(); srt.forEach(function(q,i){ i?c.lineTo(q.x,q.y):c.moveTo(q.x,q.y); }); c.closePath();
-          c.fillStyle=flaeche; c.fill();
-          c.restore();
-          c.lineWidth=2*sk; c.strokeStyle='#fff'; c.stroke();
-        }
-
-        // ID in der Tischflaeche, in die Tischachse gedreht
-        var w1=0,w2=0,dmax=-1;
-        for(var i=0;i<pts.length;i++) for(var j=i+1;j<pts.length;j++){
-          var dd=(pts[i].x-pts[j].x)*(pts[i].x-pts[j].x)+(pts[i].y-pts[j].y)*(pts[i].y-pts[j].y);
-          if(dd>dmax){ dmax=dd; w1=i; w2=j; }
-        }
-        var wi=Math.atan2(pts[w2].y-pts[w1].y, pts[w2].x-pts[w1].x);
-        if(wi>Math.PI/2) wi-=Math.PI;
-        if(wi<-Math.PI/2) wi+=Math.PI;
-        var lang=Math.sqrt(dmax);
-        var fs=Math.max(10*sk, Math.min(18*sk, lang*0.34));
-        c.save(); c.translate(mx,my); c.rotate(wi);
-        c.font='900 '+fs.toFixed(1)+'px Arial';
-        c.textAlign='center'; c.textBaseline='middle';
-        c.lineWidth=3.2*sk; c.strokeStyle='rgba(0,0,0,.55)'; c.lineJoin='round';
-        c.strokeText(t.id, 0, 0); c.fillStyle='#fff'; c.fillText(t.id, 0, 0);
-        c.restore();
-
-        // Reihenfolge-Nummer als Kreis am oberen Ende des Tisches
-        var kopf = pts[w1].y < pts[w2].y ? pts[w1] : pts[w2];
-        var kx=mx+(kopf.x-mx)*1.12, ky=my+(kopf.y-my)*1.12;
-        var r=Math.max(7.5*sk, Math.min(11*sk, lang*0.17));
-        c.beginPath(); c.arc(kx,ky,r,0,6.2832);
-        c.fillStyle = zu==='berg' ? '#1e9e5a' : (zu==='vormontiert' ? '#e08a00' : '#ffffff');
-        c.fill();
-        c.lineWidth=2*sk; c.strokeStyle=(b&&b.gfarbe)||'#D72622'; c.stroke();
-        c.font='900 '+(r*1.15).toFixed(1)+'px Arial';
-        c.textAlign='center'; c.textBaseline='middle';
-        c.fillStyle = zu ? '#fff' : '#1a1a1a';
-        c.fillText(String(t.nr), kx, ky+0.5*sk);
+  var flaechen={}, punkte={};
+  Object.keys(tische).forEach(function(tid){
+    var pk=tische[tid];
+    var mN=0,mE=0; pk.forEach(function(p){ mN+=p.N; mE+=p.E; }); mN/=pk.length; mE/=pk.length;
+    var srt=pk.slice().sort(function(a,b){
+      return Math.atan2(a.N-mN,a.E-mE)-Math.atan2(b.N-mN,b.E-mE); });
+    var poly=L.polygon(srt.map(function(p){ return [p.N,p.E]; }),
+      { color:'#fff', weight:1.2, opacity:.9, fillColor:'#c9ccd2', fillOpacity:.38 }).addTo(m);
+    flaechen[tid]=poly;
+    // Beschriftung fest auf den Tisch-Mittelpunkt (nicht an das Polygon gebunden)
+    L.tooltip({permanent:true, direction:'center', className:'kLbl', opacity:1})
+      .setLatLng([mN,mE]).setContent(String(tid)).addTo(m);
+    pk.forEach(function(p){
+      punkte[p.key]=L.circleMarker([p.N,p.E],
+        { radius:3.2, weight:1.1, color:'#fff', opacity:.95, fillColor:'#e4e7eb', fillOpacity:1 }).addTo(m);
+    });
+  });
+  L.control.scale({imperial:false, maxWidth:110}).addTo(m);
+  // Beschriftungen erst zeigen, wenn nah genug gezoomt (sonst Buchstabensalat)
+  function lblZeigen(){
+    m.getContainer().classList.toggle('kLblAus', m.getZoom()<1.4);
+  }
+  m.on('zoomend', lblZeigen); lblZeigen();
+  kMaps[lbl]={map:m, flaechen:flaechen, punkte:punkte, nGesamt:keys.length};
+}
+function kStatusMalen(){
+  var st=akStatus(), da=psErfasst();
+  Object.keys(kMaps).forEach(function(lbl){
+    var M=kMaps[lbl], e=0, nv=0, nb=0;
+    Object.keys(M.punkte).forEach(function(k){
+      var er=!!da[k]; if(er) e++;
+      M.punkte[k].setStyle({ fillColor: er?'#1565c0':'#e4e7eb' });
+    });
+    Object.keys(M.flaechen).forEach(function(tid){
+      var zu=st[tid];
+      if(zu==='berg') nb++; else if(zu==='vormontiert') nv++;
+      M.flaechen[tid].setStyle({
+        fillColor: zu==='berg' ? '#1e9e5a' : (zu==='vormontiert' ? '#e08a00' : '#c9ccd2'),
+        fillOpacity: zu ? .55 : .38
       });
-
-      // Nordpfeil + Massstab
-      var pad=9*sk;
-      c.save();
-      c.translate(br-pad-11*sk, pad+13*sk);
-      c.fillStyle='rgba(255,255,255,.92)';
-      c.beginPath(); c.moveTo(0,-12*sk); c.lineTo(6*sk,8*sk); c.lineTo(0,4*sk); c.lineTo(-6*sk,8*sk);
-      c.closePath(); c.fill();
-      c.font='900 '+(9*sk).toFixed(1)+'px Arial'; c.textAlign='center';
-      c.strokeStyle='rgba(0,0,0,.5)'; c.lineWidth=2.5*sk; c.lineJoin='round';
-      c.strokeText('N',0,-14*sk); c.fillText('N',0,-14*sk);
-      c.restore();
-
-      var mStufen=[5,10,20,25,50,100], mPx=br/(maxE-minE);
-      var mWahl=mStufen[0];
-      for(var k=0;k<mStufen.length;k++){ if(mStufen[k]*mPx < br*0.34) mWahl=mStufen[k]; }
-      var bx=pad, by=hoehe-pad-6*sk, bw=mWahl*mPx;
-      c.fillStyle='rgba(0,0,0,.45)';
-      c.fillRect(bx-3*sk, by-13*sk, bw+6*sk, 20*sk);
-      c.fillStyle='#fff'; c.fillRect(bx, by, bw, 3*sk);
-      c.font='800 '+(9.5*sk).toFixed(1)+'px Arial'; c.textAlign='left'; c.textBaseline='alphabetic';
-      c.fillText(mWahl+' m', bx, by-4*sk);
-
-      if(akQuelle){                                   // woher das Luftbild stammt
-        c.font='700 '+(8.5*sk).toFixed(1)+'px Arial'; c.textAlign='right';
-        c.fillStyle='rgba(0,0,0,.45)';
-        var qw=c.measureText(akQuelle).width+8*sk;
-        c.fillRect(br-pad-qw, hoehe-pad-12*sk, qw, 14*sk);
-        c.fillStyle='rgba(255,255,255,.92)';
-        c.fillText(akQuelle, br-pad-4*sk, hoehe-pad-2.5*sk);
-      }
-    }
-
-    // Luftbild: scharfer WMS-Ausschnitt (offline aus dem Cache), sonst Perimeterbild
-    akOrthoZeichnen(c,minE,minN,maxE,maxN,br,hoehe,function(fertig){
-     if(fertig){
-      c.fillStyle='rgba(12,18,26,.14)'; c.fillRect(0,0,br,hoehe);
-      inhalt();
-      return;
-     }
-     akLuftbild(minE,minN,maxE,maxN, Math.round(br*dpr), Math.round(hoehe*dpr), function(im){
-      akQuelle = im ? 'swisstopo SWISSIMAGE' : '';
-      if(im){ try{ c.drawImage(im,0,0,br,hoehe); }catch(e){} }
-      else if(akBild && akGeo){
-        var sx=(minE-akGeo.minE)/(akGeo.maxE-akGeo.minE)*akGeo.w;
-        var sy=(akGeo.maxN-maxN)/(akGeo.maxN-akGeo.minN)*akGeo.h;
-        var sw=(maxE-minE)/(akGeo.maxE-akGeo.minE)*akGeo.w;
-        var sh=(maxN-minN)/(akGeo.maxN-akGeo.minN)*akGeo.h;
-        try{ c.drawImage(akBild,sx,sy,sw,sh,0,0,br,hoehe); }catch(e){}
-      }
-      c.fillStyle='rgba(12,18,26,.20)'; c.fillRect(0,0,br,hoehe);   // Bild beruhigen
-      inhalt();
-     });
     });
+    var el=$('kz_'+lbl.replace('+','_'));
+    if(el) el.textContent=T('karte_stand',{e:e,g:M.nGesamt,v:nv,b:nb});
   });
-}
-
-/* Bildquellen fuer die Karte, in dieser Reihenfolge:
-   1. Drohnen-Orthofoto der Baustelle (uploads/ortho/, ~5 cm/px, liegt lokal
-      auf der Website -> auch offline scharf)
-   2. swisstopo-WMS SWISSIMAGE (nur online, wird vom Service Worker gecacht)
-   3. das grobe Perimeterbild (Notfall) */
-var akOrtho=null, akOrthoBild={}, akQuelle='';
-function akOrthoLaden(cb){
-  if(akOrtho!==null){ cb(); return; }
-  fetch('uploads/ortho/index.json').then(function(r){ return r.ok?r.json():[]; })
-    .then(function(j){ akOrtho=j||[]; cb(); })
-    .catch(function(){ akOrtho=[]; cb(); });
-}
-/* passenden Ortho-Ausschnitt suchen und den Bildausschnitt zeichnen */
-function akOrthoZeichnen(c,minE,minN,maxE,maxN,br,hoehe,cb){
-  akOrthoLaden(function(){
-    var tr=null;
-    (akOrtho||[]).forEach(function(o){
-      if(minE>=o.minE && maxE<=o.maxE && minN>=o.minN && maxN<=o.maxN) tr=o;
-    });
-    if(!tr){ cb(false); return; }
-    var im=akOrthoBild[tr.datei];
-    if(im==='fehler'){ cb(false); return; }
-    if(!im){
-      var neu=new Image();
-      neu.onload=function(){ akOrthoBild[tr.datei]=neu; akOrthoZeichnen(c,minE,minN,maxE,maxN,br,hoehe,cb); };
-      neu.onerror=function(){ akOrthoBild[tr.datei]='fehler'; cb(false); };
-      akOrthoBild[tr.datei]=null;
-      neu.src='uploads/ortho/'+tr.datei;
-      return;
-    }
-    var sx=(minE-tr.minE)/(tr.maxE-tr.minE)*tr.w;
-    var sy=(tr.maxN-maxN)/(tr.maxN-tr.minN)*tr.h;
-    var sw=(maxE-minE)/(tr.maxE-tr.minE)*tr.w;
-    var sh=(maxN-minN)/(tr.maxN-tr.minN)*tr.h;
-    try{ c.drawImage(im,sx,sy,sw,sh,0,0,br,hoehe); akQuelle='Drohne 22.04.2026'; cb(true); }
-    catch(e){ cb(false); }
-  });
-}
-
-var akWms={};
-function akLuftbild(minE,minN,maxE,maxN,wPx,hPx,cb){
-  var maxSeite=2000;
-  var w=Math.min(maxSeite, Math.max(600, wPx)), h=Math.round(w*(hPx/wPx));
-  var key=[minE.toFixed(1),minN.toFixed(1),maxE.toFixed(1),maxN.toFixed(1),w].join('_');
-  if(akWms[key]!==undefined){ cb(akWms[key]); return; }
-  var url='https://wms.geo.admin.ch/?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0'
-        + '&LAYERS=ch.swisstopo.swissimage&STYLES=&CRS=EPSG:2056&FORMAT=image/jpeg'
-        + '&WIDTH='+w+'&HEIGHT='+h
-        + '&BBOX='+minE.toFixed(2)+','+minN.toFixed(2)+','+maxE.toFixed(2)+','+maxN.toFixed(2);
-  var im=new Image();
-  im.crossOrigin='anonymous';
-  im.onload=function(){ akWms[key]=im; cb(im); };
-  im.onerror=function(){ akWms[key]=null; cb(null); };
-  im.src=url;
-}
-
-/* Vollbild: scharfe Karte, verschiebbar und zoombar */
-function karteGross(ai, gi){
-  ai=ai||0; gi=gi||0;
-  var tmp=document.createElement('canvas');
-  anwKarteMalen(ai, gi, tmp, 1600);
-  setTimeout(function(){
-    var src=null;
-    try{ src=tmp.toDataURL('image/jpeg',0.9); }catch(e){
-      var cv=document.getElementById('anwKarte'+ai+'_'+gi);
-      if(cv) try{ src=cv.toDataURL('image/jpeg',0.9); }catch(e2){}
-    }
-    if(src) bildGross(src);
-  }, 500);
-}
-
-function bildGross(src){
-  var ov=document.createElement('div');
-  ov.style.cssText='position:fixed;inset:0;z-index:80;background:#0b0f14;overflow:auto;'+
-    '-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y pinch-zoom';
-  var img=document.createElement('img');
-  img.src=src;
-  img.style.cssText='display:block;width:100%;height:auto';       // Start: passend
-  img.ondblclick=function(e){ e.stopPropagation(); zoom(); };
-  var gross=false;
-  function zoom(){
-    gross=!gross;
-    img.style.width=gross?'250%':'100%';
-    img.style.maxWidth='none';
-  }
-  var leiste=document.createElement('div');
-  leiste.style.cssText='position:fixed;top:0;left:0;right:0;display:flex;gap:8px;padding:8px;'+
-    'background:linear-gradient(180deg,rgba(0,0,0,.75),rgba(0,0,0,0));z-index:81';
-  leiste.innerHTML='<button id="bgZoom" style="border:0;border-radius:8px;padding:9px 14px;'+
-    'font:800 14px Arial;background:#fff;color:#1a1a1a">🔍 Zoom</button>'+
-    '<span style="flex:1"></span>'+
-    '<button id="bgZu" style="border:0;border-radius:8px;padding:9px 14px;'+
-    'font:800 14px Arial;background:#D72622;color:#fff">✕ Schliessen</button>';
-  ov.appendChild(img);
-  document.body.appendChild(ov);
-  document.body.appendChild(leiste);
-  function schliessen(){
-    try{ document.body.removeChild(ov); document.body.removeChild(leiste); }catch(e){}
-  }
-  leiste.querySelector('#bgZoom').onclick=zoom;
-  leiste.querySelector('#bgZu').onclick=schliessen;
-  ov.onclick=function(e){ if(e.target===ov) schliessen(); };
-}
-function anwHaken(id, setzen){
-  var von=getVon()||'';
-  if(setzen){
-    anwOk[id]={von:von, ts:Date.now()};
-    apiPut(P_ANWOK+'/'+encodeURIComponent(id), {von:von, ts:Date.now()})
-      .then(function(ok){ if(!ok) toast(T('err_kein_empfang'),true); });
-  } else {
-    delete anwOk[id];
-    fetch(DB+'/'+P_ANWOK+'/'+encodeURIComponent(id)+'.json',{method:'DELETE'})
-      .catch(function(){ toast(T('err_kein_empfang'),true); });
-  }
-  anwMalen();
-}
-function anwEditToggle(){
-  var b=$('anwEditBox');
-  var auf=b.style.display!=='none';
-  b.style.display=auf?'none':'';
-  if(auf) return;
-  var sel=$('a_nr'), h='';
-  anwAlle.forEach(function(a,i){
-    h+='<option value="'+i+'">'+(i+1)+' · '+esc(a.titel||('Auftrag '+(i+1)))+'</option>';
-  });
-  h+='<option value="neu">＋ neuer Auftrag</option>';
-  sel.innerHTML=h;
-  sel.value=anwAlle.length?'0':'neu';
-  anwEditWahl();
-}
-function anwEditWahl(){
-  var v=$('a_nr').value, a=(v==='neu')?null:anwAlle[parseInt(v,10)];
-  $('a_titel').value=a?(a.titel||''):'';
-  $('a_ids').value=a?(a.ids||[]).join(', '):'';
-  $('a_bem').value=a?(a.bem||''):'';
-  $('a_von').value=(a&&a.von)||getVon();
-  $('a_datum').value=(a&&a.datum)||'';
-}
-function anwSpeichern(){
-  var ids=$('a_ids').value.split(/[^0-9A-Za-z_.-]+/).map(function(x){return x.trim();}).filter(Boolean);
-  if(!ids.length){ toast(T('err_ids'),true); return; }
-  var von=$('a_von').value.trim(); if(von) setVon(von);
-  var v=$('a_nr')?$('a_nr').value:'0';
-  var idx=(v==='neu')?-1:parseInt(v,10);
-  var alt=(idx>=0)?anwAlle[idx]:null;
-  var rec={ titel:$('a_titel').value.trim(), ids:ids, bem:$('a_bem').value.trim(),
-            von:von, datum:$('a_datum').value||heute(), ts:Date.now() };
-  if(alt && alt.badges) rec.badges=alt.badges;   // Gruppen/Badges des Auftrags behalten
-  if(alt && alt.legende) rec.legende=alt.legende;
-  var neu=anwAlle.slice();
-  if(idx>=0) neu[idx]=rec; else neu.push(rec);
-  apiPut(P_ANW, {auftraege:neu}).then(function(ok){
-    if(!ok) throw 0;
-    anwAlle=neu; anw=anwAlle[0]; anwMalen(); $('anwEditBox').style.display='none';
-    toast(T('ok_gespeichert')+' · '+ids.length+' ID');
-  }).catch(function(){ toast(T('err_kein_empfang'),true); });
-}
-function anwLoeschen(){
-  var v=$('a_nr')?$('a_nr').value:'0';
-  if(v==='neu'){ $('anwEditBox').style.display='none'; return; }
-  var idx=parseInt(v,10), a=anwAlle[idx];
-  if(!a) return;
-  if(!confirm('Auftrag «'+(a.titel||('Auftrag '+(idx+1)))+'» für alle löschen?')) return;
-  var neu=anwAlle.slice(); neu.splice(idx,1);
-  var ziel = neu.length ? apiPut(P_ANW,{auftraege:neu})
-                        : fetch(DB+'/'+P_ANW+'.json',{method:'DELETE'}).then(function(){return true;});
-  ziel.then(function(){
-    anwAlle=neu; anw=anwAlle[0]||null; anwMalen(); $('anwEditBox').style.display='none';
-    toast(T('ok_gespeichert'));
-  }).catch(function(){ toast(T('err_kein_empfang'),true); });
 }
 
 /* ---------- Start ---------- */
@@ -1329,10 +1013,13 @@ setLang(lang);
 $('f_von').value=getVon(); $('p_von').value=getVon();
 netzMalen(); pendSenden(); laden(false);
 setInterval(function(){ if(netzAn()) laden(false); }, 90000);
+window.addEventListener('resize', function(){
+  Object.keys(kMaps).forEach(function(l){ kMaps[l].map.invalidateSize(); });
+});
 var qs=location.search;
 if(qs.indexOf('f=fortschritt')>=0) tab(2);
 else if(qs.indexOf('f=tabelle')>=0) tab(3);
-else if(qs.indexOf('f=auftrag')>=0) tab(4);
+else if(qs.indexOf('f=auftrag')>=0 || qs.indexOf('f=karte')>=0) tab(4);
 if(qs.indexOf('lang=pl')>=0) setLang('pl');
 else if(qs.indexOf('lang=en')>=0) setLang('en');
 </script>

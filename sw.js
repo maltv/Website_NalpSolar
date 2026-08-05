@@ -1,5 +1,5 @@
 ﻿'use strict';
-var CACHE = 'nalpsolar-v89';
+var CACHE = 'nalpsolar-v93';
 var PRECACHE = [
   './index.html',
   './sicherheit.html',
@@ -54,6 +54,8 @@ var PRECACHE = [
   './uploads/tables/baustand.json',
   './uploads/tables/bohrstand.json',
   './uploads/tables/typen.json',
+  './assets/js/leaflet/leaflet.js',
+  './assets/js/leaflet/leaflet.css',
   './uploads/ortho/index.json',
   './uploads/ortho/vormontage_gebiete.jpg',
   './uploads/pk/A.meta.json',
