@@ -97,6 +97,7 @@ html, body { width:100%; height:100%; overflow:hidden; background:#0d1117;
 .lbl-menzi { background:rgba(30,30,34,.88); border-color:#f2b705; color:#ffe89a; font-size:10.5px; font-weight:800; }
 .lbl-menzi.rot { border-color:#d8232a; color:#ffb3b6; }
 .lbl-stahl.pk { background:rgba(11,95,255,.92); border-color:#0b5fff; color:#fff; }
+.lbl-rentner { background:rgba(146,208,80,.92); border-color:#92d050; color:#111; font-size:10.5px; font-weight:800; }
 .lbl-tisch { background:rgba(255,220,0,.85); color:#111; border-color:#ffd700; font-size:9px; padding:1px 4px;
              transition:opacity .25s linear; will-change:opacity; }
 .lbl-status { font-size:10px; font-weight:800; padding:1px 5px;
@@ -436,6 +437,7 @@ body.ar-mode { background:transparent!important; }
   <button class="tb-btn" id="btnPk" onclick="togglePkModelle()">🏗 Echte PK-Modelle</button>
   <button class="tb-btn active" id="btnWorkers" onclick="toggleWorkers()">👷 Bauarbeiter</button>
   <button class="tb-btn active" id="btnCows"    onclick="toggleCows()">🐄 Kühe</button>
+  <button class="tb-btn active" id="btnRentner" onclick="toggleRentner()">👴 Führung 31.08.</button>
   <button class="tb-btn active" id="btnVeg"     onclick="toggleVegetation()">🌿 Vegetation</button>
   <button class="tb-btn active" id="btnCrane"   onclick="toggleCrane()">🏗 Pneukran</button>
 </div>
@@ -2373,6 +2375,120 @@ window.toggleCows=function(){
   cowsOn=!cowsOn;
   if(cowGroup) cowGroup.visible=cowsOn && !arActive;
   var b=document.getElementById('btnCows'); if(b) b.classList.toggle('active',cowsOn);
+};
+
+/* ═══════════════════════════════════════════════════════════
+   PENSIONIERTENFÜHRUNG Mo 31.08. — Besuchergruppe mit Rollator,
+   schlurft hinter dem Guide her, mit Erklär-Pausen
+═══════════════════════════════════════════════════════════ */
+var rentnerGroup=null, rentners=[], rentnerOn=true;
+var rentnerPath={cx:0,cz:0,r:50,ang:0};
+var rentnerMode='walk', rentnerT=24;
+function makeRollator(){
+  var g=new THREE.Group();
+  var frame=new THREE.MeshPhongMaterial({color:0xb0243a,shininess:60});   // klassisch bordeauxrot
+  var grau =new THREE.MeshPhongMaterial({color:0x2b2b2f,shininess:15});
+  function tube(x1,y1,z1,x2,y2,z2,r){
+    var dx=x2-x1,dy=y2-y1,dz=z2-z1,len=Math.sqrt(dx*dx+dy*dy+dz*dz);
+    var m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,len,6),frame);
+    m.position.set((x1+x2)/2,(y1+y2)/2,(z1+z2)/2);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3(dx/len,dy/len,dz/len));
+    return m;
+  }
+  [-0.2,0.2].forEach(function(z){
+    g.add(tube(0.05,0.84,z, 0.05,0.10,z, 0.022));                        // Hinterbein (Griffseite)
+    g.add(tube(0.05,0.62,z, 0.40,0.10,z, 0.022));                        // Vorderbein schräg
+    var w1=new THREE.Mesh(new THREE.CylinderGeometry(0.085,0.085,0.035,10),grau);
+    w1.rotation.x=Math.PI/2; w1.position.set(0.05,0.085,z); g.add(w1);   // Räder
+    var w2=w1.clone(); w2.position.set(0.40,0.085,z); g.add(w2);
+    var h=new THREE.Mesh(new THREE.CylinderGeometry(0.028,0.028,0.15,8),grau);
+    h.rotation.z=Math.PI/2; h.position.set(-0.02,0.86,z); g.add(h);      // Handgriffe
+  });
+  g.add(tube(0.05,0.50,-0.2, 0.05,0.50,0.2, 0.02));                      // Querstrebe
+  var seat=new THREE.Mesh(new THREE.BoxGeometry(0.24,0.03,0.34),grau); seat.position.set(0.20,0.52,0); g.add(seat); // Sitzbrett
+  return g;
+}
+function makeRentner(i){
+  var g=new THREE.Group();
+  var farben=[0x8a6d3b,0x5b6e8c,0x6e8a5b,0x8c5b6e];                      // Strickjacken-Töne
+  var coat=new THREE.MeshPhongMaterial({color:farben[i%farben.length],shininess:8});
+  var skin=new THREE.MeshPhongMaterial({color:0xe0ac69});
+  var hose=new THREE.MeshPhongMaterial({color:0x4a4a52,shininess:10});
+  var helmM=new THREE.MeshPhongMaterial({color:0xf2f2f2,shininess:70});  // weisser Besucherhelm
+  var haar=new THREE.MeshLambertMaterial({color:0xd9d9d9});
+  function limb(hipY,x,len,rad,mat){
+    var grp=new THREE.Group(); grp.position.set(x,hipY,0);
+    var m=new THREE.Mesh(new THREE.CylinderGeometry(rad,rad*0.9,len,8),mat); m.position.y=-len/2; grp.add(m); return grp;
+  }
+  var legL=limb(0.78,0.10,0.78,0.08,hose), legR=limb(0.78,-0.10,0.78,0.08,hose);
+  var torso=new THREE.Mesh(new THREE.BoxGeometry(0.44,0.55,0.30),coat); torso.position.y=1.02; torso.rotation.z=-0.16; // leicht gebückt
+  var armL=limb(1.26,0.27,0.55,0.055,coat), armR=limb(1.26,-0.27,0.55,0.055,coat);
+  armL.rotation.z=-0.45; armR.rotation.z=-0.45;                          // Hände vorn auf den Griffen
+  var head=new THREE.Mesh(new THREE.SphereGeometry(0.145,12,10),skin); head.position.set(0.06,1.45,0);
+  var kranz=new THREE.Mesh(new THREE.SphereGeometry(0.152,10,6,0,Math.PI*2,Math.PI*0.45,Math.PI*0.18),haar);
+  kranz.position.set(0.06,1.45,0);                                       // grauer Haarkranz unterm Helm
+  var helm=new THREE.Mesh(new THREE.SphereGeometry(0.165,14,8,0,Math.PI*2,0,Math.PI/2),helmM); helm.position.set(0.06,1.48,0);
+  g.add(legL,legR,torso,armL,armR,head,kranz,helm);
+  var rolli=makeRollator(); rolli.position.x=0.42; g.add(rolli);
+  g.userData={legL:legL,legR:legR,armL:armL,armR:armR,head:head};
+  return g;
+}
+function spawnRentner(){
+  rentnerGroup=new THREE.Group(); rentnerGroup.renderOrder=5;
+  rentnerPath.cx=workerArea.cx; rentnerPath.cz=workerArea.cz;
+  rentnerPath.r=Math.max(35,Math.min(60,workerArea.hx*0.35));
+  var guide=makeWorker();                                                // Guide in STRABAG-PSA
+  var d=document.createElement('div'); d.className='lbl lbl-rentner';
+  d.textContent='👴 Pensioniertenführung · Mo 31.08.';
+  var lbl=new THREE.CSS2DObject(d); lbl.position.set(0,2.5,0); guide.add(lbl);
+  rentners.push({group:guide,isGuide:true,dist:0,phase:Math.random()*6});
+  rentnerGroup.add(guide);
+  for(var i=0;i<4;i++){
+    var r=makeRentner(i);
+    rentners.push({group:r,isGuide:false,dist:3.4*(i+1),phase:Math.random()*6});
+    rentnerGroup.add(r);
+  }
+  setCast(rentnerGroup);
+  scene.add(rentnerGroup);
+  console.info('Pensioniertenführung: Guide + 4 (mit Rollator)');
+}
+function updateRentner(dt){
+  if(!rentnerGroup) return;
+  rentnerGroup.visible=rentnerOn && !arActive;
+  if(!rentnerGroup.visible) return;
+  rentnerT-=dt;
+  if(rentnerT<=0){
+    if(rentnerMode==='walk'){ rentnerMode='pause'; rentnerT=7+Math.random()*5; }   // Erklär-Pause
+    else { rentnerMode='walk'; rentnerT=22+Math.random()*10; }
+  }
+  var speed=(rentnerMode==='walk')?0.55:0;                               // Rentnertempo
+  rentnerPath.ang+=speed/rentnerPath.r*dt;
+  for(var i=0;i<rentners.length;i++){
+    var p=rentners[i], u=p.group.userData;
+    var ai=rentnerPath.ang-p.dist/rentnerPath.r;
+    var px=rentnerPath.cx+Math.cos(ai)*rentnerPath.r;
+    var pz=rentnerPath.cz+Math.sin(ai)*rentnerPath.r;
+    p.group.position.set(px,terraY(px,pz),pz);
+    var head=Math.atan2(-Math.cos(ai),-Math.sin(ai));                    // Tangente = Gehrichtung
+    if(rentnerMode==='pause' && p.isGuide) head+=Math.PI;                // Guide dreht sich zur Gruppe
+    p.group.rotation.y=head;
+    if(rentnerMode==='walk'){
+      p.phase+=dt*(p.isGuide?5.5:4.0);
+      var s=Math.sin(p.phase)*(p.isGuide?0.45:0.16);                     // Rentner: Trippelschritte
+      u.legL.rotation.z=s; u.legR.rotation.z=-s;
+      if(p.isGuide){ u.armL.rotation.x=-s*0.6; u.armR.rotation.x=s*0.6; }
+    } else {
+      u.legL.rotation.z*=0.85; u.legR.rotation.z*=0.85;
+      if(p.isGuide){ u.armR.rotation.z=-1.9+Math.sin(rentnerT*4)*0.4; u.armL.rotation.z=-0.25; } // erklärt gestikulierend
+      else if(u.head){ u.head.rotation.x=Math.sin(rentnerT*2.2+p.phase)*0.08; }                  // nickt verständig
+    }
+  }
+}
+window.toggleRentner=function(){
+  rentnerOn=!rentnerOn;
+  if(rentnerOn && !rentnerGroup){ try{ spawnRentner(); }catch(e){ console.warn('rentner',e); } }
+  if(rentnerGroup) rentnerGroup.visible=rentnerOn && !arActive;
+  var b=document.getElementById('btnRentner'); if(b) b.classList.toggle('active',rentnerOn);
 };
 
 /* ═══════════════════════════════════════════════════════════
@@ -5252,6 +5368,7 @@ function animate(){
   updateWorkers(gdt);
   updateClimbers(gdt);
   updateCows(gdt);
+  updateRentner(gdt);
   updateSamuel(gdt);
   updateBauablauf(gdt);
   updateTischLinks();
@@ -5490,6 +5607,7 @@ async function init(){
     workerArea={cx:pC.x, cz:pC.z, hx:Math.max(pS.x/2,80), hz:Math.max(pS.z/2,80)};
     spawnWorkers(5); if(workerGroup) setCast(workerGroup);
     try{ spawnCows(4); }catch(e){ console.warn('cows',e); }
+    try{ spawnRentner(); }catch(e){ console.warn('rentner',e); }
     try{ spawnSamuel(); }catch(e){ console.warn('samuel',e); }
     try{ renderStahlteile(); }catch(e){ console.warn('stahlteile',e); }   // jetzt mit Terrain-Höhe
     // Direktlinks: viewer3d.html#bohr = Bohrebene an, #tisch=350 = gleich hinfliegen
