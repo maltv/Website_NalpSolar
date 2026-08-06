@@ -1,0 +1,1189 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NalpSolar · Vormontage erfassen</title>
+<meta name="theme-color" content="#ffffff">
+<script>
+  window.NALP_GATE_CODE  = '6460';
+  window.NALP_GATE_KEY   = 'nalp_portal_unlock_v1';
+  window.NALP_GATE_TITEL = 'Vormontage';
+  window.NALP_GATE_SUB   = 'Code eingeben / Enter code / Wpisz kod';
+</script>
+<script src="assets/js/nalp-gate.js"></script>
+<link rel="stylesheet" href="assets/js/leaflet/leaflet.css">
+<style>
+  :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
+         --gruen:#1e9e5a; --blau:#1565c0; --orange:#e08a00; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body{ margin:0; background:#eef0f3; min-height:100vh; color:var(--ink);
+        font-family:Arial,"Helvetica Neue",sans-serif; }
+  header{ position:sticky; top:0; z-index:10; display:flex; align-items:center; gap:8px;
+          padding:9px 10px; background:#fff; border-bottom:4px solid var(--rot); }
+  header a.home{ color:var(--ink); text-decoration:none; font-size:20px; }
+  header .logo img{ height:20px; display:block; }
+  header h1{ font-size:14.5px; margin:0; flex:1; font-weight:800; }
+  #netz{ font-size:11px; font-weight:800; padding:3px 8px; border-radius:20px;
+         background:#e8f5ec; color:#12703f; white-space:nowrap; }
+  #netz.off{ background:#fdeaea; color:#a01c19; }
+  /* Sprachumschalter */
+  .lang{ display:flex; border:1px solid #c9ccd2; border-radius:6px; overflow:hidden; }
+  .lang button{ border:none; background:#fff; color:var(--mut); font-weight:800; font-size:12px;
+        padding:6px 8px; cursor:pointer; border-right:1px solid #e3e5e8; }
+  .lang button:last-child{ border-right:none; }
+  .lang button.on{ background:var(--rot); color:#fff; }
+
+  .tabs{ display:flex; background:#fff; border-bottom:1px solid var(--line); position:sticky; top:52px; z-index:9; }
+  .tabs button{ flex:1; border:none; background:none; padding:12px 6px; font-size:13.5px; font-weight:800;
+        color:var(--mut); cursor:pointer; border-bottom:3px solid transparent; }
+  .tabs button.on{ color:var(--rot); border-bottom-color:var(--rot); }
+
+  main{ max-width:720px; margin:0 auto; padding:12px 12px 80px; }
+  .box{ background:#fff; border:1px solid var(--line); border-left:5px solid var(--rot);
+        border-radius:6px; padding:13px; margin-bottom:13px; box-shadow:0 1px 4px rgba(20,25,32,.07); }
+  .box.blau{ border-left-color:var(--blau); }
+  .box h2{ margin:0 0 4px; font-size:15.5px; }
+  .box .sub{ font-size:12px; color:var(--mut); margin-bottom:8px; line-height:1.45; }
+  label.fl{ display:block; font-size:11.5px; font-weight:700; color:var(--mut); margin:10px 0 4px;
+            text-transform:uppercase; letter-spacing:.04em; }
+  input,textarea,select{ width:100%; background:#fff; border:1px solid #c9ccd2; border-radius:6px;
+          color:var(--ink); padding:11px 10px; font-size:16px; font-family:inherit; }
+  input:focus,textarea:focus,select:focus{ outline:2px solid rgba(215,38,34,.35); }
+  textarea{ min-height:52px; resize:vertical; font-size:15px; }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+  .btn{ display:inline-block; border:none; border-radius:6px; padding:13px 18px; font-size:15px;
+        font-weight:800; cursor:pointer; color:#fff; background:var(--rot); text-decoration:none; text-align:center; }
+  .btn.gross{ width:100%; padding:16px; font-size:17px; }
+  .btn.gruen{ background:var(--gruen); }
+  .btn.blau{ background:var(--blau); }
+  .btn.ghost{ background:#fff; color:var(--ink); border:1px solid #c9ccd2; font-weight:700;
+        padding:9px 12px; font-size:13.5px; }
+  .btn[disabled]{ opacity:.5; }
+  .sBtns{ display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
+  .sBtns button{ flex:1; min-width:64px; padding:14px 4px; font-size:16px; font-weight:900;
+        border:2px solid #c9ccd2; background:#fff; border-radius:8px; cursor:pointer; }
+  .sBtns button.on{ background:var(--rot); border-color:var(--rot); color:#fff; }
+  #ocrPrev{ margin-top:8px; }
+  #ocrPrev img{ max-width:100%; max-height:190px; border-radius:6px; border:1px solid var(--line); }
+  #ocrStatus{ font-size:13px; font-weight:700; margin-top:8px; min-height:18px; }
+  #ocrStatus.ok{ color:var(--gruen); } #ocrStatus.err{ color:var(--rot); }
+  .hint{ font-size:11.5px; color:var(--mut); margin-top:6px; line-height:1.5; }
+
+  table{ width:100%; border-collapse:collapse; font-size:13px; }
+  th,td{ text-align:left; padding:7px 6px; border-bottom:1px solid var(--line); }
+  th{ font-size:11px; text-transform:uppercase; color:var(--mut); letter-spacing:.03em; }
+  tr.pend td{ background:#fff8e6; }
+  .tabWrap{ overflow-x:auto; }
+  /* nur ~10 Zeilen zeigen, der Rest ist scrollbar */
+  .tabScroll{ max-height:430px; overflow-y:auto; overscroll-behavior:contain;
+        border:1px solid var(--line); border-radius:6px; }
+  .tabScroll table th{ position:sticky; top:0; background:#fff; z-index:1; }
+  .klapp{ display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
+  .klapp h2{ flex:1; }
+  .klapp .pfeil{ font-size:15px; color:var(--mut); transition:transform .15s; }
+  .zu .pfeil{ transform:rotate(-90deg); }
+  .zu .kInhalt{ display:none; }
+  .kInhalt{ margin-top:6px; }
+  .zaehler{ font-size:12.5px; color:var(--mut); margin:2px 0 8px; }
+  .badge{ display:inline-block; font-size:10px; font-weight:900; padding:2px 6px; border-radius:4px; }
+  .badge.v{ background:#e3f0ff; color:var(--blau); }
+  .badge.b{ background:#e8f5ec; color:#12703f; }
+  .badge.p{ background:#fff1cf; color:#7a5200; }
+  .badge.ok{ background:var(--gruen); color:#fff; }
+  .bar{ position:relative; background:#edeff2; border-radius:4px; height:13px; min-width:70px; overflow:hidden; }
+  .bar i{ position:absolute; top:0; left:0; bottom:0; background:var(--gruen); border-radius:4px; }
+  .bar i.teils{ background:var(--orange); }
+  /* Karten je Batch */
+  .kLeg{ display:flex; gap:13px; flex-wrap:wrap; font-size:12px; color:var(--mut); align-items:center; }
+  .kLeg .dot{ display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:5px;
+        vertical-align:-2px; border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.3); }
+  .kLeg .dot.b{ background:var(--blau); } .kLeg .dot.o{ background:#cfd4da; }
+  .kLeg .fl{ display:inline-block; width:15px; height:11px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
+  .kLeg .fl.o{ background:#c9ccd2; } .kLeg .fl.v{ background:var(--orange); } .kLeg .fl.b{ background:var(--gruen); }
+  .box.kBatch{ padding:8px; }                     /* mehr Platz fuer die Karte auf dem Handy */
+  .box.kBatch h2{ margin:2px 4px 2px; }
+  .box.kBatch .zaehler{ margin:0 4px 7px; }
+  .kmap{ height:64vh; min-height:300px; max-height:560px; border:1px solid var(--line);
+         border-radius:6px; background:#dfe3e8; }
+  .kLbl{ background:none; border:none; box-shadow:none; padding:0;
+         font:800 10px Arial; color:#fff; letter-spacing:.02em;
+         text-shadow:0 0 3px rgba(0,0,0,.95), 0 1px 2px rgba(0,0,0,.9); }
+  .kLbl:before{ display:none; }
+  .kLblAus .kLbl{ display:none; }
+  #toast{ position:fixed; left:50%; bottom:20px; transform:translateX(-50%) translateY(90px);
+          background:#0f5c33; color:#fff; font-weight:700; padding:12px 18px; border-radius:8px;
+          font-size:15px; transition:transform .25s; z-index:70; max-width:92%; text-align:center; }
+  #toast.on{ transform:translateX(-50%) translateY(0); }
+  #toast.err{ background:var(--rot); }
+  .stiftE{border:1px solid #c9ccd2;background:#fff;border-radius:8px;padding:4px 9px;
+    font-size:13px;font-weight:800;cursor:pointer;color:var(--ink);}
+  #ev{position:fixed;inset:0;background:rgba(10,16,24,.55);display:none;z-index:70;
+    align-items:flex-start;justify-content:center;padding:22px 12px;overflow:auto;}
+  #ev.zeig{display:flex;}
+  #ev .dlg{background:#fff;border-radius:14px;max-width:440px;width:100%;padding:16px;}
+  #ev h2{margin:0 0 2px;font-size:16px;}
+  #ev .esub{font-size:12px;color:var(--mut);margin-bottom:10px;}
+  #ev label{display:block;font-size:11px;font-weight:800;text-transform:uppercase;
+    letter-spacing:.04em;color:var(--mut);margin:9px 0 3px;}
+  #ev input,#ev select,#ev textarea{width:100%;box-sizing:border-box;font:inherit;font-size:14.5px;
+    padding:9px 10px;border:1px solid #c9ccd2;border-radius:9px;background:#fbfcfd;color:var(--ink);}
+  #ev textarea{min-height:56px;resize:vertical;}
+  #ev .erow{display:flex;gap:8px;margin-top:14px;}
+  #ev .erow button{flex:1;border:0;font:inherit;font-size:14px;font-weight:900;
+    padding:12px 8px;border-radius:10px;cursor:pointer;}
+  #ev .eab{background:#e3e8ed;color:var(--ink);flex:0 0 32%;}
+  #ev .eok{background:var(--gruen);color:#fff;}
+  #ev .ehin{font-size:11.5px;color:var(--mut);margin-top:10px;}
+</style>
+</head>
+<body>
+<header>
+  <a class="home" href="index.html" title="Start">🏠</a>
+  <div class="logo"><img src="assets/img/strabag-logo.png" alt="STRABAG"></div>
+  <h1><span data-i18n="kopf_titel">Vormontage</span></h1>
+  <a href="einfuehrung-vormontage.html" title="Einführung / Baustellendossier"
+     style="text-decoration:none;font-size:19px" aria-label="Einführung">📘</a>
+  <div class="lang" id="langBox">
+    <button data-lang="de" onclick="setLang('de')">DE</button>
+    <button data-lang="en" onclick="setLang('en')">EN</button>
+    <button data-lang="pl" onclick="setLang('pl')">PL</button>
+  </div>
+  <span id="netz">online</span>
+</header>
+<div class="tabs">
+  <button id="t1" class="on" onclick="tab(1)"><span data-i18n="tab_stuetze">🏷 Stütze</span></button>
+  <button id="t2" onclick="tab(2)"><span data-i18n="tab_fortschritt">🏗 Fortschritt</span></button>
+  <button id="t3" onclick="tab(3)"><span data-i18n="tab_tabellen">📋 Tabellen</span></button>
+  <button id="t4" onclick="tab(4)"><span data-i18n="tab_auftrag">🗺 Karten</span></button>
+</div>
+
+<main>
+  <!-- ══════════ 1 · STÜTZEN ══════════ -->
+  <section id="s1">
+    <div class="box">
+      <h2 data-i18n="s1_titel">🏷 Stütze erfassen</h2>
+      <div class="sub" data-i18n="s1_sub">Etikett von Mauchle fotografieren – ID, Stütze und Länge werden automatisch gelesen.</div>
+      <input type="file" id="f_foto" accept="image/*" capture="environment" style="display:none">
+      <button class="btn gross" onclick="document.getElementById('f_foto').click()"
+        data-i18n="s1_btn_foto">📷 Etikett fotografieren</button>
+      <div id="ocrPrev"></div>
+      <div id="ocrStatus"></div>
+
+      <label class="fl" data-i18n="lbl_id">ID Tisch *</label>
+      <input id="f_id" inputmode="numeric" data-i18n-ph="ph_id" placeholder="z.B. 995">
+
+      <label class="fl" data-i18n="lbl_stuetze">Stütze *</label>
+      <div class="sBtns" id="sBtns"></div>
+
+      <div class="row2">
+        <div>
+          <label class="fl" data-i18n="lbl_laenge">Länge [mm] *</label>
+          <input id="f_len" inputmode="numeric" data-i18n-ph="ph_laenge" placeholder="z.B. 2724">
+        </div>
+        <div>
+          <label class="fl" data-i18n="lbl_typ">Typ (optional)</label>
+          <input id="f_typ" data-i18n-ph="ph_typ" placeholder="z.B. B">
+        </div>
+      </div>
+      <div class="row2">
+        <div>
+          <label class="fl" data-i18n="lbl_bp">Bohrpunkt (1–12)</label>
+          <input id="f_bp" inputmode="numeric" data-i18n-ph="ph_bp" placeholder="z.B. 10 – neu zweistellig!">
+        </div>
+        <div>
+          <label class="fl" data-i18n="lbl_mid">Mauchle-ID (optional)</label>
+          <input id="f_mid" data-i18n-ph="ph_mid" placeholder="z.B. 24027-1153">
+        </div>
+      </div>
+      <div class="row2">
+        <div>
+          <label class="fl" data-i18n="lbl_serie">Serie (optional)</label>
+          <input id="f_serie" data-i18n-ph="ph_serie" placeholder="z.B. 8">
+        </div>
+        <div>
+          <label class="fl" data-i18n="lbl_profil">Profil (optional)</label>
+          <input id="f_profil" data-i18n-ph="ph_profil" placeholder="z.B. RRK 180x6.0">
+        </div>
+      </div>
+      <label class="fl" data-i18n="lbl_bem">Bemerkung (optional)</label>
+      <textarea id="f_bem" data-i18n-ph="ph_bem" placeholder="z.B. Etikett unleserlich, Kratzer …"></textarea>
+      <label class="fl" data-i18n="lbl_von">Erfasst von *</label>
+      <input id="f_von" data-i18n-ph="ph_von" placeholder="Name">
+      <div style="margin-top:12px"><button class="btn gross" id="btnS1" onclick="speichernStuetze()"
+        data-i18n="btn_speichern">💾 Speichern</button></div>
+      <div class="hint" data-i18n="hint_offline">Ohne Internet wird lokal gespeichert und automatisch nachgesendet, sobald wieder Empfang da ist.</div>
+    </div>
+  </section>
+
+  <!-- ══════════ 2 · FORTSCHRITT ══════════ -->
+  <section id="s2" style="display:none">
+    <div class="box blau">
+      <h2 data-i18n="s2_titel">🏗 Fortschritt Vormontage</h2>
+      <div class="sub" data-i18n="s2_sub">Primärkonstruktion vormontiert oder auf den Berg gegangen?</div>
+
+      <label class="fl" data-i18n="lbl_was">Was ist passiert? *</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn ghost" id="artV" style="flex:1;padding:16px 8px;font-size:14.5px"
+          onclick="setArt('vormontiert')"><span data-i18n="btn_vormontiert">🔧 Vormontiert</span><br>
+          <span style="font-weight:400;font-size:11.5px" data-i18n="btn_vormontiert_sub">im Tal gelagert</span></button>
+        <button class="btn ghost" id="artB" style="flex:1;padding:16px 8px;font-size:14.5px"
+          onclick="setArt('berg')"><span data-i18n="btn_berg">⛰ Auf den Berg</span><br>
+          <span style="font-weight:400;font-size:11.5px" data-i18n="btn_berg_sub">hochtransportiert</span></button>
+      </div>
+
+      <label class="fl" data-i18n="lbl_id">ID Tisch *</label>
+      <input id="p_id" inputmode="numeric" data-i18n-ph="ph_id" placeholder="z.B. 995">
+      <div class="hint" data-i18n="hint_mehrere">Mehrere auf einmal: IDs mit Komma trennen (z.B. 995, 996, 997)</div>
+
+      <label class="fl" data-i18n="lbl_bem">Bemerkung (optional)</label>
+      <textarea id="p_bem" data-i18n-ph="ph_bem_kurz" placeholder="optional"></textarea>
+      <label class="fl" data-i18n="lbl_von">Erfasst von *</label>
+      <input id="p_von" data-i18n-ph="ph_von" placeholder="Name">
+      <div style="margin-top:12px"><button class="btn gross blau" id="btnS2" onclick="speichernFortschritt()"
+        data-i18n="btn_speichern">💾 Speichern</button></div>
+    </div>
+  </section>
+
+  <!-- ══════════ 3 · TABELLEN ══════════ -->
+  <section id="s3" style="display:none">
+    <div class="box" id="box0" style="border-left-color:var(--gruen)">
+      <div class="klapp" onclick="klapp('box0')"><h2 data-i18n="s3_titel0">🧾 Bestellbatches – geliefert?</h2><span class="pfeil">▾</span></div>
+      <div class="kInhalt">
+        <div class="sub" data-i18n="batch_sub">Bestellte Stützen (Mauchle Batch 1–10) im Vergleich mit den erfassten Stützen. Zeile antippen zeigt, was noch fehlt.</div>
+        <div class="tabWrap"><table id="tab0"></table></div>
+      </div>
+    </div>
+    <div class="box zu" id="box1">
+      <div class="klapp" onclick="klapp('box1')"><h2 data-i18n="s3_titel1">🏷 Erfasste Stützen</h2><span class="pfeil">▾</span></div>
+      <div class="zaehler" id="z1">–</div>
+      <div class="kInhalt">
+        <input id="q1" data-i18n-ph="ph_suche" placeholder="Suchen (ID, Länge, Name) …" oninput="renderTab()" style="margin-bottom:8px">
+        <div class="tabScroll"><table id="tab1"></table></div>
+        <div style="margin-top:10px"><button class="btn ghost" onclick="csv1()" data-i18n="btn_csv">⬇ CSV / Excel</button></div>
+      </div>
+    </div>
+    <div class="box blau zu" id="box2">
+      <div class="klapp" onclick="klapp('box2')"><h2 data-i18n="s3_titel2">🏗 Fortschritt</h2><span class="pfeil">▾</span></div>
+      <div class="zaehler" id="z2">–</div>
+      <div class="kInhalt">
+        <div class="tabScroll"><table id="tab2"></table></div>
+        <div style="margin-top:10px"><button class="btn ghost" onclick="csv2()" data-i18n="btn_csv">⬇ CSV / Excel</button></div>
+      </div>
+    </div>
+    <div style="margin:2px 0 10px"><button class="btn ghost" onclick="location.href='protokoll.html'"
+      data-i18n="btn_protokoll">🗒 Änderungsprotokoll</button></div>
+  </section>
+
+  <!-- ══════════ 4 · KARTEN JE BATCH ══════════ -->
+  <section id="s4" style="display:none">
+    <div class="box" style="border-left-color:var(--orange)">
+      <h2 data-i18n="k_titel">🗺 Stand je Batch</h2>
+      <div class="sub" data-i18n="k_sub">Je Bohrpunkt: Passstück erfasst? Je Tischfläche: vormontiert oder schon auf dem Berg?</div>
+      <div class="kLeg">
+        <span><i class="dot b"></i><span data-i18n="leg_ps">Passstück erfasst</span></span>
+        <span><i class="dot o"></i><span data-i18n="leg_ps_offen">Passstück fehlt</span></span>
+        <span><i class="fl o"></i><span data-i18n="leg_offen">offen</span></span>
+        <span><i class="fl v"></i><span data-i18n="leg_vormontiert">vormontiert</span></span>
+        <span><i class="fl b"></i><span data-i18n="leg_berg">auf dem Berg</span></span>
+      </div>
+      <div style="margin-top:9px"><button class="btn ghost" onclick="kartenLaden(true)" data-i18n="btn_aktualisieren">↻ Aktualisieren</button></div>
+    </div>
+    <div id="kBoxen"></div>
+  </section>
+</main>
+
+<div id="ev"><div class="dlg">
+  <h2 data-i18n="edit_titel">Eintrag bearbeiten</h2>
+  <div class="esub" id="ev_sub"></div>
+  <label data-i18n="lbl_id">ID Tisch *</label><input id="ev_tid" inputmode="numeric">
+  <div id="ev_nur_st">
+    <label data-i18n="lbl_stuetze">Stütze *</label>
+    <select id="ev_st"><option>S1</option><option>S2</option><option>S3</option><option>S4</option></select>
+    <label data-i18n="lbl_laenge">Länge [mm] *</label><input id="ev_len" inputmode="numeric">
+    <label data-i18n="lbl_bp">Bohrpunkt (1–12)</label><input id="ev_bp" inputmode="numeric">
+    <label data-i18n="lbl_mid">Mauchle-ID (optional)</label><input id="ev_mid">
+    <label data-i18n="lbl_typ">Typ (optional)</label><input id="ev_typ">
+  </div>
+  <div id="ev_nur_fo" style="display:none">
+    <label data-i18n="lbl_was">Was ist passiert? *</label>
+    <select id="ev_art"><option value="vormontiert">🔧 vormontiert</option><option value="berg">⛰ auf den Berg</option></select>
+  </div>
+  <label data-i18n="lbl_bem">Bemerkung (optional)</label><textarea id="ev_bem"></textarea>
+  <div class="ehin" data-i18n="edit_hinweis">Wird protokolliert: wer, wann, alt → neu.</div>
+  <div class="erow">
+    <button class="eab" id="ev_ab" data-i18n="btn_abbrechen">Abbrechen</button>
+    <button class="eok" id="ev_ok" data-i18n="btn_speichern">💾 Speichern</button>
+  </div>
+</div></div>
+
+<div id="toast"></div>
+
+<script src="assets/js/tesseract/tesseract.min.js"></script>
+<script src="assets/js/nalp-scan-parse.js"></script>
+<script src="assets/js/nalp-protokoll.js"></script>
+<script src="assets/js/leaflet/leaflet.js"></script>
+<script src="assets/js/nalp-passstueck-daten.js"></script>
+<script>
+'use strict';
+/* ══════════ Sprachen DE / EN / PL ══════════
+   Übersetzungen erstellt und gegengeprüft (Bau-Fachsprache, Handy-tauglich). */
+var I18N={
+ de:{
+  lbl_bp:'Bohrpunkt (1–12)', ph_bp:'z.B. 10 – neu zweistellig!',
+  lbl_mid:'Mauchle-ID (optional)', ph_mid:'z.B. 24027-1153', th_bp:'BP',
+  btn_protokoll:'🗒 Änderungsprotokoll', edit_titel:'Eintrag bearbeiten',
+  btn_abbrechen:'Abbrechen', edit_hinweis:'Wird protokolliert: wer, wann, alt → neu.',
+  err_bp:'Bohrpunkt: Zahl 1–12', ok_geaendert:'Änderung gespeichert & protokolliert',
+  tab_auftrag:'🗺 Karten', k_titel:'🗺 Stand je Batch',
+  k_sub:'Je Bohrpunkt: Passstück erfasst? Je Tischfläche: vormontiert oder schon auf dem Berg?',
+  leg_ps:'Passstück erfasst', leg_ps_offen:'Passstück fehlt',
+  leg_offen:'offen', leg_vormontiert:'vormontiert', leg_berg:'auf dem Berg',
+  karte_stand:'{e}/{g} Passstücke · {v} vormontiert · {b} auf dem Berg',
+  karte_ohne:'ohne Koordinaten:',
+  btn_aktualisieren:'↻ Aktualisieren', ok_aktualisiert:'Aktualisiert ✔',
+  kopf_titel:'🔧 Vormontage', tab_stuetze:'🏷 Stütze', tab_fortschritt:'🏗 Fortschritt', tab_tabellen:'📋 Tabellen',
+  s1_titel:'🏷 Stütze erfassen',
+  s1_sub:'Etikett von Mauchle fotografieren – ID, Stütze und Länge werden automatisch gelesen.',
+  s1_btn_foto:'📷 Etikett fotografieren',
+  lbl_id:'ID Tisch *', ph_id:'z.B. 995',
+  lbl_stuetze:'Stütze S1–S4 *', lbl_laenge:'Länge [mm] *', ph_laenge:'z.B. 2724',
+  lbl_typ:'Typ (optional)', ph_typ:'z.B. B', lbl_serie:'Serie (optional)', ph_serie:'z.B. 8',
+  lbl_profil:'Profil (optional)', ph_profil:'z.B. RRK 180x6.0',
+  lbl_bem:'Bemerkung (optional)', ph_bem:'z.B. Etikett unleserlich, Kratzer …', ph_bem_kurz:'optional',
+  lbl_von:'Dein Name *', ph_von:'z.B. Jan K.',
+  btn_speichern:'💾 Speichern',
+  hint_offline:'Kein Empfang? Wird im Handy gespeichert und später automatisch gesendet.',
+  s2_titel:'🏗 Fortschritt Vormontage', s2_sub:'Primärkonstruktion vormontiert oder auf den Berg gegangen?',
+  lbl_was:'Was ist erledigt? *',
+  btn_vormontiert:'🔧 Vormontiert', btn_vormontiert_sub:'im Tal gelagert',
+  btn_berg:'⛰ Auf den Berg', btn_berg_sub:'hochtransportiert',
+  hint_mehrere:'Mehrere auf einmal: IDs mit Komma trennen (z.B. 995, 996, 997)',
+  s3_titel1:'🏷 Erfasste Stützen', s3_titel2:'🏗 Fortschritt',
+  s3_titel0:'🧾 Bestellbatches – geliefert?',
+  batch_sub:'Bestellte Stützen (Mauchle Batch 1–10) im Vergleich mit den erfassten Stützen. Zeile antippen zeigt, was noch fehlt.',
+  th_lieferung:'Lieferung', th_batch:'Batch', th_erfasst:'Erfasst',
+  badge_komplett:'✔ komplett geliefert', badge_offen:'{n} fehlt', batch_fehlt:'Fehlt:',
+  ph_suche:'Suchen (ID, Länge, Name) …', btn_csv:'⬇ CSV / Excel',
+  th_id:'ID', th_st:'St.', th_laenge:'Länge', th_typ:'Typ', th_wer:'Wer', th_wann:'Wann', th_status:'Status',
+  badge_wartet:'wartet', badge_berg:'⛰ Auf dem Berg', badge_vormontiert:'🔧 vormontiert',
+  netz_online:'online', netz_offline:'offline',
+  netz_sendet:'sende {n} …', netz_offline_wartet:'offline · {n} wartet',
+  zaehler_eintraege:'{n} Einträge', zaehler_gefiltert:' (gefiltert)',
+  zaehler_meldungen:'{g} Meldungen · {v} vormontiert · {b} auf dem Berg',
+  ocr_vorbereiten:'Bild wird vorbereitet …', ocr_lesen:'Etikett wird gelesen …',
+  ocr_ok:'✔ Erkannt', ocr_pruefen:'– bitte kurz prüfen!',
+  ocr_unlesbar:'Etikett nicht lesbar – bitte von Hand eintragen (Foto bleibt gespeichert).',
+  ocr_fehler:'Fotolesen nicht möglich – bitte von Hand eintragen.',
+  ocr_fotofehler:'Foto konnte nicht gelesen werden.',
+  err_id:'Bitte die ID eintragen.', err_stuetze:'Bitte S1–S4 wählen.',
+  err_laenge:'Bitte die Länge eintragen.', err_name:'Bitte Namen eintragen.',
+  err_art:'Bitte wählen: vormontiert oder auf den Berg.', err_ids:'Bitte mindestens eine ID eintragen.',
+  ok_gespeichert:'Gespeichert ✔', ok_offline:'Offline gespeichert – wird später gesendet ✔',
+  ok_offline_n:'Offline gespeichert ({n}) – wird später gesendet ✔',
+  ok_ids:'Gespeichert ✔ {n} ID',
+  ok_nachgesendet:'Offline-Einträge nachgesendet ✔',
+  err_kein_empfang:'Kein Empfang – im Handy gespeichert, wird später gesendet',
+  offline_hinweis:'Offline – zeigt nur Einträge von diesem Handy'
+ },
+ en:{
+  lbl_bp:'Drill point (1–12)', ph_bp:'e.g. 10 – now two digits!',
+  lbl_mid:'Mauchle ID (optional)', ph_mid:'e.g. 24027-1153', th_bp:'DP',
+  btn_protokoll:'🗒 Change log', edit_titel:'Edit entry',
+  btn_abbrechen:'Cancel', edit_hinweis:'Logged: who, when, old → new.',
+  err_bp:'Drill point: number 1–12', ok_geaendert:'Change saved & logged',
+  tab_auftrag:'🗺 Maps', k_titel:'🗺 Status per batch',
+  k_sub:'Per drill point: fitting piece saved? Per table area: pre-assembled or already on the mountain?',
+  leg_ps:'fitting piece saved', leg_ps_offen:'fitting piece missing',
+  leg_offen:'open', leg_vormontiert:'pre-assembled', leg_berg:'sent up the mountain',
+  karte_stand:'{e}/{g} fitting pieces · {v} pre-assembled · {b} on the mountain',
+  karte_ohne:'no coordinates:',
+  btn_aktualisieren:'↻ Refresh', ok_aktualisiert:'Updated ✔',
+  kopf_titel:'🔧 Pre-assembly', tab_stuetze:'🏷 Post', tab_fortschritt:'🏗 Progress', tab_tabellen:'📋 Lists',
+  s1_titel:'🏷 Save post',
+  s1_sub:'Take a photo of the Mauchle label – ID, post and length are read automatically.',
+  s1_btn_foto:'📷 Photo of label',
+  lbl_id:'Table ID *', ph_id:'e.g. 995',
+  lbl_stuetze:'Post S1–S4 *', lbl_laenge:'Length [mm] *', ph_laenge:'e.g. 2724',
+  lbl_typ:'Type (optional)', ph_typ:'e.g. B', lbl_serie:'Series (optional)', ph_serie:'e.g. 8',
+  lbl_profil:'Profile (optional)', ph_profil:'e.g. RRK 180x6.0',
+  lbl_bem:'Remark (optional)', ph_bem:'e.g. label unreadable, scratches …', ph_bem_kurz:'optional',
+  lbl_von:'Your name *', ph_von:'e.g. Jan K.',
+  btn_speichern:'💾 Save',
+  hint_offline:'No signal? Saved on the phone – sent automatically later.',
+  s2_titel:'🏗 Pre-assembly progress', s2_sub:'Main frame pre-assembled or sent to the mountain?',
+  lbl_was:'What is done? *',
+  btn_vormontiert:'🔧 Pre-assembled', btn_vormontiert_sub:'stored in the valley',
+  btn_berg:'⛰ To the mountain', btn_berg_sub:'sent up',
+  hint_mehrere:'Several at once: separate IDs with a comma (e.g. 995, 996, 997)',
+  s3_titel1:'🏷 Saved posts', s3_titel2:'🏗 Progress',
+  s3_titel0:'🧾 Order batches – delivered?',
+  batch_sub:'Ordered posts (Mauchle batch 1–10) compared with the saved posts. Tap a row to see what is still missing.',
+  th_lieferung:'Delivery', th_batch:'Batch', th_erfasst:'Saved',
+  badge_komplett:'✔ fully delivered', badge_offen:'{n} missing', batch_fehlt:'Missing:',
+  ph_suche:'Search (ID, length, name) …', btn_csv:'⬇ CSV / Excel',
+  th_id:'ID', th_st:'S1–S4', th_laenge:'Length', th_typ:'Type', th_wer:'Who', th_wann:'When', th_status:'Status',
+  badge_wartet:'waiting', badge_berg:'⛰ Sent up', badge_vormontiert:'🔧 pre-assembled',
+  netz_online:'online', netz_offline:'offline',
+  netz_sendet:'sending {n} …', netz_offline_wartet:'offline · {n} waiting',
+  zaehler_eintraege:'{n} entries', zaehler_gefiltert:' (filtered)',
+  zaehler_meldungen:'{g} reports · {v} pre-assembled · {b} on the mountain',
+  ocr_vorbereiten:'Preparing photo …', ocr_lesen:'Reading label …',
+  ocr_ok:'✔ Found', ocr_pruefen:'– check it!',
+  ocr_unlesbar:'Label not readable – enter by hand (photo is saved).',
+  ocr_fehler:'Cannot read the text – enter by hand.',
+  ocr_fotofehler:'Could not read the photo.',
+  err_id:'Enter the ID.', err_stuetze:'Choose S1–S4.',
+  err_laenge:'Enter the length.', err_name:'Enter your name.',
+  err_art:'Choose: pre-assembled or to the mountain.', err_ids:'Enter at least one ID.',
+  ok_gespeichert:'Saved ✔', ok_offline:'Saved offline – will be sent later ✔',
+  ok_offline_n:'Saved offline ({n}) – will be sent later ✔',
+  ok_ids:'Saved ✔ {n} ID',
+  ok_nachgesendet:'Offline entries sent ✔',
+  err_kein_empfang:'No signal – saved on the phone, will be sent later',
+  offline_hinweis:'Offline – only entries from this phone'
+ },
+ pl:{
+  lbl_bp:'Punkt wiercenia (1–12)', ph_bp:'np. 10 – teraz dwucyfrowy!',
+  lbl_mid:'Nr Mauchle (opcjonalnie)', ph_mid:'np. 24027-1153', th_bp:'PW',
+  btn_protokoll:'🗒 Rejestr zmian', edit_titel:'Edytuj wpis',
+  btn_abbrechen:'Anuluj', edit_hinweis:'Rejestrowane: kto, kiedy, stare → nowe.',
+  err_bp:'Punkt wiercenia: liczba 1–12', ok_geaendert:'Zmiana zapisana i zarejestrowana',
+  tab_auftrag:'🗺 Mapy', k_titel:'🗺 Stan wg partii',
+  k_sub:'Każdy punkt: podpora zapisana? Powierzchnia stołu: zmontowany czy już na górze?',
+  leg_ps:'podpora zapisana', leg_ps_offen:'brak podpory',
+  leg_offen:'otwarte', leg_vormontiert:'wstępnie zmontowane', leg_berg:'wysłane w góry',
+  karte_stand:'Podpory: {e}/{g} · zmontowane: {v} · na górze: {b}',
+  karte_ohne:'bez współrzędnych:',
+  btn_aktualisieren:'↻ Odśwież', ok_aktualisiert:'Zaktualizowano ✔',
+  kopf_titel:'🔧 Wstępny montaż', tab_stuetze:'🏷 Podpora', tab_fortschritt:'🏗 Postęp', tab_tabellen:'📋 Tabele',
+  s1_titel:'🏷 Zapisz podporę',
+  s1_sub:'Zrób zdjęcie etykiety Mauchle – ID, podpora i długość odczytają się same.',
+  s1_btn_foto:'📷 Zdjęcie etykiety',
+  lbl_id:'ID stołu *', ph_id:'np. 995',
+  lbl_stuetze:'Podpora S1–S4 *', lbl_laenge:'Długość [mm] *', ph_laenge:'np. 2724',
+  lbl_typ:'Typ (opcjonalnie)', ph_typ:'np. B', lbl_serie:'Seria (opcjonalnie)', ph_serie:'np. 8',
+  lbl_profil:'Profil (opcjonalnie)', ph_profil:'np. RRK 180x6.0',
+  lbl_bem:'Uwaga (opcjonalnie)', ph_bem:'np. etykieta nieczytelna, zarysowania …', ph_bem_kurz:'opcjonalnie',
+  lbl_von:'Imię i nazwisko *', ph_von:'np. Jan K.',
+  btn_speichern:'💾 Zapisz',
+  hint_offline:'Bez internetu zapis zostaje w telefonie i wyśle się sam, gdy wróci zasięg.',
+  s2_titel:'🏗 Postęp wstępnego montażu', s2_sub:'Konstrukcja główna zmontowana czy wysłana na górę?',
+  lbl_was:'Co zrobiono? *',
+  btn_vormontiert:'🔧 Zmontowana', btn_vormontiert_sub:'leży w dolinie',
+  btn_berg:'⛰ Na górę', btn_berg_sub:'wysłana na górę',
+  hint_mehrere:'Kilka naraz: oddziel ID przecinkiem (np. 995, 996, 997)',
+  s3_titel1:'🏷 Zapisane podpory', s3_titel2:'🏗 Postęp',
+  s3_titel0:'🧾 Partie zamówień – dostarczone?',
+  batch_sub:'Zamówione podpory (Mauchle partia 1–10) w porównaniu z zapisanymi podporami. Dotknij wiersza, aby zobaczyć czego brakuje.',
+  th_lieferung:'Dostawa', th_batch:'Partia', th_erfasst:'Zapisane',
+  badge_komplett:'✔ dostarczona w całości', badge_offen:'brakuje: {n}', batch_fehlt:'Brakuje:',
+  ph_suche:'Szukaj (ID, długość, imię i nazwisko) …', btn_csv:'⬇ CSV / Excel',
+  th_id:'ID', th_st:'Pod.', th_laenge:'Długość', th_typ:'Typ', th_wer:'Kto', th_wann:'Kiedy', th_status:'Status',
+  badge_wartet:'czeka', badge_berg:'⛰ Na górze', badge_vormontiert:'🔧 zmontowana',
+  netz_online:'online', netz_offline:'offline',
+  netz_sendet:'wysyłanie {n} …', netz_offline_wartet:'offline · w kolejce: {n}',
+  zaehler_eintraege:'Wpisy: {n}', zaehler_gefiltert:' (filtrowane)',
+  zaehler_meldungen:'Zgłoszenia: {g} · zmontowane: {v} · na górze: {b}',
+  ocr_vorbereiten:'Przygotowywanie zdjęcia …', ocr_lesen:'Odczyt etykiety …',
+  ocr_ok:'✔ Odczytano', ocr_pruefen:'– sprawdź!',
+  ocr_unlesbar:'Etykieta nieczytelna – wpisz ręcznie (zdjęcie zostaje zapisane).',
+  ocr_fehler:'Nie można odczytać tekstu – wpisz ręcznie.',
+  ocr_fotofehler:'Nie udało się odczytać zdjęcia.',
+  err_id:'Wpisz ID.', err_stuetze:'Wybierz S1–S4.',
+  err_laenge:'Wpisz długość.', err_name:'Wpisz imię i nazwisko.',
+  err_art:'Wybierz: zmontowana albo na górę.', err_ids:'Wpisz co najmniej jedno ID.',
+  ok_gespeichert:'Zapisano ✔', ok_offline:'Zapisano offline – wyśle się później ✔',
+  ok_offline_n:'Zapisano offline ({n}) – wyśle się później ✔',
+  ok_ids:'Zapisano ✔ {n} ID',
+  ok_nachgesendet:'Wpisy offline wysłane ✔',
+  err_kein_empfang:'Brak zasięgu – zapisano w telefonie, wyśle się później',
+  offline_hinweis:'Offline – tylko wpisy z tego telefonu'
+ }
+};
+var LS_LANG='nalp_lang_v1';
+var lang=(function(){
+  try{ var g=localStorage.getItem(LS_LANG); if(g&&I18N[g]) return g; }catch(e){}
+  var n=(navigator.language||'de').slice(0,2).toLowerCase();
+  return I18N[n]?n:'de';
+})();
+function T(k,v){
+  var t=(I18N[lang]&&I18N[lang][k]) || I18N.de[k] || k;
+  if(v) Object.keys(v).forEach(function(n){ t=t.split('{'+n+'}').join(v[n]); });
+  return t;
+}
+function setLang(l){
+  if(!I18N[l]) return;
+  lang=l;
+  try{ localStorage.setItem(LS_LANG,l); }catch(e){}
+  document.documentElement.lang=l;
+  document.querySelectorAll('[data-i18n]').forEach(function(el){
+    el.textContent=T(el.getAttribute('data-i18n'));
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(function(el){
+    el.placeholder=T(el.getAttribute('data-i18n-ph'));
+  });
+  document.querySelectorAll('#langBox button').forEach(function(b){
+    b.classList.toggle('on', b.getAttribute('data-lang')===l);
+  });
+  if(window.NALP_GATE_SUB!==undefined){ /* Gate bleibt mehrsprachig */ }
+  renderTab(); netzMalen();
+}
+
+var DB='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app';
+// Pfade unter 'erfassung/' – die Datenbank-Regeln geben nur diesen Zweig frei
+var P_ST='erfassung/vm_stuetzen', P_FO='erfassung/vm_fortschritt', P_BILD='erfassung/vm_etiketten';
+var LS_VON='nalp_erfasser_v1', LS_PEND='nalp_vormontage_pending_v1';
+var stuetzen={}, fortschritt={}, art=null, fotoData=null;
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+function toast(t,err){ var e=$('toast'); e.textContent=t; e.className='on'+(err?' err':'');
+  setTimeout(function(){ e.className=err?'err':''; },3000); }
+function heute(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fmtD(iso){ if(!iso) return ''; var p=String(iso).split('-'); return p.length===3?p[2]+'.'+p[1]+'.':iso; }
+function fmtZ(ts){ if(!ts) return ''; var d=new Date(ts);
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function getVon(){ try{ return localStorage.getItem(LS_VON)||''; }catch(e){ return ''; } }
+function setVon(v){ try{ localStorage.setItem(LS_VON,v||''); }catch(e){} }
+
+function klapp(id){ $(id).classList.toggle('zu'); }
+
+function tab(n){
+  [1,2,3,4].forEach(function(i){
+    $('s'+i).style.display = i===n?'':'none';
+    $('t'+i).classList.toggle('on', i===n);
+  });
+  if(n===3) laden(false);
+  if(n===4) kartenLaden(false);
+}
+
+/* ---------- Netz-Anzeige + Offline-Warteschlange ---------- */
+function netzAn(){ return navigator.onLine!==false; }
+function netzMalen(){
+  var p=pendLesen().length, e=$('netz');
+  e.className = netzAn()?'':'off';
+  e.textContent = netzAn() ? (p?T('netz_sendet',{n:p}):T('netz_online'))
+                           : (p?T('netz_offline_wartet',{n:p}):T('netz_offline'));
+}
+window.addEventListener('online', function(){ netzMalen(); pendSenden(); });
+window.addEventListener('offline', netzMalen);
+
+function pendLesen(){ try{ return JSON.parse(localStorage.getItem(LS_PEND)||'[]'); }catch(e){ return []; } }
+function pendSchreiben(a){ try{ localStorage.setItem(LS_PEND, JSON.stringify(a.slice(-400))); }catch(e){} netzMalen(); }
+function pendAdd(pfad, rec){ var a=pendLesen(); a.push({pfad:pfad, rec:rec}); pendSchreiben(a); }
+function pendSenden(){
+  var a=pendLesen(); if(!a.length || !netzAn()) return Promise.resolve();
+  netzMalen();
+  return a.reduce(function(kette,item){
+    return kette.then(function(rest){
+      return apiPost(item.pfad,item.rec).then(function(key){
+        return key?rest:rest.concat([item]);
+      }).catch(function(){ return rest.concat([item]); });
+    });
+  }, Promise.resolve([])).then(function(rest){
+    pendSchreiben(rest);
+    if(rest.length===0) toast(T('ok_nachgesendet'));
+    laden(false);
+  });
+}
+
+/* ---------- REST ---------- */
+function apiGet(p){ return fetch(DB+'/'+p+'.json',{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }); }
+function apiPost(p,body){ return fetch(DB+'/'+p+'.json',{method:'POST',body:JSON.stringify(body)})
+  .then(function(r){ return r.ok?r.json():null; }).then(function(j){ return j&&j.name?j.name:null; }); }
+function apiPut(p,body){ return fetch(DB+'/'+p+'.json',{method:'PUT',body:JSON.stringify(body)})
+  .then(function(r){ return r.ok; }); }
+function apiPatch(p,body){ return fetch(DB+'/'+p+'.json',{method:'PATCH',body:JSON.stringify(body)})
+  .then(function(r){ return r.ok; }); }
+
+/* ---------- Bearbeiten mit Änderungsprotokoll ---------- */
+var editKtx=null;   // {art:'st'|'fo', key, rec}
+function editOeffnen(artE, key){
+  var rec = artE==='st' ? stuetzen[key] : fortschritt[key];
+  if(!rec) return;
+  editKtx={ art:artE, key:key, rec:rec };
+  $('ev_sub').textContent=(artE==='st'
+    ? ('Stütze '+(rec.tischId||'?')+'-'+(rec.stuetze||'?')) : ('Tisch '+(rec.tischId||'?')))
+    +' · '+fmtD(rec.datum)+' '+fmtZ(rec.ts)+' · '+(rec.von||'');
+  $('ev_nur_st').style.display = artE==='st'?'':'none';
+  $('ev_nur_fo').style.display = artE==='fo'?'':'none';
+  $('ev_tid').value=rec.tischId||'';
+  if(artE==='st'){
+    $('ev_st').value=rec.stuetze||'S1'; $('ev_len').value=rec.laenge||'';
+    $('ev_bp').value=rec.bp||''; $('ev_mid').value=rec.mid||''; $('ev_typ').value=rec.typ||'';
+  } else {
+    $('ev_art').value=rec.art||'vormontiert';
+  }
+  $('ev_bem').value=rec.bem||'';
+  $('ev').classList.add('zeig');
+}
+$('ev_ab').onclick=function(){ $('ev').classList.remove('zeig'); editKtx=null; };
+$('ev').addEventListener('click',function(e){ if(e.target===this){ this.classList.remove('zeig'); editKtx=null; } });
+$('ev_ok').onclick=function(){
+  if(!editKtx) return;
+  var r=editKtx.rec, diffs=[], patch={};
+  function feld(name, neu){
+    var alt=r[name]==null?'':String(r[name]);
+    neu=String(neu==null?'':neu).trim();
+    if(alt!==neu){ patch[name]=neu; diffs.push([name, alt, neu]); }
+  }
+  feld('tischId', $('ev_tid').value);
+  if(editKtx.art==='st'){
+    var bp=$('ev_bp').value.trim();
+    if(bp && !(/^\d{1,2}$/.test(bp) && +bp>=1 && +bp<=12)){ toast(T('err_bp'),true); return; }
+    feld('stuetze', $('ev_st').value); feld('laenge', $('ev_len').value);
+    feld('bp', bp); feld('mid', $('ev_mid').value); feld('typ', $('ev_typ').value);
+  } else {
+    feld('art', $('ev_art').value);
+  }
+  feld('bem', $('ev_bem').value);
+  if(!diffs.length){ $('ev').classList.remove('zeig'); editKtx=null; return; }
+  var pfad=(editKtx.art==='st'?P_ST:P_FO)+'/'+editKtx.key;
+  var objekt=editKtx.art==='st'
+    ? 'Stütze '+(patch.tischId||r.tischId||'?')+'-'+(patch.stuetze||r.stuetze||'?')
+    : 'Tisch '+(patch.tischId||r.tischId||'?');
+  patch.geaendert_ts=Date.now();
+  patch.geaendert_von=NALP_PROTOKOLL.wer(false);
+  var seite=editKtx.art==='st'?'Vormontage':'Fortschritt';
+  var btn=$('ev_ok'); btn.disabled=true;
+  apiPatch(pfad, patch).then(function(ok){
+    btn.disabled=false;
+    if(!ok) throw 0;
+    NALP_PROTOKOLL.logAll(seite, objekt, diffs);
+    Object.assign(r, patch);
+    $('ev').classList.remove('zeig'); editKtx=null;
+    toast(T('ok_geaendert')); laden(false);
+  }).catch(function(){
+    btn.disabled=false;
+    toast(T('err_kein_empfang'),true);
+  });
+};
+
+/* ---------- Stütze S1–S4 ---------- */
+(function(){
+  ['S1','S2','S3','S4'].forEach(function(s){
+    var b=document.createElement('button'); b.type='button'; b.textContent=s;
+    b.onclick=function(){ setStuetze(s); }; b.id='sb_'+s;
+    $('sBtns').appendChild(b);
+  });
+})();
+var stuetzeSel='';
+function setStuetze(s){
+  stuetzeSel=(stuetzeSel===s)?'':s;
+  ['S1','S2','S3','S4'].forEach(function(x){ $('sb_'+x).classList.toggle('on', x===stuetzeSel); });
+}
+
+/* ---------- Foto + Offline-Texterkennung ---------- */
+function bildVerkleinern(file, maxPx, q, cb){
+  var img=new Image();
+  img.onload=function(){
+    var w=img.width,h=img.height;
+    if(w>maxPx||h>maxPx){ if(w>h){ h=Math.round(h*maxPx/w); w=maxPx; } else { w=Math.round(w*maxPx/h); h=maxPx; } }
+    var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+    cv.getContext('2d').drawImage(img,0,0,w,h);
+    cb(cv.toDataURL('image/jpeg',q));
+  };
+  img.onerror=function(){ cb(null); };
+  img.src=URL.createObjectURL(file);
+}
+$('f_foto').addEventListener('change',function(){
+  var f=this.files&&this.files[0]; if(!f) return;
+  $('ocrStatus').className=''; $('ocrStatus').textContent=T('ocr_vorbereiten');
+  bildVerkleinern(f, 1500, 0.75, function(data){
+    if(!data){ $('ocrStatus').className='err'; $('ocrStatus').textContent=T('ocr_fotofehler'); return; }
+    fotoData=data;
+    $('ocrPrev').innerHTML='<img src="'+data+'">';
+    ocrLesen(data);
+  });
+});
+
+var ocrWorker=null;
+function ocrWorkerHolen(){
+  if(ocrWorker) return Promise.resolve(ocrWorker);
+  if(typeof Tesseract==='undefined') return Promise.reject(new Error('OCR fehlt'));
+  return Tesseract.createWorker('eng', 1, {
+    workerPath:'assets/js/tesseract/worker.min.js',
+    corePath:'assets/js/tesseract/',
+    langPath:'assets/js/tesseract/',
+    cacheMethod:'none',
+    logger:function(m){
+      if(m.status==='recognizing text')
+        $('ocrStatus').textContent=T('ocr_lesen')+' '+Math.round((m.progress||0)*100)+'%';
+    }
+  }).then(function(w){ ocrWorker=w; return w; });
+}
+function ocrLesen(dataUrl){
+  $('ocrStatus').className=''; $('ocrStatus').textContent=T('ocr_lesen');
+  ocrWorkerHolen().then(function(w){ return w.recognize(dataUrl); })
+    .then(function(res){
+      var tr=etikettLesen((res&&res.data&&res.data.text)||'');
+      if(tr.id||tr.laenge){
+        if(tr.id) $('f_id').value=tr.id;
+        if(tr.stuetze) setStuetze(tr.stuetze);
+        if(tr.laenge) $('f_len').value=tr.laenge;
+        if(tr.typ) $('f_typ').value=tr.typ;
+        if(tr.serie) $('f_serie').value=tr.serie;
+        if(tr.profil) $('f_profil').value=tr.profil;
+        if(tr.bp) $('f_bp').value=tr.bp;
+        if(tr.mid) $('f_mid').value=tr.mid;
+        $('ocrStatus').className='ok';
+        $('ocrStatus').textContent=T('ocr_ok')+': '+(tr.id||'?')+(tr.stuetze?'-'+tr.stuetze:'')
+          +(tr.bp?' · BP '+tr.bp:'')+(tr.laenge?' · '+tr.laenge+' mm':'')+' '+T('ocr_pruefen');
+      } else {
+        $('ocrStatus').className='err'; $('ocrStatus').textContent=T('ocr_unlesbar');
+      }
+    })
+    .catch(function(){ $('ocrStatus').className='err'; $('ocrStatus').textContent=T('ocr_fehler'); });
+}
+/* Etikett Mauchle, zwei Formate:
+ *  alt (bis Batch 8):  "Position 995-S1-2724 / Serie 8 / Typ B / Länge 2724mm / Profil RRK 180x6.0"
+ *  neu (ab Lieferung 08/2026), 4 Zeilen: Position (Tisch_Stütze) / ID / Bohrpunkt / Länge
+ *  Bohrpunkte gehen neu bis 10 (zweistellig) – Parsing via nalp-scan-parse.js. */
+function etikettLesen(t){
+  var o={}, s=String(t).replace(/[|]/g,'1').replace(/\s+/g,' ');
+  var m=s.match(/(\d{2,5})\s*[-–—]\s*[S5]\s*([1-4])\s*[-–—]\s*(\d{3,5})/i);
+  if(m){ o.id=m[1]; o.stuetze='S'+m[2]; o.laenge=m[3]; }
+  if(!o.id){ var mp=s.match(/Position\s*:?\s*(\d{2,5})/i); if(mp) o.id=mp[1]; }
+  if(!o.stuetze){ var ms=s.match(/[-\s][S5]\s*([1-4])[-\s]/i); if(ms) o.stuetze='S'+ms[1]; }
+  var ml=s.match(/L[äaà]nge\s*:?\s*(\d{3,5})\s*m?m?/i); if(ml) o.laenge=ml[1];
+  var mt=s.match(/\bTyp\s*:?\s*([A-Ea-e])\b/); if(mt) o.typ=mt[1].toUpperCase();
+  var mse=s.match(/\bSerie\s*:?\s*(\w{1,6})/i); if(mse) o.serie=mse[1];
+  var mpr=s.match(/Profil\s*:?\s*([A-Z]{2,4}\s?\d{2,3}\s?[x×]\s?[\d.,]+)/i); if(mpr) o.profil=mpr[1];
+  // Neues 4-Zeilen-Etikett (Zeilenreihenfolge + OCR-Fehlerkorrektur O/0, I/1, S/5)
+  if(window.NALP_SCAN){
+    var n=NALP_SCAN.parseLabel(t);
+    if(n.tisch && !o.id) o.id=String(n.tisch);
+    if(n.stuetze && !o.stuetze) o.stuetze=n.stuetze;
+    if(n.laenge && !o.laenge) o.laenge=String(n.laenge);
+    if(n.bp!=null) o.bp=String(n.bp);
+    // Mauchle-ID nur übernehmen, wenn es keine alte Etikett-Zeile ist
+    if(n.id && !/^(serie|typ|profil|l[äa]nge|position)\b/i.test(n.id)) o.mid=n.id;
+  }
+  return o;
+}
+
+/* ---------- Speichern ---------- */
+function speichernStuetze(){
+  var id=$('f_id').value.trim(), len=$('f_len').value.trim(), von=$('f_von').value.trim();
+  if(!id){ toast(T('err_id'),true); return; }
+  if(!stuetzeSel){ toast(T('err_stuetze'),true); return; }
+  if(!len){ toast(T('err_laenge'),true); return; }
+  if(!von){ toast(T('err_name'),true); return; }
+  var bp=$('f_bp').value.trim();
+  if(bp && !(/^\d{1,2}$/.test(bp) && +bp>=1 && +bp<=12)){ toast(T('err_bp'),true); return; }
+  setVon(von);
+  $('btnS1').disabled=true;
+  var rec={ tischId:id, stuetze:stuetzeSel, laenge:len, typ:$('f_typ').value.trim(),
+            bp:bp, mid:$('f_mid').value.trim(),
+            serie:$('f_serie').value.trim(), profil:$('f_profil').value.trim(),
+            bem:$('f_bem').value.trim(), von:von, datum:heute(), ts:Date.now(),
+            quelle: fotoData?'foto':'manuell' };
+  var foto=fotoData;
+  function fertig(){
+    ['f_id','f_len','f_bp','f_mid','f_typ','f_serie','f_profil','f_bem','f_foto'].forEach(function(i){ $(i).value=''; });
+    $('ocrPrev').innerHTML=''; $('ocrStatus').textContent=''; $('ocrStatus').className='';
+    fotoData=null; $('btnS1').disabled=false;
+  }
+  if(!netzAn()){ pendAdd(P_ST, rec); fertig(); toast(T('ok_offline')); return; }
+  apiPost(P_ST,rec).then(function(key){
+    if(!key) throw 0;
+    if(!foto) return true;
+    return apiPost(P_BILD,{eintrag:key, ts:Date.now(), data:foto})
+      .then(function(fk){ return fk?apiPut(P_ST+'/'+key+'/foto',fk):true; });
+  }).then(function(){
+    fertig(); toast(T('ok_gespeichert')+' '+id+'-'+rec.stuetze+'-'+len); laden(false);
+  }).catch(function(){
+    pendAdd(P_ST, rec); fertig(); toast(T('err_kein_empfang'),true);
+  });
+}
+
+function setArt(a){
+  art=(art===a)?null:a;
+  $('artV').style.background = art==='vormontiert'?'var(--blau)':'#fff';
+  $('artV').style.color = art==='vormontiert'?'#fff':'var(--ink)';
+  $('artB').style.background = art==='berg'?'var(--gruen)':'#fff';
+  $('artB').style.color = art==='berg'?'#fff':'var(--ink)';
+}
+function speichernFortschritt(){
+  var ids=$('p_id').value.split(/[,;\s]+/).map(function(x){return x.trim();}).filter(Boolean);
+  var von=$('p_von').value.trim();
+  if(!art){ toast(T('err_art'),true); return; }
+  if(!ids.length){ toast(T('err_ids'),true); return; }
+  if(!von){ toast(T('err_name'),true); return; }
+  setVon(von);
+  $('btnS2').disabled=true;
+  var bem=$('p_bem').value.trim(), ts=Date.now();
+  var recs=ids.map(function(id,i){ return { tischId:id, art:art, bem:bem, von:von, datum:heute(), ts:ts+i }; });
+  function fertig(){ $('p_id').value=''; $('p_bem').value=''; $('btnS2').disabled=false; }
+  if(!netzAn()){
+    recs.forEach(function(r){ pendAdd(P_FO,r); }); fertig();
+    toast(T('ok_offline_n',{n:recs.length})); return;
+  }
+  Promise.all(recs.map(function(r){ return apiPost(P_FO,r); })).then(function(keys){
+    if(keys.some(function(k){ return !k; })) throw 0;
+    fertig(); toast(T('ok_ids',{n:ids.length})); laden(false);
+  }).catch(function(){
+    recs.forEach(function(r){ pendAdd(P_FO,r); }); fertig(); toast(T('err_kein_empfang'),true);
+  });
+}
+
+/* ---------- Tabellen ---------- */
+function laden(manuell){
+  if(!netzAn()){ renderTab(); if(manuell) toast(T('offline_hinweis'),true); return; }
+  Promise.all([apiGet(P_ST),apiGet(P_FO)]).then(function(r){
+    stuetzen=r[0]||{}; fortschritt=r[1]||{}; renderTab();
+  }).catch(function(){ renderTab(); });
+}
+function alleStuetzen(){
+  var a=Object.keys(stuetzen).map(function(k){ var v=stuetzen[k]; v._k=k; return v; });
+  pendLesen().forEach(function(p){ if(p.pfad===P_ST){ var v=JSON.parse(JSON.stringify(p.rec)); v._pend=true; a.push(v); } });
+  return a.sort(function(x,y){ return (y.ts||0)-(x.ts||0); });
+}
+function alleFortschritt(){
+  var a=Object.keys(fortschritt).map(function(k){ var v=fortschritt[k]; v._k=k; return v; });
+  pendLesen().forEach(function(p){ if(p.pfad===P_FO){ var v=JSON.parse(JSON.stringify(p.rec)); v._pend=true; a.push(v); } });
+  return a.sort(function(x,y){ return (y.ts||0)-(x.ts||0); });
+}
+function renderTab(){
+  if(!$('q1')) return;
+  var q=($('q1').value||'').toLowerCase();
+  var st=alleStuetzen().filter(function(r){
+    if(!q) return true;
+    return ((r.tischId||'')+' '+(r.stuetze||'')+' '+(r.laenge||'')+' '+(r.von||'')+' '+(r.bem||'')).toLowerCase().indexOf(q)>=0;
+  });
+  var h='<tr><th>'+T('th_id')+'</th><th>'+T('th_st')+'</th><th>'+T('th_laenge')+'</th><th>'+T('th_bp')
+        +'</th><th>'+T('th_typ')
+        +'</th><th>'+T('th_wer')+'</th><th>'+T('th_wann')+'</th><th></th></tr>';
+  st.slice(0,300).forEach(function(r){
+    h+='<tr'+(r._pend?' class="pend"':'')+'><td><b>'+esc(r.tischId)+'</b>'
+      +(r._pend?' <span class="badge p">'+T('badge_wartet')+'</span>':'')+'</td>'
+      +'<td>'+esc(r.stuetze||'')+'</td><td>'+esc(r.laenge||'')+'</td><td>'+esc(r.bp||'')+'</td><td>'+esc(r.typ||'')+'</td>'
+      +'<td>'+esc(r.von||'')+'</td><td>'+esc(fmtD(r.datum))+' '+fmtZ(r.ts)+'</td>'
+      +'<td>'+(r._k&&!r._pend?'<button class="stiftE" data-e="st" data-k="'+esc(r._k)+'" title="'+T('edit_titel')+'">✎</button>':'')+'</td></tr>';
+  });
+  $('tab1').innerHTML=h;
+  $('z1').textContent=T('zaehler_eintraege',{n:st.length})+(q?T('zaehler_gefiltert'):'');
+
+  var fo=alleFortschritt();
+  // Tische, die auf den Berg gegangen sind: aeltere Vormontage-Meldungen
+  // werden durchgestrichen und als "auf den Berg" gekennzeichnet
+  var bergTs={};
+  fo.forEach(function(r){
+    if(r.art==='berg'){
+      var k=String(r.tischId||'').trim();
+      if(!bergTs[k] || (r.ts||0)>bergTs[k]) bergTs[k]=r.ts||0;
+    }
+  });
+  var hb=Object.keys(bergTs).length;                       // Tische auf dem Berg
+  var imTal={};
+  fo.forEach(function(r){
+    var k=String(r.tischId||'').trim();
+    if(r.art==='vormontiert' && !bergTs[k]) imTal[k]=true;
+  });
+  var hv=Object.keys(imTal).length;                        // noch im Tal
+  var h2='<tr><th>'+T('th_id')+'</th><th>'+T('th_status')+'</th><th>'+T('th_wer')+'</th><th>'+T('th_wann')+'</th><th></th></tr>';
+  fo.slice(0,300).forEach(function(r){
+    var k=String(r.tischId||'').trim();
+    var ueberholt = r.art==='vormontiert' && bergTs[k];    // spaeter auf den Berg gegangen
+    var stat = r.art==='berg' || ueberholt
+      ? '<span class="badge b">'+T('badge_berg')+'</span>'
+      : '<span class="badge v">'+T('badge_vormontiert')+'</span>';
+    h2+='<tr'+(r._pend?' class="pend"':'')+(ueberholt?' style="opacity:.6"':'')+'>'
+       +'<td><b'+(ueberholt?' style="text-decoration:line-through"':'')+'>'+esc(r.tischId)+'</b>'
+       +(r._pend?' <span class="badge p">'+T('badge_wartet')+'</span>':'')+'</td>'
+       +'<td>'+stat+'</td>'
+       +'<td>'+esc(r.von||'')+'</td><td'+(ueberholt?' style="text-decoration:line-through"':'')+'>'
+       +esc(fmtD(r.datum))+' '+fmtZ(r.ts)+'</td>'
+       +'<td>'+(r._k&&!r._pend?'<button class="stiftE" data-e="fo" data-k="'+esc(r._k)+'" title="'+T('edit_titel')+'">✎</button>':'')+'</td></tr>';
+  });
+  $('tab2').innerHTML=h2;
+  document.querySelectorAll('.stiftE').forEach(function(b){
+    b.onclick=function(){ editOeffnen(b.dataset.e, b.dataset.k); };
+  });
+  $('z2').textContent=T('zaehler_meldungen',{g:fo.length,v:hv,b:hb});
+  renderBatches();
+  kartenMalen();
+}
+
+/* ---------- Bestellbatches: komplett geliefert? ----------
+   Vergleicht die gueltigen Bestellpositionen (NALP_PS_DATEN.bestellungen,
+   Mauchle Batch 1-10) mit den erfassten Stuetzen. Eine Position gilt als
+   geliefert, sobald Tisch + Stuetze einmal erfasst wurde. */
+var batchAuf={};
+/* Liefertermine der Bestellbatches – alle Angaben aus Mails belegt:
+   1: Mail Victor 08.05.  ·  3/4/8: Bestellmails (Liefertermin)  ·  5: Maeder
+   18.06. "Lieferung Batch 5"  ·  6: Maeder 07.07. "kommt diesen Mittwoch"
+   8 Ist: Victor 30.07. (komplett vor Ort)  ·  9/11/12/13: Bucheli 30.07. 10:52
+   Batch 10: laut F. Borner / Bucheli 30.07. gibt es keinen eigenen Batch 10. */
+var LIEFERUNG={
+  1:{soll:'2026-05-18'},
+  3:{soll:'2026-06-01'},
+  4:{soll:'2026-06-08'},
+  5:{soll:'2026-06-18', ist:'2026-06-18'},
+  6:{soll:'2026-07-08', ist:'2026-07-08'},
+  8:{soll:'2026-07-27', ist:'2026-07-30', spaet:true},
+  9:{soll:'2026-08-03', hinweis:'evtl. 1 Tag später'},
+  10:{hinweis:'kein eigener Batch (Bauleitung 30.07.)'},
+  11:{soll:'2026-08-10'},
+  12:{soll:'2026-08-17'},
+  13:{soll:'2026-08-24'}
+};
+function lieferText(b, voll){
+  var l=LIEFERUNG[b];
+  if(!l) return '<span style="color:var(--mut)">–</span>';
+  if(l.ist)   return '<b style="color:var(--gruen)">'+fmtD(l.ist)+'</b>'
+                     +(l.spaet?' <span style="color:var(--mut);font-size:11px">(Soll '+fmtD(l.soll)+')</span>':'');
+  if(l.soll){
+    var offen=!voll, heuteS=heute();
+    var farbe = offen && l.soll<heuteS ? 'var(--rot)' : 'var(--ink)';
+    return '<span style="color:'+farbe+'">'+fmtD(l.soll)+'</span>'
+      +(l.hinweis?' <span style="color:var(--mut);font-size:11px">'+esc(l.hinweis)+'</span>':'');
+  }
+  return '<span style="color:var(--mut);font-size:11px">'+esc(l.hinweis||'–')+'</span>';
+}
+function normId(x){ var s=String(x==null?'':x).trim(); return /^\d+$/.test(s)?String(parseInt(s,10)):s; }
+function batchPositionen(){
+  var best=(window.NALP_PS_DATEN&&window.NALP_PS_DATEN.bestellungen)||[];
+  var map={};
+  best.forEach(function(o){
+    if(o[6]!==1) return;                     // ersetzte Positionen nicht zaehlen
+    var key=normId(o[0])+'-'+o[1];
+    (map[o[3]]=map[o[3]]||{})[key]=true;
+  });
+  return map;
+}
+function renderBatches(){
+  var el=$('tab0'); if(!el) return;
+  var map=batchPositionen();
+  var bs=Object.keys(map).map(Number).sort(function(a,b){return a-b;});
+  if(!bs.length){ el.innerHTML=''; return; }
+  var da={};
+  alleStuetzen().forEach(function(r){
+    da[normId(r.tischId)+'-'+String(r.stuetze||'').trim().toUpperCase()]=true;
+  });
+  var h='<tr><th>'+T('th_batch')+'</th><th>'+T('th_lieferung')+'</th><th>'+T('th_erfasst')+'</th><th></th><th>'+T('th_status')+'</th></tr>';
+  bs.forEach(function(b){
+    var keys=Object.keys(map[b]), n=keys.length;
+    var fehlt=keys.filter(function(k){ return !da[k]; });
+    var ok=n-fehlt.length, voll=!fehlt.length, pz=Math.round(ok/n*100);
+    h+='<tr style="cursor:pointer" onclick="batchToggle('+b+')">'
+      +'<td><b>'+b+'</b></td>'
+      +'<td style="white-space:nowrap;font-size:12.5px">'+lieferText(b,voll)+'</td>'
+      +'<td style="white-space:nowrap">'+ok+' / '+n+'</td>'
+      +'<td style="width:22%"><div class="bar"><i class="'+(voll?'':'teils')+'" style="width:'+pz+'%"></i></div></td>'
+      +'<td>'+(voll?'<span class="badge ok">'+T('badge_komplett')+'</span>'
+                   :'<span class="badge p">'+T('badge_offen',{n:fehlt.length})+'</span>')+'</td></tr>';
+    if(batchAuf[b] && fehlt.length){
+      fehlt.sort(function(x,y){
+        var px=x.split('-'), py=y.split('-');
+        return (Number(px[0])-Number(py[0])) || (px[1]<py[1]?-1:1);
+      });
+      h+='<tr><td></td><td colspan="4" style="font-size:12px;color:var(--mut);line-height:1.6">'
+        +T('batch_fehlt')+' '+fehlt.join(', ')+'</td></tr>';
+    }
+  });
+  el.innerHTML=h;
+}
+function batchToggle(b){ batchAuf[b]=!batchAuf[b]; renderBatches(); }
+function csvDl(name, kopf, zeilen){
+  var lines=[kopf.join(';')].concat(zeilen.map(function(z){
+    return z.map(function(v){ return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'; }).join(';');
+  }));
+  var b=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=name; a.click();
+}
+function csv1(){
+  csvDl('Vormontage_Stuetzen_'+heute()+'.csv',
+    ['ID','Stuetze','Laenge_mm','Bohrpunkt','MauchleID','Typ','Serie','Profil','Bemerkung','Erfasst_von','Datum','Zeit','Quelle'],
+    alleStuetzen().map(function(r){ return [r.tischId,r.stuetze,r.laenge,r.bp||'',r.mid||'',r.typ,r.serie,r.profil,r.bem,r.von,fmtD(r.datum),fmtZ(r.ts),r.quelle||'']; }));
+}
+function csv2(){
+  csvDl('Vormontage_Fortschritt_'+heute()+'.csv',
+    ['ID','Status','Bemerkung','Erfasst_von','Datum','Zeit'],
+    alleFortschritt().map(function(r){ return [r.tischId, r.art==='berg'?'auf den Berg':'vormontiert', r.bem, r.von, fmtD(r.datum), fmtZ(r.ts)]; }));
+}
+
+/* ══════════ Karten je Batch ══════════
+   Eine Karte pro Bestellbatch (Batch 9 und 10 gehoeren zusammen): je
+   Bohrpunkt zeigt ein Punkt, ob das Passstueck erfasst ist; die Tisch-
+   flaeche traegt den Fortschritt (orange = vormontiert, gruen = auf dem
+   Berg; Berg ueberschreibt). Die Arbeitsreihenfolge gibt die Bauleitung
+   muendlich durch - hier steht nur der Stand. */
+function kartenLaden(manuell){
+  kartenMalen();                         // Karten sofort bauen - Status kommt nach
+  laden(manuell);                        // frische Daten -> renderTab -> kartenMalen
+  if(manuell) toast(T('ok_aktualisiert'));
+}
+function kartenGruppen(){                // Batch 9 + 10 zusammen
+  var map=batchPositionen(), g={};
+  Object.keys(map).forEach(function(b){
+    var lbl=(b==='9'||b==='10')?'9+10':String(b);
+    g[lbl]=g[lbl]||{};
+    Object.keys(map[b]).forEach(function(k){ g[lbl][k]=true; });
+  });
+  return g;
+}
+function psErfasst(){                    // erfasste Passstuecke je tisch-stuetze
+  var da={};
+  alleStuetzen().forEach(function(r){
+    da[normId(r.tischId)+'-'+String(r.stuetze||'').trim().toUpperCase()]=true;
+  });
+  return da;
+}
+var kGrp={};                             // Batchgruppe -> Positionsschluessel
+var kMaps={};                            // lbl -> {map, flaechen, punkte, nGesamt}
+var kPfaehle=null, kGeoPer=null, kOrtho=null;
+
+function kDaten(cb){                     // Bohrpunkte + Kartenhintergruende einmal laden
+  if(kPfaehle && kGeoPer!==null && kOrtho!==null){ cb(); return; }
+  Promise.all([
+    kPfaehle?Promise.resolve(kPfaehle):fetch('uploads/pfaehle.json').then(function(r){ return r.json(); }),
+    kGeoPer!==null?Promise.resolve(kGeoPer):fetch('uploads/perimeter_geo.json').then(function(r){ return r.ok?r.json():false; }).catch(function(){ return false; }),
+    kOrtho!==null?Promise.resolve(kOrtho):fetch('uploads/ortho/index.json').then(function(r){ return r.ok?r.json():[]; }).catch(function(){ return []; })
+  ]).then(function(r){ kPfaehle=r[0]; kGeoPer=r[1]; kOrtho=r[2]; cb(); }).catch(function(){});
+}
+function akLv95(lat,lon){                // WGS84 -> LV95 (Naeherung swisstopo)
+  var p=(lat*3600-169028.66)/10000, l=(lon*3600-26782.5)/10000;
+  return { E:2600072.37+211455.93*l-10938.51*l*p-0.36*l*p*p-44.54*l*l*l,
+           N:1200147.07+308807.95*p+3745.25*l*l+76.63*p*p-194.56*l*l*p+119.79*p*p*p };
+}
+/* Status je Tisch aus den Fortschritt-Meldungen */
+function akStatus(){
+  var st={};
+  Object.keys(fortschritt||{}).forEach(function(k){
+    var r=fortschritt[k]; if(!r||!r.tischId) return;
+    var id=normId(r.tischId);
+    if(r.art==='berg') st[id]='berg';
+    else if(st[id]!=='berg') st[id]='vormontiert';
+  });
+  pendLesen().forEach(function(p){          // offline erfasste mitzaehlen
+    if(p.pfad!==P_FO || !p.rec) return;
+    var id=normId(p.rec.tischId);
+    if(p.rec.art==='berg') st[id]='berg';
+    else if(st[id]!=='berg') st[id]='vormontiert';
+  });
+  return st;
+}
+
+/* Leaflet-Minikarten: einmal bauen, danach nur noch Farben nachziehen -
+   so bleiben Zoom und Ausschnitt beim Aktualisieren erhalten. */
+function kartenMalen(){
+  var wrap=$('kBoxen');
+  if(!wrap || typeof L==='undefined') return;
+  if($('s4').style.display==='none') return;
+  kGrp=kartenGruppen();
+  // nur die aktuellen Batches zeigen (8 und 9+10) - aeltere sind durch
+  var lbls=Object.keys(kGrp)
+    .filter(function(l){ return parseInt(l,10)>=8; })
+    .sort(function(a,b){ return parseInt(b,10)-parseInt(a,10); });
+  kDaten(function(){
+    if(!kPfaehle) return;
+    lbls.forEach(function(lbl){ if(!kMaps[lbl]) kMapBauen(wrap,lbl); });
+    Object.keys(kMaps).forEach(function(l){ kMaps[l].map.invalidateSize(); });
+    kStatusMalen();
+  });
+}
+function kMapBauen(wrap,lbl){
+  var keys=Object.keys(kGrp[lbl]);
+  var pos={}; kPfaehle.forEach(function(q){ pos[normId(q[0])+'-'+q[1]]=q; });
+  var tische={}, ohne={};
+  keys.forEach(function(k){
+    var i=k.lastIndexOf('-'), tid=k.slice(0,i), s=k.slice(i+1);
+    var q=pos[k];
+    if(!q){ ohne[tid]=true; return; }
+    var v=akLv95(q[2],q[3]);
+    (tische[tid]=tische[tid]||[]).push({s:s, key:k, N:v.N, E:v.E});
+  });
+  if(!Object.keys(tische).length) return;
+
+  var sid=lbl.replace('+','_');
+  var box=document.createElement('div');
+  box.className='box kBatch';
+  box.innerHTML='<h2>Batch '+esc(lbl)+'</h2>'
+    +'<div class="zaehler" id="kz_'+sid+'">–</div>'
+    +'<div class="kmap" id="km_'+sid+'"></div>'
+    +(Object.keys(ohne).length?'<div class="hint" style="margin:6px 4px 0">'+T('karte_ohne')+' '
+      +Object.keys(ohne).sort().join(', ')+'</div>':'');
+  wrap.appendChild(box);
+
+  var m=L.map('km_'+sid, { crs:L.CRS.Simple, attributionControl:false,
+                           zoomSnap:0.25, minZoom:-3, maxZoom:6 });
+  // zuerst den Ausschnitt setzen, dann zeichnen - sonst stimmen die Anker nicht
+  var bounds=[];
+  Object.keys(tische).forEach(function(tid){
+    tische[tid].forEach(function(p){ bounds.push([p.N,p.E]); });
+  });
+  var b=L.latLngBounds(bounds);
+  m.fitBounds(b.pad(0.12));
+  m.setMaxBounds(b.pad(1.2));
+
+  if(kGeoPer) L.imageOverlay('assets/img/perimeter.jpg',
+      [[kGeoPer.minN,kGeoPer.minE],[kGeoPer.maxN,kGeoPer.maxE]]).addTo(m);
+  (kOrtho||[]).forEach(function(o){          // Drohnen-Ortho scharf darueber
+    L.imageOverlay('uploads/ortho/'+o.datei, [[o.minN,o.minE],[o.maxN,o.maxE]]).addTo(m);
+  });
+
+  var flaechen={}, punkte={};
+  Object.keys(tische).forEach(function(tid){
+    var pk=tische[tid];
+    var mN=0,mE=0; pk.forEach(function(p){ mN+=p.N; mE+=p.E; }); mN/=pk.length; mE/=pk.length;
+    var srt=pk.slice().sort(function(a,b){
+      return Math.atan2(a.N-mN,a.E-mE)-Math.atan2(b.N-mN,b.E-mE); });
+    var poly=L.polygon(srt.map(function(p){ return [p.N,p.E]; }),
+      { color:'#fff', weight:1.2, opacity:.9, fillColor:'#c9ccd2', fillOpacity:.38 }).addTo(m);
+    flaechen[tid]=poly;
+    // Beschriftung fest auf den Tisch-Mittelpunkt (nicht an das Polygon gebunden)
+    L.tooltip({permanent:true, direction:'center', className:'kLbl', opacity:1})
+      .setLatLng([mN,mE]).setContent(String(tid)).addTo(m);
+    pk.forEach(function(p){
+      punkte[p.key]=L.circleMarker([p.N,p.E],
+        { radius:3.2, weight:1.1, color:'#fff', opacity:.95, fillColor:'#e4e7eb', fillOpacity:1 }).addTo(m);
+    });
+  });
+  L.control.scale({imperial:false, maxWidth:110}).addTo(m);
+  // Beschriftungen erst zeigen, wenn nah genug gezoomt (sonst Buchstabensalat)
+  function lblZeigen(){
+    m.getContainer().classList.toggle('kLblAus', m.getZoom()<1.4);
+  }
+  m.on('zoomend', lblZeigen); lblZeigen();
+  kMaps[lbl]={map:m, flaechen:flaechen, punkte:punkte, nGesamt:keys.length};
+}
+function kStatusMalen(){
+  var st=akStatus(), da=psErfasst();
+  Object.keys(kMaps).forEach(function(lbl){
+    var M=kMaps[lbl], e=0, nv=0, nb=0;
+    Object.keys(M.punkte).forEach(function(k){
+      var er=!!da[k]; if(er) e++;
+      M.punkte[k].setStyle({ fillColor: er?'#1565c0':'#e4e7eb' });
+    });
+    Object.keys(M.flaechen).forEach(function(tid){
+      var zu=st[tid];
+      if(zu==='berg') nb++; else if(zu==='vormontiert') nv++;
+      M.flaechen[tid].setStyle({
+        fillColor: zu==='berg' ? '#1e9e5a' : (zu==='vormontiert' ? '#e08a00' : '#c9ccd2'),
+        fillOpacity: zu ? .55 : .38
+      });
+    });
+    var el=$('kz_'+lbl.replace('+','_'));
+    if(el) el.textContent=T('karte_stand',{e:e,g:M.nGesamt,v:nv,b:nb});
+  });
+}
+
+/* ---------- Start ---------- */
+setLang(lang);
+$('f_von').value=getVon(); $('p_von').value=getVon();
+netzMalen(); pendSenden(); laden(false);
+setInterval(function(){ if(netzAn()) laden(false); }, 90000);
+window.addEventListener('resize', function(){
+  Object.keys(kMaps).forEach(function(l){ kMaps[l].map.invalidateSize(); });
+});
+var qs=location.search;
+if(qs.indexOf('f=fortschritt')>=0) tab(2);
+else if(qs.indexOf('f=tabelle')>=0) tab(3);
+else if(qs.indexOf('f=auftrag')>=0 || qs.indexOf('f=karte')>=0) tab(4);
+if(qs.indexOf('lang=pl')>=0) setLang('pl');
+else if(qs.indexOf('lang=en')>=0) setLang('en');
+</script>
+</body>
+</html>

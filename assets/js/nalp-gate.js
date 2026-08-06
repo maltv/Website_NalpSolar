@@ -25,6 +25,21 @@
   // Bereits freigeschaltet? -> nichts tun.
   try { if (window.localStorage.getItem(KEY) === '1') return; } catch (e) { /* privater Modus */ }
 
+  // Freischaltung per Link: ...?k=6460 (fuer QR-Aushaenge, damit der Code
+  // nicht lesbar auf dem Blatt stehen muss). Der Code wird sofort aus der
+  // Adresszeile entfernt, damit er nicht im Verlauf/Screenshot auftaucht.
+  try {
+    var mk = /[?&]k=([0-9]{3,8})/.exec(window.location.search || '');
+    if (mk && mk[1] === CODE) {
+      window.localStorage.setItem(KEY, '1');
+      if (window.history && window.history.replaceState) {
+        var sauber = (window.location.search || '').replace(/([?&])k=[0-9]{3,8}&?/, '$1').replace(/[?&]$/, '');
+        window.history.replaceState({}, '', window.location.pathname + sauber + window.location.hash);
+      }
+      return;
+    }
+  } catch (e) { /* egal, dann kommt das Tastenfeld */ }
+
   // Scroll/Interaktion sperren bis freigeschaltet.
   var htmlEl = document.documentElement;
   htmlEl.classList.add('nalp-gate-locked');

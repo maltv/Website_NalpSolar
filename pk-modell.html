@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>NalpSolar · 3D-Modell Primärkonstruktion</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#ffffff">
+<script src="assets/js/nalp-gate.js"></script>
+<style>
+  :root { --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; height:100%; }
+  body { font-family:Arial,"Helvetica Neue",sans-serif; color:var(--ink);
+         background:#0e141b; display:flex; flex-direction:column; overflow:hidden; }
+
+  .topbar { background:#fff; border-bottom:4px solid var(--rot); padding:9px 14px;
+            display:flex; align-items:center; gap:12px; flex-shrink:0; }
+  .topbar img { height:24px; display:block; }
+  .topbar .ti { font-size:13px; font-weight:900; letter-spacing:.02em; }
+  .topbar a { margin-left:auto; color:var(--rot); font-weight:800; font-size:12.5px;
+              text-decoration:none; }
+
+  #buehne { flex:1; position:relative; min-height:0; }
+  #cv { position:absolute; inset:0; }
+
+  .steuer { position:absolute; top:10px; left:10px; right:10px; display:flex;
+            flex-wrap:wrap; gap:6px; pointer-events:none; }
+  .steuer > * { pointer-events:auto; }
+  .btn { background:rgba(255,255,255,.94); border:1px solid rgba(0,0,0,.12);
+         border-radius:8px; padding:7px 12px; font-size:13px; font-weight:800;
+         color:var(--ink); cursor:pointer; }
+  .btn.an { background:var(--rot); color:#fff; border-color:var(--rot); }
+  .btn.klein { padding:6px 10px; font-size:12px; font-weight:700; }
+
+  .info { position:absolute; left:10px; bottom:10px; background:rgba(10,15,22,.82);
+          color:#eaf0f8; border-radius:10px; padding:9px 12px; font-size:12px;
+          line-height:1.65; max-width:min(74vw,340px); backdrop-filter:blur(6px); }
+  .info b { color:#fff; }
+  .info .zeile { display:flex; justify-content:space-between; gap:14px; }
+  .info .mut { color:#9fb0c4; }
+
+  .teile { position:absolute; right:10px; bottom:10px; background:rgba(10,15,22,.82);
+           color:#eaf0f8; border-radius:10px; padding:9px 12px; font-size:11.5px;
+           line-height:1.6; max-height:44vh; overflow:auto; backdrop-filter:blur(6px);
+           display:none; }
+  .teile b { color:#fff; display:block; margin-bottom:3px; }
+
+  #lade { position:absolute; inset:0; display:flex; align-items:center;
+          justify-content:center; color:#cfe0f5; font-size:14px; font-weight:700;
+          background:#0e141b; }
+  @media (max-width:560px){ .teile { display:none!important; } }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <img src="assets/img/strabag-logo.png" alt="STRABAG">
+  <div class="ti">3D-Modell Primärkonstruktion</div>
+  <a href="index.html">✕ Schliessen</a>
+</div>
+
+<div id="buehne">
+  <canvas id="cv"></canvas>
+  <div id="lade">Modell wird geladen …</div>
+
+  <div class="steuer">
+    <button class="btn an" id="btnA" onclick="typWahl('A')">Typ A</button>
+    <button class="btn"    id="btnB" onclick="typWahl('B')">Typ B</button>
+    <button class="btn"    id="btnD" onclick="typWahl('D')">Typ D</button>
+    <button class="btn"    id="btnE" onclick="typWahl('E')">Typ E</button>
+    <button class="btn klein" id="btnSchr" onclick="schrauben()">🔩 Schrauben</button>
+    <button class="btn klein" id="btnKante" onclick="kanten()">◻ Kanten</button>
+    <button class="btn klein" onclick="ansicht('iso')">↺ Ansicht</button>
+    <button class="btn klein" onclick="ansicht('quer')">Querschnitt</button>
+  </div>
+
+  <div class="info" id="info"></div>
+  <div class="teile" id="teile"></div>
+</div>
+
+<script src="assets/js/three/three.min.js"></script>
+<script src="assets/js/three/OrbitControls.js"></script>
+<script>
+/* ── 3D-Modelle der Primärkonstruktion (Tekla-IFC von MAAG über ILF) ──
+   Erzeugt mit tools/build_pk_modelle.py: je Typ drei Stufen
+   (haupt / schrauben / lod) als Float32- und Uint32-Binärdateien.
+   Nullpunkt jedes Modells = Mitte Modulträgerfläche, +Y talwärts. */
+var TYPEN = ['A','B','D','E'];
+var szene, kamera, renderer, ctrl, gruppe=null, boden=null;
+var cache = {};                    // typ -> {meta, haupt:{geo}, schrauben:{geo}}
+var aktTyp='A', zeigeSchrauben=false, zeigeKanten=false;
+
+var matStahl = new THREE.MeshPhongMaterial({ color:0x9fb4c9, specular:0x4a5a6a,
+  shininess:45, side:THREE.DoubleSide });
+var matSchraube = new THREE.MeshPhongMaterial({ color:0xd8b23a, specular:0x6a5a20,
+  shininess:70, side:THREE.DoubleSide });
+var matKante = new THREE.LineBasicMaterial({ color:0x22303f });
+
+function init(){
+  var cv=document.getElementById('cv');
+  renderer=new THREE.WebGLRenderer({canvas:cv, antialias:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+  szene=new THREE.Scene();
+  szene.background=new THREE.Color(0x0e141b);
+  szene.fog=new THREE.Fog(0x0e141b, 40, 120);
+
+  kamera=new THREE.PerspectiveCamera(45, 1, 0.1, 500);
+  ctrl=new THREE.OrbitControls(kamera, renderer.domElement);
+  ctrl.enableDamping=true; ctrl.dampingFactor=0.08;
+
+  szene.add(new THREE.HemisphereLight(0xdceaff, 0x2a3038, 1.15));
+  var s1=new THREE.DirectionalLight(0xffffff, 0.85); s1.position.set(12,18,9); szene.add(s1);
+  var s2=new THREE.DirectionalLight(0x9fc4ff, 0.35); s2.position.set(-14,7,-11); szene.add(s2);
+
+  // Boden als Orientierung (Höhe wird je Typ auf die Pfahlfüsse gesetzt)
+  boden=new THREE.GridHelper(40, 40, 0x2b3a4a, 0x1b2632);
+  boden.position.y=-5.6; szene.add(boden);
+
+  groesse();
+  window.addEventListener('resize', groesse);
+  animate();
+  // Direktlink: pk-modell.html#E oder #E,quer
+  var h=(location.hash||'').replace('#','').split(',');
+  var t=(h[0]||'A').toUpperCase();
+  ansicht(h.indexOf('quer')>=0 ? 'quer' : 'iso');
+  typWahl(TYPEN.indexOf(t)>=0 ? t : 'A');
+}
+
+function groesse(){
+  var b=document.getElementById('buehne');
+  renderer.setSize(b.clientWidth, b.clientHeight, false);
+  kamera.aspect=b.clientWidth/Math.max(1,b.clientHeight);
+  kamera.updateProjectionMatrix();
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+  ctrl.update();
+  renderer.render(szene, kamera);
+}
+
+function ansicht(art){
+  if(art==='quer'){ kamera.position.set(11, -0.6, 0.4); }        // Blick entlang der Tischachse
+  else            { kamera.position.set(13, 7, 14); }            // schräg von vorne
+  ctrl.target.set(0, -1.8, 0);
+  ctrl.update();
+}
+
+/* ── Laden ───────────────────────────────────────────────── */
+function bin(url, Typ){
+  return fetch(url).then(function(r){
+    if(!r.ok) throw new Error(url+' '+r.status);
+    return r.arrayBuffer();
+  }).then(function(b){ return new Typ(b); });
+}
+
+function stufeLaden(typ, stufe){
+  return Promise.all([
+    bin('uploads/pk/'+typ+'_'+stufe+'.v.bin', Float32Array),
+    bin('uploads/pk/'+typ+'_'+stufe+'.f.bin', Uint32Array)
+  ]).then(function(r){
+    var g=new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(r[0],3));
+    g.setIndex(new THREE.BufferAttribute(r[1],1));
+    g.computeVertexNormals();
+    return g;
+  });
+}
+
+function typLaden(typ){
+  if(cache[typ]) return Promise.resolve(cache[typ]);
+  return Promise.all([
+    fetch('uploads/pk/'+typ+'.meta.json').then(function(r){ return r.json(); }),
+    stufeLaden(typ,'haupt')
+  ]).then(function(r){
+    cache[typ]={ meta:r[0], haupt:r[1], schrauben:null };
+    return cache[typ];
+  });
+}
+
+function typWahl(typ){
+  aktTyp=typ;
+  TYPEN.forEach(function(t){
+    var b=document.getElementById('btn'+t);
+    if(b) b.classList.toggle('an', t===typ);
+  });
+  document.getElementById('lade').style.display='flex';
+  typLaden(typ).then(function(d){
+    zeichnen(d);
+    document.getElementById('lade').style.display='none';
+  }).catch(function(e){
+    document.getElementById('lade').textContent='Modell Typ '+typ+' nicht gefunden';
+    console.warn(e);
+  });
+}
+
+function zeichnen(d){
+  if(gruppe){ szene.remove(gruppe); gruppe=null; }
+  gruppe=new THREE.Group();
+  // IFC ist Z-up, three.js Y-up -> Modell aufrichten (Modell-Z wird Höhe)
+  gruppe.rotation.x=-Math.PI/2;
+
+  var m=new THREE.Mesh(d.haupt, matStahl);
+  gruppe.add(m);
+  if(zeigeKanten){
+    var e=new THREE.LineSegments(new THREE.EdgesGeometry(d.haupt, 35), matKante);
+    gruppe.add(e);
+  }
+  if(zeigeSchrauben){
+    if(d.schrauben){ gruppe.add(new THREE.Mesh(d.schrauben, matSchraube)); }
+    else {
+      stufeLaden(d.meta.typ,'schrauben').then(function(g){
+        d.schrauben=g;
+        if(aktTyp===d.meta.typ && zeigeSchrauben) gruppe.add(new THREE.Mesh(g, matSchraube));
+      }).catch(function(){});
+    }
+  }
+  szene.add(gruppe);
+  // Boden auf Höhe der Pfahlfüsse legen (Modell-Nullpunkt = Mitte Modulträger)
+  if(boden && d.meta && d.meta.bbox) boden.position.y=d.meta.bbox.min[2]-0.2;
+  infoZeigen(d.meta);
+}
+
+function infoZeigen(meta){
+  var b=meta.bbox, mf=meta.modulflaeche||{};
+  var lng=(b.max[0]-b.min[0]), hoch=(b.max[2]-b.min[2]), tief=(b.max[1]-b.min[1]);
+  var st=meta.stufen||{};
+  function z(k,v){ return '<div class="zeile"><span class="mut">'+k+'</span><b>'+v+'</b></div>'; }
+  document.getElementById('info').innerHTML=
+      '<b>Primärkonstruktion Typ '+meta.typ+'</b> · 10er-Tisch'
+    + z('Länge über alles', lng.toFixed(2)+' m')
+    + z('Höhe über alles', hoch.toFixed(2)+' m')
+    + z('Tiefe (horizontal)', tief.toFixed(2)+' m')
+    + (mf.laenge ? z('Modulträgerfläche', mf.laenge.toFixed(2)+' × '+
+        Math.sqrt(mf.breite_hor*mf.breite_hor+mf.hoehe*mf.hoehe).toFixed(2)+' m') : '')
+    + z('Dreiecke', ((st.haupt?st.haupt.fCount:0)
+        + (zeigeSchrauben&&st.schrauben?st.schrauben.fCount:0)).toLocaleString('de-CH'))
+    + '<div class="mut" style="margin-top:4px;font-size:11px">Quelle: '+meta.quelle+'</div>';
+
+  var t=meta.teile||{}, h='<b>Bauteile im Modell</b>';
+  Object.keys(t).forEach(function(k){
+    if(!k) return;
+    h+='<div class="zeile"><span>'+k+'</span><span class="mut">'+t[k]+'×</span></div>';
+  });
+  var box=document.getElementById('teile');
+  box.innerHTML=h; box.style.display='block';
+}
+
+function schrauben(){
+  zeigeSchrauben=!zeigeSchrauben;
+  document.getElementById('btnSchr').classList.toggle('an', zeigeSchrauben);
+  if(cache[aktTyp]) zeichnen(cache[aktTyp]);
+}
+function kanten(){
+  zeigeKanten=!zeigeKanten;
+  document.getElementById('btnKante').classList.toggle('an', zeigeKanten);
+  if(cache[aktTyp]) zeichnen(cache[aktTyp]);
+}
+
+init();
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+}
+</script>
+</body>
+</html>

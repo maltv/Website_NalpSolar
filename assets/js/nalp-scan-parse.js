@@ -46,8 +46,11 @@
     // bevorzugt mit Etikett-Präfix …
     var m = /(?:BP|B\.?\s?P\.?|BOHRPUNKT|BOHRP|BOHRUNG)\s*[.:]?\s*([0-9OIl]{1,2})/i.exec(line);
     if (!m) {
-      // … sonst nackte kleine Zahl (eigene Zeile)
-      var t = numFix(line.replace(/[^0-9OIlSB]/g, ''));
+      // … sonst nackte kleine Zahl auf EIGENER Zeile: nur Ziffern und die
+      // typischen OCR-Verwechsler O/I/l erlaubt – Buchstabenzeilen wie
+      // "Typ B" (altes Etikett) dürfen NIE als Bohrpunkt gelesen werden.
+      if (!/^[0-9OIl\s.:]{1,3}$/.test(line.trim())) return null;
+      var t = numFix(line.replace(/[^0-9OIl]/g, ''));
       if (!/^\d{1,2}$/.test(t)) return null;
       m = [null, t];
     }

@@ -108,55 +108,58 @@
 
   <div class="wrap">
   <div class="grid">
+    <a class="card breit" href="sicherheit.html">
+      <div class="ico">🦺</div>
+      <div class="ttl">Sicherheit</div>
+      <div class="desc">Notruf &amp; Notfall-Infrastruktur, Sicherheits- &amp; Rettungskonzepte (PSAgA, Notfallkonzepte Berg/Tal), Gefahren- &amp; Massnahmenplanung – DE / EN / IT / PL</div>
+    </a>
+
     <a class="card" href="karte.html">
       <div class="ico">🗺️</div>
-      <div class="ttl">2D-Plan</div>
-      <div class="desc">Karte mit Tischen, Typen, Kranstandorten &amp; ID-Suche</div>
-    </a>
-
-    <a class="card" href="viewer3d.html">
-      <div class="ico">⛰️</div>
-      <div class="ttl">3D-Plan</div>
-      <div class="desc">Geländemodell mit Baustand, Werkleitungen &amp; Erdung</div>
-    </a>
-
-    <a class="card" href="game.html">
-      <div class="ico">🎮</div>
-      <div class="ttl">Spiele</div>
-      <div class="desc">Birkhuhn-Jagd &amp; Creeper-Nacht im 3D-Gelände</div>
+      <div class="ttl">Pläne 2D &amp; 3D</div>
+      <div class="desc">Karte mit Tischen, Typen &amp; ID-Suche – auf der Karte umschaltbar zum 3D-Geländemodell</div>
     </a>
 
     <a class="card" href="stahlbau.html">
       <div class="ico">🏗️</div>
       <div class="ttl">Stahlbau</div>
-      <div class="desc">Montagekonzept &amp; Primärkonstruktionen (Typ &amp; Baujahr)</div>
+      <div class="desc">Schrauben &amp; Drehmomente, Montagekonzept, Pläne nach Typ &amp; Baujahr – neu mit dem 🏗️ 3D-Modell der Primärkonstruktion</div>
+    </a>
+
+    <a class="card" href="vormontage.html">
+      <div class="ico">🔧</div>
+      <div class="ttl">Vormontage</div>
+      <div class="desc">Stützen-Etikett fotografieren, Fortschritt melden, Auftrag &amp; Tabellen – inkl. 📘 Einführung für neue Mitarbeitende</div>
+    </a>
+
+    <a class="card" href="pfahlkopf.html">
+      <div class="ico">🔩</div>
+      <div class="ttl">Pfahlköpfe &amp; Gewinde</div>
+      <div class="desc">Je Pfahl (S1–S4): Kopf montiert? Gewinde 5 / 6.35 mm? Dazu Lagerorte auf der Karte &amp; Typen-Masse zum Bestimmen</div>
     </a>
 
     <a class="card" href="logistik.html">
       <div class="ico">🚚</div>
-      <div class="ttl">Logistik</div>
-      <div class="desc">Transporte &amp; Abholungen melden – Sandro hakt ab, mit Kommentar &amp; Foto</div>
+      <div class="ttl">Logistik &amp; Lieferscheine</div>
+      <div class="desc">Transporte melden, Sandro hakt ab – und Papier-Lieferscheine abfotografieren &amp; ablegen</div>
     </a>
 
-    <a class="card" href="lieferscheine.html">
-      <div class="ico">📄</div>
-      <div class="ttl">Lieferscheine</div>
-      <div class="desc">Papierschein abfotografieren &amp; ablegen – zentral gesammelt, für die Rechnungsprüfung abhakbar</div>
-    </a>
-
-    <a class="card breit" href="5w-programm.html">
+    <a class="card" href="5w-programm.html">
       <div class="ico">🗓️</div>
       <div class="ttl">5W-Programm</div>
-      <div class="desc">Fünfwochenprogramm KW 30–34 – Excel &amp; PDF</div>
+      <div class="desc">Fünfwochenprogramm – Excel &amp; PDF</div>
     </a>
 
-    <!-- Kacheln Baupiste-Chaos + Passstücke auf Victors Wunsch 24.07. entfernt;
-         die Seiten selbst bleiben unter /baupiste-chaos.html (eigener PIN) und
-         /passstueck.html (Code 6460) direkt erreichbar -->
-    <a class="card breit" href="erfassungen.html">
-      <div class="ico">📋</div>
-      <div class="ttl">Erfassungen</div>
-      <div class="desc">Stahlteile &amp; Montage als Tabelle – live aus Firebase, mit CSV-/Excel-Export</div>
+    <a class="card" href="bauprogramm.html">
+      <div class="ico">🎬</div>
+      <div class="ttl">Bauprogramm-Animation</div>
+      <div class="desc">Gesamtbauprogramm 2026+ Woche für Woche auf der Karte: wo wird gebohrt, wo läuft der Stahlbau (Stand 03.08.2026)</div>
+    </a>
+
+    <a class="card breit" href="game.html">
+      <div class="ico">🎮</div>
+      <div class="ttl">Spiele</div>
+      <div class="desc">Birkhuhn-Jagd &amp; Creeper-Nacht im 3D-Gelände</div>
     </a>
   </div>
   </div>
@@ -164,6 +167,7 @@
   <div class="foot">
     Interner Baustellen-Zugang · Victor Malt, STRABAG B8-13<br>
     Code ändern/abmelden: <a href="#" onclick="try{localStorage.removeItem('nalp_portal_unlock_v1');localStorage.removeItem('nalp_logistik_unlock_v1');}catch(e){};alert('Abgemeldet – die Reiter fragen den Code wieder ab.');return false">Abmelden</a>
+    <div style="margin-top:6px"><a href="admin.html" style="color:#b8bcc3;font-weight:400;font-size:10px;text-decoration:none">admin</a></div>
   </div>
 
   <script>
