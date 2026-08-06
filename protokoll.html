@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>NalpSolar · Änderungsprotokoll</title>
+<meta name="theme-color" content="#0b1826">
+<script src="assets/js/nalp-gate.js"></script>
+<script src="assets/js/nalp-protokoll.js"></script>
+<style>
+  :root{--bg:#eef1f5;--card:#fff;--line:rgba(10,22,38,.12);--txt:#14202e;--muted:#5b6b7c;--blue:#0b5fff;--green:#12a457;--red:#e5484d;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;}
+  body{display:flex;flex-direction:column;background:var(--bg);color:var(--txt);font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;}
+  .top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top));
+    color:#e8eef7;background:radial-gradient(120% 160% at 0 0,#173657,#0b1826);box-shadow:0 2px 14px rgba(0,0,0,.3);}
+  .top .brand{font-size:10px;letter-spacing:.22em;font-weight:800;color:#ffc340;text-transform:uppercase;}
+  .top h1{font-size:16px;font-weight:900;margin:1px 0 0;}
+  .top .sp{flex:1;}
+  .btn{border:0;border-radius:11px;padding:10px 14px;font-weight:800;font-size:14px;color:#fff;cursor:pointer;white-space:nowrap;}
+  .btn.home{background:linear-gradient(135deg,#0b5fff,#2196F3);}
+  .btn.exp{background:linear-gradient(135deg,#1c8a4a,#12a457);}
+  .btn.ghost{background:rgba(255,255,255,.14);}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 14px;background:var(--card);border-bottom:1px solid var(--line);}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;}
+  .tab{border:1px solid var(--line);background:#f6f8fb;color:var(--txt);border-radius:9px;padding:8px 12px;font-size:13px;font-weight:800;cursor:pointer;}
+  .tab.on{background:var(--blue);border-color:var(--blue);color:#fff;}
+  .search{flex:1;min-width:160px;}
+  .search input{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:14px;background:#fff;color:var(--txt);}
+  .count{font-size:12px;color:var(--muted);white-space:nowrap;}
+  .wrap{flex:1;min-height:0;overflow:auto;padding:12px 14px 40px;}
+  table{width:100%;border-collapse:separate;border-spacing:0;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:13px;}
+  thead th{position:sticky;top:0;background:#f3f6fa;text-align:left;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;
+    color:var(--muted);padding:10px;border-bottom:1px solid var(--line);white-space:nowrap;z-index:2;}
+  tbody td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top;}
+  tbody tr:last-child td{border-bottom:0;}
+  tbody tr:nth-child(even){background:#fafbfd;}
+  .chip{display:inline-block;font-size:11px;font-weight:800;border-radius:6px;padding:2px 7px;color:#fff;background:#5b6b7c;white-space:nowrap;}
+  .chip.Tabellen{background:var(--blue);} .chip.Vormontage{background:#c85a12;}
+  .chip.Fortschritt{background:var(--green);} .chip.Scan{background:#1c8a4a;}
+  .alt{color:var(--red);text-decoration:line-through;text-decoration-thickness:1.5px;}
+  .neu{color:#0e6b33;font-weight:800;}
+  .von{color:var(--muted);}
+  .syn{display:inline-block;width:8px;height:8px;border-radius:50%;}
+  .syn.ok{background:var(--green);} .syn.off{background:#e8a012;}
+  .empty{padding:40px 16px;text-align:center;color:var(--muted);font-size:14px;}
+  .note{font-size:11.5px;color:var(--muted);padding:8px 2px 0;line-height:1.5;}
+  .err{color:#b0242a;font-weight:700;}
+</style>
+</head>
+<body>
+<div class="top">
+  <button class="btn home" onclick="location.href='erfassungen.html'">‹ Erfassungen</button>
+  <div><div class="brand">NalpSolar · STRABAG B8-13</div><h1>🗒 Änderungsprotokoll</h1></div>
+  <span class="sp"></span>
+  <button class="btn ghost" onclick="NALP_PROTOKOLL.wer(true);load()">👤 Name ändern</button>
+  <button class="btn ghost" onclick="load()">⟳</button>
+  <button class="btn exp" onclick="exportCsv()">⬇ CSV</button>
+</div>
+
+<div class="bar">
+  <div class="tabs" id="tabs"></div>
+  <span class="sp"></span>
+  <div class="search"><input id="q" type="search" placeholder="Suche: Objekt, Feld, Wert, Name …"></div>
+  <span class="count" id="count">–</span>
+</div>
+
+<div class="wrap">
+  <div id="host"></div>
+  <div class="note" id="note"></div>
+</div>
+
+<script>
+'use strict';
+var state={ rows:[], filter:'alle', q:'' };
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function fmtTs(ts){ if(!ts) return ''; var d=new Date(ts); function z(n){return String(n).padStart(2,'0');}
+  return z(d.getDate())+'.'+z(d.getMonth()+1)+'.'+d.getFullYear()+' '+z(d.getHours())+':'+z(d.getMinutes()); }
+
+function merge(fb, lokal){
+  var m={};
+  function add(e, inFb){ if(!e||!e.ts) return; var k=e.ts+'|'+e.feld+'|'+e.objekt;
+    m[k]=Object.assign({}, m[k]||{}, e, { fb:(m[k]&&m[k].fb)||inFb||e.fb===true }); }
+  if(fb) Object.keys(fb).forEach(function(id){ add(fb[id], true); });
+  (lokal||[]).forEach(function(e){ add(e, e.fb===true); });
+  return Object.keys(m).map(function(k){ return m[k]; }).sort(function(a,b){ return b.ts-a.ts; });
+}
+
+function load(){
+  document.getElementById('note').innerHTML='Lade aus Firebase …';
+  fetch(NALP_PROTOKOLL.DB+NALP_PROTOKOLL.PFAD+'.json',{cache:'no-store'})
+    .then(function(r){ return r.ok? r.json():null; })
+    .then(function(fb){
+      state.rows=merge(fb, NALP_PROTOKOLL.lokal());
+      document.getElementById('note').innerHTML = (fb===null
+        ? '<span class="err">Firebase nicht erreichbar</span> – nur Änderungen von diesem Gerät sichtbar.'
+        : 'Live aus Firebase · ')+state.rows.length+' Änderungen · Bearbeiter auf diesem Gerät: <b>'
+        + esc((function(){try{return localStorage.getItem('nalp_user_name_v1')||'– noch nicht gesetzt –';}catch(e){return '?';}})())+'</b>';
+      render();
+    })
+    .catch(function(){
+      state.rows=merge(null, NALP_PROTOKOLL.lokal());
+      document.getElementById('note').innerHTML='<span class="err">Offline</span> – nur Änderungen von diesem Gerät.';
+      render();
+    });
+}
+
+function gefiltert(){
+  var q=state.q.toLowerCase();
+  return state.rows.filter(function(r){
+    if(state.filter!=='alle' && r.seite!==state.filter) return false;
+    if(!q) return true;
+    return [r.seite,r.objekt,r.feld,r.alt,r.neu,r.von].join(' ').toLowerCase().indexOf(q)>=0;
+  });
+}
+
+function render(){
+  var seiten={}; state.rows.forEach(function(r){ seiten[r.seite]=(seiten[r.seite]||0)+1; });
+  var defs=[['alle','Alle · '+state.rows.length]].concat(Object.keys(seiten).sort().map(function(s){ return [s, s+' · '+seiten[s]]; }));
+  document.getElementById('tabs').innerHTML=defs.map(function(d){
+    return '<button class="tab'+(state.filter===d[0]?' on':'')+'" data-f="'+esc(d[0])+'">'+esc(d[1])+'</button>';
+  }).join('');
+  document.querySelectorAll('.tab').forEach(function(b){ b.onclick=function(){ state.filter=b.dataset.f; render(); }; });
+
+  var rows=gefiltert();
+  document.getElementById('count').textContent=rows.length+' angezeigt';
+  var host=document.getElementById('host');
+  if(!rows.length){ host.innerHTML='<div class="empty">Keine Änderungen protokolliert.</div>'; return; }
+  host.innerHTML='<table><thead><tr><th>Wann</th><th>Seite</th><th>Objekt</th><th>Feld</th><th>Änderung</th><th>Von</th><th>DB</th></tr></thead><tbody>'+
+    rows.map(function(r){
+      return '<tr><td>'+esc(fmtTs(r.ts))+'</td>'+
+        '<td><span class="chip '+esc(r.seite)+'">'+esc(r.seite)+'</span></td>'+
+        '<td><b>'+esc(r.objekt)+'</b></td>'+
+        '<td>'+esc(r.feld)+'</td>'+
+        '<td><span class="alt">'+esc(r.alt||'leer')+'</span> → <span class="neu">'+esc(r.neu||'leer')+'</span></td>'+
+        '<td class="von">'+esc(r.von)+'</td>'+
+        '<td><span class="syn '+(r.fb?'ok':'off')+'" title="'+(r.fb?'in Firebase':'nur lokal')+'"></span></td></tr>';
+    }).join('')+'</tbody></table>';
+}
+
+function exportCsv(){
+  var rows=gefiltert();
+  function cell(v){ return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'; }
+  var lines=[['Wann','Seite','Objekt','Feld','Alt','Neu','Von','in Firebase'].map(cell).join(';')];
+  rows.forEach(function(r){ lines.push([fmtTs(r.ts),r.seite,r.objekt,r.feld,r.alt,r.neu,r.von,r.fb?'ja':'nein'].map(cell).join(';')); });
+  var blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='NalpSolar_Protokoll_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+document.getElementById('q').addEventListener('input',function(){ state.q=this.value.trim(); render(); });
+load();
+if('serviceWorker' in navigator){ window.addEventListener('load',function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
+</script>
+</body>
+</html>

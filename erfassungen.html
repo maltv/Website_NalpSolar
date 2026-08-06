@@ -6,6 +6,7 @@
 <title>NalpSolar · Erfassungen</title>
 <meta name="theme-color" content="#0b1826">
 <script src="assets/js/nalp-gate.js"></script>
+<script src="assets/js/nalp-protokoll.js"></script>
 <style>
   :root{--bg:#eef1f5;--card:#fff;--line:rgba(10,22,38,.12);--txt:#14202e;--muted:#5b6b7c;--blue:#0b5fff;--green:#12a457;--orange:#ff8a3d;--red:#e5484d;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -50,6 +51,26 @@
   .syn{display:inline-block;width:8px;height:8px;border-radius:50%;}
   .syn.ok{background:var(--green);} .syn.off{background:#e8a012;}
   .empty{padding:40px 16px;text-align:center;color:var(--muted);font-size:14px;}
+  .stift{border:1px solid var(--line);background:#f6f8fb;color:var(--txt);border-radius:8px;
+    padding:5px 9px;font-size:13px;font-weight:800;cursor:pointer;}
+  .stift:hover{background:#e9eef5;}
+  #ov{position:fixed;inset:0;background:rgba(10,16,24,.55);display:none;z-index:60;
+    align-items:flex-start;justify-content:center;padding:24px 12px;overflow:auto;}
+  #ov.zeig{display:flex;}
+  .dlg{background:#fff;border-radius:14px;max-width:520px;width:100%;padding:16px;}
+  .dlg h2{margin:0 0 2px;font-size:16px;}
+  .dlg .sub{font-size:12px;color:var(--muted);margin-bottom:12px;}
+  .dlg label{display:block;font-size:11px;font-weight:800;text-transform:uppercase;
+    letter-spacing:.04em;color:var(--muted);margin:9px 0 3px;}
+  .dlg input,.dlg textarea,.dlg select{width:100%;font:inherit;font-size:14px;padding:9px 10px;
+    border:1px solid var(--line);border-radius:9px;background:#fbfcfd;color:var(--txt);}
+  .dlg textarea{min-height:64px;resize:vertical;}
+  .dlg .row{display:flex;gap:8px;margin-top:14px;}
+  .dlg .row button{flex:1;border:0;font:inherit;font-size:14px;font-weight:900;padding:12px 8px;
+    border-radius:10px;cursor:pointer;}
+  .dlg .ab{background:#e3e8ed;color:var(--txt);flex:0 0 32%;}
+  .dlg .ok{background:var(--green);color:#fff;}
+  .dlg .hinweis{font-size:11.5px;color:var(--muted);margin-top:10px;}
   .note{font-size:11.5px;color:var(--muted);padding:8px 2px 0;line-height:1.5;}
   .err{color:#b0242a;font-weight:700;}
   @media(max-width:640px){ .top h1{font-size:15px;} table{font-size:12.5px;} }
@@ -60,9 +81,27 @@
   <button class="btn home" onclick="location.href='index.html'">🏠 Start</button>
   <div><div class="brand">NalpSolar · STRABAG B8-13</div><h1>📋 Erfassungen</h1></div>
   <span class="sp"></span>
+  <button class="btn ghost" onclick="location.href='protokoll.html'">🗒 Protokoll</button>
   <button class="btn ghost" onclick="load(true)">⟳ Aktualisieren</button>
   <button class="btn exp" onclick="exportCsv()">⬇ CSV / Excel</button>
 </div>
+
+<div id="ov"><div class="dlg">
+  <h2>Eintrag bearbeiten</h2>
+  <div class="sub" id="e_sub"></div>
+  <label for="e_tid">Tisch-ID</label><input id="e_tid">
+  <label for="e_typ">Typ</label><input id="e_typ">
+  <label for="e_schwere">Schwere</label>
+  <select id="e_schwere"><option value=""></option><option>Info</option><option>Mittel</option><option>Hoch</option><option>Stopp</option></select>
+  <label for="e_titel">Titel</label><input id="e_titel">
+  <label for="e_text">Beschreibung</label><textarea id="e_text"></textarea>
+  <label for="e_bem">Bemerkung</label><textarea id="e_bem"></textarea>
+  <label for="e_datum">Datum (JJJJ-MM-TT)</label><input id="e_datum" placeholder="2026-07-29">
+  <label for="e_anzahl">Anzahl</label><input id="e_anzahl" inputmode="numeric">
+  <label for="e_von">Erfasst von</label><input id="e_von">
+  <div class="hinweis">Jede Änderung wird im <b>Änderungsprotokoll</b> festgehalten (wer, wann, alt → neu).</div>
+  <div class="row"><button class="ab" id="e_ab">Abbrechen</button><button class="ok" id="e_ok">Speichern ✓</button></div>
+</div></div>
 
 <div class="bar">
   <div class="tabs" id="tabs"></div>
@@ -88,17 +127,18 @@ function fmtTs(ts){ if(!ts) return ''; var d=new Date(ts); function z(n){return 
 
 function lsLoad(){ try{ return JSON.parse(localStorage.getItem(LS_LOG)||'[]'); }catch(e){ return []; } }
 
-function normalize(rec, art, fb){
+function normalize(rec, art, fb, fbKey){
   return { art:art||rec.art||'', tischId:rec.tischId||'', typ:rec.typ||rec.teilTyp||'', schwere:rec.schwere||'',
     titel:rec.titel||'', text:rec.text||'', bemerkung:rec.bemerkung||'', datum:rec.datum||'',
-    von:rec.von||'', ts:rec.ts||0, fb: fb===true ? true : (rec.fb===true),
+    von:rec.von||'', ts:rec.ts||0, fb: fb===true ? true : (rec.fb===true), fbKey:fbKey||rec.fbKey||'',
     anzahl:rec.anzahl||'', lat:(typeof rec.lat==='number'?rec.lat:null), lon:(typeof rec.lon==='number'?rec.lon:null), acc:rec.acc||'', posArt:rec.posArt||'' };
 }
 
 function merge(fbData, local){
   var byTs={};
-  function add(r){ if(!r) return; var k=r.ts||(r.art+'|'+r.tischId+'|'+r.titel+'|'+r.datum+'|'+r.von); byTs[k]=Object.assign({}, byTs[k]||{}, r, { fb: (byTs[k]&&byTs[k].fb) || r.fb }); }
-  if(fbData){ Object.keys(KINDS).forEach(function(art){ var node=fbData[art]; if(node) Object.keys(node).forEach(function(id){ add(normalize(node[id], art, true)); }); }); }
+  function add(r){ if(!r) return; var k=r.ts||(r.art+'|'+r.tischId+'|'+r.titel+'|'+r.datum+'|'+r.von);
+    byTs[k]=Object.assign({}, byTs[k]||{}, r, { fb: (byTs[k]&&byTs[k].fb) || r.fb, fbKey: (byTs[k]&&byTs[k].fbKey) || r.fbKey }); }
+  if(fbData){ Object.keys(KINDS).forEach(function(art){ var node=fbData[art]; if(node) Object.keys(node).forEach(function(id){ add(normalize(node[id], art, true, id)); }); }); }
   local.forEach(function(r){ add(normalize(r, r.art, r.fb)); });
   return Object.keys(byTs).map(function(k){return byTs[k];});
 }
@@ -161,8 +201,8 @@ function render(){
   var head='<tr>'+COLS.map(function(c){
     var ar = state.sortKey===c.k ? (state.sortDir<0?' ▼':' ▲') : '';
     return '<th data-k="'+c.k+'">'+c.t+'<span class="ar">'+ar+'</span></th>';
-  }).join('')+'<th>DB</th></tr>';
-  var body=rows.map(function(r){
+  }).join('')+'<th>DB</th><th></th></tr>';
+  var body=rows.map(function(r,i){
     var inhalt = r.art==='vorkommnis'
       ? (r.titel?'<b>'+esc(r.titel)+'</b>':'')+(r.text?(r.titel?'<br>':'')+esc(r.text):'')
       : esc(r.bemerkung);
@@ -182,9 +222,12 @@ function render(){
       '<td>'+esc(fmtDate(r.datum))+'</td>'+
       '<td class="von">'+esc(r.von)+'</td>'+
       '<td><span class="syn '+(r.fb?'ok':'off')+'" title="'+(r.fb?'in Firebase':'nur lokal')+'"></span></td>'+
+      '<td><button class="stift" data-i="'+i+'" title="Bearbeiten">✎</button></td>'+
     '</tr>';
   }).join('');
   host.innerHTML='<table><thead>'+head+'</thead><tbody>'+body+'</tbody></table>';
+  state.view=rows;
+  host.querySelectorAll('.stift').forEach(function(b){ b.onclick=function(){ openEdit(state.view[parseInt(b.dataset.i,10)]); }; });
   host.querySelectorAll('th[data-k]').forEach(function(th){ th.onclick=function(){
     var k=th.dataset.k; if(state.sortKey===k) state.sortDir*=-1; else { state.sortKey=k; state.sortDir=(k==='ts'||k==='datum')?-1:1; } render();
   };});
@@ -209,6 +252,56 @@ function exportCsv(){
   a.href=url; a.download='NalpSolar_Erfassungen_'+d.getFullYear()+z(d.getMonth()+1)+z(d.getDate())+'.csv';
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(url);},1500);
 }
+
+/* ── Bearbeiten mit Änderungsprotokoll ───────────────────────────────── */
+var EDIT_FELDER=[['tischId','e_tid'],['typ','e_typ'],['schwere','e_schwere'],['titel','e_titel'],
+  ['text','e_text'],['bemerkung','e_bem'],['datum','e_datum'],['anzahl','e_anzahl'],['von','e_von']];
+var editRow=null;
+
+function openEdit(r){
+  if(!r) return;
+  editRow=r;
+  document.getElementById('e_sub').textContent=(KINDS[r.art]||r.art)+' · Tisch '+(r.tischId||'–')+
+    ' · erfasst '+fmtTs(r.ts)+(r.fbKey?'':' · nur lokal auf diesem Gerät');
+  EDIT_FELDER.forEach(function(f){ document.getElementById(f[1]).value=r[f[0]]==null?'':r[f[0]]; });
+  document.getElementById('ov').classList.add('zeig');
+}
+document.getElementById('e_ab').onclick=function(){ document.getElementById('ov').classList.remove('zeig'); editRow=null; };
+document.getElementById('ov').addEventListener('click',function(e){ if(e.target===this){ this.classList.remove('zeig'); editRow=null; } });
+
+document.getElementById('e_ok').onclick=function(){
+  if(!editRow) return;
+  var r=editRow, patch={}, diffs=[];
+  EDIT_FELDER.forEach(function(f){
+    var neu=document.getElementById(f[1]).value.trim();
+    var alt=r[f[0]]==null?'':String(r[f[0]]);
+    if(neu!==alt){ patch[f[0]]=neu; diffs.push([f[0],alt,neu]); }
+  });
+  if(!diffs.length){ document.getElementById('ov').classList.remove('zeig'); editRow=null; return; }
+  var objekt=(KINDS[r.art]||r.art)+' Tisch '+(patch.tischId||r.tischId||'?')+' ('+fmtTs(r.ts)+')';
+  // 1) Protokoll (lokal + Firebase)
+  NALP_PROTOKOLL.logAll('Tabellen', objekt, diffs);
+  // 2) Datensatz in Firebase ändern (wenn er dort liegt)
+  if(r.fbKey){
+    patch.geaendert_ts=Date.now(); patch.geaendert_von=NALP_PROTOKOLL.wer(false);
+    fetch(DB+'/erfassung/'+r.art+'/'+encodeURIComponent(r.fbKey)+'.json',
+      { method:'PATCH', body: JSON.stringify(patch) })
+      .then(function(resp){ setNote(resp.ok?'✓ Änderung in Firebase gespeichert & protokolliert.':'<span class="err">Firebase-Fehler</span> – Änderung nur lokal/protokolliert.'); })
+      .catch(function(){ setNote('<span class="err">Offline</span> – Änderung lokal angewendet, Protokoll wird nachgeliefert.'); });
+  } else {
+    setNote('✓ Lokalen Eintrag geändert & protokolliert.');
+  }
+  // 3) Lokale Kopie (falls der Eintrag von diesem Gerät stammt)
+  try{
+    var arr=lsLoad(), i;
+    for(i=0;i<arr.length;i++){ if(arr[i].ts===r.ts){ Object.assign(arr[i], patch); break; } }
+    localStorage.setItem(LS_LOG, JSON.stringify(arr));
+  }catch(e){}
+  // 4) Ansicht aktualisieren
+  Object.assign(r, patch);
+  document.getElementById('ov').classList.remove('zeig'); editRow=null;
+  render();
+};
 
 document.getElementById('q').addEventListener('input', function(){ state.q=this.value.trim(); render(); });
 load(true);

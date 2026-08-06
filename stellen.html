@@ -6,6 +6,7 @@
 <title>NalpSolar · Was noch zu stellen ist (1.1–1.6 + 3.2)</title>
 <meta name="theme-color" content="#0b1826">
 <script src="assets/js/nalp-gate.js"></script>
+<script src="assets/js/nalp-protokoll.js"></script>
 <style>
 
 @page{size:A4 portrait;margin:9mm 9mm 7mm 9mm} *{box-sizing:border-box} body{font-family:"Segoe UI",Arial,sans-serif;color:#111;font-size:8.3pt;line-height:1.12;margin:0}
@@ -172,12 +173,71 @@ tr.readyrow{background:#eaf6ee}tr.efrow{background:#fff3e0}tr.fhrow{background:#
       cb.classList.toggle('done', on);
       if(on) local[k]=1; else delete local[k];
       saveLocal();
+      if(window.NALP_PROTOKOLL) NALP_PROTOKOLL.log('Fortschritt','Tisch '+k,'gestellt', on?'nein':'ja', on?'ja':'nein');
       setMsg('Speichere …','#ffd23f');
       fetch(DB+PATH+'/'+encodeURIComponent(k)+'.json',{ method: on?'PUT':'DELETE', body: on?'true':undefined })
         .then(function(r){ setMsg(r.ok?('✓ Tisch '+k+' in Firebase gespeichert'):'⚠ Firebase-Fehler – lokal gesichert', r.ok?'#7ce0a5':'#ffb3b3'); })
         .catch(function(){ setMsg('⚠ offline – lokal gesichert, sync beim nächsten Klick','#ffb3b3'); });
     });
   });
+
+  // ── Bearbeiten des Zustand/Aktion-Texts je Tisch (mit Änderungsprotokoll) ──
+  // Überschriebener Text liegt in Firebase (erfassung/stellen_edit/<Tisch>) und
+  // localStorage; Original bleibt im HTML und ist per Tooltip sichtbar.
+  var EPATH='/erfassung/stellen_edit', ELS='nalp_stellen_edit_v1';
+  var edits={}; try{ edits=JSON.parse(localStorage.getItem(ELS)||'{}'); }catch(e){}
+  function eSave(){ try{ localStorage.setItem(ELS, JSON.stringify(edits)); }catch(e){} }
+
+  var st=document.createElement('style');
+  st.textContent='.stift{border:1px solid #c9d2dc;background:#f6f8fb;border-radius:7px;padding:2px 7px;'+
+    'font-size:12px;font-weight:800;cursor:pointer;margin-left:6px;vertical-align:middle;}'+
+    '.editiert{color:#0b5fff;font-weight:800;} @media print{.stift{display:none!important;}}';
+  document.head.appendChild(st);
+
+  function zelleVon(k){
+    var out=null;
+    boxes.some(function(cb){ if(cb.dataset.k===k){ var tr=cb.closest('tr'); out=tr?tr.children[3]:null; return true; } return false; });
+    return out;
+  }
+  function anwenden(k){
+    var z=zelleVon(k); if(!z) return;
+    if(!z.dataset.orig) z.dataset.orig=z.innerHTML;
+    var e=edits[k];
+    if(e && e.text){
+      z.innerHTML='<span class="editiert" title="Bearbeitet von '+(e.von||'?')+'">✎</span> ';
+      z.appendChild(document.createTextNode(e.text));
+      z.title='Original: '+z.dataset.orig.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+    } else { z.innerHTML=z.dataset.orig; z.removeAttribute('title'); }
+  }
+
+  boxes.forEach(function(cb){
+    var k=cb.dataset.k, td=cb.parentElement;
+    var b=document.createElement('button');
+    b.className='stift'; b.textContent='✎'; b.title='Zustand/Aktion bearbeiten (protokolliert)';
+    b.addEventListener('click',function(){
+      var z=zelleVon(k); if(!z) return;
+      var alt=(edits[k]&&edits[k].text)||'';
+      var vorschlag=alt||z.textContent.replace(/^✎\s*/,'').replace(/\s+/g,' ').trim();
+      var neu=window.prompt('Zustand/Aktion für Tisch '+k+' (leer = zurück zum Original):', vorschlag);
+      if(neu===null) return;
+      neu=neu.trim();
+      var von=NALP_PROTOKOLL.wer(false);
+      NALP_PROTOKOLL.log('Fortschritt','Tisch '+k,'zustand_text', alt||'(Original)', neu||'(Original)');
+      if(neu){ edits[k]={text:neu, von:von, ts:Date.now()}; } else { delete edits[k]; }
+      eSave(); anwenden(k);
+      setMsg('Speichere Text …','#ffd23f');
+      fetch(DB+EPATH+'/'+encodeURIComponent(k)+'.json',
+        { method: neu?'PUT':'DELETE', body: neu?JSON.stringify(edits[k]):undefined })
+        .then(function(r){ setMsg(r.ok?'✓ Text für Tisch '+k+' gespeichert & protokolliert':'⚠ Firebase-Fehler – lokal gesichert', r.ok?'#7ce0a5':'#ffb3b3'); })
+        .catch(function(){ setMsg('⚠ offline – Text lokal gesichert','#ffb3b3'); });
+    });
+    td.appendChild(b);
+  });
+
+  fetch(DB+EPATH+'.json',{cache:'no-store'})
+    .then(function(r){ return r.ok? r.json():null; })
+    .then(function(obj){ if(obj){ edits=obj; eSave(); } Object.keys(edits).forEach(anwenden); })
+    .catch(function(){ Object.keys(edits).forEach(anwenden); });
 
   // Beim Laden: aktuellen Stand aus Firebase holen (Firebase ist fuehrend -> echte Geraete-Synchronisation)
   setMsg('Lade Stand aus Firebase …');

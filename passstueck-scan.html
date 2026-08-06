@@ -85,6 +85,9 @@
   .karte .l2{font-size:12px;color:var(--muted);margin-top:2px;}
   .karte .del{border:0;background:#f1f3f6;color:var(--red);font:inherit;font-weight:900;
     border-radius:9px;padding:8px 11px;}
+  .karte .edit{border:0;background:#f1f3f6;color:var(--blue);font:inherit;font-weight:900;
+    border-radius:9px;padding:8px 11px;}
+  .karte .kbtns{display:flex;gap:6px;flex:none;}
   .leer{font-size:13px;color:var(--muted);text-align:center;margin:16px 0;}
 
   .unten{position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;
@@ -170,6 +173,7 @@
 </div>
 
 <script src="assets/js/nalp-scan-parse.js"></script>
+<script src="assets/js/nalp-protokoll.js"></script>
 <script src="assets/vendor/tesseract/tesseract.min.js"></script>
 <script>
 'use strict';
@@ -332,6 +336,7 @@ var erg = document.getElementById('erg');
 var f_pos = document.getElementById('f_pos'), f_id = document.getElementById('f_id');
 var f_bp = document.getElementById('f_bp'), f_lng = document.getElementById('f_lng');
 var gpsWert = '';
+var editIdx = -1;   // -1 = Neuerfassung, sonst Index in daten[] (Bearbeiten-Modus)
 
 function status(span, input, ok) {
   span.className = ok ? 'ok' : 'fehlt';
@@ -349,6 +354,8 @@ function pruefeFelder() {
 [f_pos, f_id, f_bp, f_lng].forEach(function (i) { i.addEventListener('input', pruefeFelder); });
 
 function zeigeErgebnis(p, roh) {
+  editIdx = -1;   // jeder neue Scan verlässt den Bearbeiten-Modus
+  document.querySelector('#erg h2').textContent = 'Erkannt – bitte prüfen';
   f_pos.value = p.pos || ''; f_id.value = p.id || '';
   f_bp.value = p.bp !== null && p.bp !== undefined ? p.bp : '';
   f_lng.value = p.laenge !== null && p.laenge !== undefined ? p.laenge : '';
@@ -371,7 +378,7 @@ document.getElementById('gps').addEventListener('click', function () {
 });
 
 document.getElementById('verwerfen').addEventListener('click', function () {
-  erg.classList.remove('zeig');
+  erg.classList.remove('zeig'); editIdx = -1;
 });
 document.getElementById('speichern').addEventListener('click', function () {
   var pos = f_pos.value.toUpperCase().trim();
@@ -382,13 +389,33 @@ document.getElementById('speichern').addEventListener('click', function () {
   if (!(bp >= 1 && bp <= NALP_SCAN.BP_MAX)) fehler.push('Bohrpunkt 1–' + NALP_SCAN.BP_MAX);
   if (!(lng >= NALP_SCAN.LEN_MIN && lng <= NALP_SCAN.LEN_MAX)) fehler.push('Länge ' + NALP_SCAN.LEN_MIN + '–' + NALP_SCAN.LEN_MAX + ' mm');
   if (fehler.length) { alert('Bitte korrigieren: ' + fehler.join(', ')); return; }
-  daten.unshift({
-    zeit: new Date().toISOString(), pos: pp.pos, tisch: pp.tisch, stuetze: pp.stuetze,
-    id: f_id.value.trim(), bp: bp, laenge: lng, gps: gpsWert
-  });
+
+  if (editIdx >= 0 && daten[editIdx]) {
+    // Bearbeiten-Modus: Unterschiede protokollieren, Eintrag ersetzen
+    var alt = daten[editIdx];
+    var diffs = [];
+    if (alt.pos !== pp.pos) diffs.push(['position', alt.pos, pp.pos]);
+    if (String(alt.id || '') !== f_id.value.trim()) diffs.push(['id', alt.id || '', f_id.value.trim()]);
+    if (alt.bp !== bp) diffs.push(['bohrpunkt', alt.bp, bp]);
+    if (alt.laenge !== lng) diffs.push(['laenge_mm', alt.laenge, lng]);
+    if ((alt.gps || '') !== gpsWert && gpsWert) diffs.push(['gps', alt.gps || '', gpsWert]);
+    if (window.NALP_PROTOKOLL) NALP_PROTOKOLL.logAll('Scan', 'Passstück ' + alt.pos, diffs);
+    daten[editIdx] = {
+      zeit: alt.zeit, pos: pp.pos, tisch: pp.tisch, stuetze: pp.stuetze,
+      id: f_id.value.trim(), bp: bp, laenge: lng, gps: gpsWert || alt.gps || '',
+      geaendert: diffs.length ? new Date().toISOString() : alt.geaendert
+    };
+    stat.textContent = diffs.length ? 'Eintrag geändert & protokolliert.' : 'Keine Änderung.';
+    editIdx = -1;
+  } else {
+    daten.unshift({
+      zeit: new Date().toISOString(), pos: pp.pos, tisch: pp.tisch, stuetze: pp.stuetze,
+      id: f_id.value.trim(), bp: bp, laenge: lng, gps: gpsWert
+    });
+    stat.textContent = 'Gespeichert – nächstes Etikett in den Rahmen.';
+  }
   try { localStorage.setItem(KEY, JSON.stringify(daten)); } catch (e) {}
   erg.classList.remove('zeig');
-  stat.textContent = 'Gespeichert – nächstes Etikett in den Rahmen.';
   render();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
@@ -406,15 +433,26 @@ function render() {
       d.laenge + ' mm</div><div class="l2">' + (d.id ? 'ID ' + d.id + ' · ' : '') +
       new Date(d.zeit).toLocaleString('de-CH', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) +
       (d.gps ? ' · 📍' : '') + '</div>';
+    var btns = document.createElement('div'); btns.className = 'kbtns';
+    var edit = document.createElement('button'); edit.className = 'edit'; edit.textContent = '✎';
+    edit.setAttribute('aria-label', d.pos + ' bearbeiten');
+    edit.addEventListener('click', function () {
+      zeigeErgebnis({ pos: d.pos, id: d.id, bp: d.bp, laenge: d.laenge, warn: [] }, '');
+      editIdx = i;   // nach zeigeErgebnis setzen (das setzt editIdx zurück)
+      document.querySelector('#erg h2').textContent = 'Eintrag bearbeiten – ' + d.pos + ' (protokolliert)';
+    });
     var del = document.createElement('button'); del.className = 'del'; del.textContent = '✕';
     del.setAttribute('aria-label', d.pos + ' löschen');
     del.addEventListener('click', function () {
       if (!confirm(d.pos + ' löschen?')) return;
+      if (window.NALP_PROTOKOLL) NALP_PROTOKOLL.log('Scan', 'Passstück ' + d.pos, 'eintrag',
+        'BP ' + d.bp + ' · ' + d.laenge + ' mm', 'gelöscht');
       daten.splice(i, 1);
       try { localStorage.setItem(KEY, JSON.stringify(daten)); } catch (e) {}
       render();
     });
-    k.appendChild(links); k.appendChild(del); host.appendChild(k);
+    btns.appendChild(edit); btns.appendChild(del);
+    k.appendChild(links); k.appendChild(btns); host.appendChild(k);
   });
 }
 render();

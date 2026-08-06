@@ -6,6 +6,7 @@
 <title>NalpSolar · Passstücke erfassen</title>
 <meta name="theme-color" content="#0b1826">
 <script src="assets/js/nalp-gate.js"></script>
+<script src="assets/js/nalp-protokoll.js"></script>
 <style>
   :root{ --bg:#eef1f5; --card:#fff; --line:rgba(10,22,38,.14); --txt:#14202e; --muted:#5b6b7c;
          --or:#ff8a3d; --or2:#e0691b; --red:#d63a3f; --green:#1c8a4a; }
@@ -59,7 +60,10 @@
   .st.ja .b.ja{background:var(--green);border-color:var(--green);color:#fff;}
   .st.nein .b.nein{background:var(--red);border-color:var(--red);color:#fff;}
   .mehr{display:none;margin-top:9px;}
-  .st.ja .mehr{display:block;}
+  .st.ja .mehr, .st.edit .mehr{display:block;}
+  .stift{border:1px solid var(--line);background:#fbfcfd;border-radius:8px;padding:4px 9px;
+    font-size:13px;font-weight:800;cursor:pointer;color:var(--txt);flex:none;}
+  .st.edit .stift{background:var(--or);border-color:var(--or);color:#0b1826;}
   .mehr input{width:100%;font:inherit;font-size:15px;padding:10px 11px;border-radius:10px;
     border:1px solid var(--line);background:#fbfcfd;}
   .mrow{display:flex;gap:8px;margin-top:7px;}
@@ -1347,6 +1351,10 @@ function zaehlen() {
   document.getElementById('fbar').style.width = (n / 65 * 100) + '%';
 }
 
+function protok(id, feld, alt, neu) {
+  if (window.NALP_PROTOKOLL) NALP_PROTOKOLL.log('Vormontage', 'Passstück ' + id, feld, alt, neu);
+}
+
 document.querySelectorAll('.st').forEach(function (st) {
   var id = st.dataset.id, d = daten[id] || {};
   if (d.w) st.classList.add(d.w);
@@ -1354,20 +1362,36 @@ document.querySelectorAll('.st').forEach(function (st) {
   if (d.lng) st.querySelector('.lng').value = d.lng;
   if (d.gps) st.querySelector('.gpsout').textContent = 'Standort: ' + d.gps;
 
+  // ✎ Bearbeiten: öffnet die Detailfelder auch ohne Status (protokolliert wird sowieso)
+  var stift = document.createElement('button');
+  stift.className = 'stift'; stift.textContent = '✎'; stift.title = 'Bearbeiten (protokolliert)';
+  stift.addEventListener('click', function () { st.classList.toggle('edit'); });
+  st.querySelector('.sk').appendChild(stift);
+
   st.querySelectorAll('.b').forEach(function (b) {
     b.addEventListener('click', function () {
       var w = b.dataset.w;
       daten[id] = daten[id] || {};
+      var alt = daten[id].w || '';
       if (st.classList.contains(w)) { st.classList.remove(w); delete daten[id].w; }
       else { st.classList.remove('ja', 'nein'); st.classList.add(w); daten[id].w = w; }
+      protok(id, 'status', alt === 'ja' ? 'gefunden' : alt === 'nein' ? 'nicht da' : '',
+        (daten[id].w || '') === 'ja' ? 'gefunden' : (daten[id].w || '') === 'nein' ? 'nicht da' : '');
       sichern();
     });
   });
+  var ortAlt = d.ort || '', lngAlt = d.lng || '';
   st.querySelector('.ort').addEventListener('input', function (e) {
     daten[id] = daten[id] || {}; daten[id].ort = e.target.value; sichern();
   });
+  st.querySelector('.ort').addEventListener('change', function (e) {
+    protok(id, 'fundort', ortAlt, e.target.value); ortAlt = e.target.value;
+  });
   st.querySelector('.lng').addEventListener('input', function (e) {
     daten[id] = daten[id] || {}; daten[id].lng = e.target.value; sichern();
+  });
+  st.querySelector('.lng').addEventListener('change', function (e) {
+    protok(id, 'gemessen_mm', lngAlt, e.target.value); lngAlt = e.target.value;
   });
   st.querySelector('.gps').addEventListener('click', function () {
     var out = st.querySelector('.gpsout');
@@ -1377,7 +1401,9 @@ document.querySelectorAll('.st').forEach(function (st) {
       var s = p.coords.latitude.toFixed(6) + ', ' + p.coords.longitude.toFixed(6)
             + ' (±' + Math.round(p.coords.accuracy) + ' m)';
       out.textContent = 'Standort: ' + s;
-      daten[id] = daten[id] || {}; daten[id].gps = s; sichern();
+      daten[id] = daten[id] || {};
+      protok(id, 'gps', daten[id].gps || '', s);
+      daten[id].gps = s; sichern();
     }, function () { out.textContent = 'Standort konnte nicht ermittelt werden.'; },
       { enableHighAccuracy: true, timeout: 15000 });
   });
