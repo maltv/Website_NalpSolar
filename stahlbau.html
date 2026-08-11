@@ -142,6 +142,53 @@
           font-size:12.5px; line-height:1.55; margin:10px 0 0; }
 .srFuss { font-size:11.5px; color:#63676d; padding:10px 13px; line-height:1.6;
           border-top:1px solid #eceef1; background:#fafbfc; }
+
+/* ══ PZ2025 – Restkonstruktionen ══ */
+.pzSteps{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:6px 14px 12px;margin:0 0 12px;
+         box-shadow:0 4px 12px rgba(10,22,38,.05);}
+.pzSteps ol{margin:8px 0 0;padding-left:0;list-style:none;counter-reset:s;}
+.pzSteps li{position:relative;padding:8px 0 8px 34px;font-size:13px;counter-increment:s;border-top:1px dashed var(--line);}
+.pzSteps li:first-child{border-top:0;}
+.pzSteps li::before{content:counter(s);position:absolute;left:0;top:8px;width:23px;height:23px;border-radius:7px;
+         background:#12304f;color:#fff;font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center;}
+.pzSteps li b{color:var(--txt);}
+.pzBar{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin:0 0 10px;}
+.pzF{border:1px solid var(--line);background:#fff;border-radius:9px;padding:7px 12px;font:800 12.5px Arial;color:#3a4a5a;cursor:pointer;}
+.pzF.on{background:#12304f;color:#fff;border-color:#12304f;}
+.pzCnt{font-size:12px;color:var(--muted);font-weight:700;margin-left:auto;}
+.pzT{background:var(--card);border:1px solid var(--line);border-left:5px solid #8b98a6;border-radius:12px;
+     padding:11px 13px;margin-bottom:9px;box-shadow:0 4px 12px rgba(10,22,38,.05);}
+.pzT.stop{border-left-color:var(--red);} .pzT.warn2{border-left-color:#e8a012;} .pzT.go{border-left-color:var(--green);}
+.pzT.done{opacity:.5;}
+.pzH{display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+.pzId{font-size:19px;font-weight:900;letter-spacing:-.01em;}
+.pzTy{font-size:11px;font-weight:800;background:#eef1f5;color:#3a4a5a;border-radius:6px;padding:2px 7px;}
+.pzBer{font-size:11px;font-weight:800;background:#e2edfe;color:#0b3ea8;border-radius:6px;padding:2px 7px;}
+.pzChk{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:800;color:var(--muted);cursor:pointer;}
+.pzChk input{width:21px;height:21px;accent-color:var(--green);cursor:pointer;}
+.pzTags{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;}
+.pzTag{font-size:10.5px;font-weight:800;border-radius:6px;padding:2px 8px;border:1px solid transparent;white-space:nowrap;}
+.t-stop{background:#fdecec;color:#a51d21;border-color:#f3c1c3;}
+.t-warn{background:#fff4e0;color:#8a5a00;border-color:#f5d99a;}
+.t-ok{background:#e4f6ea;color:#14663a;border-color:#b8e3c6;}
+.t-neut{background:#eef1f5;color:#42525f;border-color:#dfe4ea;}
+.pzRows{margin-top:9px;display:grid;grid-template-columns:auto 1fr;gap:0 10px;font-size:12.5px;}
+.pzRows dt{font-weight:800;color:var(--muted);padding:4px 0;white-space:nowrap;font-size:11.5px;text-transform:uppercase;letter-spacing:.02em;}
+.pzRows dd{margin:0;padding:4px 0;border-bottom:1px dashed var(--line);}
+.pzRows dt{border-bottom:1px dashed var(--line);}
+.pzRows .q{color:var(--muted);font-size:11px;}
+.pzAkt{margin-top:9px;background:#f7f9fb;border-radius:8px;padding:8px 10px;font-size:12.5px;line-height:1.5;}
+.pzAkt b{color:#a51d21;}
+.pzOffen{font-size:12px;color:#8a5a00;background:#fff8ec;border:1px solid #f5d99a;border-radius:8px;padding:7px 10px;margin-top:8px;}
+/* Montage-Checkliste */
+.clBox{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:4px 14px;margin-bottom:10px;
+       box-shadow:0 4px 12px rgba(10,22,38,.05);border-left:5px solid var(--blue);}
+.clBox.rot{border-left-color:var(--red);} .clBox.amber{border-left-color:#e8a012;} .clBox.gruen{border-left-color:var(--green);}
+.clT{font-size:13.5px;font-weight:900;padding:11px 0 3px;display:flex;gap:8px;align-items:center;}
+.clBox label{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px dashed var(--line);font-size:13px;cursor:pointer;}
+.clBox label input{width:21px;height:21px;flex:none;margin-top:1px;accent-color:var(--green);cursor:pointer;}
+.clBox label.done span{text-decoration:line-through;opacity:.55;}
+@media(max-width:560px){ .pzRows{grid-template-columns:1fr;gap:0;} .pzRows dt{border-bottom:0;padding:6px 0 0;} }
 </style>
 </head>
 <body>
@@ -232,39 +279,110 @@
     </div></td></tr></tbody>
   </table>
 
-  <!-- REGELN -->
-  <h2>2 · Wichtig – nicht vergessen</h2>
+  <!-- ══════ PZ2025 – RESTKONSTRUKTIONEN ══════ -->
+  <h2>2 · PZ2025 fertig machen – die 17 Restkonstruktionen</h2>
+  <div class="lead">Bereich 2.2 läuft aus, 4.1 startet frühestens Do 13.08. – das Fenster dazwischen gehört
+    dem Rest aus dem Perimeter 2025. Stand Nalpi 10.08.2026.
+    <b>Was hier nicht belegt ist, steht als „offen" da – nicht raten, im Feld prüfen.</b></div>
 
   <div class="warn">
-    <div class="wt">❗ Diese 2 Verbindungen NICHT vorspannen</div>
-    <div class="wb">Hier kein Drehmoment – stattdessen mit <b>Kontermutter</b> gegen Lösen sichern:</div>
+    <div class="wt">🛑 Vor dem Hochfahren klären – sonst umsonst gefahren</div>
     <ul>
-      <li><b>Modulträger ↔ Auflagerträger</b> (Verschraubung durch die Langlöcher in den Pfetten).</li>
-      <li><b>Bergseitige Stütze ↔ Auflagerträger.</b></li>
+      <li><b>326 + 380:</b> die bestehenden Modulträger sind <b>kaputt</b>. Neue MT laufen über einen neuen
+        5er-Stapel (zusammen mit den 3 Tischen aus 2.2). <b>Stapel-Nummer noch nicht bestätigt</b> –
+        David Bühler (CKW) hat am 06.08. 21:47 zurückgefragt und wartet auf Antwort. Ohne diese Klärung
+        keine MT-Montage auf 326/380 einplanen.</li>
+      <li><b>Gruppe „Falsche Höhen" (8 Tische: 326, 327, 342, 359, 361, 362, 381, 383):</b> für diese Tische
+        gelten die Passstücklängen erst ab <b>Rev. A8/A9</b>. Die im Nalpi als „geliefert" markierten Stücke
+        stammen aus Batch 2/3 (April/Mai, alter SOLL-Stand). <b>Vor dem Einbau Etikett gegen die aktuelle
+        Freigabelänge prüfen</b> (Passstück-Rechner, Kontrolle K2) – im Zweifel nicht verbauen.</li>
+      <li><b>357:</b> S2 und S3 haben fehlerhafte Pfähle. Neue Passstücke <b>2203 mm (S2)</b> und
+        <b>2279 mm (S3)</b> sind in Bestellbatch 013 (27.07.) – erst montieren, wenn sie da sind.</li>
+      <li><b>2157:</b> S2 wird auf der Baustelle um −446 mm auf <b>1177 mm</b> gekürzt, S3 um −226 mm auf
+        <b>1551 mm</b> (F. Borner, 22.07.). Kein Ersatzteil nötig, aber vor dem Stellen kürzen.</li>
     </ul>
   </div>
 
-  <div class="warn amber">
-    <div class="wt">🔩 Modulklemmen an den Pfetten</div>
-    <div class="wb">Gewindefurchende Schraube <b>SFS nonut TDBL-T 8.6×16</b>. Zuerst mit Schlagschrauber ansetzen (90° zur Pfette),
-      dann <b>zwingend mit dem Drehmomentschlüssel</b> auf <span class="big40">40 Nm</span> fertig anziehen.
-      <b>Nie</b> mit dem Schlagschrauber endanziehen – sonst reisst das Gewinde aus. Reisst es bei 40 Nm trotzdem → Wert in 5-Nm-Schritten reduzieren.</div>
+  <div class="pzSteps">
+    <div class="clT">📋 Arbeitsanweisung – Reihenfolge je Tisch</div>
+    <ol>
+      <li><b>Passstück identifizieren:</b> Etikett <i>Tisch_Sx</i> lesen und gegen die Freigabelänge prüfen.
+        Stimmt es nicht → <b>nicht einbauen</b>, Mike/Victor melden (Passstück-Rechner → Kontrolle K2/K3).</li>
+      <li><b>Pfahlkopf prüfen:</b> Kopf montiert? Wenn nein → <b>Gewinde messen</b> (Lehre SCALA 464):
+        5 mm oder 6.35 mm Steigung. Nie nach Tischtyp raten – am 03.08. wurden im selben Tisch am selben
+        Bohrtag beide Steigungen gefunden. Ergebnis im Reiter <a href="pfahlkopf.html">Pfahlkopf-Inventur</a> erfassen.</li>
+      <li><b>Primärkonstruktion stellen</b>, Schrauben nach Tabelle 1 (8.8 innen) bzw. Tabelle 2 (HV 10.9
+        Fuss-/Kopfplatte) vorspannen. Kopfplatte max. 15 cm über OK Terrain.</li>
+      <li><b>Modulträger setzen:</b> vorher prüfen, ob der Stapel am Berg ist und welcher MT zu diesem Tisch
+        gehört (Stapel/Pos. unten). Nur an den Ringschrauben heben.</li>
+      <li><b>Montage-Checkliste Abschnitt 3</b> abarbeiten (Kontermuttern, Klemmen 40 Nm, Madenschrauben).</li>
+      <li><b>In Nalpi erfassen</b> – PK montiert / MT montiert. Nicht auf der Website, nicht auf Zetteln.</li>
+    </ol>
   </div>
 
-  <div class="warn green">
-    <div class="wt">📌 PV-Modul in der Klemme fixieren</div>
-    <div class="wb">Pro Modul <b>2× Madenschraube M5×8</b> an derselben Klemme setzen und mit <b>Loctite</b> sichern.
-      Oben: Spaltmass <b>1–2 mm</b> zwischen Modulklemme und PV-Modul einhalten.</div>
+  <div class="pzBar">
+    <button class="pzF on" data-f="alle" onclick="pzFilter('alle')">Alle 17</button>
+    <button class="pzF" data-f="offen" onclick="pzFilter('offen')">Noch nichts gestellt</button>
+    <button class="pzF" data-f="pk" onclick="pzFilter('pk')">PK steht, MT fehlt</button>
+    <button class="pzF" data-f="stop" onclick="pzFilter('stop')">🛑 Blockiert</button>
+    <span class="pzCnt" id="pzCnt"></span>
+  </div>
+  <div id="pzList"></div>
+
+  <div class="src" style="margin-top:14px;border-top:0;padding-top:0">
+    <b>Quellen:</b> Baustatus, Typ, Bereich, Montagedaten = Nalpi-Export <b>10.08.2026</b>
+    (<i>export-tableId-2026-08-10</i>). · Stapel-Nr., Position im Stapel und „Stack geliefert" = letzter
+    Nalpi-Vollexport mit Stapel-Spalte, <b>01.07.2026</b> – seither können sich Stapel verschoben haben,
+    bei CKW gegenprüfen. · Pfahl-/Bohrstatus = Nalpi 08.08.2026 (alle 68 Bohrpunkte dieser 17 Tische sind
+    <b>injiziert</b>). · Passstück-Bestellungen Batch 1–10 = Mauchle-Bestellbatches; Batch 013 =
+    <i>20260727_2224_Stahlbau_Bestellbatch_NR_013</i>. · Vorkommnisse = Mails F. Borner „Problemtische"
+    und „Problemtische Nalps" 22.07.2026, Mailwechsel V. Malt ↔ D. Bühler (CKW) 06.08.2026,
+    Dossier Falsche_Höhen_PZ2025 (Baustopp 23.06., ILF Rev. A8 02.07. / A9 10.07.). ·
+    Gewinde-Erfassung = Firebase <i>erfassung/gewinde</i>, Abfrage 11.08.2026: <b>für diese 17 Tische
+    liegt keine einzige Messung vor</b>.
   </div>
 
-  <div class="warn blue">
-    <div class="wt">🏗️ Modulträger heben / handhaben</div>
-    <div class="wb">Nur die <b>definierten Aufhängepunkte</b> (Ringschrauben) und Auflagerpunkte benutzen – sonst irreversible Verformung / Tragsicherheit gefährdet.
-      Ringschrauben nach der Montage auf der Primärkonstruktion wieder demontieren. Gewicht 10er-Tisch ≈ <b>955 kg</b>.</div>
+  <!-- MONTAGE-CHECKLISTE (ersetzt „Wichtig – nicht vergessen") -->
+  <h2>3 · Montage-Checkliste – je Tisch abhaken</h2>
+  <div class="lead">Gleiche Regeln wie bisher, nur zum Abhaken. Häkchen bleiben auf dem Gerät gespeichert
+    (<a href="#" onclick="clReset();return false;">zurücksetzen</a>).</div>
+
+  <div class="clBox rot">
+    <div class="clT">❗ Diese 2 Verbindungen NICHT vorspannen – Kontermutter statt Drehmoment</div>
+    <label><input type="checkbox" data-cl="k1"><span><b>Modulträger ↔ Auflagerträger</b> (durch die Langlöcher
+      in den Pfetten) mit Kontermutter gesichert.</span></label>
+    <label><input type="checkbox" data-cl="k2"><span><b>Bergseitige Stütze ↔ Auflagerträger</b> mit
+      Kontermutter gesichert.</span></label>
+  </div>
+
+  <div class="clBox amber">
+    <div class="clT">🔩 Modulklemmen an den Pfetten</div>
+    <label><input type="checkbox" data-cl="k3"><span>Schraube <b>SFS nonut TDBL-T 8.6×16</b> mit
+      Schlagschrauber angesetzt (90° zur Pfette).</span></label>
+    <label><input type="checkbox" data-cl="k4"><span>Mit dem <b>Drehmomentschlüssel</b> auf
+      <span class="big40">40 Nm</span> fertig angezogen – <b>nie</b> mit dem Schlagschrauber endanziehen
+      (Gewinde reisst aus). Reisst es bei 40 Nm → in 5-Nm-Schritten reduzieren.</span></label>
+  </div>
+
+  <div class="clBox gruen">
+    <div class="clT">📌 PV-Modul in der Klemme fixieren</div>
+    <label><input type="checkbox" data-cl="k5"><span>Pro Modul <b>2× Madenschraube M5×8</b> an derselben
+      Klemme gesetzt und mit <b>Loctite</b> gesichert.</span></label>
+    <label><input type="checkbox" data-cl="k6"><span>Oben Spaltmass <b>1–2 mm</b> zwischen Modulklemme und
+      PV-Modul eingehalten.</span></label>
+  </div>
+
+  <div class="clBox">
+    <div class="clT">🏗️ Modulträger heben / handhaben</div>
+    <label><input type="checkbox" data-cl="k7"><span>Nur an den <b>definierten Aufhängepunkten</b>
+      (Ringschrauben) und Auflagerpunkten gehoben – sonst irreversible Verformung.
+      Gewicht 10er-Tisch ≈ <b>955 kg</b>.</span></label>
+    <label><input type="checkbox" data-cl="k8"><span>Ringschrauben nach der Montage auf der
+      Primärkonstruktion wieder <b>demontiert</b>.</span></label>
   </div>
 
   <!-- PLÄNE -->
-  <h2>3 · Pläne – wo sitzt welche Schraube (nach Typ &amp; Baujahr)</h2>
+  <h2>4 · Pläne – wo sitzt welche Schraube (nach Typ &amp; Baujahr)</h2>
   <div class="plans" id="plans"></div>
 
   <div class="src" id="src"></div>
@@ -581,6 +699,201 @@ function srBild(){
     setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
   }, 'image/jpeg', 0.92);
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   PZ2025 – 17 Restkonstruktionen
+   Daten: Nalpi-Export 10.08.2026 (Baustatus/Typ/Bereich/PK-Datum),
+          Nalpi-Vollexport 01.07.2026 (Stapel/Pos/Stack geliefert),
+          Mauchle-Bestellbatches 1-10 + 013, Mails Borner 22.07. /
+          Buehler 06.08., Dossier Falsche_Hoehen_PZ2025.
+   Nichts hier ist geschaetzt - unbelegte Felder stehen als "offen".
+   ═══════════════════════════════════════════════════════════════ */
+var G1 = 'Gruppe «Falsche Höhen» – Passstücklänge erst ab Rev. A8/A9 gültig. Etikett gegen aktuelle Freigabelänge prüfen, sonst nicht verbauen.';
+var PZ = [
+ {id:326, typ:'E_2025', ber:'26_1.2', pk:null, bstat:'Passstück geliefert', kl:'stop',
+  psb:'Batch 2 · 24.04.2026', st:'33 / Pos. 8', stg:'11.05.2026',
+  tags:[['Modulträger kaputt','t-stop'],['Stapel offen','t-stop'],['Falsche Höhen','t-warn']],
+  akt:'<b>Modulträger ist kaputt.</b> Neuer MT läuft über den neuen 5er-Stapel (mit 380 + den 3 Tischen aus 2.2). Stapel-Nummer noch nicht bestätigt – Rückfrage D. Bühler (CKW) vom 06.08. 21:47 offen. ' + G1},
+
+ {id:327, typ:'E_2025', ber:'26_1.2', pk:'29.07.2026', bstat:'Primärkonstruktion montiert', kl:'warn2',
+  psb:'Batch 2 · 24.04.2026', st:'34 / Pos. 4', stg:'12.05.2026',
+  tags:[['PK steht','t-ok'],['Falsche Höhen','t-warn']],
+  akt:'PK steht seit 29.07., es fehlt nur der Modulträger. ' + G1},
+
+ {id:342, typ:'E_2025', ber:'26_1.3', pk:null, bstat:'Passstück geliefert', kl:'warn2',
+  psb:'Batch 3 · 01.05.2026 (S3 «Doppel» ursprünglich Batch 1)', st:'27 / Pos. 10', stg:'02.01.2026',
+  tags:[['Falsche Höhen','t-warn']],
+  akt:G1},
+
+ {id:357, typ:'E_2025', ber:'26_1.2', pk:'06.07.2026', bstat:'Primärkonstruktion montiert', kl:'stop',
+  psb:'Batch 2 · 24.04.2026 · <b>S2/S3 neu in Batch 013 (27.07.)</b>', st:'34 / Pos. 6', stg:'12.05.2026',
+  tags:[['PK steht','t-ok'],['Fehlerhafte Pfähle','t-stop'],['wartet auf Passstück','t-stop']],
+  akt:'<b>Fehlerhafte Pfähle S2 und S3</b> (Borner 22.07.). Neue Passstücke <b>S2 = 2203 mm</b>, <b>S3 = 2279 mm</b> in Bestellbatch 013 vom 27.07. Erst weiterbauen, wenn die Stücke auf der Baustelle sind.'},
+
+ {id:358, typ:'E_2025', ber:'26_1.3', pk:'09.07.2026', bstat:'Primärkonstruktion montiert', kl:'warn2',
+  psb:'Batch 3 · 01.05.2026', st:'26 / Pos. 9', stg:'01.01.2026',
+  tags:[['PK steht','t-ok'],['NO024 klären','t-warn']],
+  akt:'PK steht, MT fehlt. <b>Vor dem Weiterbau mit der BL klären:</b> NO024 offeriert den Rückbau von 358/379/382, ILF lässt dieselben Tische «vorerst bestehen» – Widerspruch ist nicht aufgelöst.'},
+
+ {id:359, typ:'E_2025', ber:'26_1.3', pk:null, bstat:'Passstück geliefert', kl:'warn2',
+  psb:'Batch 3 · 01.05.2026', st:'26 / Pos. 10', stg:'01.01.2026',
+  tags:[['Falsche Höhen','t-warn'],['im Tal vormontiert','t-ok']],
+  akt:'Vormontage im Tal bestätigt (Feldinfo 13.07.). ' + G1},
+
+ {id:361, typ:'E_2025', ber:'26_1.3', pk:null, bstat:'Passstück geliefert', kl:'warn2',
+  psb:'Batch 3 · 01.05.2026', st:'27 / Pos. 9', stg:'02.01.2026',
+  tags:[['Falsche Höhen','t-warn'],['im Tal vormontiert','t-ok']],
+  akt:'Vormontage im Tal bestätigt (Feldinfo 13.07.). ' + G1},
+
+ {id:362, typ:'E_2025', ber:'26_1.3', pk:null, bstat:'Passstück BESTELLT (nicht geliefert)', kl:'stop',
+  psb:'Batch 3 · 01.05.2026', st:'27 / Pos. 8', stg:'02.01.2026',
+  tags:[['Passstück fehlt','t-stop'],['Falsche Höhen','t-warn'],['im Tal vormontiert','t-ok']],
+  akt:'<b>Einziger der 17 Tische, der im Nalpi noch auf «Passstück bestellt» steht</b> – Lieferstand bei Mauchle prüfen, bevor eine Kolonne hochfährt. Vormontage im Tal bestätigt (13.07.). ' + G1},
+
+ {id:379, typ:'B_2025', ber:'26_1.3', pk:'09.07.2026', bstat:'Primärkonstruktion montiert', kl:'warn2',
+  psb:'Batch 3 · 01.05.2026', st:'26 / Pos. 7', stg:'01.01.2026',
+  tags:[['PK steht','t-ok'],['NO024 klären','t-warn']],
+  akt:'PK steht, MT fehlt. Gleicher NO024-Widerspruch wie 358/382 – vor dem Weiterbau mit der BL klären.'},
+
+ {id:380, typ:'E_2025', ber:'26_1.3', pk:'20.10.2025', bstat:'Primärkonstruktion montiert', kl:'stop',
+  psb:'keine Position in Batch 1–10 (Konstruktion 2025 gestellt)', st:'24 / Pos. 6', stg:'22.10.2025',
+  tags:[['Modulträger kaputt','t-stop'],['Stapel offen','t-stop'],['seit 2025 gestellt','t-neut']],
+  akt:'<b>Modulträger ist kaputt.</b> Am 01.07. war der Tisch noch als «Modulträger montiert» erfasst, heute steht er wieder auf «Primärkonstruktion montiert». Neuer MT über den neuen 5er-Stapel – Stapel-Nummer noch nicht bestätigt (Rückfrage CKW vom 06.08. offen).'},
+
+ {id:381, typ:'E_2025', ber:'26_1.3', pk:null, bstat:'Passstück geliefert', kl:'warn2',
+  psb:'Batch 3 · 01.05.2026', st:'26 / Pos. 8', stg:'01.01.2026',
+  tags:[['Falsche Höhen','t-warn']],
+  akt:G1},
+
+ {id:382, typ:'E_2025', ber:'26_1.3', pk:'24.06.2026', bstat:'Primärkonstruktion montiert', kl:'warn2',
+  psb:'Batch 3 · 01.05.2026', st:'27 / Pos. 7', stg:'02.01.2026',
+  tags:[['PK steht','t-ok'],['NO024 klären','t-warn']],
+  akt:'PK steht seit 24.06., MT fehlt. Gleicher NO024-Widerspruch wie 358/379 – vor dem Weiterbau mit der BL klären.'},
+
+ {id:383, typ:'E_2025', ber:'26_1.3', pk:null, bstat:'Passstück geliefert', kl:'warn2',
+  psb:'Batch 3 · 01.05.2026', st:'27 / Pos. 6', stg:'02.01.2026',
+  tags:[['Falsche Höhen','t-warn'],['im Tal vormontiert','t-ok']],
+  akt:'Vormontage im Tal bestätigt (Feldinfo 13.07.). ' + G1},
+
+ {id:422, typ:'B_2025', ber:'26_1.3', pk:'09.07.2026', bstat:'Primärkonstruktion montiert', kl:'go',
+  psb:'Batch 3 · 01.05.2026', st:'37 / Pos. 6', stg:'am 01.07. nicht erfasst',
+  tags:[['PK steht','t-ok'],['Stapel 37 prüfen','t-warn']],
+  akt:'Kein bekanntes Vorkommnis – es fehlt nur der Modulträger. <b>Stapel 37 war am 01.07. weder als bestellt noch als geliefert erfasst</b> – bei CKW nachfragen, ob er inzwischen oben ist.'},
+
+ {id:1620, typ:'B_2025', ber:'26_1.3', pk:'27.07.2026', bstat:'Primärkonstruktion montiert', kl:'go',
+  psb:'Batch 3 · 01.05.2026', st:'37 / Pos. 7', stg:'am 01.07. nicht erfasst',
+  tags:[['PK steht','t-ok'],['Stapel 37 prüfen','t-warn']],
+  akt:'Kein bekanntes Vorkommnis – PK seit 27.07. gestellt, es fehlt nur der Modulträger aus Stapel 37 (Lieferstand prüfen).'},
+
+ {id:1623, typ:'E_2025', ber:'26_1.3', pk:'27.07.2026', bstat:'Primärkonstruktion montiert', kl:'go',
+  psb:'Batch 3 · 01.05.2026', st:'37 / Pos. 8', stg:'am 01.07. nicht erfasst',
+  tags:[['PK steht','t-ok'],['im Tal vormontiert','t-ok'],['Stapel 37 prüfen','t-warn']],
+  akt:'Kein bekanntes Vorkommnis. Vormontage im Tal bestätigt (13.07.). Modulträger aus Stapel 37 – Lieferstand prüfen.'},
+
+ {id:2157, typ:'B_2025', ber:'26_1.2', pk:'09.07.2026', bstat:'Primärkonstruktion montiert', kl:'warn2',
+  psb:'Batch 2 · 24.04.2026', st:'33 / Pos. 2', stg:'11.05.2026',
+  tags:[['PK steht','t-ok'],['auf Baustelle kürzen','t-warn']],
+  akt:'<b>S2 um −446 mm auf 1177 mm kürzen, S3 um −226 mm auf 1551 mm kürzen</b> (F. Borner 22.07.: «eifach lösbar und eh euses Verschulde»). Kein Ersatzteil nötig – kürzen, dann Modulträger setzen.'}
+];
+
+var PZ_LS='nalp_pz2025_done_v1';
+var PZ_DB='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app';
+var pzDone={}; try{ pzDone=JSON.parse(localStorage.getItem(PZ_LS)||'{}'); }catch(e){}
+var pzAktiv='alle';
+
+function pzSaveLocal(){ try{ localStorage.setItem(PZ_LS, JSON.stringify(pzDone)); }catch(e){} }
+
+function pzToggle(id, an){
+  if(an) pzDone[id]=true; else delete pzDone[id];
+  pzSaveLocal(); pzRender();
+  var u=PZ_DB+'/erfassung/pz2025_status/'+id+'.json';
+  try{
+    fetch(u,{method: an?'PUT':'DELETE', body: an?'true':undefined}).catch(function(){});
+  }catch(e){}
+}
+
+function pzFilter(f){
+  pzAktiv=f;
+  var bs=document.querySelectorAll('.pzF');
+  for(var i=0;i<bs.length;i++) bs[i].classList.toggle('on', bs[i].getAttribute('data-f')===f);
+  pzRender();
+}
+
+function pzRender(){
+  var liste=PZ.filter(function(t){
+    if(pzAktiv==='offen') return t.pk===null;
+    if(pzAktiv==='pk')    return t.pk!==null;
+    if(pzAktiv==='stop')  return t.kl==='stop';
+    return true;
+  });
+  var html='';
+  liste.forEach(function(t){
+    var done=!!pzDone[t.id];
+    var kopf = t.pk===null
+      ? '<span class="q">noch nichts gestellt</span>'
+      : 'PK montiert am <b>'+t.pk+'</b>, Modulträger fehlt';
+    var tags=t.tags.map(function(x){ return '<span class="pzTag '+x[1]+'">'+x[0]+'</span>'; }).join('');
+    html+='<div class="pzT '+t.kl+(done?' done':'')+'">'
+      + '<div class="pzH"><span class="pzId">'+t.id+'</span>'
+      + '<span class="pzTy">'+t.typ+'</span><span class="pzBer">'+t.ber+'</span>'
+      + '<label class="pzChk">erledigt<input type="checkbox" '+(done?'checked':'')
+      + ' onchange="pzToggle('+t.id+',this.checked)"></label></div>'
+      + '<div class="pzTags">'+tags+'</div>'
+      + '<dl class="pzRows">'
+      +   '<dt>Stand</dt><dd>'+kopf+' <span class="q">· Nalpi: '+t.bstat+'</span></dd>'
+      +   '<dt>Passstücke</dt><dd>'+t.psb+'</dd>'
+      +   '<dt>Modulträger</dt><dd>Stapel <b>'+t.st+'</b> · am Berg: '+t.stg+' <span class="q">(Stand 01.07.)</span></dd>'
+      +   '<dt>Pfahlköpfe</dt><dd>'+(t.pk!==null
+              ? 'montiert – die Primärkonstruktion steht darauf'
+              : '<b>im Feld prüfen</b>')+'</dd>'
+      +   '<dt>Gewinde</dt><dd>'+(t.pk!==null
+              ? '<span class="q">nicht mehr relevant (Kopf sitzt)</span>'
+              : '<b>nicht gemessen</b> – je Bohrpunkt 5 oder 6.35 mm mit Lehre bestimmen')+'</dd>'
+      +   '<dt>Pfähle</dt><dd>alle 4 Bohrpunkte injiziert <span class="q">(08.08.2026)</span></dd>'
+      + '</dl>'
+      + '<div class="pzAkt">'+t.akt+'</div>'
+      + '</div>';
+  });
+  document.getElementById('pzList').innerHTML=html;
+  var offen=PZ.filter(function(t){ return !pzDone[t.id]; }).length;
+  document.getElementById('pzCnt').textContent=liste.length+' angezeigt · '+offen+' von '+PZ.length+' offen';
+}
+
+/* Firebase ist beim Laden fuehrend (geraeteuebergreifend), localStorage = Offline-Cache */
+(function(){
+  pzRender();
+  try{
+    fetch(PZ_DB+'/erfassung/pz2025_status.json').then(function(r){ return r.json(); }).then(function(d){
+      if(d && typeof d==='object'){ pzDone={}; for(var k in d){ if(d[k]) pzDone[k]=true; } pzSaveLocal(); pzRender(); }
+    }).catch(function(){});
+  }catch(e){}
+})();
+
+/* Montage-Checkliste – nur lokal (Handgriffe je Tisch, kein Team-Status) */
+var CL_LS='nalp_stahlbau_cl_v1';
+function clInit(){
+  var st={}; try{ st=JSON.parse(localStorage.getItem(CL_LS)||'{}'); }catch(e){}
+  var bs=document.querySelectorAll('[data-cl]');
+  for(var i=0;i<bs.length;i++){
+    (function(b){
+      var k=b.getAttribute('data-cl');
+      b.checked=!!st[k];
+      b.parentNode.classList.toggle('done', b.checked);
+      b.addEventListener('change', function(){
+        var s={}; try{ s=JSON.parse(localStorage.getItem(CL_LS)||'{}'); }catch(e){}
+        if(b.checked) s[k]=1; else delete s[k];
+        try{ localStorage.setItem(CL_LS, JSON.stringify(s)); }catch(e){}
+        b.parentNode.classList.toggle('done', b.checked);
+      });
+    })(bs[i]);
+  }
+}
+function clReset(){
+  try{ localStorage.removeItem(CL_LS); }catch(e){}
+  var bs=document.querySelectorAll('[data-cl]');
+  for(var i=0;i<bs.length;i++){ bs[i].checked=false; bs[i].parentNode.classList.remove('done'); }
+}
+clInit();
 </script>
 </body>
 </html>
