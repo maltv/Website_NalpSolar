@@ -92,7 +92,8 @@
   .chkBtns button{ border:2px solid #c9ccd2; background:#fff; border-radius:8px; cursor:pointer;
         padding:8px 11px; font-size:13.5px; font-weight:800; color:var(--ink); }
   .chkBtns button.on{ background:var(--gruen); border-color:var(--gruen); color:#fff; }
-  .chkBtns button.voll{ border-color:var(--gruen); color:#12703f; }
+  .chkBtns button.voll{ border-color:var(--gruen); color:#12703f; opacity:.5; }  /* erledigt tritt zurueck */
+  .chkBtns button.on{ opacity:1; }
   .chkListe{ max-height:52vh; overflow-y:auto; overscroll-behavior:contain;
         border:1px solid var(--line); border-radius:6px; }
   .cT{ display:flex; align-items:stretch; gap:5px; padding:5px 6px; border-bottom:1px solid var(--line); }
@@ -351,6 +352,7 @@
     <div class="box" style="border-left-color:var(--orange)">
       <h2 data-i18n="k_titel">🗺 Stand je Batch</h2>
       <div class="sub" data-i18n="k_sub">Je Bohrpunkt: Passstück erfasst? Je Tischfläche: vormontiert oder schon auf dem Berg?</div>
+      <div class="chkBtns" id="kBatches"></div>
       <div class="kLeg">
         <span><i class="dot b"></i><span data-i18n="leg_ps">Passstück erfasst</span></span>
         <span><i class="dot o"></i><span data-i18n="leg_ps_offen">Passstück fehlt</span></span>
@@ -1432,6 +1434,7 @@ function chkBatchWaehlen(b){
   chkBatch=b;
   try{ localStorage.setItem(LS_CHK,String(b)); }catch(e){}
   renderChk();
+  if(typeof kartenMalen==='function') kartenMalen();   // Karte folgt der Wahl
 }
 function renderChk(){
   var wrap=$('chkListe'); if(!wrap) return;
@@ -1581,23 +1584,41 @@ function kartenMalen(){
   if(!wrap || typeof L==='undefined') return;
   if($('s4').style.display==='none') return;
   kGrp=kartenGruppen();
-  // nur die aktuellen Batches zeigen (ab 8) - aeltere sind durch.
-  // Zuoberst der Batch, der gerade abgeladen wird, dann absteigend.
-  var akt=aktuellerBatch();
-  var lbls=Object.keys(kGrp)
-    .filter(function(l){ return parseInt(l,10)>=8; })
-    .sort(function(a,b){
-      var pa=parseInt(a,10), pb=parseInt(b,10);
-      if(pa===akt) return -1;
-      if(pb===akt) return 1;
-      return pb-pa;
-    });
+  /* EINE Karte - die des gewaehlten Batches. Alle Batches gleichzeitig zu
+     zeigen war unbrauchbar: sobald die naechsten Bestellungen erfasst sind,
+     haengen vier Karten an der Seite, die auf der Baustelle keiner braucht,
+     und das Handy laedt sie alle. Der Batch wird oben gewaehlt - dieselbe
+     Wahl wie in der Checkliste. */
+  var lbl=kLabel(chkBatch || aktuellerBatch());
+  kBatchLeiste();
   kDaten(function(){
     if(!kPfaehle) return;
-    lbls.forEach(function(lbl){ if(!kMaps[lbl]) kMapBauen(wrap,lbl); });
-    Object.keys(kMaps).forEach(function(l){ kMaps[l].map.invalidateSize(); });
+    if(!kMaps[lbl]) kMapBauen(wrap,lbl);
+    Object.keys(kMaps).forEach(function(l){
+      var an=(l===lbl);
+      if(kMaps[l].box) kMaps[l].box.style.display = an?'':'none';
+      if(an) kMaps[l].map.invalidateSize();
+    });
     kStatusMalen();
   });
+}
+function kLabel(b){ return (b===9||b===10) ? '9+10' : String(b); }
+/* Batchwahl ueber der Karte - haelt Karte und Checkliste zusammen */
+function kBatchLeiste(){
+  var el=$('kBatches'); if(!el) return;
+  var map=batchPositionen(), da=psErfasst();
+  var bs=Object.keys(map).map(Number).sort(function(a,b){ return a-b; });
+  if(!chkBatch || bs.indexOf(chkBatch)<0) chkBatch=aktuellerBatch();
+  el.innerHTML=bs.map(function(b){
+    var keys=Object.keys(map[b]), voll=keys.every(function(k){ return da[k]; });
+    return '<button type="button" class="'+(b===chkBatch?'on':(voll?'voll':''))+'" '
+      +'onclick="kBatchWaehlen('+b+')">'+b+(voll?' ✔':'')+'</button>';
+  }).join('');
+}
+function kBatchWaehlen(b){
+  chkBatch=b;
+  try{ localStorage.setItem(LS_CHK,String(b)); }catch(e){}
+  renderChk(); kartenMalen();
 }
 function kMapBauen(wrap,lbl){
   var keys=Object.keys(kGrp[lbl]);
@@ -1662,7 +1683,7 @@ function kMapBauen(wrap,lbl){
     m.getContainer().classList.toggle('kLblAus', m.getZoom()<1.4);
   }
   m.on('zoomend', lblZeigen); lblZeigen();
-  kMaps[lbl]={map:m, flaechen:flaechen, punkte:punkte, nGesamt:keys.length};
+  kMaps[lbl]={map:m, box:box, flaechen:flaechen, punkte:punkte, nGesamt:keys.length};
 }
 function kStatusMalen(){
   var st=akStatus(), da=psErfasst();
