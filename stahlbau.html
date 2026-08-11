@@ -169,6 +169,33 @@
 .pzTab b.rot{color:#a51d21;} .pzTab b.gru{color:#14663a;}
 .pzTab input[type=checkbox]{width:20px;height:20px;accent-color:var(--green);cursor:pointer;}
 .pzHint{font-size:11.5px;color:var(--muted);margin:7px 2px 0;}
+.pzTab .mg{display:block;font-size:11px;font-weight:800;color:#a51d21;margin-top:2px;}
+.pzTab .mg.ok{color:#14663a;font-weight:700;}
+
+/* ══ Pendente Mängel ══ */
+.mgKopf{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px;}
+.mgZahl{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:8px 13px;
+        box-shadow:0 4px 12px rgba(10,22,38,.05);min-width:86px;}
+.mgZahl b{display:block;font-size:21px;font-weight:900;line-height:1.1;}
+.mgZahl span{font-size:10.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;}
+.mgZahl.krit b{color:var(--red);}
+.mgStand{font-size:11.5px;color:var(--muted);margin-left:auto;text-align:right;line-height:1.4;}
+.mgGrp{background:var(--card);border:1px solid var(--line);border-radius:11px;margin-bottom:8px;
+       box-shadow:0 4px 12px rgba(10,22,38,.05);overflow:hidden;}
+.mgGrp>summary{cursor:pointer;padding:10px 13px;font-size:13px;font-weight:800;display:flex;
+       align-items:center;gap:9px;list-style:none;}
+.mgGrp>summary::-webkit-details-marker{display:none;}
+.mgGrp>summary::before{content:'▸';font-size:11px;color:var(--muted);transition:transform .15s;}
+.mgGrp[open]>summary::before{transform:rotate(90deg);}
+.mgGrp .gt{font-size:16px;font-weight:900;}
+.mgGrp .gz{font-size:11px;font-weight:800;color:var(--muted);margin-left:auto;}
+.mgZ{border-top:1px solid var(--line);padding:9px 13px;font-size:12.5px;display:flex;gap:9px;align-items:flex-start;}
+.mgZ .sv{flex:none;font-size:9.5px;font-weight:900;border-radius:5px;padding:2px 6px;margin-top:1px;white-space:nowrap;}
+.sv.KRITISCH{background:#fdecec;color:#a51d21;} .sv.MITTEL{background:#fff4e0;color:#8a5a00;}
+.sv.GERING{background:#eef1f5;color:#42525f;}
+.mgZ .mt{font-weight:700;} .mgZ .mm{color:var(--muted);font-size:11px;margin-top:1px;}
+.mgLeer{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:16px;text-align:center;
+        font-size:13px;color:var(--muted);}
 </style>
 </head>
 <body>
@@ -309,6 +336,7 @@
         <th>Passstücke · Batch</th>
         <th>Modulträger · Stapel</th>
         <th>Pfahlkopf / Gewinde</th>
+        <th>Mängel</th>
         <th>ok</th>
       </tr></thead>
       <tbody id="pzBody"></tbody>
@@ -332,8 +360,22 @@
     liegt keine einzige Messung vor</b>.
   </div>
 
+  <!-- ══════ PENDENTE MÄNGEL ══════ -->
+  <h2>3 · Pendente Mängel – aus dem Nalpi-Mängelmanagement</h2>
+  <div class="lead">Alle offenen Mängel an Tischen und Bohrpunkten, live aus dem Mängeltool.
+    Ohne Empfang wird der zuletzt mitgelieferte Stand angezeigt.</div>
+
+  <div class="mgKopf" id="mgKopf"></div>
+  <div class="pzBar">
+    <button class="pzF on" data-m="pz" onclick="mgFilter('pz')">Nur PZ2025 (17)</button>
+    <button class="pzF" data-m="krit" onclick="mgFilter('krit')">🛑 Kritisch</button>
+    <button class="pzF" data-m="ohnekopf" onclick="mgFilter('ohnekopf')">Ohne «Kopf nicht montiert»</button>
+    <button class="pzF" data-m="alle" onclick="mgFilter('alle')">Alle</button>
+  </div>
+  <div id="mgListe"><div class="mgLeer">Mängel werden geladen …</div></div>
+
   <!-- PLÄNE -->
-  <h2>3 · Pläne – wo sitzt welche Schraube (nach Typ &amp; Baujahr)</h2>
+  <h2>4 · Pläne – wo sitzt welche Schraube (nach Typ &amp; Baujahr)</h2>
   <div class="plans" id="plans"></div>
 
   <div class="src" id="src"></div>
@@ -795,6 +837,7 @@ function pzRender(){
       + '<td>'+t.ps+'</td>'
       + '<td>'+t.st+'</td>'
       + '<td>'+kopf+'</td>'
+      + '<td>'+mgFuerTisch(t.id)+'</td>'
       + '<td class="mid"><input type="checkbox" '+(done?'checked':'')
       +   ' onchange="pzToggle('+t.id+',this.checked)"></td>'
       + '</tr>';
@@ -812,6 +855,129 @@ function pzRender(){
       if(d && typeof d==='object'){ pzDone={}; for(var k in d){ if(d[k]) pzDone[k]=true; } pzSaveLocal(); pzRender(); }
     }).catch(function(){});
   }catch(e){}
+})();
+
+/* ═══════════════════════════════════════════════════════════════
+   PENDENTE MÄNGEL – Nalpi-Mängelmanagement
+   Quelle ist NICHT SharePoint, sondern das Buildtrack-Backend
+   (Postgres) auf api.buildtrack.ch – derselbe Delta-Feed wie in
+   der Nalpi-Extension. Endpunkt ist ohne Token lesbar und
+   erlaubt CORS → live. Ohne Empfang: uploads/maengel.json.
+   ═══════════════════════════════════════════════════════════════ */
+var MG_API='https://api.buildtrack.ch/api/v1/maengel/changes?since=0&limit=2000';
+var MG=[], mgQuelle='', mgAktiv='pz';
+var PZ_IDS={}; PZ.forEach(function(t){ PZ_IDS[t.id]=1; });
+
+/* Mängel je Tisch für die Tabelle oben.
+   Achtung: pzRender() laeuft schon vor dem ersten Maengel-Abruf – dann ist MG
+   noch undefined (var-Hoisting), darum die defensive Pruefung. */
+function mgFuerTisch(id){
+  if(!MG || !MG.length) return '<span class="q">–</span>';
+  var ms=MG.filter(function(m){ return m.tisch===String(id); });
+  if(!ms.length) return '<span class="mg ok">keine</span>';
+  var koepfe=ms.filter(function(m){ return m.kind==='head_not_mounted'; });
+  var rest=ms.filter(function(m){ return m.kind!=='head_not_mounted'; });
+  var out=rest.map(function(m){
+    return '<span class="mg">'+(m.schwere==='KRITISCH'?'🛑 ':'')+esc(m.titel)+'</span>';
+  });
+  if(koepfe.length) out.push('<span class="mg">'+koepfe.length+'× Kopf nicht montiert ('
+    + koepfe.map(function(m){ return (m.key||'').split('_')[1]||'?'; }).join(', ')+')</span>');
+  return out.join('');
+}
+function esc(s){ return String(s==null?'':s).replace(/[&<>]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; }); }
+
+function mgFilter(f){
+  mgAktiv=f;
+  var bs=document.querySelectorAll('[data-m]');
+  for(var i=0;i<bs.length;i++) bs[i].classList.toggle('on', bs[i].getAttribute('data-m')===f);
+  mgRender();
+}
+
+function mgRender(){
+  var kopf=document.getElementById('mgKopf'), liste=document.getElementById('mgListe');
+  var krit=MG.filter(function(m){ return m.schwere==='KRITISCH'; }).length;
+  var pzM =MG.filter(function(m){ return PZ_IDS[m.tisch]; }).length;
+  var tische={}; MG.forEach(function(m){ tische[m.tisch]=1; });
+  kopf.innerHTML='<div class="mgZahl"><b>'+MG.length+'</b><span>pendent</span></div>'
+    + '<div class="mgZahl krit"><b>'+krit+'</b><span>kritisch</span></div>'
+    + '<div class="mgZahl"><b>'+Object.keys(tische).length+'</b><span>Tische</span></div>'
+    + '<div class="mgZahl"><b>'+pzM+'</b><span>an den 17</span></div>'
+    + '<div class="mgStand">'+mgQuelle+'</div>';
+
+  var sel=MG.filter(function(m){
+    if(mgAktiv==='pz')       return PZ_IDS[m.tisch];
+    if(mgAktiv==='krit')     return m.schwere==='KRITISCH';
+    if(mgAktiv==='ohnekopf') return m.kind!=='head_not_mounted';
+    return true;
+  });
+  if(!sel.length){ liste.innerHTML='<div class="mgLeer">Keine Mängel in dieser Auswahl.</div>'; return; }
+
+  /* nach Tisch gruppieren, kritische zuerst */
+  var grp={};
+  sel.forEach(function(m){ (grp[m.tisch]=grp[m.tisch]||[]).push(m); });
+  var keys=Object.keys(grp).sort(function(a,b){
+    var ka=grp[a].some(function(m){return m.schwere==='KRITISCH';});
+    var kb=grp[b].some(function(m){return m.schwere==='KRITISCH';});
+    if(ka!==kb) return ka?-1:1;
+    if(grp[b].length!==grp[a].length) return grp[b].length-grp[a].length;
+    return (parseInt(a,10)||0)-(parseInt(b,10)||0);
+  });
+  var h='';
+  keys.forEach(function(t){
+    var ms=grp[t], offen=ms.length;
+    var kr=ms.filter(function(m){return m.schwere==='KRITISCH';}).length;
+    h+='<details class="mgGrp"'+(kr||keys.length<=12?' open':'')+'>'
+     + '<summary><span class="gt">'+esc(t)+'</span>'
+     +   (PZ_IDS[t]?'<span class="pzBer">PZ2025</span>':'')
+     +   (kr?'<span class="pzTag t-stop">'+kr+'× kritisch</span>':'')
+     +   '<span class="gz">'+offen+' offen</span></summary>';
+    ms.forEach(function(m){
+      h+='<div class="mgZ"><span class="sv '+esc(m.schwere)+'">'+esc(m.schwere)+'</span>'
+       + '<span><span class="mt">'+esc(m.titel)+'</span>'
+       + '<span class="mm">#'+esc(m.nr)+' · '+esc(m.key)+' · erfasst '+esc(m.erfasst)
+       +   (m.von?' von '+esc(m.von):'')
+       +   (m.frist?' · Frist '+esc(m.frist):'')
+       +   (m.status==='IN_BEARBEITUNG'?' · in Bearbeitung':'')+'</span></span></div>';
+    });
+    h+='</details>';
+  });
+  liste.innerHTML=h;
+}
+
+/* live laden, sonst mitgelieferter Stand */
+(function(){
+  function fertig(){ mgRender(); pzRender(); }
+  function ausSnapshot(grund){
+    fetch('uploads/maengel.json').then(function(r){ return r.json(); }).then(function(d){
+      MG=d.maengel||[]; mgQuelle='Stand der mitgelieferten Datei<br>('+grund+')'; fertig();
+    }).catch(function(){
+      document.getElementById('mgListe').innerHTML=
+        '<div class="mgLeer">Mängel konnten nicht geladen werden ('+esc(grund)+').</div>';
+    });
+  }
+  var abbruch=setTimeout(function(){ ausSnapshot('keine Antwort'); }, 8000);
+  fetch(MG_API,{headers:{accept:'application/json'}}).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(d){
+    clearTimeout(abbruch);
+    var roh=d.maengel||[];
+    MG=roh.filter(function(m){
+      return !m.deletedAt && !m.duplicateOf
+        && (m.status==='OFFEN'||m.status==='IN_BEARBEITUNG')
+        && (m.entityType==='table'||m.entityType==='drillpoint');
+    }).map(function(m){
+      return { nr:m.displayNo, art:m.entityType, key:m.entityKey,
+               tisch:String(m.entityKey||'').split('_')[0], titel:m.title,
+               schwere:m.severity, status:m.status, kind:m.kind,
+               erfasst:(m.createdAt||'').slice(0,10), von:m.createdBy,
+               frist:(m.behebenBis||'').slice(0,10)||null };
+    });
+    mgQuelle='live aus dem Mängeltool<br>abgerufen '+new Date().toLocaleString('de-CH',
+      {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    fertig();
+  }).catch(function(e){ clearTimeout(abbruch); ausSnapshot(String(e.message||e)); });
 })();
 </script>
 </body>
