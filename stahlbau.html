@@ -277,6 +277,12 @@
         Terminplan Bucheli <b>10.08.2026</b> → <b>Eingang prüfen</b>. Die alten Stücke aus Batch 2/3
         (April/Mai) passen nicht mehr – vor dem Einbau Etikettlänge gegen die Batch-11-Länge in der
         Tabelle halten, im Zweifel nicht verbauen.</li>
+      <li><b>Nalpi zeigt bei diesen Tischen „Passstück geliefert" – das stimmt nicht.</b>
+        31 der 100 Batch-11-Positionen tragen ein Liefer-Häkchen mit Datum <b>31.05. / 04.06. / 18.06. /
+        29.06.2026</b>, also aus der Zeit <b>vor</b> der Bestellung vom 15.07. Das sind die alten,
+        zu kurzen Stücke aus Batch 2/3 – beim Umhängen der Positionen auf Batch 11 blieb das Häkchen
+        stehen. <b>Nicht auf den Nalpi-Status verlassen, Länge am Etikett messen.</b>
+        (Einzige Ausnahme: 362_S3 hat kein Häkchen – deshalb steht 362 als Ganzes auf „bestellt".)</li>
       <li><b>357:</b> S2 und S3 haben fehlerhafte Pfähle. Neue Passstücke <b>2203 mm (S2)</b> und
         <b>2279 mm (S3)</b> sind in Bestellbatch 013 – Liefertermin aber erst <b>24.08.2026</b>.
         Bis dahin nicht fertigstellen.</li>
@@ -654,7 +660,8 @@ function srBild(){
    Nichts hier ist geschaetzt - unbelegte Felder stehen als "offen".
    ═══════════════════════════════════════════════════════════════ */
 var G1 = 'Falsche Höhen (Rev. A8/A9) – alte Passstücke aus Batch 2/3 passen nicht mehr, Ersatz kommt mit Batch 11.';
-var B11 = 'Batch <b>011</b> · best. 15.07.<span class="sub">Liefertermin 10.08.2026 – Eingang prüfen</span>';
+var B11 = 'Batch <b>011</b> · best. 15.07.<span class="sub">Liefertermin 10.08.2026 – Eingang prüfen</span>'
+        + '<span class="sub" style="color:#a51d21"><b>⚠ Nalpi-Häkchen «geliefert» = ALTES Stück (Mai/Juni)</b></span>';
 var PZ = [
  {id:326, typ:'E_2025', ber:'26_1.2', pk:null, bstat:'Passstück geliefert', kl:'stop',
   ps:B11+'<span class="len">S1 2093 · S2 669 · S3 1116 · S4 2262</span>',
