@@ -69,6 +69,34 @@
   #ocrStatus{ font-size:13px; font-weight:700; margin-top:8px; min-height:18px; }
   #ocrStatus.ok{ color:var(--gruen); } #ocrStatus.err{ color:var(--rot); }
   .hint{ font-size:11.5px; color:var(--mut); margin-top:6px; line-height:1.5; }
+  /* Soll-Abgleich direkt im Formular */
+  #sollHint{ font-size:12.5px; font-weight:700; margin-top:7px; min-height:16px; line-height:1.45; }
+  #sollHint.ok{ color:var(--gruen); } #sollHint.warn{ color:#8a5a00; } #sollHint.err{ color:var(--rot); }
+  /* Checkliste Lieferung: Batchwahl + antippbare Positionen */
+  .chkBtns{ display:flex; gap:6px; flex-wrap:wrap; margin:2px 0 9px; }
+  .chkBtns button{ border:2px solid #c9ccd2; background:#fff; border-radius:8px; cursor:pointer;
+        padding:8px 11px; font-size:13.5px; font-weight:800; color:var(--ink); }
+  .chkBtns button.on{ background:var(--gruen); border-color:var(--gruen); color:#fff; }
+  .chkBtns button.voll{ border-color:var(--gruen); color:#12703f; }
+  .chkListe{ max-height:52vh; overflow-y:auto; overscroll-behavior:contain;
+        border:1px solid var(--line); border-radius:6px; }
+  .cT{ display:flex; align-items:stretch; gap:5px; padding:5px 6px; border-bottom:1px solid var(--line); }
+  .cT:last-child{ border-bottom:none; }
+  .cT .idt{ flex:0 0 52px; display:flex; flex-direction:column; justify-content:center;
+        font-size:14px; font-weight:900; }
+  .cT .idt small{ font-weight:700; font-size:10px; color:var(--mut); }
+  .cPos{ flex:1; border:1.5px solid #c9ccd2; background:#fff; border-radius:8px; cursor:pointer;
+        padding:7px 2px; font-family:inherit; color:var(--ink); line-height:1.25; }
+  .cPos b{ display:block; font-size:12.5px; } .cPos span{ font-size:12px; font-weight:700; color:var(--mut); }
+  .cPos.ok{ background:#e8f5ec; border-color:var(--gruen); }
+  .cPos.ok b, .cPos.ok span{ color:#12703f; }
+  .cPos.leer{ border-style:dashed; opacity:.45; cursor:default; }
+  details.mehr{ margin-top:12px; border-top:1px solid var(--line); padding-top:8px; }
+  details.mehr summary{ font-size:12.5px; font-weight:800; color:var(--mut); cursor:pointer;
+        list-style:none; padding:4px 0; }
+  details.mehr summary::-webkit-details-marker{ display:none; }
+  details.mehr summary:before{ content:'▸ '; }
+  details.mehr[open] summary:before{ content:'▾ '; }
 
   table{ width:100%; border-collapse:collapse; font-size:13px; }
   th,td{ text-align:left; padding:7px 6px; border-bottom:1px solid var(--line); }
@@ -161,7 +189,18 @@
 <main>
   <!-- ══════════ 1 · STÜTZEN ══════════ -->
   <section id="s1">
-    <div class="box">
+    <!-- Checkliste: bestellte Positionen des Batches antippen statt tippen -->
+    <div class="box" id="boxChk" style="border-left-color:var(--gruen)">
+      <div class="klapp" onclick="klapp('boxChk')"><h2 data-i18n="chk_titel">✅ Lieferung abhaken</h2><span class="pfeil">▾</span></div>
+      <div class="kInhalt">
+        <div class="sub" data-i18n="chk_sub">Batch wählen, Position antippen – ID, Stütze und Länge stehen dann im Formular. Grün = schon erfasst.</div>
+        <div class="chkBtns" id="chkBatches"></div>
+        <div class="zaehler" id="chkStand">–</div>
+        <div class="chkListe" id="chkListe"></div>
+      </div>
+    </div>
+
+    <div class="box" id="boxForm">
       <h2 data-i18n="s1_titel">🏷 Stütze erfassen</h2>
       <div class="sub" data-i18n="s1_sub">Etikett von Mauchle fotografieren – ID, Stütze und Länge werden automatisch gelesen.</div>
       <input type="file" id="f_foto" accept="image/*" capture="environment" style="display:none">
@@ -171,41 +210,41 @@
       <div id="ocrStatus"></div>
 
       <label class="fl" data-i18n="lbl_id">ID Tisch *</label>
-      <input id="f_id" inputmode="numeric" data-i18n-ph="ph_id" placeholder="z.B. 995">
+      <input id="f_id" inputmode="numeric" data-i18n-ph="ph_id" placeholder="z.B. 995" oninput="sollPruefen()">
 
       <label class="fl" data-i18n="lbl_stuetze">Stütze *</label>
       <div class="sBtns" id="sBtns"></div>
 
-      <div class="row2">
-        <div>
-          <label class="fl" data-i18n="lbl_laenge">Länge [mm] *</label>
-          <input id="f_len" inputmode="numeric" data-i18n-ph="ph_laenge" placeholder="z.B. 2724">
+      <label class="fl" data-i18n="lbl_laenge">Länge [mm] *</label>
+      <input id="f_len" inputmode="numeric" data-i18n-ph="ph_laenge" placeholder="z.B. 2724" oninput="sollPruefen()">
+      <div id="sollHint"></div>
+
+      <details class="mehr">
+        <summary data-i18n="mehr_titel">Weitere Angaben (nur wenn nötig)</summary>
+        <div class="row2">
+          <div>
+            <label class="fl" data-i18n="lbl_typ">Typ (optional)</label>
+            <input id="f_typ" data-i18n-ph="ph_typ" placeholder="z.B. B">
+          </div>
+          <div>
+            <label class="fl" data-i18n="lbl_bp">Bohrpunkt (1–12)</label>
+            <input id="f_bp" inputmode="numeric" data-i18n-ph="ph_bp" placeholder="z.B. 10 – neu zweistellig!">
+          </div>
         </div>
-        <div>
-          <label class="fl" data-i18n="lbl_typ">Typ (optional)</label>
-          <input id="f_typ" data-i18n-ph="ph_typ" placeholder="z.B. B">
+        <div class="row2">
+          <div>
+            <label class="fl" data-i18n="lbl_mid">Mauchle-ID (optional)</label>
+            <input id="f_mid" data-i18n-ph="ph_mid" placeholder="z.B. 24027-1153">
+          </div>
+          <div>
+            <label class="fl" data-i18n="lbl_serie">Serie (optional)</label>
+            <input id="f_serie" data-i18n-ph="ph_serie" placeholder="z.B. 8">
+          </div>
         </div>
-      </div>
-      <div class="row2">
-        <div>
-          <label class="fl" data-i18n="lbl_bp">Bohrpunkt (1–12)</label>
-          <input id="f_bp" inputmode="numeric" data-i18n-ph="ph_bp" placeholder="z.B. 10 – neu zweistellig!">
-        </div>
-        <div>
-          <label class="fl" data-i18n="lbl_mid">Mauchle-ID (optional)</label>
-          <input id="f_mid" data-i18n-ph="ph_mid" placeholder="z.B. 24027-1153">
-        </div>
-      </div>
-      <div class="row2">
-        <div>
-          <label class="fl" data-i18n="lbl_serie">Serie (optional)</label>
-          <input id="f_serie" data-i18n-ph="ph_serie" placeholder="z.B. 8">
-        </div>
-        <div>
-          <label class="fl" data-i18n="lbl_profil">Profil (optional)</label>
-          <input id="f_profil" data-i18n-ph="ph_profil" placeholder="z.B. RRK 180x6.0">
-        </div>
-      </div>
+        <label class="fl" data-i18n="lbl_profil">Profil (optional)</label>
+        <input id="f_profil" data-i18n-ph="ph_profil" placeholder="z.B. RRK 180x6.0">
+      </details>
+
       <label class="fl" data-i18n="lbl_bem">Bemerkung (optional)</label>
       <textarea id="f_bem" data-i18n-ph="ph_bem" placeholder="z.B. Etikett unleserlich, Kratzer …"></textarea>
       <label class="fl" data-i18n="lbl_von">Erfasst von *</label>
@@ -359,9 +398,20 @@ var I18N={
   btn_vormontiert:'🔧 Vormontiert', btn_vormontiert_sub:'im Tal gelagert',
   btn_berg:'⛰ Auf den Berg', btn_berg_sub:'hochtransportiert',
   hint_mehrere:'Mehrere auf einmal: IDs mit Komma trennen (z.B. 995, 996, 997)',
+  chk_titel:'✅ Lieferung abhaken',
+  chk_sub:'Batch wählen, Position antippen – ID, Stütze und Länge stehen dann im Formular. Grün = schon erfasst.',
+  chk_stand:'Batch {b}: {e} von {g} Stützen erfasst',
+  chk_alle:'✔ Batch {b} ist komplett erfasst',
+  chk_uebernommen:'{id}-{s} · {l} mm eingesetzt – Name prüfen und speichern',
+  chk_erfasst_schon:'{id}-{s} ist schon erfasst – nochmals erfassen?',
+  mehr_titel:'Weitere Angaben (nur wenn nötig)',
+  soll_ok:'✔ Stimmt mit der Bestellung überein (Batch {b})',
+  soll_abw:'⚠ Bestellt sind {l} mm (Batch {b}) – Länge nachmessen!',
+  soll_unbekannt:'⚠ {id}-{s} steht in keinem Bestellbatch – bitte Bemerkung schreiben',
+  ocr_zuordnung:'✔ Über die Bestellliste zugeordnet',
   s3_titel1:'🏷 Erfasste Stützen', s3_titel2:'🏗 Fortschritt',
   s3_titel0:'🧾 Bestellbatches – geliefert?',
-  batch_sub:'Bestellte Stützen (Mauchle Batch 1–10) im Vergleich mit den erfassten Stützen. Zeile antippen zeigt, was noch fehlt.',
+  batch_sub:'Bestellte Stützen (Mauchle Batch 1–15) im Vergleich mit den erfassten Stützen. Zeile antippen zeigt, was noch fehlt.',
   th_lieferung:'Lieferung', th_batch:'Batch', th_erfasst:'Erfasst',
   badge_komplett:'✔ komplett geliefert', badge_offen:'{n} fehlt', batch_fehlt:'Fehlt:',
   ph_suche:'Suchen (ID, Länge, Name) …', btn_csv:'⬇ CSV / Excel',
@@ -417,8 +467,19 @@ var I18N={
   btn_berg:'⛰ To the mountain', btn_berg_sub:'sent up',
   hint_mehrere:'Several at once: separate IDs with a comma (e.g. 995, 996, 997)',
   s3_titel1:'🏷 Saved posts', s3_titel2:'🏗 Progress',
+  chk_titel:'✅ Tick off the delivery',
+  chk_sub:'Pick the batch, tap a position – ID, post and length are filled in. Green = already saved.',
+  chk_stand:'Batch {b}: {e} of {g} posts saved',
+  chk_alle:'✔ Batch {b} is complete',
+  chk_uebernommen:'{id}-{s} · {l} mm filled in – check the name and save',
+  chk_erfasst_schon:'{id}-{s} is already saved – save it again?',
+  mehr_titel:'More details (only if needed)',
+  soll_ok:'✔ Matches the order (batch {b})',
+  soll_abw:'⚠ Ordered length is {l} mm (batch {b}) – measure again!',
+  soll_unbekannt:'⚠ {id}-{s} is not in any order batch – please add a note',
+  ocr_zuordnung:'✔ Matched with the order list',
   s3_titel0:'🧾 Order batches – delivered?',
-  batch_sub:'Ordered posts (Mauchle batch 1–10) compared with the saved posts. Tap a row to see what is still missing.',
+  batch_sub:'Ordered posts (Mauchle batch 1–15) compared with the saved posts. Tap a row to see what is still missing.',
   th_lieferung:'Delivery', th_batch:'Batch', th_erfasst:'Saved',
   badge_komplett:'✔ fully delivered', badge_offen:'{n} missing', batch_fehlt:'Missing:',
   ph_suche:'Search (ID, length, name) …', btn_csv:'⬇ CSV / Excel',
@@ -475,7 +536,18 @@ var I18N={
   hint_mehrere:'Kilka naraz: oddziel ID przecinkiem (np. 995, 996, 997)',
   s3_titel1:'🏷 Zapisane podpory', s3_titel2:'🏗 Postęp',
   s3_titel0:'🧾 Partie zamówień – dostarczone?',
-  batch_sub:'Zamówione podpory (Mauchle partia 1–10) w porównaniu z zapisanymi podporami. Dotknij wiersza, aby zobaczyć czego brakuje.',
+  chk_titel:'✅ Odhacz dostawę',
+  chk_sub:'Wybierz partię, dotknij pozycji – ID, podpora i długość wpiszą się same. Zielony = już zapisane.',
+  chk_stand:'Partia {b}: zapisano {e} z {g} podpór',
+  chk_alle:'✔ Partia {b} jest kompletna',
+  chk_uebernommen:'{id}-{s} · {l} mm wpisane – sprawdź imię i zapisz',
+  chk_erfasst_schon:'{id}-{s} jest już zapisane – zapisać ponownie?',
+  mehr_titel:'Więcej danych (tylko w razie potrzeby)',
+  soll_ok:'✔ Zgodne z zamówieniem (partia {b})',
+  soll_abw:'⚠ Zamówiono {l} mm (partia {b}) – zmierz jeszcze raz!',
+  soll_unbekannt:'⚠ {id}-{s} nie ma w żadnej partii – dopisz uwagę',
+  ocr_zuordnung:'✔ Dopasowano do listy zamówień',
+  batch_sub:'Zamówione podpory (Mauchle partia 1–15) w porównaniu z zapisanymi podporami. Dotknij wiersza, aby zobaczyć czego brakuje.',
   th_lieferung:'Dostawa', th_batch:'Partia', th_erfasst:'Zapisane',
   badge_komplett:'✔ dostarczona w całości', badge_offen:'brakuje: {n}', batch_fehlt:'Brakuje:',
   ph_suche:'Szukaj (ID, długość, imię i nazwisko) …', btn_csv:'⬇ CSV / Excel',
@@ -669,10 +741,12 @@ $('ev_ok').onclick=function(){
   });
 })();
 var stuetzeSel='';
-function setStuetze(s){
-  stuetzeSel=(stuetzeSel===s)?'':s;
+function stuetzeSetzen(s){                    // setzt fix (Checkliste, Foto)
+  stuetzeSel=s||'';
   ['S1','S2','S3','S4'].forEach(function(x){ $('sb_'+x).classList.toggle('on', x===stuetzeSel); });
+  if(typeof sollPruefen==='function') sollPruefen();
 }
+function setStuetze(s){ stuetzeSetzen(stuetzeSel===s?'':s); }   // Knopf = umschalten
 
 /* ---------- Foto + Offline-Texterkennung ---------- */
 function bildVerkleinern(file, maxPx, q, cb){
@@ -698,7 +772,41 @@ $('f_foto').addEventListener('change',function(){
   });
 });
 
-var ocrWorker=null;
+/* Fuer die Texterkennung wird das Foto aufbereitet: Graustufen, Kontrast auf
+   die 2%/98%-Perzentile gespreizt (Sonne, Schatten, Blitz) und auf mind.
+   1600 px hochgezogen. Flaue Handyfotos direkt in Tesseract zu schicken war
+   der Hauptgrund, weshalb kaum ein Etikett gelesen wurde. Gespeichert wird
+   weiterhin das normale Foto. */
+function ocrBildAufbereiten(dataUrl, cb){
+  var img=new Image();
+  img.onload=function(){
+    try{
+      var f=Math.min(2.2, Math.max(1, 1600/Math.max(img.width, img.height)));
+      var w=Math.round(img.width*f), h=Math.round(img.height*f);
+      var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+      var ctx=cv.getContext('2d');
+      ctx.drawImage(img,0,0,w,h);
+      var bild=ctx.getImageData(0,0,w,h), p=bild.data, hist=new Uint32Array(256), i, g;
+      for(i=0;i<p.length;i+=4){
+        g=(p[i]*0.299+p[i+1]*0.587+p[i+2]*0.114)|0;
+        p[i]=p[i+1]=p[i+2]=g; hist[g]++;
+      }
+      var n=w*h, lo=0, hi=255, s=0;
+      for(i=0;i<256;i++){ s+=hist[i]; if(s>n*0.02){ lo=i; break; } }
+      for(s=0,i=255;i>=0;i--){ s+=hist[i]; if(s>n*0.02){ hi=i; break; } }
+      if(hi-lo<25){ lo=0; hi=255; }
+      var lut=new Uint8Array(256), sp=255/(hi-lo);
+      for(i=0;i<256;i++) lut[i]=Math.max(0, Math.min(255, Math.round((i-lo)*sp)));
+      for(i=0;i<p.length;i+=4){ p[i]=p[i+1]=p[i+2]=lut[p[i]]; }
+      ctx.putImageData(bild,0,0);
+      cb(cv.toDataURL('image/png'));
+    }catch(e){ cb(dataUrl); }
+  };
+  img.onerror=function(){ cb(dataUrl); };
+  img.src=dataUrl;
+}
+
+var ocrWorker=null, ocrFilter=null;          // ocrFilter: aktuell gesetzte Zeichenliste
 function ocrWorkerHolen(){
   if(ocrWorker) return Promise.resolve(ocrWorker);
   if(typeof Tesseract==='undefined') return Promise.reject(new Error('OCR fehlt'));
@@ -713,28 +821,110 @@ function ocrWorkerHolen(){
     }
   }).then(function(w){ ocrWorker=w; return w; });
 }
+/* Durchgang 1 mit Zeichenfilter (auf dem Etikett stehen nur Ziffern, S1-S4,
+   BP und mm) – das raeumt die typischen Buchstabensalat-Treffer weg.
+   Durchgang 2 ohne Filter, falls nichts Brauchbares herauskam. */
+function ocrDurchgang(bild, mitFilter){
+  var filter = mitFilter ? '0123456789SBPLMmx_-.:/ ' : '';
+  return ocrWorkerHolen().then(function(w){
+    var p = (ocrFilter===filter) ? Promise.resolve() : w.setParameters({
+      tessedit_pageseg_mode:'6',                 // ein zusammenhaengender Textblock
+      tessedit_char_whitelist:filter,
+      user_defined_dpi:'300'
+    }).then(function(){ ocrFilter=filter; });
+    return p.then(function(){ return w.recognize(bild); });
+  });
+}
 function ocrLesen(dataUrl){
   $('ocrStatus').className=''; $('ocrStatus').textContent=T('ocr_lesen');
-  ocrWorkerHolen().then(function(w){ return w.recognize(dataUrl); })
-    .then(function(res){
-      var tr=etikettLesen((res&&res.data&&res.data.text)||'');
-      if(tr.id||tr.laenge){
-        if(tr.id) $('f_id').value=tr.id;
-        if(tr.stuetze) setStuetze(tr.stuetze);
-        if(tr.laenge) $('f_len').value=tr.laenge;
-        if(tr.typ) $('f_typ').value=tr.typ;
-        if(tr.serie) $('f_serie').value=tr.serie;
-        if(tr.profil) $('f_profil').value=tr.profil;
-        if(tr.bp) $('f_bp').value=tr.bp;
-        if(tr.mid) $('f_mid').value=tr.mid;
-        $('ocrStatus').className='ok';
-        $('ocrStatus').textContent=T('ocr_ok')+': '+(tr.id||'?')+(tr.stuetze?'-'+tr.stuetze:'')
-          +(tr.bp?' · BP '+tr.bp:'')+(tr.laenge?' · '+tr.laenge+' mm':'')+' '+T('ocr_pruefen');
-      } else {
-        $('ocrStatus').className='err'; $('ocrStatus').textContent=T('ocr_unlesbar');
-      }
-    })
-    .catch(function(){ $('ocrStatus').className='err'; $('ocrStatus').textContent=T('ocr_fehler'); });
+  ocrBildAufbereiten(dataUrl, function(bild){
+    ocrDurchgang(bild, true)
+      .then(function(res){
+        if(ocrUebernehmen((res&&res.data&&res.data.text)||'')) return null;
+        return ocrDurchgang(bild, false).then(function(res2){
+          if(!ocrUebernehmen((res2&&res2.data&&res2.data.text)||'')){
+            $('ocrStatus').className='err'; $('ocrStatus').textContent=T('ocr_unlesbar');
+          }
+        });
+      })
+      .catch(function(){ $('ocrStatus').className='err'; $('ocrStatus').textContent=T('ocr_fehler'); });
+  });
+}
+/* Gelesenen Text ins Formular uebernehmen. Wichtigster Schritt: der Abgleich
+   mit der Bestellliste. Was geliefert wird, ist vorher bestellt worden – ein
+   halb erkanntes Etikett laesst sich damit eindeutig aufloesen. */
+function ocrUebernehmen(text){
+  var tr=etikettLesen(text||''), treffer=sollTreffer(text, tr);
+  if(!treffer && !tr.id && !tr.laenge) return false;
+  if(treffer){
+    $('f_id').value=treffer.id;
+    stuetzeSetzen(treffer.s);
+    $('f_len').value=treffer.laenge;
+  } else {
+    if(tr.id) $('f_id').value=tr.id;
+    if(tr.stuetze) stuetzeSetzen(tr.stuetze);
+    if(tr.laenge) $('f_len').value=tr.laenge;
+  }
+  if(tr.typ) $('f_typ').value=tr.typ;
+  if(tr.serie) $('f_serie').value=tr.serie;
+  if(tr.profil) $('f_profil').value=tr.profil;
+  if(tr.bp) $('f_bp').value=tr.bp;
+  if(tr.mid) $('f_mid').value=tr.mid;
+  /* Gelesene Laenge weicht von der bestellten ab: dann NICHT stillschweigend
+     die Bestellung einsetzen, sondern beide Werte zeigen und pruefen lassen. */
+  var strittig = treffer && tr.laenge && Math.abs(+tr.laenge - treffer.laenge)>2;
+  $('ocrStatus').className = strittig ? 'err' : 'ok';
+  $('ocrStatus').textContent = treffer
+    ? T('ocr_ok')+': '+treffer.id+'-'+treffer.s+' · '+treffer.laenge+' mm · '+T('ocr_zuordnung')
+      +(strittig?' (Foto: '+tr.laenge+' mm) '+T('ocr_pruefen'):'')
+    : T('ocr_ok')+': '+(tr.id||'?')+(tr.stuetze?'-'+tr.stuetze:'')
+      +(tr.bp?' · BP '+tr.bp:'')+(tr.laenge?' · '+tr.laenge+' mm':'')+' '+T('ocr_pruefen');
+  sollPruefen();
+  return true;
+}
+/* Laengen, die in der ganzen Bestellung nur ein einziges Mal vorkommen –
+   die sind praktisch ein Schluessel auf genau eine Stuetze. */
+var SOLL_EINMALIG=null;
+function sollLaengenEinmalig(){
+  if(SOLL_EINMALIG) return SOLL_EINMALIG;
+  var soll=sollIndex(), n={};
+  Object.keys(soll).forEach(function(k){ n[soll[k].laenge]=(n[soll[k].laenge]||0)+1; });
+  SOLL_EINMALIG={};
+  Object.keys(n).forEach(function(l){ if(n[l]===1) SOLL_EINMALIG[l]=true; });
+  return SOLL_EINMALIG;
+}
+/* Punktevergabe gegen alle bestellten Positionen: eine einmalige Laenge oder
+   ID+Stuetze zusammen reichen fuer einen Treffer. Widerspricht das Etikett der
+   Position (andere ID / andere Stuetze klar gelesen), gibt es Abzug. Uebernommen
+   wird nur ein EINDEUTIGER Treffer – sonst bleibt es beim reinen Etikett-Lesen. */
+function sollTreffer(roh, tr){
+  var soll=sollIndex(), einmalig=sollLaengenEinmalig(), txt=String(roh||'').toUpperCase();
+  var zahlen={}, m, re=/[0-9OISB]{3,4}/g;
+  while((m=re.exec(txt))!==null){
+    var z=m[0].replace(/O/g,'0').replace(/I/g,'1').replace(/S/g,'5').replace(/B/g,'8');
+    if(/^\d{3,4}$/.test(z)) zahlen[String(+z)]=true;
+  }
+  if(tr && tr.id) zahlen[String(+tr.id)]=true;
+  if(tr && tr.laenge) zahlen[String(+tr.laenge)]=true;
+  var best=null, zweit=0;
+  Object.keys(soll).forEach(function(k){
+    var p=k.split('-'), t=soll[k], pkt=0;
+    if(zahlen[p[0]]) pkt+=2;
+    if(zahlen[String(t.laenge)]){ pkt+=3; if(einmalig[t.laenge]) pkt+=2; }
+    if(tr && tr.id && +tr.id===+p[0]) pkt+=1;
+    if(tr && tr.stuetze===p[1]) pkt+=1;
+    if(tr && tr.laenge && Math.abs(+tr.laenge-t.laenge)<=1) pkt+=1;
+    if(tr && tr.id && tr.stuetze && +tr.id===+p[0] && tr.stuetze===p[1]) pkt+=3;
+    if(!pkt) return;
+    if(tr && tr.id && +tr.id!==+p[0]) pkt-=4;            // Etikett sagt klar etwas anderes
+    if(tr && tr.stuetze && tr.stuetze!==p[1]) pkt-=4;
+    if(pkt<=0) return;
+    if(!best || pkt>best.pkt){
+      if(best) zweit=Math.max(zweit, best.pkt);
+      best={ id:p[0], s:p[1], pkt:pkt, laenge:t.laenge, batch:t.batch };
+    } else if(pkt>zweit) zweit=pkt;
+  });
+  return (best && best.pkt>=5 && best.pkt>zweit) ? best : null;
 }
 /* Etikett Mauchle, zwei Formate:
  *  alt (bis Batch 8):  "Position 995-S1-2724 / Serie 8 / Typ B / Länge 2724mm / Profil RRK 180x6.0"
@@ -783,7 +973,10 @@ function speichernStuetze(){
   function fertig(){
     ['f_id','f_len','f_bp','f_mid','f_typ','f_serie','f_profil','f_bem','f_foto'].forEach(function(i){ $(i).value=''; });
     $('ocrPrev').innerHTML=''; $('ocrStatus').textContent=''; $('ocrStatus').className='';
-    fotoData=null; $('btnS1').disabled=false;
+    $('sollHint').textContent=''; $('sollHint').className='';
+    stuetzeSetzen('');                    // Stütze zurücksetzen: sonst wandert
+    fotoData=null; $('btnS1').disabled=false;   // die letzte Wahl auf das nächste Teil
+    renderChk();                          // Häkchen in der Checkliste sofort nachziehen
   }
   if(!netzAn()){ pendAdd(P_ST, rec); fertig(); toast(T('ok_offline')); return; }
   apiPost(P_ST,rec).then(function(key){
@@ -903,6 +1096,7 @@ function renderTab(){
   });
   $('z2').textContent=T('zaehler_meldungen',{g:fo.length,v:hv,b:hb});
   renderBatches();
+  renderChk();
   kartenMalen();
 }
 
@@ -915,7 +1109,9 @@ var batchAuf={};
    1: Mail Victor 08.05.  ·  3/4/8: Bestellmails (Liefertermin)  ·  5: Maeder
    18.06. "Lieferung Batch 5"  ·  6: Maeder 07.07. "kommt diesen Mittwoch"
    8 Ist: Victor 30.07. (komplett vor Ort)  ·  9/11/12/13: Bucheli 30.07. 10:52
-   Batch 10: laut F. Borner / Bucheli 30.07. gibt es keinen eigenen Batch 10. */
+   Batch 10: laut F. Borner / Bucheli 30.07. gibt es keinen eigenen Batch 10.
+   11-15: Liefertermin aus der jeweiligen Bestell-xlsx (Zeile 1); Batch 11 laut
+   Bauleitung 11.08.2026 abends auf dem Platz (Bestellung sagte 06.08.). */
 var LIEFERUNG={
   1:{soll:'2026-05-18'},
   3:{soll:'2026-06-01'},
@@ -925,9 +1121,11 @@ var LIEFERUNG={
   8:{soll:'2026-07-27', ist:'2026-07-30', spaet:true},
   9:{soll:'2026-08-03', hinweis:'evtl. 1 Tag später'},
   10:{hinweis:'kein eigener Batch (Bauleitung 30.07.)'},
-  11:{soll:'2026-08-10'},
+  11:{soll:'2026-08-11', hinweis:'Anlieferung abends'},
   12:{soll:'2026-08-17'},
-  13:{soll:'2026-08-24'}
+  13:{soll:'2026-08-24'},
+  14:{soll:'2026-09-01'},
+  15:{soll:'2026-09-07'}
 };
 function lieferText(b, voll){
   var l=LIEFERUNG[b];
@@ -986,6 +1184,107 @@ function renderBatches(){
   el.innerHTML=h;
 }
 function batchToggle(b){ batchAuf[b]=!batchAuf[b]; renderBatches(); }
+
+/* ══════════ Checkliste Lieferung + Abgleich mit der Bestellung ══════════
+   Grundgedanke: Was Mauchle liefert, ist vorher bestellt worden. Statt ID,
+   Stuetze und Laenge abzutippen (oder muehsam abzufotografieren), tippt man
+   die bestellte Position an. Getippt/fotografiert wird nur noch, was NICHT
+   auf der Bestellliste steht - und genau das faellt dann auch sofort auf. */
+var SOLL=null;                              // 'ID-Sx' -> {laenge, batch, art}
+function sollIndex(){
+  if(SOLL) return SOLL;
+  SOLL={};
+  ((window.NALP_PS_DATEN&&window.NALP_PS_DATEN.bestellungen)||[]).forEach(function(o){
+    if(o[6]!==1) return;                    // ersetzte Bestellungen ignorieren
+    var k=normId(o[0])+'-'+o[1];
+    if(!SOLL[k] || o[3]>SOLL[k].batch) SOLL[k]={ laenge:Math.round(o[2]), batch:o[3], art:o[5] };
+  });
+  return SOLL;
+}
+var LS_CHK='nalp_vm_batch';
+var chkBatch=(function(){ try{ return +localStorage.getItem(LS_CHK)||0; }catch(e){ return 0; } })();
+
+/* Der Batch, um den es gerade geht: die juengste Lieferung, die schon da (oder
+   heute faellig) ist und noch offene Positionen hat. Am Abladetag steht damit
+   sowohl in der Checkliste als auch bei den Karten das Richtige zuoberst. */
+function aktuellerBatch(){
+  var map=batchPositionen(), da=psErfasst(), heuteS=heute();
+  var bs=Object.keys(map).map(Number).sort(function(a,b){ return a-b; });
+  var offen=bs.filter(function(b){ return Object.keys(map[b]).some(function(k){ return !da[k]; }); });
+  var geliefert=offen.filter(function(b){
+    var l=LIEFERUNG[b]; return l && (l.ist || (l.soll && l.soll<=heuteS));
+  });
+  if(geliefert.length) return geliefert[geliefert.length-1];
+  if(offen.length)     return offen[offen.length-1];
+  return bs.length ? bs[bs.length-1] : 0;
+}
+
+function chkBatchWaehlen(b){
+  chkBatch=b;
+  try{ localStorage.setItem(LS_CHK,String(b)); }catch(e){}
+  renderChk();
+}
+function renderChk(){
+  var wrap=$('chkListe'); if(!wrap) return;
+  var map=batchPositionen(), da=psErfasst(), soll=sollIndex();
+  var bs=Object.keys(map).map(Number).sort(function(a,b){ return a-b; });
+  if(!bs.length){ wrap.innerHTML=''; $('chkBatches').innerHTML=''; return; }
+  if(bs.indexOf(chkBatch)<0) chkBatch=aktuellerBatch();
+  $('chkBatches').innerHTML=bs.map(function(b){
+    var keys=Object.keys(map[b]), voll=keys.every(function(k){ return da[k]; });
+    return '<button type="button" class="'+(b===chkBatch?'on':(voll?'voll':''))+'" '
+      +'onclick="chkBatchWaehlen('+b+')">'+b+(voll?' ✔':'')+'</button>';
+  }).join('');
+
+  var keys=Object.keys(map[chkBatch]), ok=keys.filter(function(k){ return da[k]; }).length;
+  $('chkStand').textContent = (ok===keys.length)
+    ? T('chk_alle',{b:chkBatch})
+    : T('chk_stand',{b:chkBatch, e:ok, g:keys.length});
+
+  var tische={};
+  keys.forEach(function(k){
+    var p=k.split('-'); (tische[p[0]]=tische[p[0]]||{})[p[1]]=true;
+  });
+  var h=Object.keys(tische).sort(function(a,b){ return Number(a)-Number(b); }).map(function(id){
+    var zellen=['S1','S2','S3','S4'].map(function(s){
+      if(!tische[id][s]) return '<button type="button" class="cPos leer" disabled><b>'+s+'</b><span>–</span></button>';
+      var k=id+'-'+s, l=(soll[k]&&soll[k].laenge)||'';
+      return '<button type="button" class="cPos'+(da[k]?' ok':'')+'" '
+        +'onclick="chkNimm(\''+id+'\',\''+s+'\','+(l||0)+')">'
+        +'<b>'+s+(da[k]?' ✔':'')+'</b><span>'+(l?l+' mm':'?')+'</span></button>';
+    }).join('');
+    var offenN=['S1','S2','S3','S4'].filter(function(s){ return tische[id][s] && !da[id+'-'+s]; }).length;
+    return '<div class="cT"><div class="idt">'+id+'<small>'+(offenN?offenN+' offen':'✔')+'</small></div>'+zellen+'</div>';
+  }).join('');
+  wrap.innerHTML=h;
+}
+function chkNimm(id, s, l){
+  $('f_id').value=id;
+  stuetzeSetzen(s);
+  if(l) $('f_len').value=l;
+  var da=psErfasst();
+  if(da[id+'-'+s]) toast(T('chk_erfasst_schon',{id:id,s:s}),true);
+  else toast(T('chk_uebernommen',{id:id,s:s,l:l||'?'}));
+  sollPruefen();
+  var ziel=$('boxForm') || $('f_id');
+  if(ziel && ziel.scrollIntoView) ziel.scrollIntoView({behavior:'smooth', block:'start'});
+}
+/* Live-Abgleich des Formulars mit der Bestellung: falsche Laenge oder ein
+   Passstueck, das gar nicht bestellt wurde, faellt sofort auf. Gesperrt wird
+   nichts - im Feld zaehlt, was tatsaechlich auf dem Lastwagen liegt. */
+function sollPruefen(){
+  var el=$('sollHint'); if(!el) return null;
+  var id=normId($('f_id').value.trim()), s=stuetzeSel, len=$('f_len').value.trim();
+  el.className=''; el.textContent='';
+  if(!id || !s) return null;
+  var t=sollIndex()[id+'-'+s];
+  if(!t){ el.className='err'; el.textContent=T('soll_unbekannt',{id:id,s:s}); return null; }
+  if(len && Math.abs(+len - t.laenge)>2){
+    el.className='warn'; el.textContent=T('soll_abw',{l:t.laenge,b:t.batch}); return t;
+  }
+  el.className='ok'; el.textContent=T('soll_ok',{b:t.batch});
+  return t;
+}
 function csvDl(name, kopf, zeilen){
   var lines=[kopf.join(';')].concat(zeilen.map(function(z){
     return z.map(function(v){ return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'; }).join(';');
@@ -1073,10 +1372,17 @@ function kartenMalen(){
   if(!wrap || typeof L==='undefined') return;
   if($('s4').style.display==='none') return;
   kGrp=kartenGruppen();
-  // nur die aktuellen Batches zeigen (8 und 9+10) - aeltere sind durch
+  // nur die aktuellen Batches zeigen (ab 8) - aeltere sind durch.
+  // Zuoberst der Batch, der gerade abgeladen wird, dann absteigend.
+  var akt=aktuellerBatch();
   var lbls=Object.keys(kGrp)
     .filter(function(l){ return parseInt(l,10)>=8; })
-    .sort(function(a,b){ return parseInt(b,10)-parseInt(a,10); });
+    .sort(function(a,b){
+      var pa=parseInt(a,10), pb=parseInt(b,10);
+      if(pa===akt) return -1;
+      if(pb===akt) return 1;
+      return pb-pa;
+    });
   kDaten(function(){
     if(!kPfaehle) return;
     lbls.forEach(function(lbl){ if(!kMaps[lbl]) kMapBauen(wrap,lbl); });
