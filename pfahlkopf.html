@@ -120,14 +120,15 @@
   <!-- Zielpfahl -->
   <div class="box" id="ziel">
     <div id="zTisch">–</div>
-    <div id="zSub">Standort wird gesucht …</div>
+    <div id="zSub">Auf der Karte unten einen Pfahl antippen</div>
     <div id="zTyp" style="display:none"></div>
     <div id="zKopf" style="display:none"></div>
     <div id="zDist"></div>
     <div class="sBtns" id="sBtns" style="display:none"></div>
-    <div class="sHint" id="sHint" style="display:none">📍 = GPS-Vorschlag. Jeder Pfahl kann ein anderes Gewinde
-      und einen eigenen Kopf-Status haben – bitte prüfen, an welchem Pfahl du wirklich stehst
-      (S1 + S4 = Tal, S2 + S3 = Berg), und antippen.</div>
+    <div class="sHint" id="sHint" style="display:none"><b>Pfahl auf der Karte antippen</b> – das wählt Tisch
+      und Stütze direkt, ohne GPS. Hier oben geht es auch (S1 + S4 = Tal, S2 + S3 = Berg);
+      📍 = GPS-Vorschlag, falls Standort da. Jeder Pfahl kann ein anderes Gewinde und einen
+      eigenen Kopf-Status haben.</div>
     <div class="warn" id="zWarn" style="display:none"></div>
   </div>
 
@@ -265,6 +266,7 @@
 
   <!-- Karte -->
   <div class="box" id="kartenBox">
+    <div style="font-size:12.5px;font-weight:800;color:#1a1a1a;margin:0 0 7px">👆 Pfahl antippen = auswählen<span style="display:block;font-weight:600;color:#63676d;font-size:11.5px;margin-top:2px">Aus der Übersicht zoomt der erste Tipp auf den Tisch, der zweite wählt den Pfahl. Ohne GPS.</span></div>
     <canvas id="karte" height="430"></canvas>
     <div class="kbar">
       <span id="legende"></span>
@@ -478,7 +480,7 @@ function zielMalen(){
   var inf=pfahlInfo(ziel.typ);
   $('zTisch').textContent='Tisch '+ziel.id;
   $('zSub').textContent=(stuetzeSel?('Pfahl '+stuetzeSel):'Pfahl wählen (S1–S4)')
-    +(zielManuell?'  ·  Tisch von Hand gewählt':'');
+    +(zielManuell?'  ·  auf der Karte gewählt':'');
   var zt=$('zTyp'); zt.style.display='';
   zt.textContent='Typ '+inf.typ+(inf.laenge?' · '+inf.laenge:'');
   zt.style.background = inf.typ==='E' ? '#5b3fa8' : (inf.typ==='C'||inf.typ==='D' ? '#0f7b6c' : '#63676d');
@@ -510,16 +512,16 @@ function zielMalen(){
     if(kk) teile.push((kk.montiert?'Kopf montiert':'ohne Kopf')+' ('+(kk.von||'')+', '+fmtZ(kk.ts)+')');
     w.style.display=''; w.style.background='#e8f5ec'; w.style.borderColor='#1e9e5a'; w.style.color='#12703f';
     w.textContent='✔ '+ziel.id+'-'+stuetzeSel+' erfasst: '+teile.join(' · ');
-  } else if(d!=null && d>25){
+  } else if(d!=null && d>25 && !zielManuell){
     w.style.display=''; w.style.background='#fff3d6'; w.style.borderColor='#e0a800'; w.style.color='#7a5200';
-    w.textContent='Weit vom nächsten Tisch entfernt ('+d+' m) – bitte prüfen oder Tisch von Hand wählen.';
+    w.textContent='Weit vom nächsten Tisch entfernt ('+d+' m) – bitte prüfen oder auf der Karte antippen.';
   } else { w.style.display='none'; }
   $('b5').disabled=$('b6').disabled=$('bk1').disabled=$('bk0').disabled=!(ziel&&stuetzeSel);
 }
 
 /* ---------- Gewinde messen ---------- */
 function messen(g){
-  if(!ziel){ toast('Kein Tisch erkannt',true); return; }
+  if(!ziel){ toast('Kein Pfahl gewaehlt - auf der Karte antippen',true); return; }
   if(!stuetzeSel){ toast('Bitte Pfahl S1–S4 wählen',true); return; }
   var von=$('f_von').value.trim();
   if(!von){ toast('Bitte Namen eintragen',true); $('f_von').focus(); return; }
@@ -549,7 +551,7 @@ function messen(g){
 
 /* ---------- Pfahlkopf montiert / fehlt ---------- */
 function kopfSetzen(mont){
-  if(!ziel){ toast('Kein Tisch erkannt',true); return; }
+  if(!ziel){ toast('Kein Pfahl gewaehlt - auf der Karte antippen',true); return; }
   if(!stuetzeSel){ toast('Bitte Pfahl S1–S4 wählen',true); return; }
   var von=$('f_von').value.trim();
   if(!von){ toast('Bitte Namen eintragen',true); $('f_von').focus(); return; }
@@ -835,15 +837,65 @@ function kZoomUm(faktor, cx, cy){
     }
     e.preventDefault();
   });
-  function ende(e){ delete kPtr[e.pointerId]; }
+  /* Tippen auf einen Pfahl = auswaehlen. Kein GPS noetig: der Punkt auf der
+     Karte bestimmt Tisch UND Stuetze. Verschieben/Zoomen zaehlt nicht als Tipp
+     (Weg < 10 px, Dauer < 600 ms, nur ein Finger). */
+  cv.addEventListener('pointerdown', function(e){
+    var p=kPtr[e.pointerId]; if(p){ p.t0=Date.now(); p.x0=e.clientX; p.y0=e.clientY; }
+  });
+  function ende(e){
+    var p=kPtr[e.pointerId];
+    var einFinger = Object.keys(kPtr).length===1;
+    delete kPtr[e.pointerId];
+    if(!p || !p.t0 || !einFinger) return;
+    var weg=Math.hypot(e.clientX-p.x0, e.clientY-p.y0);
+    if(weg>10 || Date.now()-p.t0>600) return;      // war Verschieben, kein Tipp
+    var r=cv.getBoundingClientRect();
+    kartenTipp(e.clientX-r.left, e.clientY-r.top);
+  }
   cv.addEventListener('pointerup', ende);
-  cv.addEventListener('pointercancel', ende);
+  cv.addEventListener('pointercancel', function(e){ delete kPtr[e.pointerId]; });
   cv.addEventListener('wheel', function(e){
     var r=cv.getBoundingClientRect();
     kZoomUm(e.deltaY>0?1.25:0.8, e.clientX-r.left, e.clientY-r.top);
     e.preventDefault();
   }, {passive:false});
 })();
+/* Bildschirmpunkt -> naechster Pfahl. Waehlt Tisch + Stuetze direkt aus,
+   ohne GPS. In der Uebersicht wird zusaetzlich auf den Tisch gezoomt, weil
+   die Punkte dort nur wenige Pixel gross sind. */
+function kartenTipp(x, y){
+  if(!kView || !tische.length) return;
+  var mPerPx=kView.mPerPx, vE=kView.vE, vN=kView.vN;
+  var best=null, bd=1e9;
+  tische.forEach(function(t){
+    t.pf.forEach(function(p){
+      var v=lv95(p.lat,p.lon);
+      var px=(v.E-vE)/mPerPx, py=430-(v.N-vN)/mPerPx;
+      var d=Math.hypot(px-x, py-y);
+      if(d<bd){ bd=d; best={t:t, p:p, px:px, py:py}; }
+    });
+  });
+  var radius = zoomNah ? 26 : 18;
+  if(!best || bd>radius){ toast('Kein Pfahl an dieser Stelle'); return; }
+
+  zielManuell=best.t; ziel=best.t; ziel._d=null;
+  if(pos){ var q=lv95(pos.lat,pos.lon), w=lv95(best.p.lat,best.p.lon);
+           ziel._d=Math.hypot(q.E-w.E, q.N-w.N); }
+  stuetzeSel=best.p.s;
+
+  if(!zoomNah){                       // aus der Uebersicht auf den Tisch zoomen
+    var es=0, ns=0;
+    best.t.pf.forEach(function(p){ var v=lv95(p.lat,p.lon); es+=v.E; ns+=v.N; });
+    kMitte={ E:es/best.t.pf.length, N:ns/best.t.pf.length };
+    kSpann=40; zoomNah=true;
+    $('zoomBtn').textContent='🔍 Übersicht';
+  }
+  zielMalen(); malen();
+  var st=messungen[ziel.id+'-'+stuetzeSel], kp=koepfe[ziel.id+'-'+stuetzeSel];
+  toast(ziel.id+'-'+stuetzeSel+(st||kp ? ' (schon erfasst)' : ' gewählt'));
+  try{ $('ziel').scrollIntoView({behavior:'smooth', block:'center'}); }catch(e){}
+}
 function legendeMalen(){
   $('legende').innerHTML = ansicht==='kopf'
     ? '<span><span class="pkt" style="background:#9aa0a8"></span>unbekannt</span>'

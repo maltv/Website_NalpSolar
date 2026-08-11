@@ -300,15 +300,15 @@
         David Bühler (CKW) hat am 06.08. 21:47 zurückgefragt und wartet auf Antwort. Ohne diese Klärung
         keine MT-Montage auf 326/380 einplanen.</li>
       <li><b>Gruppe „Falsche Höhen" (8 Tische: 326, 327, 342, 359, 361, 362, 381, 383):</b> die neuen
-        Passstücke nach Rev. A8/A9 sind in <b>Bestellbatch 011</b> (bestellt 15.07.), Liefertermin laut
-        Terminplan Bucheli <b>10.08.2026</b> → <b>Eingang prüfen</b>. Die alten Stücke aus Batch 2/3
-        (April/Mai) passen nicht mehr – vor dem Einbau Etikettlänge gegen die Batch-11-Länge in der
-        Tabelle halten, im Zweifel nicht verbauen.</li>
-      <li><b>Nalpi zeigt bei diesen Tischen „Passstück geliefert" – das stimmt nicht.</b>
+        Passstücke nach Rev. A8/A9 sind in <b>Bestellbatch 011</b> (bestellt 15.07.) und kommen
+        <b>am Dienstagabend, 11.08.2026, auf die Baustelle</b>. Vorher lässt sich an diesen Tischen
+        nichts fertigstellen. Die alten Stücke aus Batch 2/3 (April/Mai) passen nicht mehr – nach der
+        Anlieferung Etikettlänge gegen die Batch-11-Länge in der Tabelle halten, im Zweifel nicht verbauen.</li>
+      <li><b>Nalpi zeigt bei diesen Tischen „Passstück geliefert" – das ist falsch.</b>
         31 der 100 Batch-11-Positionen tragen ein Liefer-Häkchen mit Datum <b>31.05. / 04.06. / 18.06. /
-        29.06.2026</b>, also aus der Zeit <b>vor</b> der Bestellung vom 15.07. Das sind die alten,
-        zu kurzen Stücke aus Batch 2/3 – beim Umhängen der Positionen auf Batch 11 blieb das Häkchen
-        stehen. <b>Nicht auf den Nalpi-Status verlassen, Länge am Etikett messen.</b>
+        29.06.2026</b>, also Wochen <b>vor</b> der Bestellung vom 15.07. Das sind die alten, zu kurzen
+        Stücke aus Batch 2/3 – beim Umhängen der Positionen auf Batch 11 blieb das Häkchen stehen.
+        <b>Aus Batch 11 ist noch nichts geliefert und nichts erfasst.</b>
         (Einzige Ausnahme: 362_S3 hat kein Häkchen – deshalb steht 362 als Ganzes auf „bestellt".)</li>
       <li><b>357:</b> S2 und S3 haben fehlerhafte Pfähle. Neue Passstücke <b>2203 mm (S2)</b> und
         <b>2279 mm (S3)</b> sind in Bestellbatch 013 – Liefertermin aber erst <b>24.08.2026</b>.
@@ -702,8 +702,9 @@ function srBild(){
    Nichts hier ist geschaetzt - unbelegte Felder stehen als "offen".
    ═══════════════════════════════════════════════════════════════ */
 var G1 = 'Falsche Höhen (Rev. A8/A9) – alte Passstücke aus Batch 2/3 passen nicht mehr, Ersatz kommt mit Batch 11.';
-var B11 = 'Batch <b>011</b> · best. 15.07.<span class="sub">Liefertermin 10.08.2026 – Eingang prüfen</span>'
-        + '<span class="sub" style="color:#a51d21"><b>⚠ Nalpi-Häkchen «geliefert» = ALTES Stück (Mai/Juni)</b></span>';
+var B11 = 'Batch <b>011</b> · best. 15.07.'
+        + '<span class="sub" style="color:#a51d21"><b>⚠ NOCH NICHT DA – Anlieferung Di 11.08. abends</b></span>'
+        + '<span class="sub">bis dahin kann nichts davon verbaut werden</span>';
 var PZ = [
  {id:326, typ:'E_2025', ber:'26_1.2', pk:null, bstat:'Passstück geliefert', kl:'stop',
   ps:B11+'<span class="len">S1 2093 · S2 669 · S3 1116 · S4 2262</span>',
@@ -822,9 +823,16 @@ function pzRender(){
   var h='';
   liste.forEach(function(t){
     var done=!!pzDone[t.id];
+    /* Der Nalpi-Baustatus wird bei den Batch-11-Tischen NICHT als Wahrheit
+       angezeigt: dort steht «Passstück geliefert», gemeint sind aber die alten
+       Stücke aus Batch 2/3. Deshalb durchgestrichen mit Klarstellung. */
+    var alt11 = t.ps.indexOf('Batch <b>011</b>')===0;
+    var bs = (alt11 && t.bstat.indexOf('Passstück')===0)
+      ? '<span class="sub"><s>Nalpi: '+t.bstat+'</s> – meint das alte Stück</span>'
+      : '<span class="sub">Nalpi: '+t.bstat+'</span>';
     var stand = t.pk===null
-      ? '<b class="rot">noch nichts gestellt</b><span class="sub">'+t.bstat+'</span>'
-      : 'PK <b>'+t.pk+'</b><span class="sub">Modulträger fehlt</span>';
+      ? '<b class="rot">noch nichts gestellt</b>'+bs
+      : 'PK <b>'+t.pk+'</b><span class="sub">Modulträger fehlt</span>'+bs;
     var kopf = t.pk!==null
       ? '<b class="gru">Kopf montiert</b><span class="sub">PK steht darauf</span>'
       : '<b>im Feld prüfen</b><span class="sub">Gewinde nicht gemessen – 5 oder 6.35 mm</span>';
