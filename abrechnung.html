@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Geowork · Abrechnungskontrolle</title>
+<meta name="robots" content="noindex,nofollow">
+<!-- Abrechnungskontrolle Geowork (GW25-002) — nur Victor.
+     ECHTER Schutz: Die Zahlen liegen AES-256-GCM-verschluesselt in
+     uploads/abrechnung/geowork.enc.json. Ohne Passwort steht dort nur Chiffrat;
+     diese Seite enthaelt selbst KEINE Zahlen. Kein Soft-Gate noetig.
+     Daten bauen: Tools\Geowork_Abrechnung_Bauen.py (im KI-Projekt). -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
+         --gruen:#2e9e46; --orange:#e08a00; --bg:#f2f3f5; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; }
+  body{ font-family:Arial,"Helvetica Neue",sans-serif; color:var(--ink); background:var(--bg); }
+  .topbar{ background:#fff; border-bottom:4px solid var(--rot); padding:12px 18px;
+           display:flex; align-items:center; gap:14px; position:sticky; top:0; z-index:500; }
+  .topbar .t{ font-weight:900; font-size:17px; }
+  .topbar .los{ font-size:11.5px; color:var(--mut); font-weight:700; letter-spacing:.06em; margin-left:auto; }
+  .wrap{ max-width:1080px; margin:0 auto; padding:16px 14px 60px; }
+  .card{ background:#fff; border:1px solid var(--line); border-left:5px solid var(--rot);
+         border-radius:6px; padding:14px 16px; margin-bottom:14px; box-shadow:0 1px 4px rgba(20,25,32,.07); }
+  .card h2{ margin:0 0 4px; font-size:16px; }
+  .sub{ font-size:12px; color:var(--mut); margin-bottom:12px; line-height:1.55; }
+
+  /* Login */
+  #login{ position:fixed; inset:0; z-index:2000; display:flex; align-items:center; justify-content:center;
+          padding:24px; background:linear-gradient(rgba(20,28,38,.45),rgba(20,28,38,.65)) , #223041; }
+  #login .box{ background:#fff; border-radius:8px; border-top:6px solid var(--rot); padding:24px 22px 20px;
+               width:100%; max-width:340px; box-shadow:0 14px 44px rgba(10,14,20,.45); text-align:center; }
+  #login h1{ font-size:17px; margin:0 0 4px; }
+  #login p{ font-size:12.5px; color:var(--mut); margin:0 0 16px; line-height:1.5; }
+  #login input[type=password]{ width:100%; padding:11px 12px; font-size:16px; border:1px solid #c9ccd1;
+               border-radius:5px; font-family:inherit; }
+  #login button{ width:100%; margin-top:10px; padding:11px; font-size:15px; font-weight:700; color:#fff;
+               background:var(--rot); border:0; border-radius:5px; cursor:pointer; }
+  #login .merk{ display:flex; align-items:center; gap:7px; justify-content:center; margin-top:11px;
+               font-size:12.5px; color:var(--mut); }
+  #login .fehler{ color:var(--rot); font-size:12.5px; margin-top:10px; font-weight:700; min-height:16px; }
+
+  /* Kacheln */
+  .kacheln{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:10px; margin-bottom:14px; }
+  .k{ background:#fff; border:1px solid var(--line); border-top:4px solid var(--rot); border-radius:6px;
+      padding:12px 14px; }
+  .k .lab{ font-size:11.5px; color:var(--mut); font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+  .k .val{ font-size:26px; font-weight:900; line-height:1.15; margin-top:3px; }
+  .k .val small{ font-size:14px; font-weight:700; color:var(--mut); }
+  .k .note{ font-size:11.5px; color:var(--mut); margin-top:4px; line-height:1.45; }
+  .k.gruen{ border-top-color:var(--gruen); } .k.orange{ border-top-color:var(--orange); }
+
+  table{ border-collapse:collapse; width:100%; font-size:13px; }
+  th,td{ border-bottom:1px solid var(--line); padding:6px 8px; text-align:right; white-space:nowrap; }
+  th:first-child,td:first-child{ text-align:left; }
+  thead th{ background:#f7f8f9; font-size:11.5px; text-transform:uppercase; letter-spacing:.03em; color:var(--mut); }
+  tbody tr:hover{ background:#fafbfc; }
+  tfoot td{ font-weight:900; border-top:2px solid var(--ink); }
+  .tabwrap{ overflow-x:auto; }
+  .pos{ color:var(--rot); font-weight:700; } .neg{ color:var(--gruen); font-weight:700; }
+  .tag{ display:inline-block; font-size:11px; font-weight:700; padding:2px 7px; border-radius:10px; }
+  .tag.b{ background:#fdeceb; color:#a3201d; } .tag.p{ background:#fff4e0; color:#8a5400; }
+  .tag.o{ background:#eef0f2; color:#4a4f55; }
+  #karte{ height:440px; border-radius:6px; border:1px solid var(--line); }
+  .legende{ font-size:12px; color:var(--mut); margin-top:8px; display:flex; gap:16px; flex-wrap:wrap; }
+  .legende i{ width:11px; height:11px; border-radius:50%; display:inline-block; margin-right:5px; }
+  .fuss{ font-size:11.5px; color:var(--mut); line-height:1.6; }
+  .rechnung{ font-family:"Consolas",monospace; font-size:13px; line-height:1.85; background:#f7f8f9;
+             border:1px solid var(--line); border-radius:5px; padding:12px 14px; overflow-x:auto; }
+  .rechnung .z{ display:flex; justify-content:space-between; gap:20px; }
+  .rechnung .summe{ border-top:1px solid #c9ccd1; margin-top:5px; padding-top:5px; font-weight:900; }
+  details{ margin-top:10px; } summary{ cursor:pointer; font-size:13px; font-weight:700; color:var(--rot); }
+</style>
+</head>
+<body>
+
+<div id="login">
+  <div class="box">
+    <h1>Abrechnungskontrolle Geowork</h1>
+    <p>GW25-002 Nalps Solar<br>Die Daten sind verschlüsselt. Passwort eingeben.</p>
+    <input type="password" id="pw" autocomplete="current-password" placeholder="Passwort" autofocus>
+    <button id="go">Öffnen</button>
+    <label class="merk"><input type="checkbox" id="merken"> auf diesem Gerät merken</label>
+    <div class="fehler" id="fehler"></div>
+  </div>
+</div>
+
+<div class="topbar">
+  <div class="t">Abrechnungskontrolle Geowork</div>
+  <div class="los">GW25-002 · LOS B8-13</div>
+</div>
+
+<div class="wrap" id="inhalt" style="display:none">
+
+  <div class="kacheln" id="kacheln"></div>
+
+  <div class="card">
+    <h2>Geht die Rechnung auf?</h2>
+    <div class="sub">Jeder Pfahl darf einmal gebohrt und einmal injiziert verrechnet werden.
+      Alles darüber sind Neubohrungen – die sind nur dann geschuldet, wenn die Ursache bei uns
+      oder beim Planer liegt.</div>
+    <div class="rechnung" id="probe"></div>
+  </div>
+
+  <div class="card">
+    <h2>Monat für Monat</h2>
+    <div class="sub">Verrechnet = Claim Table. Bohrlog = Geoworks eigene Tagesprotokolle.
+      Punkte = unsere Nalpi-Erfassung (zählt jeden Pfahl nur einmal, deshalb tiefer).</div>
+    <div class="tabwrap"><table id="tabMonate"></table></div>
+  </div>
+
+  <div class="card">
+    <h2>Mehrfach gebohrte Pfähle</h2>
+    <div class="sub" id="mfSub"></div>
+    <div class="tabwrap"><table id="tabMehrfach"></table></div>
+    <details><summary>Alle anzeigen</summary><div class="tabwrap"><table id="tabMehrfachAlle"></table></div></details>
+  </div>
+
+  <div class="card">
+    <h2>Karte</h2>
+    <div class="sub">Ein Punkt je Tisch. Rot = mindestens ein Pfahl mehrfach gebohrt,
+      orange = Neubohrung vermerkt, grau = einmal gebohrt. Antippen zeigt die Details.</div>
+    <div id="karte"></div>
+    <div class="legende">
+      <span><i style="background:#D72622"></i>mehrfach gebohrt</span>
+      <span><i style="background:#e08a00"></i>Neubohrung vermerkt</span>
+      <span><i style="background:#8a9099"></i>einmal gebohrt</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Woher die Zahlen kommen</h2>
+    <div class="fuss" id="quellen"></div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const nf = (n,d=0) => (n==null?'–':Number(n).toLocaleString('de-CH',{minimumFractionDigits:d,maximumFractionDigits:d}));
+const chf = n => (n==null?'–':Number(n).toLocaleString('de-CH',{minimumFractionDigits:2,maximumFractionDigits:2}));
+const KEY = 'nalp_abr_pw_v1';
+
+function b64(s){ const b=atob(s), a=new Uint8Array(b.length); for(let i=0;i<b.length;i++) a[i]=b.charCodeAt(i); return a; }
+
+async function entschluesseln(paket, pw){
+  const basis = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name:'PBKDF2', salt:b64(paket.salt), iterations:paket.iter, hash:'SHA-256' },
+    basis, { name:'AES-GCM', length:256 }, false, ['decrypt']);
+  const klar = await crypto.subtle.decrypt({ name:'AES-GCM', iv:b64(paket.iv) }, key, b64(paket.ct));
+  return JSON.parse(new TextDecoder().decode(klar));
+}
+
+let PAKET = null;
+async function paketHolen(){
+  if (PAKET) return PAKET;
+  const r = await fetch('uploads/abrechnung/geowork.enc.json', {cache:'no-store'});
+  if (!r.ok) throw new Error('Datendatei nicht gefunden');
+  PAKET = await r.json();
+  return PAKET;
+}
+
+async function oeffnen(pw, merken){
+  $('#fehler').textContent = 'einen Moment …';
+  let daten;
+  try {
+    daten = await entschluesseln(await paketHolen(), pw);
+  } catch(e){
+    $('#fehler').textContent = 'Passwort stimmt nicht.';
+    $('#pw').select(); return;
+  }
+  if (merken) { try{ localStorage.setItem(KEY, pw); }catch(e){} }
+  $('#login').style.display='none';
+  $('#inhalt').style.display='';
+  zeichnen(daten);
+}
+
+function zeichnen(d){
+  const k = d.kumuliert, m = d.monate;
+
+  // ---- Kacheln
+  $('#kacheln').innerHTML = [
+    ['Verrechnet bis '+(k.bis||''), nf(k.claim_stk)+' <small>Bohrungen</small>',
+      nf(k.claim_m,1)+' m Bohren · CHF '+chf(k.claim_chf)],
+    ['Im Bohrlog dokumentiert', nf(k.log_stk)+' <small>Bohrungen</small>',
+      nf(k.log_m,1)+' m auf '+nf(k.log_pfaehle)+' verschiedenen Pfählen'],
+    ['Differenz Claim − Bohrlog', (k.diff_stk>0?'+':'')+nf(k.diff_stk)+' <small>Bohrungen</small>',
+      (k.diff_m>0?'+':'')+nf(k.diff_m,1)+' m', k.diff_stk>0?'':'gruen'],
+    ['Mehrfach gebohrte Pfähle', nf(k.mehrfach_pfaehle)+' <small>Pfähle</small>',
+      nf(k.mehrfach_zuviel_m,1)+' m über Einmalbedarf · CHF '+chf(k.mehrfach_chf), 'orange'],
+    ['Injektion verrechnet', nf(k.inj_m,1)+' <small>m</small>',
+      'CHF '+chf(k.inj_chf)+' · '+(k.inj_diff_m===0?'exakt = Bohrmeter':nf(k.inj_diff_m,1)+' m ggü. Bohrmetern')],
+    ['Gebohrt, noch nicht verrechnet', nf(k.offen_stk)+' <small>Bohrungen</small>',
+      nf(k.offen_m,1)+' m'+(k.offen_ab?' · ab '+k.offen_ab:''), 'gruen']
+  ].map(([lab,val,note,cls]) =>
+    `<div class="k ${cls||''}"><div class="lab">${lab}</div><div class="val">${val}</div><div class="note">${note}</div></div>`
+  ).join('');
+
+  // ---- Probe
+  $('#probe').innerHTML = [
+    ['Verrechnete Bohrungen (Claim Mai–'+(k.bis||'')+')', nf(k.claim_stk)],
+    ['dokumentiert im Bohrlog', nf(k.log_stk)],
+    ['davon auf verschiedenen Pfählen', nf(k.log_pfaehle)],
+    ['= Bohrungen über den Einmalbedarf hinaus', nf(k.claim_stk - k.log_pfaehle), true],
+    ['SPACER'],
+    ['Verrechnete Injektionsmeter', nf(k.inj_m,1)+' m'],
+    ['davon auf mehrfach gebohrte Pfähle', nf(k.mehrfach_zuviel_m,1)+' m'],
+    ['= Injektion, die es je Pfahl nur einmal geben kann', 'CHF '+chf(k.inj_zuviel_chf), true]
+  ].map(z => z[0]==='SPACER' ? '<div style="height:10px"></div>'
+      : `<div class="z ${z[2]?'summe':''}"><span>${z[0]}</span><span>${z[1]}</span></div>`).join('')
+    + `<div style="margin-top:12px;font-family:Arial;font-size:12px;color:#63676d;line-height:1.6">
+        Geowork setzt die Injektion in jedem Monat exakt gleich den Bohrmetern. Wird ein Pfahl neu
+        gebohrt, wird damit auch die Injektion ein zweites Mal verrechnet – physisch bekommt der
+        Pfahl aber nur einen Injektionskörper. Diese Differenz muss am Bauende null sein.</div>`;
+
+  // ---- Monatstabelle
+  const th = ['Monat','Verrechnet Stk','Verrechnet m','Bohrlog Stk','Bohrlog m','Diff m',
+              'Neubohrungen','Injektion m','Netto CHF'];
+  $('#tabMonate').innerHTML =
+    '<thead><tr>'+th.map(h=>`<th>${h}</th>`).join('')+'</tr></thead><tbody>'+
+    m.map(x=>`<tr><td><b>${x.label}</b></td><td>${nf(x.bohr_stk)}</td><td>${nf(x.bohr_m,1)}</td>
+      <td>${nf(x.log_stk)}</td><td>${nf(x.log_m,1)}</td>
+      <td class="${x.diff_m>0?'pos':'neg'}">${x.diff_m>0?'+':''}${nf(x.diff_m,1)}</td>
+      <td>${nf(x.log_redrill)}${x.log_redrill?' <span class="tag o">'+nf(x.log_redrill_m,1)+' m</span>':''}</td>
+      <td>${nf(x.inj_m,1)}</td><td>${chf(x.netto)}</td></tr>`).join('')+
+    '</tbody><tfoot><tr><td>Total</td>'+
+      `<td>${nf(k.claim_stk)}</td><td>${nf(k.claim_m,1)}</td><td>${nf(k.log_stk)}</td>
+       <td>${nf(k.log_m,1)}</td><td class="${k.diff_m>0?'pos':'neg'}">${k.diff_m>0?'+':''}${nf(k.diff_m,1)}</td>
+       <td>${nf(k.redrill)}</td><td>${nf(k.inj_m,1)}</td><td>${chf(k.netto)}</td></tr></tfoot>`;
+
+  // ---- Mehrfach-Tabellen (nur was auch verrechnet ist)
+  const mfV = d.mehrfach.filter(x => x.verrechnet);
+  const mfO = d.mehrfach.filter(x => !x.verrechnet);
+  const grp = {};
+  mfV.forEach(x => { grp[x.gruppe] = (grp[x.gruppe]||0) + 1; });
+  $('#mfSub').innerHTML = 'Diese Pfähle stehen im Bohrlog an mehreren Tagen – jede weitere Bohrung ist '
+    + 'zusätzlich verrechnet worden. '
+    + Object.entries(grp).map(([g,n]) => `<b>${n}</b> ${g}`).join(' · ')
+    + '. Bei «Baupiste B» und «PZ2025» liegt die Ursache in der Planänderung '
+    + '(→ Axpo-Dossier NO022/NO024), bei «Ursache offen» muss Geowork die Ursache nennen.'
+    + (mfO.length ? ` Weitere <b>${mfO.length}</b> Pfähle sind mehrfach gebohrt, aber noch nicht verrechnet.` : '');
+  const kopf = ['Pfahl','Tisch','Bohrungen','Tage','m total','m zu viel','CHF zu viel','Gruppe'];
+  const zeile = x => `<tr><td><b>${x.pfahl}</b>${x.sicher?'':' <span class="tag o" title="Pfahlzuordnung unsicher">?</span>'}</td>
+      <td>${x.tisch??'–'}</td><td>${x.n}</td>
+      <td style="font-size:11.5px">${x.tage.join(' · ')}</td><td>${nf(x.m,1)}</td>
+      <td class="pos">${nf(x.m_zuviel,1)}</td><td class="pos">${chf(x.chf)}</td>
+      <td><span class="tag ${x.gruppe.startsWith('Baupiste')?'b':x.gruppe.startsWith('PZ')?'p':'o'}">${x.gruppe}</span></td></tr>`;
+  const tab = (arr) => '<thead><tr>'+kopf.map(h=>`<th>${h}</th>`).join('')+'</tr></thead><tbody>'
+      + arr.map(zeile).join('') + '</tbody>';
+  $('#tabMehrfach').innerHTML = tab(mfV.slice(0,15));
+  $('#tabMehrfachAlle').innerHTML = tab(d.mehrfach);
+
+  // ---- Karte: Tische als Übersicht, mehrfach gebohrte Pfähle punktgenau darüber
+  const karte = L.map('karte', {scrollWheelZoom:false});
+  L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg',
+    { maxZoom:19, attribution:'© swisstopo' }).addTo(karte);
+  const pts = d.karte;
+  const ebTisch = L.layerGroup().addTo(karte), ebPfahl = L.layerGroup().addTo(karte);
+  pts.forEach(p => {
+    const farbe = p.mf>0 ? '#D72622' : (p.rd>0 ? '#e08a00' : '#8a9099');
+    L.circleMarker([p.lat,p.lon], {radius:p.mf>0?7:5, color:'#fff', weight:1.5,
+      fillColor:farbe, fillOpacity:.92})
+     .bindPopup(`<b>Tisch ${p.t}</b><br>${p.n} Bohrungen · ${nf(p.m,1)} m`
+      + (p.mf>0?`<br><b style="color:#D72622">${p.mf} Mehrfachbohrung${p.mf>1?'en':''}</b>`:'')
+      + (p.rd>0?`<br>${p.rd} als Neubohrung vermerkt`:'')
+      + `<br><span style="color:#63676d">${p.von} bis ${p.bis}</span>`)
+     .addTo(ebTisch);
+  });
+  mfV.filter(x => x.lat).forEach(x => {
+    L.circleMarker([x.lat,x.lon], {radius:4, color:'#7a0f0d', weight:1, fillColor:'#D72622', fillOpacity:1})
+     .bindPopup(`<b>Pfahl ${x.pfahl}</b><br>${x.n}× gebohrt: ${x.tage.join(', ')}`
+       + `<br>${nf(x.m_zuviel,1)} m über Einmalbedarf = CHF ${chf(x.chf)}<br><i>${x.gruppe}</i>`)
+     .addTo(ebPfahl);
+  });
+  L.control.layers(null, {'Tische':ebTisch, 'Mehrfach gebohrte Pfähle':ebPfahl},
+                   {collapsed:false}).addTo(karte);
+  if (pts.length) karte.fitBounds(L.latLngBounds(pts.map(p=>[p.lat,p.lon])).pad(.06));
+
+  // ---- Quellen
+  const q = d.quelle, p = d.punkte || {};
+  $('#quellen').innerHTML = `
+    <b>Verrechnet:</b> ${q.claim} (Blätter ${m.map(x=>x.blatt).join(', ')})<br>
+    <b>Bohrlog:</b> ${q.bohrlog_kumuliert} für Mai bis 06.07., danach ${q.tageslogs} Tages-Drill-Logs aus den Mails<br>
+    <b>Eigene Erfassung:</b> ${q.punktexport}${p.punkte_total?` · ${nf(p.punkte_total)} Bohrpunkte im Projekt, ${nf(p.gebohrt_2026)} davon 2026 gebohrt, ${nf(p.injiziert_2026)} injiziert`:''}<br>
+    <b>Stand:</b> ${d.stand} · neu bauen mit <code>python Tools\\Geowork_Abrechnung_Bauen.py</code><br><br>
+    Die Zahlen dieser Seite liegen AES-256-verschlüsselt auf dem Server. Ohne Passwort ist nichts lesbar –
+    auch nicht im Quelltext.`;
+}
+
+$('#go').onclick = () => oeffnen($('#pw').value, $('#merken').checked);
+$('#pw').addEventListener('keydown', e => { if (e.key==='Enter') $('#go').click(); });
+(function(){ try{ const pw=localStorage.getItem(KEY); if(pw){ $('#merken').checked=true; oeffnen(pw,false); } }catch(e){} })();
+</script>
+</body>
+</html>
