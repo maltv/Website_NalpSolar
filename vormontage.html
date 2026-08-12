@@ -87,25 +87,6 @@
   /* Soll-Abgleich direkt im Formular */
   #sollHint{ font-size:12.5px; font-weight:700; margin-top:7px; min-height:16px; line-height:1.45; }
   #sollHint.ok{ color:var(--gruen); } #sollHint.warn{ color:#8a5a00; } #sollHint.err{ color:var(--rot); }
-  /* Checkliste Lieferung: Batchwahl + antippbare Positionen */
-  .chkBtns{ display:flex; gap:6px; flex-wrap:wrap; margin:2px 0 9px; }
-  .chkBtns button{ border:2px solid #c9ccd2; background:#fff; border-radius:8px; cursor:pointer;
-        padding:8px 11px; font-size:13.5px; font-weight:800; color:var(--ink); }
-  .chkBtns button.on{ background:var(--gruen); border-color:var(--gruen); color:#fff; }
-  .chkBtns button.voll{ border-color:var(--gruen); color:#12703f; }
-  .chkListe{ max-height:52vh; overflow-y:auto; overscroll-behavior:contain;
-        border:1px solid var(--line); border-radius:6px; }
-  .cT{ display:flex; align-items:stretch; gap:5px; padding:5px 6px; border-bottom:1px solid var(--line); }
-  .cT:last-child{ border-bottom:none; }
-  .cT .idt{ flex:0 0 52px; display:flex; flex-direction:column; justify-content:center;
-        font-size:14px; font-weight:900; }
-  .cT .idt small{ font-weight:700; font-size:10px; color:var(--mut); }
-  .cPos{ flex:1; border:1.5px solid #c9ccd2; background:#fff; border-radius:8px; cursor:pointer;
-        padding:7px 2px; font-family:inherit; color:var(--ink); line-height:1.25; }
-  .cPos b{ display:block; font-size:12.5px; } .cPos span{ font-size:12px; font-weight:700; color:var(--mut); }
-  .cPos.ok{ background:#e8f5ec; border-color:var(--gruen); }
-  .cPos.ok b, .cPos.ok span{ color:#12703f; }
-  .cPos.leer{ border-style:dashed; opacity:.45; cursor:default; }
   details.mehr{ margin-top:12px; border-top:1px solid var(--line); padding-top:8px; }
   details.mehr summary{ font-size:12.5px; font-weight:800; color:var(--mut); cursor:pointer;
         list-style:none; padding:4px 0; }
@@ -204,17 +185,6 @@
 <main>
   <!-- ══════════ 1 · STÜTZEN ══════════ -->
   <section id="s1">
-    <!-- Checkliste: bestellte Positionen des Batches antippen statt tippen -->
-    <div class="box" id="boxChk" style="border-left-color:var(--gruen)">
-      <div class="klapp" onclick="klapp('boxChk')"><h2 data-i18n="chk_titel">✅ Lieferung abhaken</h2><span class="pfeil">▾</span></div>
-      <div class="kInhalt">
-        <div class="sub" data-i18n="chk_sub">Batch wählen, Position antippen – ID, Stütze und Länge stehen dann im Formular. Grün = schon erfasst.</div>
-        <div class="chkBtns" id="chkBatches"></div>
-        <div class="zaehler" id="chkStand">–</div>
-        <div class="chkListe" id="chkListe"></div>
-      </div>
-    </div>
-
     <div class="box" id="boxForm">
       <h2 data-i18n="s1_titel">🏷 Stütze erfassen</h2>
       <div class="sub" data-i18n="s1_sub">Etikett von Mauchle fotografieren – ID, Stütze und Länge werden automatisch gelesen.</div>
@@ -321,7 +291,7 @@
     <div class="box" id="box0" style="border-left-color:var(--gruen)">
       <div class="klapp" onclick="klapp('box0')"><h2 data-i18n="s3_titel0">🧾 Bestellbatches – geliefert?</h2><span class="pfeil">▾</span></div>
       <div class="kInhalt">
-        <div class="sub" data-i18n="batch_sub">Bestellte Stützen (Mauchle Batch 1–10) im Vergleich mit den erfassten Stützen. Zeile antippen zeigt, was noch fehlt.</div>
+        <div class="sub" data-i18n="batch_sub">Bestellte Stützen (ab Mauchle-Batch 8) im Vergleich mit den erfassten Stützen. Zeile antippen zeigt, was noch fehlt.</div>
         <div class="tabWrap"><table id="tab0"></table></div>
       </div>
     </div>
@@ -438,10 +408,6 @@ var I18N={
   btn_vormontiert:'🔧 Vormontiert', btn_vormontiert_sub:'im Tal gelagert',
   btn_berg:'⛰ Auf den Berg', btn_berg_sub:'hochtransportiert',
   hint_mehrere:'Mehrere auf einmal: IDs mit Komma trennen (z.B. 995, 996, 997)',
-  chk_titel:'✅ Lieferung abhaken',
-  chk_sub:'Batch wählen, Position antippen – ID, Stütze und Länge stehen dann im Formular. Grün = schon erfasst.',
-  chk_stand:'Batch {b}: {e} von {g} Stützen erfasst',
-  chk_alle:'✔ Batch {b} ist komplett erfasst',
   chk_uebernommen:'{id}-{s} · {l} mm eingesetzt – Name prüfen und speichern',
   chk_erfasst_schon:'{id}-{s} ist schon erfasst – nochmals erfassen?',
   mehr_titel:'Weitere Angaben (nur wenn nötig)',
@@ -451,7 +417,7 @@ var I18N={
   ocr_zuordnung:'✔ Über die Bestellliste zugeordnet',
   s3_titel1:'🏷 Erfasste Stützen', s3_titel2:'🏗 Fortschritt',
   s3_titel0:'🧾 Bestellbatches – geliefert?',
-  batch_sub:'Bestellte Stützen (Mauchle Batch 1–15) im Vergleich mit den erfassten Stützen. Zeile antippen zeigt, was noch fehlt.',
+  batch_sub:'Bestellte Stützen (ab Mauchle-Batch 8) im Vergleich mit den erfassten Stützen. Zeile antippen zeigt, was noch fehlt.',
   th_lieferung:'Lieferung', th_batch:'Batch', th_erfasst:'Erfasst',
   badge_komplett:'✔ komplett geliefert', badge_offen:'{n} fehlt', batch_fehlt:'Fehlt:',
   ph_suche:'Suchen (ID, Länge, Name) …', btn_csv:'⬇ CSV / Excel',
@@ -515,10 +481,6 @@ var I18N={
   btn_berg:'⛰ To the mountain', btn_berg_sub:'sent up',
   hint_mehrere:'Several at once: separate IDs with a comma (e.g. 995, 996, 997)',
   s3_titel1:'🏷 Saved posts', s3_titel2:'🏗 Progress',
-  chk_titel:'✅ Tick off the delivery',
-  chk_sub:'Pick the batch, tap a position – ID, post and length are filled in. Green = already saved.',
-  chk_stand:'Batch {b}: {e} of {g} posts saved',
-  chk_alle:'✔ Batch {b} is complete',
   chk_uebernommen:'{id}-{s} · {l} mm filled in – check the name and save',
   chk_erfasst_schon:'{id}-{s} is already saved – save it again?',
   mehr_titel:'More details (only if needed)',
@@ -527,7 +489,7 @@ var I18N={
   soll_unbekannt:'⚠ {id}-{s} is not in any order batch – please add a note',
   ocr_zuordnung:'✔ Matched with the order list',
   s3_titel0:'🧾 Order batches – delivered?',
-  batch_sub:'Ordered posts (Mauchle batch 1–15) compared with the saved posts. Tap a row to see what is still missing.',
+  batch_sub:'Ordered posts (Mauchle batch 8 and later) compared with the saved posts. Tap a row to see what is still missing.',
   th_lieferung:'Delivery', th_batch:'Batch', th_erfasst:'Saved',
   badge_komplett:'✔ fully delivered', badge_offen:'{n} missing', batch_fehlt:'Missing:',
   ph_suche:'Search (ID, length, name) …', btn_csv:'⬇ CSV / Excel',
@@ -592,10 +554,6 @@ var I18N={
   hint_mehrere:'Kilka naraz: oddziel ID przecinkiem (np. 995, 996, 997)',
   s3_titel1:'🏷 Zapisane podpory', s3_titel2:'🏗 Postęp',
   s3_titel0:'🧾 Partie zamówień – dostarczone?',
-  chk_titel:'✅ Odhacz dostawę',
-  chk_sub:'Wybierz partię, dotknij pozycji – ID, podpora i długość wpiszą się same. Zielony = już zapisane.',
-  chk_stand:'Partia {b}: zapisano {e} z {g} podpór',
-  chk_alle:'✔ Partia {b} jest kompletna',
   chk_uebernommen:'{id}-{s} · {l} mm wpisane – sprawdź imię i zapisz',
   chk_erfasst_schon:'{id}-{s} jest już zapisane – zapisać ponownie?',
   mehr_titel:'Więcej danych (tylko w razie potrzeby)',
@@ -603,7 +561,7 @@ var I18N={
   soll_abw:'⚠ Zamówiono {l} mm (partia {b}) – zmierz jeszcze raz!',
   soll_unbekannt:'⚠ {id}-{s} nie ma w żadnej partii – dopisz uwagę',
   ocr_zuordnung:'✔ Dopasowano do listy zamówień',
-  batch_sub:'Zamówione podpory (Mauchle partia 1–15) w porównaniu z zapisanymi podporami. Dotknij wiersza, aby zobaczyć czego brakuje.',
+  batch_sub:'Zamówione podpory (Mauchle od partii 8) w porównaniu z zapisanymi podporami. Dotknij wiersza, aby zobaczyć czego brakuje.',
   th_lieferung:'Dostawa', th_batch:'Partia', th_erfasst:'Zapisane',
   badge_komplett:'✔ dostarczona w całości', badge_offen:'brakuje: {n}', batch_fehlt:'Brakuje:',
   ph_suche:'Szukaj (ID, długość, imię i nazwisko) …', btn_csv:'⬇ CSV / Excel',
@@ -803,7 +761,7 @@ $('ev_ok').onclick=function(){
   });
 })();
 var stuetzeSel='';
-function stuetzeSetzen(s){                    // setzt fix (Checkliste, Foto)
+function stuetzeSetzen(s){                    // setzt fix (Scanner, Foto)
   stuetzeSel=s||'';
   ['S1','S2','S3','S4'].forEach(function(x){ $('sb_'+x).classList.toggle('on', x===stuetzeSel); });
   if(typeof sollPruefen==='function') sollPruefen();
@@ -1185,7 +1143,6 @@ function speichernStuetze(){
     $('sollHint').textContent=''; $('sollHint').className='';
     stuetzeSetzen('');                    // Stütze zurücksetzen: sonst wandert
     fotoData=null; $('btnS1').disabled=false;   // die letzte Wahl auf das nächste Teil
-    renderChk();                          // Häkchen in der Checkliste sofort nachziehen
   }
   if(!netzAn()){ pendAdd(P_ST, rec); fertig(); toast(T('ok_offline')); return; }
   apiPost(P_ST,rec).then(function(key){
@@ -1305,7 +1262,6 @@ function renderTab(){
   });
   $('z2').textContent=T('zaehler_meldungen',{g:fo.length,v:hv,b:hb});
   renderBatches();
-  renderChk();
   kartenMalen();
 }
 
@@ -1363,7 +1319,9 @@ function batchPositionen(){
 function renderBatches(){
   var el=$('tab0'); if(!el) return;
   var map=batchPositionen();
-  var bs=Object.keys(map).map(Number).sort(function(a,b){return a-b;});
+  var bs=Object.keys(map).map(Number)
+    .filter(function(b){ return b>=8; })   // 1-7 sind laengst verbaut
+    .sort(function(a,b){return a-b;});
   if(!bs.length){ el.innerHTML=''; return; }
   var da={};
   alleStuetzen().forEach(function(r){
@@ -1410,9 +1368,6 @@ function sollIndex(){
   });
   return SOLL;
 }
-var LS_CHK='nalp_vm_batch';
-var chkBatch=(function(){ try{ return +localStorage.getItem(LS_CHK)||0; }catch(e){ return 0; } })();
-
 /* Der Batch, um den es gerade geht: die juengste Lieferung, die schon da (oder
    heute faellig) ist und noch offene Positionen hat. Am Abladetag steht damit
    sowohl in der Checkliste als auch bei den Karten das Richtige zuoberst. */
@@ -1428,56 +1383,6 @@ function aktuellerBatch(){
   return bs.length ? bs[bs.length-1] : 0;
 }
 
-function chkBatchWaehlen(b){
-  chkBatch=b;
-  try{ localStorage.setItem(LS_CHK,String(b)); }catch(e){}
-  renderChk();
-}
-function renderChk(){
-  var wrap=$('chkListe'); if(!wrap) return;
-  var map=batchPositionen(), da=psErfasst(), soll=sollIndex();
-  var bs=Object.keys(map).map(Number).sort(function(a,b){ return a-b; });
-  if(!bs.length){ wrap.innerHTML=''; $('chkBatches').innerHTML=''; return; }
-  if(bs.indexOf(chkBatch)<0) chkBatch=aktuellerBatch();
-  $('chkBatches').innerHTML=bs.map(function(b){
-    var keys=Object.keys(map[b]), voll=keys.every(function(k){ return da[k]; });
-    return '<button type="button" class="'+(b===chkBatch?'on':(voll?'voll':''))+'" '
-      +'onclick="chkBatchWaehlen('+b+')">'+b+(voll?' ✔':'')+'</button>';
-  }).join('');
-
-  var keys=Object.keys(map[chkBatch]), ok=keys.filter(function(k){ return da[k]; }).length;
-  $('chkStand').textContent = (ok===keys.length)
-    ? T('chk_alle',{b:chkBatch})
-    : T('chk_stand',{b:chkBatch, e:ok, g:keys.length});
-
-  var tische={};
-  keys.forEach(function(k){
-    var p=k.split('-'); (tische[p[0]]=tische[p[0]]||{})[p[1]]=true;
-  });
-  var h=Object.keys(tische).sort(function(a,b){ return Number(a)-Number(b); }).map(function(id){
-    var zellen=['S1','S2','S3','S4'].map(function(s){
-      if(!tische[id][s]) return '<button type="button" class="cPos leer" disabled><b>'+s+'</b><span>–</span></button>';
-      var k=id+'-'+s, l=(soll[k]&&soll[k].laenge)||'';
-      return '<button type="button" class="cPos'+(da[k]?' ok':'')+'" '
-        +'onclick="chkNimm(\''+id+'\',\''+s+'\','+(l||0)+')">'
-        +'<b>'+s+(da[k]?' ✔':'')+'</b><span>'+(l?l+' mm':'?')+'</span></button>';
-    }).join('');
-    var offenN=['S1','S2','S3','S4'].filter(function(s){ return tische[id][s] && !da[id+'-'+s]; }).length;
-    return '<div class="cT"><div class="idt">'+id+'<small>'+(offenN?offenN+' offen':'✔')+'</small></div>'+zellen+'</div>';
-  }).join('');
-  wrap.innerHTML=h;
-}
-function chkNimm(id, s, l){
-  $('f_id').value=id;
-  stuetzeSetzen(s);
-  if(l) $('f_len').value=l;
-  var da=psErfasst();
-  if(da[id+'-'+s]) toast(T('chk_erfasst_schon',{id:id,s:s}),true);
-  else toast(T('chk_uebernommen',{id:id,s:s,l:l||'?'}));
-  sollPruefen();
-  var ziel=$('boxForm') || $('f_id');
-  if(ziel && ziel.scrollIntoView) ziel.scrollIntoView({behavior:'smooth', block:'start'});
-}
 /* Live-Abgleich des Formulars mit der Bestellung: falsche Laenge oder ein
    Passstueck, das gar nicht bestellt wurde, faellt sofort auf. Gesperrt wird
    nichts - im Feld zaehlt, was tatsaechlich auf dem Lastwagen liegt. */
