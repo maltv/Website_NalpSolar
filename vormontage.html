@@ -1486,11 +1486,17 @@ function kartenMalen(){
   if(!wrap || typeof L==='undefined') return;
   if($('s4').style.display==='none') return;
   kGrp=kartenGruppen();
-  // nur die aktuellen Batches zeigen (ab 8) - aeltere sind durch.
+  // Nur aktuelle Batches: ab 8 (aeltere sind verbaut) und erst, wenn die
+  // Lieferung da oder faellig ist - kuenftige Batches erscheinen von selbst.
   // Zuoberst der Batch, der gerade abgeladen wird, dann absteigend.
-  var akt=aktuellerBatch();
+  var akt=aktuellerBatch(), heuteS=heute();
   var lbls=Object.keys(kGrp)
-    .filter(function(l){ return parseInt(l,10)>=8; })
+    .filter(function(l){
+      var b=parseInt(l,10);
+      if(b<8) return false;
+      var lf=LIEFERUNG[b];
+      return !!(lf && (lf.ist || (lf.soll && lf.soll<=heuteS)));
+    })
     .sort(function(a,b){
       var pa=parseInt(a,10), pb=parseInt(b,10);
       if(pa===akt) return -1;
