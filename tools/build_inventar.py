@@ -118,11 +118,19 @@ def main():
         'pfaehle': raus,
     }
 
+    # Bereichsgrenzen fuer die Karte mitgeben (nur die mit Polygon, also 2026);
+    # auf 6 Nachkommastellen gekuerzt = ~0.1 m, spart rund die Haelfte der Groesse.
+    grenzen = dict((n, [[round(c[0], 6), round(c[1], 6)] for c in polygone[n]]) for n in namen)
+
     with io.open(ZIEL, 'w', encoding='utf-8', newline='\n') as f:
         f.write('{"stand":%s,\n' % json.dumps(daten['stand'], ensure_ascii=False))
         f.write('"bereiche":%s,\n' % json.dumps(daten['bereiche'], ensure_ascii=False))
         f.write('"legende":%s,\n'  % json.dumps(daten['legende'], ensure_ascii=False))
-        f.write('"pfaehle":[\n')
+        f.write('"grenzen":{\n')
+        f.write(',\n'.join('%s:%s' % (json.dumps(n, ensure_ascii=False),
+                                      json.dumps(grenzen[n], separators=(',', ':')))
+                           for n in namen))
+        f.write('},\n"pfaehle":[\n')
         f.write(',\n'.join(json.dumps(r, ensure_ascii=False, separators=(',', ':')) for r in raus))
         f.write('\n]}\n')
 
