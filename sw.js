@@ -1,5 +1,5 @@
 ﻿'use strict';
-var CACHE = 'nalpsolar-v104';
+var CACHE = 'nalpsolar-v105';
 var PRECACHE = [
   './index.html',
   './protokoll.html',
@@ -12,6 +12,7 @@ var PRECACHE = [
   './gewinde.html',
   './pfahlkopf.html',
   './uploads/pfaehle.json',
+  './uploads/inventar.json',
   './uploads/perimeter_geo.json',
   './assets/img/perimeter.jpg',
   // Offline-Texterkennung fuer die Etiketten (laeuft ohne Internet im Tal)

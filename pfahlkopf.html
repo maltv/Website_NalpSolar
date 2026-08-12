@@ -14,9 +14,9 @@
 <script src="assets/js/nalp-gate.js"></script>
 <style>
   :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
-         --blau:#1565c0; --gelb:#e0a800; --gruen:#1e9e5a; --fehlt:#d84343; }
+         --blau:#1565c0; --gelb:#e0a800; --gruen:#1e9e5a; --fehlt:#d84343; --bg:#eef0f3; }
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  body{ margin:0; background:#eef0f3; min-height:100vh; color:var(--ink);
+  body{ margin:0; background:var(--bg); min-height:100vh; color:var(--ink);
         font-family:Arial,"Helvetica Neue",sans-serif; }
   header{ position:sticky; top:0; z-index:10; display:flex; align-items:center; gap:8px;
           padding:9px 10px; background:#fff; border-bottom:4px solid var(--rot); }
@@ -27,280 +27,330 @@
          background:#e8f5ec; color:#12703f; white-space:nowrap; }
   #netz.off{ background:#fdeaea; color:#a01c19; }
   .tabs{ display:flex; background:#fff; border-bottom:1px solid var(--line); position:sticky; top:52px; z-index:9; }
-  .tabs button{ flex:1; border:none; background:none; padding:11px 4px; font-size:13px; font-weight:800;
+  .tabs button{ flex:1; border:none; background:none; padding:11px 2px; font-size:12.5px; font-weight:800;
         color:var(--mut); cursor:pointer; border-bottom:3px solid transparent; }
   .tabs button.on{ color:var(--rot); border-bottom-color:var(--rot); }
-  main{ max-width:720px; margin:0 auto; padding:10px 10px 80px; }
+  main{ max-width:720px; margin:0 auto; padding:10px 10px 90px; }
   .box{ background:#fff; border:1px solid var(--line); border-left:5px solid var(--rot);
         border-radius:6px; padding:12px; margin-bottom:11px; box-shadow:0 1px 4px rgba(20,25,32,.07); }
+  .box h2{ font-size:13px; margin:0 0 9px; text-transform:uppercase; letter-spacing:.04em; color:var(--mut); }
+  .box.plain{ border-left-color:#c9ccd2; }
 
-  /* ── Zielpfahl gross anzeigen ── */
+  /* ── Chips (Bereich / Filter / Typ / Gewinde) ── */
+  .chips{ display:flex; flex-wrap:wrap; gap:6px; }
+  .chips button{ border:1.5px solid #c9ccd2; background:#fff; color:var(--ink); border-radius:20px;
+        padding:7px 11px; font-size:12.5px; font-weight:800; cursor:pointer; font-family:inherit; }
+  .chips button.on{ background:var(--ink); border-color:var(--ink); color:#fff; }
+  .chips button small{ font-weight:700; opacity:.75; margin-left:4px; }
+  .chips button.on small{ opacity:.85; }
+
+  /* ── Karte ── */
+  #kartenBox{ padding:0; overflow:hidden; }
+  #kwrap{ position:relative; background:#f6f7f9; }
+  #karte{ display:block; width:100%; height:56vh; min-height:280px; touch-action:none; }
+  #kInfo{ position:absolute; left:8px; bottom:8px; background:rgba(255,255,255,.92); border-radius:5px;
+        padding:4px 8px; font-size:11px; font-weight:700; color:var(--mut); pointer-events:none; }
+  #kZoom{ position:absolute; right:8px; bottom:8px; display:flex; flex-direction:column; gap:6px; }
+  #kZoom button{ width:40px; height:40px; border-radius:8px; border:1px solid #c9ccd2; background:rgba(255,255,255,.95);
+        font-size:20px; font-weight:900; cursor:pointer; color:var(--ink); line-height:1; }
+  .klegende{ display:flex; flex-wrap:wrap; gap:10px; padding:8px 10px; font-size:11px;
+        font-weight:700; color:var(--mut); border-top:1px solid var(--line); background:#fff; }
+  .klegende i{ display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:4px;
+        vertical-align:-1px; border:1.5px solid #8b9099; }
+
+  /* ── Auswahl ── */
   #ziel{ text-align:center; padding:14px 12px; }
   #zTisch{ font-size:44px; font-weight:900; line-height:1; }
   #zSub{ font-size:16px; font-weight:700; color:var(--mut); margin-top:6px; }
   #zTyp{ display:inline-block; margin-top:9px; font-size:15px; font-weight:900; color:#fff;
          background:var(--ink); border-radius:6px; padding:5px 12px; }
-  #zKopf{ font-size:12px; color:var(--mut); margin-top:6px; }
-  #zDist{ font-size:13.5px; color:var(--mut); margin-top:8px; }
-  #zDist b{ color:var(--ink); }
+  #zKopf{ font-size:12px; color:var(--mut); margin-top:7px; line-height:1.5; }
+  #zStand{ font-size:13px; font-weight:800; margin-top:8px; }
   .warn{ background:#fff3d6; border:1.5px solid var(--gelb); border-radius:6px;
-         padding:8px 10px; font-size:13px; font-weight:700; color:#7a5200; margin-top:9px; }
+         padding:8px 10px; font-size:13px; font-weight:700; color:#7a5200; margin-top:9px; text-align:left; }
+  .ok{ background:#e8f5ec; border:1.5px solid var(--gruen); border-radius:6px;
+         padding:8px 10px; font-size:13px; font-weight:700; color:#12703f; margin-top:9px; text-align:left; }
 
-  /* ── Pfahlwahl S1–S4 ── */
   .sBtns{ display:flex; gap:8px; margin-top:11px; }
   .sBtns button{ flex:1; padding:13px 2px; font-size:17px; font-weight:900; border-radius:8px;
-        border:2px solid #c9ccd2; background:#fff; color:var(--ink); cursor:pointer; position:relative; }
+        border:2px solid #c9ccd2; background:#fff; color:var(--ink); cursor:pointer; font-family:inherit; }
   .sBtns button.on{ border-color:var(--rot); outline:2.5px solid var(--rot); }
   .sBtns button.g5{ background:var(--blau); border-color:var(--blau); color:#fff; }
   .sBtns button.g6{ background:var(--gelb); border-color:var(--gelb); color:#3a2b00; }
   .sBtns button small{ display:block; font-size:10px; font-weight:800; margin-top:2px; }
-  .sHint{ font-size:11.5px; color:var(--mut); margin-top:6px; line-height:1.45; }
 
-  /* ── Messknoepfe ── */
   .mess{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:4px; }
   .mess button{ border:none; border-radius:10px; padding:20px 8px; font-size:22px; font-weight:900;
-        color:#fff; cursor:pointer; line-height:1.15; box-shadow:0 2px 6px rgba(20,25,32,.2); }
+        color:#fff; cursor:pointer; line-height:1.15; box-shadow:0 2px 6px rgba(20,25,32,.2); font-family:inherit; }
   .mess button small{ display:block; font-size:12.5px; font-weight:700; opacity:.92; margin-top:5px; }
   .m5{ background:var(--blau); } .m6{ background:var(--gelb); color:#3a2b00 !important; }
   .mk1{ background:var(--gruen); } .mk0{ background:var(--fehlt); }
-  .mess button[disabled]{ opacity:.45; }
+  .mess button[disabled]{ opacity:.4; }
 
   select,input{ width:100%; background:#fff; border:1px solid #c9ccd2; border-radius:6px;
         color:var(--ink); padding:10px; font-size:15px; font-family:inherit; }
   label.fl{ display:block; font-size:11.5px; font-weight:700; color:var(--mut); margin:9px 0 4px;
         text-transform:uppercase; letter-spacing:.04em; }
   .btn{ display:inline-block; border:none; border-radius:6px; padding:10px 14px; font-size:14px;
-        font-weight:800; cursor:pointer; color:#fff; background:var(--rot); }
+        font-weight:800; cursor:pointer; color:#fff; background:var(--rot); font-family:inherit; }
   .btn.ghost{ background:#fff; color:var(--ink); border:1px solid #c9ccd2; font-weight:700; }
+  .btn[disabled]{ opacity:.45; }
   .row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
 
-  /* ── Typen-Tabelle ── */
-  .ttab{ width:100%; border-collapse:collapse; font-size:12.5px; }
-  .ttab th,.ttab td{ border:1px solid var(--line); padding:6px 5px; text-align:center; }
-  .ttab th{ background:#f4f5f7; font-size:11px; text-transform:uppercase; letter-spacing:.03em; color:var(--mut); }
-  .ttab td:first-child{ font-weight:900; font-size:15px; }
-  .ttab .schwer{ background:#fdeaea; }
-  .tipp{ font-size:13px; line-height:1.55; }
-  .tipp li{ margin-bottom:6px; }
-  .quelle{ font-size:11px; color:var(--mut); line-height:1.5; }
+  /* ── Zaehler Lager ── */
+  .zaehler{ display:flex; align-items:center; gap:10px; margin-top:10px; }
+  #zahl{ flex:1; text-align:center; font-size:52px; font-weight:900; line-height:1.05;
+        border:2px solid var(--line); border-radius:10px; padding:6px 0; background:#fafbfc; }
+  .plus{ display:grid; grid-template-columns:repeat(4,1fr); gap:7px; margin-top:9px; }
+  .plus button{ padding:15px 2px; font-size:16px; font-weight:900; border-radius:8px; border:2px solid #c9ccd2;
+        background:#fff; cursor:pointer; font-family:inherit; color:var(--ink); }
+  .plus button.minus{ color:var(--fehlt); border-color:#f0bcbc; }
 
-  /* ── Karte ── */
-  #kartenBox{ padding:0; overflow:hidden; }
-  #karte{ width:100%; display:block; background:#dfe3e8; touch-action:none; }
-  .kbar{ display:flex; gap:8px; align-items:center; padding:8px 10px; border-top:1px solid var(--line);
-        font-size:12px; color:var(--mut); flex-wrap:wrap; }
-  #legende{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-  .pkt{ display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:4px; vertical-align:-1px; }
-  .zaehler{ font-size:12.5px; color:var(--mut); }
-  .liste{ font-size:13px; }
-  .liste div{ padding:5px 0; border-bottom:1px solid var(--line); }
-  #toast{ position:fixed; left:50%; bottom:18px; transform:translateX(-50%) translateY(90px);
-          background:#0f5c33; color:#fff; font-weight:800; padding:13px 20px; border-radius:8px;
-          font-size:16px; transition:transform .25s; z-index:70; max-width:92%; text-align:center; }
-  #toast.on{ transform:translateX(-50%) translateY(0); }
-  #toast.err{ background:var(--rot); }
+  /* ── Tabellen ── */
+  table.t{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  table.t th,table.t td{ border:1px solid var(--line); padding:6px 5px; text-align:center; }
+  table.t th{ background:#f4f5f7; font-size:10.5px; text-transform:uppercase; letter-spacing:.03em; color:var(--mut); }
+  table.t td.l,table.t th.l{ text-align:left; }
+  table.t tr.sum td{ font-weight:900; background:#f9fafb; }
+  .g5c{ color:var(--blau); font-weight:900; } .g6c{ color:#8a6800; font-weight:900; }
+  .fehlt{ background:#fdeaea; color:#a01c19; font-weight:900; }
+  .deckt{ background:#e8f5ec; color:#12703f; font-weight:900; }
+  .liste{ font-size:12.5px; }
+  .liste div.z{ display:flex; gap:8px; align-items:center; padding:7px 0; border-bottom:1px solid var(--line); }
+  .liste div.z b{ min-width:74px; }
+  .liste div.z span{ flex:1; color:var(--mut); }
+  .liste div.z button{ border:none; background:none; color:var(--fehlt); font-size:16px; cursor:pointer; padding:2px 6px; }
+  .hint{ font-size:11.5px; color:var(--mut); line-height:1.5; margin-top:8px; }
+
+  #toast{ position:fixed; left:50%; bottom:18px; transform:translate(-50%,26px); opacity:0;
+        background:#1a1a1a; color:#fff; padding:11px 16px; border-radius:8px; font-size:13.5px;
+        font-weight:700; transition:.22s; pointer-events:none; z-index:50; max-width:92vw; text-align:center; }
+  #toast.on{ opacity:1; transform:translate(-50%,0); }
+  #toast.err{ background:var(--fehlt); }
 </style>
 </head>
 <body>
 <header>
   <a class="home" href="index.html" title="Start">🏠</a>
   <div class="logo"><img src="assets/img/strabag-logo.png" alt="STRABAG"></div>
-  <h1>🔩 Pfahlköpfe &amp; Gewinde</h1>
+  <h1>🔩 Pfahlkopf-Inventur</h1>
   <span id="netz">online</span>
 </header>
 
 <div class="tabs">
-  <button id="tg1" class="on" onclick="tabG(1)">🔩 Pfahl</button>
-  <button id="tg2" onclick="tabG(2)">📦 Lager</button>
-  <button id="tg3" onclick="tabG(3)">📐 Typen</button>
+  <button id="tb1" class="on" onclick="tab(1)">📍 Feld</button>
+  <button id="tb2" onclick="tab(2)">📦 Lager</button>
+  <button id="tb3" onclick="tab(3)">📊 Bilanz</button>
+  <button id="tb4" onclick="tab(4)">📐 Masse</button>
 </div>
 
 <main>
-<section id="sPf">
-  <!-- Zielpfahl -->
+
+<!-- ══════════ 1 · FELD ══════════ -->
+<section id="s1">
+
+  <div class="box plain" style="padding:10px">
+    <div class="chips" id="filter"></div>
+    <label class="fl" style="margin-top:10px">Bereich – zum Hinspringen antippen</label>
+    <div class="chips" id="bereiche"></div>
+    <label class="fl">Oder Tisch-Nr suchen</label>
+    <div class="row">
+      <input id="suche" inputmode="numeric" placeholder="z. B. 1057" style="flex:1" onkeydown="if(event.key==='Enter')suchen()">
+      <button class="btn ghost" onclick="suchen()">Springen</button>
+    </div>
+  </div>
+
+  <div class="box" id="kartenBox">
+    <div id="kwrap">
+      <canvas id="karte"></canvas>
+      <div id="kInfo">–</div>
+      <div id="kZoom">
+        <button onclick="zoomen(1.6)" aria-label="Vergrössern">+</button>
+        <button onclick="zoomen(1/1.6)" aria-label="Verkleinern">−</button>
+      </div>
+    </div>
+    <div class="klegende">
+      <span><i style="background:#c9ccd2"></i>offen</span>
+      <span><i style="background:#1565c0;border-color:#1565c0"></i>5.0 mm</span>
+      <span><i style="background:#e0a800;border-color:#e0a800"></i>6.35 mm</span>
+      <span><i style="background:#1e9e5a;border-color:#1e9e5a"></i>Kopf drauf</span>
+      <span><i style="background:#fff;border-style:dashed"></i>noch nicht gebohrt</span>
+    </div>
+  </div>
+
   <div class="box" id="ziel">
     <div id="zTisch">–</div>
-    <div id="zSub">Auf der Karte unten einen Pfahl antippen</div>
+    <div id="zSub">Pfahl auf der Karte antippen</div>
     <div id="zTyp" style="display:none"></div>
-    <div id="zKopf" style="display:none"></div>
-    <div id="zDist"></div>
-    <div class="sBtns" id="sBtns" style="display:none"></div>
-    <div class="sHint" id="sHint" style="display:none"><b>Pfahl auf der Karte antippen</b> – das wählt Tisch
-      und Stütze direkt, ohne GPS. Hier oben geht es auch (S1 + S4 = Tal, S2 + S3 = Berg);
-      📍 = GPS-Vorschlag, falls Standort da. Jeder Pfahl kann ein anderes Gewinde und einen
-      eigenen Kopf-Status haben.</div>
-    <div class="warn" id="zWarn" style="display:none"></div>
+    <div id="zKopf"></div>
+    <div id="zStand"></div>
+    <div class="sBtns" id="sBtns"></div>
+    <div id="zHinweis"></div>
   </div>
 
-  <!-- Erfassung -->
   <div class="box">
-    <label class="fl" style="margin-top:0">1 · Gewinde am Pfahl</label>
+    <h2>Gewinde erfassen</h2>
     <div class="mess">
-      <button class="m5" id="b5" onclick="messen('5')">🔵 5 mm<small>Steigung 5 mm</small></button>
-      <button class="m6" id="b6" onclick="messen('6.35')">🟡 6.35 mm<small>Steigung 6.35 mm</small></button>
+      <button class="m5" id="b5" onclick="gewindeSetzen(5)" disabled>🔵 5.0<small>Union Pipe · 60°</small></button>
+      <button class="m6" id="b6" onclick="gewindeSetzen(6.35)" disabled>🟡 6.35<small>Merigo · Vierkant</small></button>
     </div>
-    <label class="fl">2 · Pfahlkopf am Pfahl</label>
+    <h2 style="margin-top:14px">Pfahlkopf</h2>
     <div class="mess">
-      <button class="mk1" id="bk1" onclick="kopfSetzen(1)">✅ montiert<small>Kopf ist drauf</small></button>
-      <button class="mk0" id="bk0" onclick="kopfSetzen(0)">⭕ fehlt<small>kein Kopf montiert</small></button>
-    </div>
-    <div class="row" style="margin-top:10px">
-      <button class="btn ghost" onclick="tischWaehlen()">🎯 anderer Tisch</button>
-      <button class="btn ghost" onclick="letzteRueckgaengig()">↶ letzte zurück</button>
+      <button class="mk1" id="bk1" onclick="kopfSetzen(1)" disabled>✅ drauf<small>Kopf ist montiert</small></button>
+      <button class="mk0" id="bk0" onclick="kopfSetzen(0)" disabled>⭕ fehlt<small>Kopf fehlt noch</small></button>
     </div>
     <label class="fl">Erfasst von</label>
-    <input id="f_von" placeholder="Name">
-    <div class="zaehler" id="stat" style="margin-top:8px">–</div>
-  </div>
-
-  <!-- letzte Pfahl-Erfassungen -->
-  <div class="box" style="border-left-color:#8a8e94">
-    <div class="row"><b style="flex:1">Zuletzt erfasst</b>
-      <button class="btn ghost" onclick="csv()">⬇ Gewinde</button>
-      <button class="btn ghost" onclick="kopfCsv()">⬇ Köpfe</button></div>
-    <div class="liste" id="letzte" style="margin-top:6px">–</div>
-  </div>
-</section>
-
-<section id="sMat" style="display:none">
-  <!-- Muffen / Pfahlkoepfe am Lagerort erfassen -->
-  <div class="box" style="border-left-color:var(--blau)">
-    <div style="font-size:15.5px;font-weight:800">📦 Pfahlköpfe &amp; Muffen am Lager erfassen</div>
-    <div style="font-size:12px;color:var(--mut);margin-top:4px;line-height:1.45">
-      Wo liegt welches Material? Standort kommt vom GPS – am Lagerort erfassen,
-      dann Gewinde antippen zum Speichern.</div>
-    <label class="fl">Was liegt hier? *</label>
-    <div class="sBtns" style="margin-top:2px">
-      <button type="button" id="ma_k" onclick="setMatArt('pfahlkopf')">🔩 Pfahlkopf<small>Kopfplatte + Muffe</small></button>
-      <button type="button" id="ma_m" onclick="setMatArt('muffe')">⚪ Muffe<small>Verbindungsmuffe</small></button>
-    </div>
-    <div class="row" style="margin-top:4px">
-      <div style="flex:1">
-        <label class="fl">Anzahl *</label>
-        <div class="row" style="flex-wrap:nowrap">
-          <button class="btn ghost" onclick="anz(-1)" style="padding:10px 16px;font-size:18px">−</button>
-          <input id="m_anz" inputmode="numeric" value="1" style="width:auto;flex:1;text-align:center;font-weight:900">
-          <button class="btn ghost" onclick="anz(1)" style="padding:10px 16px;font-size:18px">+</button>
-        </div>
-      </div>
-      <div style="flex:1">
-        <label class="fl">Typ (optional)</label>
-        <input id="m_typ" list="typListe" placeholder="z.B. E oder A/B">
-        <datalist id="typListe">
-          <option value="A"><option value="A/B"><option value="B1"><option value="B2">
-          <option value="C"><option value="C/D"><option value="D"><option value="E"><option value="R38">
-        </datalist>
-      </div>
-    </div>
-    <label class="fl">Erfasst von *</label>
-    <input id="m_von" placeholder="Name">
-    <label class="fl">Gewinde antippen = speichern</label>
-    <div class="mess">
-      <button class="m5" id="mb5" onclick="matMessen('5')">🔵 5 mm<small>Steigung 5 mm</small></button>
-      <button class="m6" id="mb6" onclick="matMessen('6.35')">🟡 6.35 mm<small>Steigung 6.35 mm</small></button>
-    </div>
+    <input id="f_von" placeholder="Name" oninput="setVon(this.value)">
     <div class="row" style="margin-top:10px">
-      <span class="zaehler" id="m_gps" style="flex:1">Warte auf GPS …</span>
-      <button class="btn ghost" onclick="matRueckgaengig()">↶ letzte zurück</button>
+      <button class="btn ghost" id="undoBtn" onclick="undo()" disabled>↶ Letzte Erfassung zurück</button>
     </div>
-    <div class="zaehler" id="matStat" style="margin-top:6px">–</div>
+    <div class="hint">Gewinde immer mit der Gewindelehre SCALA 464 messen (Blättchen 5.0 und 6.0) – „Typ E ⇒ 5 mm“ stimmt nicht, am 03.08. lagen im selben Tisch beide Steigungen.</div>
   </div>
 
-  <!-- letzte Material-Erfassungen -->
-  <div class="box" style="border-left-color:#8a8e94">
-    <div class="row"><b style="flex:1">Zuletzt abgelegt</b>
-      <button class="btn ghost" onclick="matCsv()">⬇ CSV</button></div>
-    <div class="liste" id="matLetzte" style="margin-top:6px">–</div>
+  <div class="box plain">
+    <h2>Heute erfasst</h2>
+    <div class="liste" id="heuteListe"></div>
   </div>
 </section>
 
-<section id="sTyp" style="display:none">
+<!-- ══════════ 2 · LAGER ══════════ -->
+<section id="s2" style="display:none">
   <div class="box">
-    <div style="font-size:15.5px;font-weight:800">📐 Pfahlkopf-Typen – Masse (Ausführung 2025)</div>
-    <div style="font-size:12px;color:var(--mut);margin:6px 0 10px;line-height:1.45">
-      Zum schnellen Bestimmen im Gelände: Kopfplatte messen oder Muffe prüfen.
-      Alle Masse in mm, Gewicht = Platte + 4 Flügelbleche + Muffe.</div>
-    <div style="overflow-x:auto">
-    <table class="ttab">
-      <tr><th>Typ</th><th>Kopfplatte<br>L × B × T</th><th>Muffe<br>Ø aussen × L</th><th>Flügelbleche<br>Dicke</th><th>Gewicht<br>komplett</th></tr>
-      <tr><td>A</td><td>290 × 280 × 20</td><td>Ø 114 × 80</td><td>4 × 10</td><td>≈ 16.5 kg</td></tr>
-      <tr><td>B1</td><td>290 × 280 × 20</td><td>Ø 114 × 80</td><td>4 × 10</td><td>≈ 16.5 kg</td></tr>
-      <tr><td>B2</td><td><b>320</b> × 280 × 20</td><td>Ø 114 × 80</td><td>4 × 10</td><td>≈ 17.8 kg</td></tr>
-      <tr class="schwer"><td>C</td><td>350 × 320 × 25</td><td>Ø 140 × 80</td><td>4 × 12</td><td>≈ 26.7 kg 👥</td></tr>
-      <tr class="schwer"><td>D</td><td>350 × 320 × 25</td><td>Ø 140 × 80</td><td>4 × 12</td><td>≈ 26.7 kg 👥</td></tr>
-      <tr class="schwer"><td>E</td><td>350 × <b>370</b> × <b>30</b></td><td>Ø 140 × 80</td><td>4 × 15</td><td>≈ 36.0 kg 👥</td></tr>
-    </table>
+    <h2>Was zählst du?</h2>
+    <div class="chips" id="lArt"></div>
+    <label class="fl">Typ</label>
+    <div class="chips" id="lTyp"></div>
+    <label class="fl">Gewinde</label>
+    <div class="chips" id="lGew"></div>
+    <label class="fl">Lagerort</label>
+    <input id="l_ort" list="orte" placeholder="z. B. IP Tal">
+    <datalist id="orte">
+      <option value="IP Tal"><option value="IP Berg"><option value="Container Tal">
+      <option value="Container Berg"><option value="Terno Küblis"><option value="Baufeld">
+      <option value="Zulauf bestellt">
+    </datalist>
+    <div class="hint" style="margin-top:4px">Lagerort mit „Zulauf“ im Namen = bestellt/unterwegs,
+      wird in der Bilanz getrennt ausgewiesen.</div>
+
+    <div class="zaehler"><div id="zahl">0</div></div>
+    <div class="plus">
+      <button onclick="zaehlen(1)">+1</button>
+      <button onclick="zaehlen(5)">+5</button>
+      <button onclick="zaehlen(10)">+10</button>
+      <button class="minus" onclick="zaehlen(-1)">−1</button>
     </div>
-    <div style="font-size:11.5px;color:var(--mut);margin-top:6px">👥 = C/D und E nicht allein versetzen (NO004, Pkt. 2c).</div>
+    <label class="fl">Gezählt von</label>
+    <input id="l_von" placeholder="Name" oninput="setVon(this.value)">
+    <div class="row" style="margin-top:10px">
+      <button class="btn" onclick="lagerSpeichern()">Bestand speichern</button>
+      <button class="btn ghost" onclick="zahlSetzen(0)">Zähler auf 0</button>
+    </div>
+    <div class="hint">Ein Eintrag je Lagerort + Typ + Gewinde. Zählst du denselben Posten nochmal, ersetzt der neue Wert den alten (letzter Stand gewinnt) – du musst nichts löschen.</div>
   </div>
 
-  <div class="box" style="border-left-color:var(--gruen)">
-    <div style="font-size:14.5px;font-weight:800;margin-bottom:6px">So erkennst du den Typ am schnellsten</div>
-    <ul class="tipp" style="margin:0;padding-left:18px">
-      <li><b>Muffen-Ø prüfen:</b> Ø 114 = Familie A/B · Ø 140 = C/D/E.
-        Mit dem Massband um die Muffe: Umfang ≈ 36 cm → 114er, ≈ 44 cm → 140er.</li>
-      <li><b>Plattenbreite (quer):</b> 280 = A/B · 320 = C/D · 370 = E.</li>
-      <li><b>A vs. B1:</b> identische Masse – am Bauteil nicht unterscheidbar
-        (Terno liefert teilweise kombiniert als «A/B»).</li>
-      <li><b>B2:</b> an der 320er-Plattenlänge erkennbar (30 mm länger als A/B1).</li>
-      <li><b>E:</b> grösste und dickste Platte (30 mm), deutlich am schwersten (~36 kg).</li>
-      <li><b>Passt auf Pfahlrohr:</b> Muffe Ø 114 (innen ca. 89) → 88.9er-ROR ·
-        Muffe Ø 140 (innen ca. 114) → 114.3er-ROR.</li>
-      <li><b>Gewinde im Kopf:</b> 🔵 5.0 mm Steigung = Spitzgewinde 60° («UP») ·
-        🟡 6.35 mm = Vierkantgewinde («Merigo») – gleiche Farben wie auf dieser Seite.</li>
-    </ul>
-  </div>
-
-  <div class="box" style="border-left-color:#8a8e94">
-    <div class="quelle">
-      <b>Quelle:</b> NO004 «Änderung bei Pfahlköpfen», freigegeben/signiert Axpo 03.10.2025 –
-      Nachtragskalkulation Seite 4, Spalten «Ausführung»
-      (Dropbox: 02 Auftraggeber\04 Nachtraege\004 Pfahlköpfe\NO004_Pfahlkopf_freigegeben.pdf).<br><br>
-      <b>Achtung:</b> Masse gelten für die Ausführung 2025 (345 Tische × 4). Laut NO004 soll der
-      Pfahlkopf für die weiteren Baujahre optimiert werden – 2026er-Köpfe können abweichen
-      (Mauchle-Plan Typ A 2026 zeigt z.B. bauseitige Kopfplatte BLE 20×300).
-      Abweichungen bitte an Victor melden.
-    </div>
+  <div class="box plain">
+    <h2>Erfasste Bestände</h2>
+    <div class="liste" id="lagerListe"></div>
   </div>
 </section>
 
-  <!-- Karte -->
-  <div class="box" id="kartenBox">
-    <div style="font-size:12.5px;font-weight:800;color:#1a1a1a;margin:0 0 7px">👆 Pfahl antippen = auswählen<span style="display:block;font-weight:600;color:#63676d;font-size:11.5px;margin-top:2px">Aus der Übersicht zoomt der erste Tipp auf den Tisch, der zweite wählt den Pfahl. Ohne GPS.</span></div>
-    <canvas id="karte" height="430"></canvas>
-    <div class="kbar">
-      <span id="legende"></span>
-      <span style="flex:1"></span>
-      <button class="btn ghost" id="folgenBtn" onclick="folgen()" title="zu meinem Standort">📍</button>
-      <button class="btn ghost" id="ansichtBtn" onclick="ansichtWechsel()">🔁 Köpfe</button>
-      <button class="btn ghost" id="zoomBtn" onclick="zoomWechsel()">🔍 Übersicht</button>
-    </div>
+<!-- ══════════ 3 · BILANZ ══════════ -->
+<section id="s3" style="display:none">
+  <div class="box">
+    <h2>Bedarf – Pfähle im Boden ohne Kopf</h2>
+    <div id="bedarfTab"></div>
+    <div class="hint" id="bedarfHint"></div>
   </div>
+
+  <div class="box">
+    <h2>Bestand Pfahlköpfe</h2>
+    <div id="bestandTab"></div>
+    <div class="hint">Alles, was du im Reiter 📦 Lager auf einen Lagerort mit „Zulauf“ im Namen buchst,
+      zählt unten als bestellt/unterwegs und nicht als vorhanden.</div>
+  </div>
+
+  <div class="box">
+    <h2>Reicht es?</h2>
+    <div id="bilanzTab"></div>
+    <div class="hint">Getrennt nach Kopfgruppe, weil ein E-Kopf nicht auf einen C/D-Pfahl passt:
+      <b>A/B</b> = Muffe Ø114 · <b>C/D</b> = Ø140, Platte 350×320×25 · <b>E</b> = Ø140, Platte 350×370×30.
+      B1 und B2 stecken zusammen in A/B – aus dem Tischtyp lässt sich nicht ableiten, welcher der beiden gebraucht wird.</div>
+  </div>
+
+  <div class="box plain">
+    <h2>Bestand Pfähle (Material am Lager)</h2>
+    <div id="pfahlTab"></div>
+  </div>
+
+  <div class="box plain">
+    <h2>Export</h2>
+    <div class="row">
+      <button class="btn ghost" onclick="csvGewinde()">CSV Gewinde-Messungen</button>
+      <button class="btn ghost" onclick="csvLager()">CSV Lagerbestand</button>
+      <button class="btn ghost" onclick="csvBedarf()">CSV Bedarf je Pfahl</button>
+    </div>
+    <div class="hint" id="standHint"></div>
+  </div>
+</section>
+
+<!-- ══════════ 4 · MASSE ══════════ -->
+<section id="s4" style="display:none">
+  <div class="box">
+    <h2>Pfahlkopf erkennen – Masse je Typ</h2>
+    <table class="t">
+      <tr><th class="l">Typ</th><th>Kopfplatte mm</th><th>Gewicht</th><th>Muffe</th></tr>
+      <tr><td class="l">A / B1</td><td>290×280×20</td><td>~16.5 kg</td><td>Ø114×80</td></tr>
+      <tr><td class="l">B2</td><td>320×280×20</td><td>~17.8 kg</td><td>Ø114×80</td></tr>
+      <tr><td class="l">C / D</td><td>350×320×25</td><td>~26.7 kg</td><td>Ø140×80</td></tr>
+      <tr><td class="l">E</td><td>350×370×30</td><td>~36.0 kg</td><td>Ø140×80</td></tr>
+    </table>
+    <div class="hint">Quelle: NO004 S. 4 Nachtragskalkulation, freigegeben 03.10.2025 (Ausführung 2025).
+      Die 2026er-Köpfe sind laut NO004 „optimiert“ und können abweichen. C/D und E sind schwer – zu zweit heben.</div>
+  </div>
+  <div class="box">
+    <h2>Pfahl erkennen</h2>
+    <table class="t">
+      <tr><th class="l">Tischtyp</th><th>Rohr</th><th>Länge</th><th>Muffe</th></tr>
+      <tr><td class="l">A / B</td><td>ROR 88.9</td><td>–</td><td>klein, Ø114 aussen</td></tr>
+      <tr><td class="l">C / D</td><td>ROR 114</td><td>2.5 m</td><td>gross, Ø140 aussen</td></tr>
+      <tr><td class="l">E</td><td>ROR 114</td><td>3.0 m</td><td>gross, Ø140 aussen</td></tr>
+    </table>
+    <div class="hint">Pfahllängen nach Angabe V. Malt 31.07.2026. Der Durchmesser trennt A/B von C/D/E,
+      die Länge trennt C/D von E.</div>
+  </div>
+  <div class="box">
+    <h2>Gewinde unterscheiden</h2>
+    <table class="t">
+      <tr><th class="l">Steigung</th><th>Form</th><th>Hersteller</th></tr>
+      <tr><td class="l g5c">5.0 mm</td><td>60° Spitzgewinde</td><td>Union Pipe (MM-M140X6.5)</td></tr>
+      <tr><td class="l g6c">6.35 mm</td><td>Vierkant (filetto quadro)</td><td>Merigo (Disegno 237)</td></tr>
+    </table>
+    <div class="hint">Kein Lieferschein und kein Zertifikat nennt die Steigung – nur die Gewindelehre
+      SCALA 464 (Art. 626352, Blättchen 5.0 und 6.0) schafft Klarheit. Die beiden Systeme passen NICHT zusammen.</div>
+  </div>
+</section>
+
 </main>
 <div id="toast"></div>
 
 <script>
 'use strict';
+/* ══════════════════════════════════════════════════════════════════════
+   Pfahlkopf-Inventur – ohne GPS, Auswahl per Kartenausschnitt.
+   Datenquelle: uploads/inventar.json  (tools/build_inventar.py)
+   Erfassung:   Firebase RTDB, gleiche Pfade/Satzform wie bisher, damit
+                die Messungen vom 31.07./03.08. gültig bleiben.
+   ══════════════════════════════════════════════════════════════════════ */
 var DB='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app';
-var P_GEW='erfassung/gewinde', P_MAT='erfassung/gewinde_material', P_KOPF='erfassung/pfahlkopf_montage';
+var P_GEW='erfassung/gewinde', P_KOPF='erfassung/pfahlkopf_montage', P_LAGER='erfassung/lager_v2';
 var LS_VON='nalp_erfasser_v1', LS_PEND='nalp_gewinde_pending_v1';
-var pfaehle=[], tische=[], tischGeo={}, geo=null, bild=null, messungen={}, koepfe={}, pos=null,
-    ziel=null, zielManuell=null, stuetzeSel=null;
-var material={}, matArt=null;
-var zoomNah=false;   // ohne GPS Uebersicht, bei erstem Fix -> Nahbereich
-var ansicht='gewinde';  // 'gewinde' oder 'kopf' – Faerbung der Pfahlpunkte auf der Karte
-var kMitte=null, kSpann=null, kView=null, kPtr={};   // manuell verschobene/gezoomte Kartenansicht
 
-function tabG(n){
-  $('sPf').style.display  = n===1?'':'none';
-  $('sMat').style.display = n===2?'':'none';
-  $('sTyp').style.display = n===3?'':'none';
-  $('kartenBox').style.display = n===3?'none':'';
-  $('tg1').classList.toggle('on', n===1);
-  $('tg2').classList.toggle('on', n===2);
-  $('tg3').classList.toggle('on', n===3);
-  if(n!==3) malen();
-}
+var pfaehle=[], bereiche=[], stand={}, messungen={}, koepfe={}, lager={};
+var sel=null;                       // gewaehlter Pfahl {t,s,lat,lon,tb,tv,ber,st,pk}
+var filter='offen';                 // 'offen' | 'e' | 'alle'
+var letzte=null;                    // fuer Undo
+var view={cx:0, cy:0, mpp:0.9};     // Kartenmitte (m, lokal) + Meter pro Pixel
+var ORIGIN=null;                    // Bezugspunkt fuer die lokale Meterprojektion
 
 function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
@@ -309,26 +359,23 @@ function toast(t,err){ var e=$('toast'); e.textContent=t; e.className='on'+(err?
 function heute(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function fmtZ(ts){ var d=new Date(ts); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
 function getVon(){ try{ return localStorage.getItem(LS_VON)||''; }catch(e){ return ''; } }
-function setVon(v){ try{ localStorage.setItem(LS_VON,v||''); }catch(e){} }
+function setVon(v){ try{ localStorage.setItem(LS_VON,v||''); }catch(e){}
+  if($('f_von').value!==v) $('f_von').value=v; if($('l_von').value!==v) $('l_von').value=v; }
 
-/* Pfahllänge nach Tischtyp (Angabe V. Malt): E = 3.0 m, C/D = 2.5 m */
-function pfahlInfo(typ){
-  var t=String(typ||'').charAt(0).toUpperCase();
-  if(t==='E') return {typ:t, laenge:'3.0 m'};
-  if(t==='C'||t==='D') return {typ:t, laenge:'2.5 m'};
-  return {typ:t||'?', laenge:''};
+var HASH=['','#feld','#lager','#bilanz','#masse'];
+function tab(n,stumm){
+  for(var i=1;i<=4;i++){ $('s'+i).style.display = i===n?'':'none'; $('tb'+i).classList.toggle('on', i===n); }
+  if(n===1) setTimeout(malen,30);
+  if(n===2) lagerListeMalen();
+  if(n===3) bilanzMalen();
+  if(!stumm){ try{ history.replaceState(null,'',HASH[n]); }catch(e){} }
 }
-/* Pfahlkopf-Masse je Tischtyp (NO004 S.4, Ausfuehrung 2025) */
-function kopfHinweis(typ){
-  var t=String(typ||'').charAt(0).toUpperCase();
-  if(t==='A') return 'Kopf: 290×280×20 mm · ~16.5 kg';
-  if(t==='B') return 'Kopf B1: 290×280×20 (~16.5 kg) · B2: 320×280×20 (~17.8 kg)';
-  if(t==='C'||t==='D') return 'Kopf: 350×320×25 mm · ~26.7 kg · zu zweit!';
-  if(t==='E') return 'Kopf: 350×370×30 mm · ~36 kg · zu zweit!';
-  return '';
+function tabAusHash(){
+  var i=HASH.indexOf(String(location.hash||'').toLowerCase());
+  if(i>0) tab(i,true);
 }
 
-/* ---------- Daten ---------- */
+/* ─────────── Firebase (REST, kein SDK) ─────────── */
 function apiGet(p){ return fetch(DB+'/'+p+'.json',{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }); }
 function apiPost(p,body){ return fetch(DB+'/'+p+'.json',{method:'POST',body:JSON.stringify(body)})
   .then(function(r){ return r.ok?r.json():null; }).then(function(j){ return j&&j.name?j.name:null; }); }
@@ -345,657 +392,634 @@ function pendAdd(pfad,rec){ var a=pendLesen(); a.push({pfad:pfad,rec:rec}); pend
 function pendSenden(){
   var a=pendLesen(); if(!a.length||!netzAn()) return;
   a.reduce(function(k,item){
-    var pfad=item.pfad||P_GEW, rec=item.rec||item;   // alte Eintraege ohne Pfad -> Pfahlmessung
+    var pfad=item.pfad||P_GEW, rec=item.rec||item;
     return k.then(function(rest){
       return apiPost(pfad,rec).then(function(key){ return key?rest:rest.concat([item]); })
         .catch(function(){ return rest.concat([item]); });
     });
   }, Promise.resolve([])).then(function(rest){
     pendSchreiben(rest);
-    if(!rest.length){ toast('Offline-Erfassungen gesendet ✔'); laden(); }
+    if(rest.length<a.length) toast('✔ '+(a.length-rest.length)+' nachgesendet');
   });
 }
 window.addEventListener('online', function(){ netzMalen(); pendSenden(); });
 window.addEventListener('offline', netzMalen);
 
-/* GPS findet den Tisch, der Pfahl wird am Tisch bestaetigt (S1-S4).
-   Erfasst wird je PFAHL: Gewinde (5/6.35) und Kopf-Status (montiert/fehlt) -
-   die vier Pfaehle eines Tisches koennen sich unterscheiden. */
-function tischeBauen(){
-  var map={};
-  pfaehle.forEach(function(p){
-    var t=map[p[0]] || (map[p[0]]={id:p[0], typ:p[4]||'', pf:[], pkt:[]});
-    t.pf.push({s:p[1], lat:p[2], lon:p[3]});
-    t.pkt.push([p[2],p[3]]);
-    if(!t.typ && p[4]) t.typ=p[4];
-  });
-  tische=Object.keys(map).map(function(k){
-    var t=map[k];
-    t.pf.sort(function(a,b){ return a.s<b.s?-1:1; });
-    return t;
+/* ─────────── Daten laden ─────────── */
+function schluessel(t,s){ return String(t)+'-S'+s; }
+
+function inventarLaden(){
+  return fetch('uploads/inventar.json',{cache:'no-store'}).then(function(r){ return r.json(); }).then(function(j){
+    stand=j.stand||{}; bereiche=j.bereiche||[];
+    pfaehle=(j.pfaehle||[]).map(function(p){
+      return {t:String(p[0]), s:p[1], lat:p[2], lon:p[3], tb:p[4], tv:p[5], ber:p[6], st:p[7], pk:p[8]};
+    });
+    // lokale Meterprojektion um den Schwerpunkt
+    var la=0, lo=0;
+    pfaehle.forEach(function(p){ la+=p.lat; lo+=p.lon; });
+    ORIGIN={lat:la/pfaehle.length, lon:lo/pfaehle.length};
+    pfaehle.forEach(function(p){ var m=zuMeter(p.lat,p.lon); p.x=m.x; p.y=m.y; });
+    view.cx=0; view.cy=0; view.mpp=1.6;
   });
 }
+function zuMeter(lat,lon){
+  return { x:(lon-ORIGIN.lon)*111320*Math.cos(ORIGIN.lat*Math.PI/180),
+           y:(lat-ORIGIN.lat)*111320 };
+}
 
-function laden(){
-  if(!netzAn()){ malen(); return; }
-  Promise.all([apiGet(P_GEW),apiGet(P_MAT),apiGet(P_KOPF)]).then(function(r){
-    var j=r[0];
+function erfassungLaden(){
+  if(!netzAn()){ malen(); return Promise.resolve(); }
+  return Promise.all([apiGet(P_GEW),apiGet(P_KOPF),apiGet(P_LAGER)]).then(function(r){
     messungen={};
-    Object.keys(j||{}).forEach(function(k){
-      var m=j[k]; if(!m||!m.tischId||!m.stuetze) return;
-      if(!/^S\d$/i.test(String(m.stuetze))) return;   // alte Tisch-Eintraege ('alle') ignorieren
-      m._k=k;
-      messungen[String(m.tischId)+'-'+String(m.stuetze).toUpperCase()]=m;  // letzte Messung gewinnt
-    });
-    material={};
-    Object.keys(r[1]||{}).forEach(function(k){
-      var m=r[1][k]; if(!m||!m.art) return;
-      m._k=k; material[k]=m;
+    Object.keys(r[0]||{}).forEach(function(k){
+      var m=r[0][k]; if(!m||!m.tischId||!m.stuetze) return;
+      if(!/^S\d$/i.test(String(m.stuetze))) return;      // alte 'alle'-Eintraege ignorieren
+      m._k=k; messungen[String(m.tischId)+'-'+String(m.stuetze).toUpperCase()]=m;
     });
     koepfe={};
-    Object.keys(r[2]||{}).forEach(function(k){
-      var m=r[2][k]; if(!m||!m.tischId||!m.stuetze) return;
+    Object.keys(r[1]||{}).forEach(function(k){
+      var m=r[1][k]; if(!m||!m.tischId||!m.stuetze) return;
       if(!/^S\d$/i.test(String(m.stuetze))) return;
-      m._k=k;
-      koepfe[String(m.tischId)+'-'+String(m.stuetze).toUpperCase()]=m;    // letzter Stand gewinnt
+      m._k=k; koepfe[String(m.tischId)+'-'+String(m.stuetze).toUpperCase()]=m;
     });
-    malen(); listeMalen(); statMalen(); zielMalen(); matListeMalen();
+    lager={};
+    Object.keys(r[2]||{}).forEach(function(k){
+      var m=r[2][k]; if(!m||!m.art) return;
+      m._k=k;
+      var key=[m.art,m.typ,m.gewinde,(m.ort||'').trim().toLowerCase()].join('|');
+      if(!lager[key]||(m.ts||0)>(lager[key].ts||0)) lager[key]=m;   // letzter Stand gewinnt
+    });
+    malen(); zielMalen(); heuteMalen(); lagerListeMalen(); bilanzMalen(); chipsMalen();
   }).catch(function(){});
 }
 
-/* ---------- GPS ---------- */
-function meter(lat1,lon1,lat2,lon2){
-  var dy=(lat2-lat1)*111320, dx=(lon2-lon1)*111320*Math.cos(lat1*Math.PI/180);
-  return Math.sqrt(dx*dx+dy*dy);
+/* ─────────── Zustand je Pfahl ─────────── */
+/* 'fertig'  Primaerkonstruktion steht oder Kopf als montiert erfasst
+   'offen'   im Boden, Kopf fehlt          -> das ist die Arbeitsliste
+   'leer'    noch nicht gebohrt                                            */
+function zustand(p){
+  var k=schluessel(p.t,p.s);
+  if(p.pk) return 'fertig';
+  if(koepfe[k] && koepfe[k].montiert) return 'fertig';
+  if(p.st<2) return 'leer';
+  return 'offen';
 }
-if(navigator.geolocation){
-  navigator.geolocation.watchPosition(function(p){
-    var ersterFix=!pos;
-    pos={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
-    if(ersterFix){ zoomNah=true; $('zoomBtn').textContent='🔍 Übersicht'; }
-    $('m_gps').textContent='📍 Standort da · GPS ±'+Math.round(pos.acc)+' m';
-    zielSuchen(); malen();
-  }, function(){ $('zSub').textContent='Kein GPS – bitte Standort erlauben'; },
-     {enableHighAccuracy:true, maximumAge:3000, timeout:20000});
-}
-function tischAbstand(t){                    // kuerzester Abstand zu einem Pfahl
-  var b=1e9;
-  for(var i=0;i<t.pkt.length;i++){
-    var d=meter(pos.lat,pos.lon,t.pkt[i][0],t.pkt[i][1]);
-    if(d<b) b=d;
-  }
-  return b;
-}
-function naechsterPfahl(t){                  // GPS-Vorschlag innerhalb des Tisches
-  if(!pos||!t) return null;
-  var best=null, bd=1e9;
-  t.pf.forEach(function(p){
-    var d=meter(pos.lat,pos.lon,p.lat,p.lon);
-    if(d<bd){ bd=d; best=p; }
-  });
-  return best?best.s:null;
-}
-function zielSuchen(){
-  if(zielManuell){ ziel=zielManuell; zielMalen(); return; }
-  if(!pos||!tische.length) return;
-  var best=null, bd=1e9;
-  tische.forEach(function(t){
-    var d=tischAbstand(t);
-    if(d<bd){ bd=d; best=t; }
-  });
-  var wechsel = !ziel || !best || ziel.id!==best.id;
-  ziel=best; if(ziel) ziel._d=bd;
-  if(wechsel) stuetzeSel=null;               // neuer Tisch -> Pfahlwahl zuruecksetzen
-  zielMalen();
-}
-function setStuetze(s){
-  stuetzeSel=s;
-  zielMalen();
-}
-function stuetzenMalen(){
-  var box=$('sBtns');
-  if(!ziel){ box.style.display='none'; $('sHint').style.display='none'; return; }
-  var gps=naechsterPfahl(ziel);
-  if(!stuetzeSel && gps && !zielManuell) stuetzeSel=gps;   // Vorschlag vorauswaehlen
-  box.style.display=''; $('sHint').style.display='';
-  box.innerHTML='';
-  ziel.pf.forEach(function(p){
-    var m=messungen[ziel.id+'-'+p.s], k=koepfe[ziel.id+'-'+p.s];
-    var b=document.createElement('button'); b.type='button';
-    b.className=(m?(m.gewinde==='5'?'g5':'g6'):'')+(stuetzeSel===p.s?' on':'');
-    var teile=[];
-    if(m) teile.push(esc(m.gewinde)+' mm');
-    if(k) teile.push(k.montiert?'K ✓':'K –');
-    b.innerHTML=esc(p.s)+(p.s===gps?' 📍':'')
-      +'<small>'+(teile.length?teile.join(' · '):'offen')+'</small>';
-    b.onclick=function(){ setStuetze(p.s); };
-    box.appendChild(b);
-  });
-}
-function zielMalen(){
-  if(!ziel){ return; }
-  stuetzenMalen();
-  var m=stuetzeSel?messungen[ziel.id+'-'+stuetzeSel]:null;
-  var kk=stuetzeSel?koepfe[ziel.id+'-'+stuetzeSel]:null;
-  var inf=pfahlInfo(ziel.typ);
-  $('zTisch').textContent='Tisch '+ziel.id;
-  $('zSub').textContent=(stuetzeSel?('Pfahl '+stuetzeSel):'Pfahl wählen (S1–S4)')
-    +(zielManuell?'  ·  auf der Karte gewählt':'');
-  var zt=$('zTyp'); zt.style.display='';
-  zt.textContent='Typ '+inf.typ+(inf.laenge?' · '+inf.laenge:'');
-  zt.style.background = inf.typ==='E' ? '#5b3fa8' : (inf.typ==='C'||inf.typ==='D' ? '#0f7b6c' : '#63676d');
-  var zk=$('zKopf'), kh=kopfHinweis(ziel.typ);
-  zk.style.display=kh?'':'none'; zk.textContent=kh;
-  var d=ziel._d!=null?Math.round(ziel._d):null;
-  $('zDist').innerHTML = (d!=null?('Entfernung <b>'+d+' m</b>'):'') +
-     (pos&&pos.acc?('  ·  GPS ±'+Math.round(pos.acc)+' m'):'');
-  // Ist der TYP in der Umgebung eindeutig? (GPS-Ungenauigkeit vs. enge Pfahlabstaende)
-  var umkreis = Math.max(10, (pos&&pos.acc)?pos.acc:10);
-  var typen={};
-  if(pos) tische.forEach(function(t){
-    if(tischAbstand(t)<=umkreis){
-      var k=String(t.typ||'?').charAt(0).toUpperCase();
-      typen[k]=(typen[k]||0)+1;
-    }
-  });
-  var tListe=Object.keys(typen);
-  var w=$('zWarn');
-  if(tListe.length>1 && !zielManuell){
-    w.style.display=''; w.style.background='#fff3d6'; w.style.borderColor='#e0a800'; w.style.color='#7a5200';
-    w.textContent='⚠ Im Umkreis von '+Math.round(umkreis)+' m stehen Tische vom Typ '+tListe.join(' und ')
-      +' – bitte den Tisch von Hand wählen, damit der Typ stimmt.';
-    return;
-  }
-  if(m||kk){
-    var teile=[];
-    if(m)  teile.push(m.gewinde+' mm ('+(m.von||'')+', '+fmtZ(m.ts)+')');
-    if(kk) teile.push((kk.montiert?'Kopf montiert':'ohne Kopf')+' ('+(kk.von||'')+', '+fmtZ(kk.ts)+')');
-    w.style.display=''; w.style.background='#e8f5ec'; w.style.borderColor='#1e9e5a'; w.style.color='#12703f';
-    w.textContent='✔ '+ziel.id+'-'+stuetzeSel+' erfasst: '+teile.join(' · ');
-  } else if(d!=null && d>25 && !zielManuell){
-    w.style.display=''; w.style.background='#fff3d6'; w.style.borderColor='#e0a800'; w.style.color='#7a5200';
-    w.textContent='Weit vom nächsten Tisch entfernt ('+d+' m) – bitte prüfen oder auf der Karte antippen.';
-  } else { w.style.display='none'; }
-  $('b5').disabled=$('b6').disabled=$('bk1').disabled=$('bk0').disabled=!(ziel&&stuetzeSel);
+function gewindeVon(p){ var m=messungen[schluessel(p.t,p.s)]; return m?+m.gewinde:null; }
+function sichtbar(p){
+  if(filter==='alle') return true;
+  if(filter==='e') return p.tb==='E' && zustand(p)!=='leer';
+  return zustand(p)==='offen';
 }
 
-/* ---------- Gewinde messen ---------- */
-function messen(g){
-  if(!ziel){ toast('Kein Pfahl gewaehlt - auf der Karte antippen',true); return; }
-  if(!stuetzeSel){ toast('Bitte Pfahl S1–S4 wählen',true); return; }
-  var von=$('f_von').value.trim();
-  if(!von){ toast('Bitte Namen eintragen',true); $('f_von').focus(); return; }
-  setVon(von); $('m_von').value=von;
-  var key=ziel.id+'-'+stuetzeSel;
-  if(messungen[key] && !confirm('Pfahl '+key+' ist schon mit '+messungen[key].gewinde+' mm erfasst.\nÜberschreiben?')) return;
-  var rec={ tischId:ziel.id, stuetze:stuetzeSel, typ:ziel.typ||'', gewinde:g,
-            lat:pos?+pos.lat.toFixed(6):null, lon:pos?+pos.lon.toFixed(6):null,
-            acc:pos?Math.round(pos.acc):null, dist:ziel._d!=null?Math.round(ziel._d):null,
-            von:von, datum:heute(), ts:Date.now() };
-  messungen[key]=rec;                       // sofort sichtbar
-  // weiter zum naechsten Pfahl dieses Tisches ohne Gewinde
-  var offen=ziel.pf.filter(function(p){ return !messungen[ziel.id+'-'+p.s]; });
-  stuetzeSel=offen.length?offen[0].s:null;
-  malen(); listeMalen(); statMalen(); zielMalen();
-  if(navigator.vibrate) navigator.vibrate(60);
-  toast('✔ '+key+' · '+g+' mm');
-  if(!netzAn()){ pendAdd(P_GEW,rec); return; }
-  apiPost(P_GEW,rec).then(function(k){
-    if(!k) throw 0;
-    rec._k=k;
-  }).catch(function(){
-    pendAdd(P_GEW,rec);
-    toast('Kein Empfang – lokal gespeichert',true);
-  });
+/* ─────────── Karte ─────────── */
+var cv, ctx, dpr=1;
+function canvasSetzen(){
+  cv=$('karte'); ctx=cv.getContext('2d');
+  dpr=window.devicePixelRatio||1;
+  var r=cv.getBoundingClientRect();
+  cv.width=Math.round(r.width*dpr); cv.height=Math.round(r.height*dpr);
 }
-
-/* ---------- Pfahlkopf montiert / fehlt ---------- */
-function kopfSetzen(mont){
-  if(!ziel){ toast('Kein Pfahl gewaehlt - auf der Karte antippen',true); return; }
-  if(!stuetzeSel){ toast('Bitte Pfahl S1–S4 wählen',true); return; }
-  var von=$('f_von').value.trim();
-  if(!von){ toast('Bitte Namen eintragen',true); $('f_von').focus(); return; }
-  setVon(von); $('m_von').value=von;
-  var key=ziel.id+'-'+stuetzeSel, alt=koepfe[key];
-  if(alt && !!alt.montiert===!!mont){ toast(key+' ist schon so erfasst ✓'); return; }
-  if(alt && !confirm('Pfahl '+key+' ist schon als „'+(alt.montiert?'Kopf montiert':'ohne Kopf')+'“ erfasst.\nÄndern?')) return;
-  var rec={ tischId:ziel.id, stuetze:stuetzeSel, typ:ziel.typ||'', montiert:mont?1:0,
-            lat:pos?+pos.lat.toFixed(6):null, lon:pos?+pos.lon.toFixed(6):null,
-            acc:pos?Math.round(pos.acc):null, dist:ziel._d!=null?Math.round(ziel._d):null,
-            von:von, datum:heute(), ts:Date.now() };
-  koepfe[key]=rec;                          // sofort sichtbar
-  // weiter zum naechsten Pfahl dieses Tisches ohne Kopf-Status
-  var offen=ziel.pf.filter(function(p){ return !koepfe[ziel.id+'-'+p.s]; });
-  if(offen.length) stuetzeSel=offen[0].s;
-  malen(); listeMalen(); statMalen(); zielMalen();
-  if(navigator.vibrate) navigator.vibrate(60);
-  toast(mont?('✔ '+key+' · Kopf montiert'):('✔ '+key+' · ohne Kopf'));
-  if(!netzAn()){ pendAdd(P_KOPF,rec); return; }
-  apiPost(P_KOPF,rec).then(function(k){
-    if(!k) throw 0;
-    rec._k=k;
-  }).catch(function(){
-    pendAdd(P_KOPF,rec);
-    toast('Kein Empfang – lokal gespeichert',true);
-  });
+function s2p(p){   // Weltmeter -> Pixel (CSS-Pixel)
+  var r=cv.getBoundingClientRect();
+  return { x:r.width/2 + (p.x-view.cx)/view.mpp, y:r.height/2 - (p.y-view.cy)/view.mpp };
 }
-
-/* ---------- Muffen & Pfahlkoepfe (Materiallager nach GPS) ---------- */
-function setMatArt(a){
-  matArt=(matArt===a)?null:a;
-  $('ma_m').classList.toggle('on', matArt==='muffe');
-  $('ma_k').classList.toggle('on', matArt==='pfahlkopf');
-}
-function anz(d){ $('m_anz').value=Math.max(1,(parseInt($('m_anz').value,10)||1)+d); }
-function matName(a){ return a==='muffe'?'Muffe':'Pfahlkopf'; }
-function alleMat(){
-  return Object.keys(material).map(function(k){ return material[k]; })
-    .sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
-}
-function matMessen(g){
-  if(!matArt){ toast('Bitte wählen: Pfahlkopf oder Muffe',true); return; }
-  if(!pos){ toast('Noch kein GPS – Standort nötig',true); return; }
-  var von=$('m_von').value.trim();
-  if(!von){ toast('Bitte Namen eintragen',true); $('m_von').focus(); return; }
-  setVon(von); $('f_von').value=von;
-  var n=Math.max(1,parseInt($('m_anz').value,10)||1);
-  var rec={ art:matArt, gewinde:g, anzahl:n, typ:$('m_typ').value.trim(),
-            lat:+pos.lat.toFixed(6), lon:+pos.lon.toFixed(6), acc:Math.round(pos.acc),
-            von:von, datum:heute(), ts:Date.now() };
-  material['loc_'+rec.ts]=rec;              // sofort sichtbar
-  matListeMalen(); malen();
-  if(navigator.vibrate) navigator.vibrate(60);
-  toast('✔ '+n+'× '+matName(matArt)+(rec.typ?(' '+rec.typ):'')+' · '+g+' mm');
-  if(!netzAn()){ pendAdd(P_MAT,rec); return; }
-  apiPost(P_MAT,rec).then(function(k){
-    if(!k) throw 0;
-    rec._k=k;
-  }).catch(function(){
-    pendAdd(P_MAT,rec);
-    toast('Kein Empfang – lokal gespeichert',true);
-  });
-}
-function matRueckgaengig(){
-  var a=alleMat();
-  if(!a.length){ toast('Nichts zum Zurücknehmen',true); return; }
-  var m=a[0];
-  if(!confirm('Letzte Ablage löschen?\n'+m.anzahl+'× '+matName(m.art)+' · '+m.gewinde+' mm')) return;
-  Object.keys(material).forEach(function(k){ if(material[k]===m) delete material[k]; });
-  if(m._k) fetch(DB+'/'+P_MAT+'/'+m._k+'.json',{method:'DELETE'}).catch(function(){});
-  matListeMalen(); malen();
-  toast('Zurückgenommen');
-}
-function matListeMalen(){
-  if(!$('matLetzte')) return;
-  var a=alleMat();
-  $('matLetzte').innerHTML = a.length ? a.slice(0,8).map(function(m){
-    var f=m.gewinde==='5'?'#1565c0':'#e0a800';
-    return '<div>'+(m.art==='muffe'?'◼':'▲')+' <b>'+esc(m.anzahl)+'× '+matName(m.art)+'</b> · '
-      +'<span style="color:'+f+';font-weight:900">'+esc(m.gewinde)+' mm</span>'
-      +(m.typ?' · Typ '+esc(m.typ):'')+' · '+esc(m.von||'')+' '+fmtZ(m.ts)+'</div>';
-  }).join('') : '<div style="color:var(--mut)">noch nichts abgelegt</div>';
-  var mu=0, ko=0;
-  a.forEach(function(m){ if(m.art==='muffe') mu+=(+m.anzahl||0); else ko+=(+m.anzahl||0); });
-  $('matStat').textContent = a.length+' Ablagen · '+ko+' Pfahlköpfe · '+mu+' Muffen';
-}
-function matCsv(){
-  var kopf=['Art','Typ','Gewinde_mm','Anzahl','Datum','Zeit','Erfasst_von','lat','lon','GPS_m'];
-  var zeilen=alleMat().map(function(m){
-    return [matName(m.art),m.typ,m.gewinde,m.anzahl,m.datum,fmtZ(m.ts),m.von,m.lat,m.lon,m.acc];
-  });
-  var lines=[kopf.join(';')].concat(zeilen.map(function(z){
-    return z.map(function(v){ return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'; }).join(';'); }));
-  var b=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
-  var a=document.createElement('a'); a.href=URL.createObjectURL(b);
-  a.download='Pfahlkopf_Lager_'+heute()+'.csv'; a.click();
-}
-
-/* ---------- Rueckgaengig (Gewinde + Kopf gemeinsam, neueste zuerst) ---------- */
-function letzteRueckgaengig(){
-  var alle=[];
-  Object.keys(messungen).forEach(function(k){ alle.push({art:'gew', key:k, m:messungen[k]}); });
-  Object.keys(koepfe).forEach(function(k){ alle.push({art:'kopf', key:k, m:koepfe[k]}); });
-  alle.sort(function(a,b){ return (b.m.ts||0)-(a.m.ts||0); });
-  if(!alle.length){ toast('Nichts zum Zurücknehmen',true); return; }
-  var e=alle[0], m=e.m;
-  var was=e.art==='gew' ? (m.gewinde+' mm') : (m.montiert?'Kopf montiert':'ohne Kopf');
-  if(!confirm('Letzte Erfassung löschen?\nPfahl '+e.key+' · '+was)) return;
-  if(e.art==='gew') delete messungen[e.key]; else delete koepfe[e.key];
-  if(m._k) fetch(DB+'/'+(e.art==='gew'?P_GEW:P_KOPF)+'/'+m._k+'.json',{method:'DELETE'}).catch(function(){});
-  malen(); listeMalen(); statMalen(); zielMalen();
-  toast('Zurückgenommen');
-}
-function tischWaehlen(){
-  if(!pos){ toast('Noch kein GPS',true); return; }
-  var nah=tische.map(function(t){ return {p:t, d:tischAbstand(t)}; })
-    .sort(function(a,b){ return a.d-b.d; }).slice(0,8);
-  var txt='Welcher Tisch?\n\n0) wieder automatisch (GPS)\n'+nah.map(function(x,i){
-    var t=x.p, ty=String(t.typ||'?').charAt(0);
-    var n=t.pf.filter(function(p){ return messungen[t.id+'-'+p.s]||koepfe[t.id+'-'+p.s]; }).length;
-    return (i+1)+') Tisch '+t.id+' (Typ '+ty+', '+Math.round(x.d)+' m, '+n+'/'+t.pf.length+' erfasst)';
-  }).join('\n')+'\n\nNummer eingeben:';
-  var a=prompt(txt,'1');
-  if(a===null) return;
-  if(parseInt(a,10)===0){ zielManuell=null; stuetzeSel=null; zielSuchen(); malen(); return; }
-  var i=parseInt(a,10)-1;
-  if(isNaN(i)||i<0||i>=nah.length){ toast('Ungültig',true); return; }
-  zielManuell=nah[i].p; zielManuell._d=nah[i].d; ziel=zielManuell;
-  var offen=zielManuell.pf.filter(function(p){ return !messungen[zielManuell.id+'-'+p.s]; });
-  stuetzeSel=offen.length?offen[0].s:null;
-  zielMalen(); malen();
-}
-
-/* ---------- Karte ---------- */
-function lv95(lat,lon){                   // WGS84 -> LV95 (Naeherung swisstopo)
-  var p=(lat*3600-169028.66)/10000, l=(lon*3600-26782.5)/10000;
-  return { E:2600072.37+211455.93*l-10938.51*l*p-0.36*l*p*p-44.54*l*l*l,
-           N:1200147.07+308807.95*p+3745.25*l*l+76.63*p*p-194.56*l*l*p+119.79*p*p*p };
+function p2s(px,py){
+  var r=cv.getBoundingClientRect();
+  return { x:view.cx + (px-r.width/2)*view.mpp, y:view.cy - (py-r.height/2)*view.mpp };
 }
 function malen(){
-  var cv=$('karte'); if(!cv||!geo) return;
-  var br=cv.clientWidth||360;
-  cv.width=br*(window.devicePixelRatio||1);
-  cv.height=430*(window.devicePixelRatio||1);
-  cv.style.height='430px';
-  var c=cv.getContext('2d');
-  c.setTransform(window.devicePixelRatio||1,0,0,window.devicePixelRatio||1,0,0);
-  c.clearRect(0,0,br,430);
+  if(!cv||!pfaehle.length) return;
+  canvasSetzen();
+  var r=cv.getBoundingClientRect();
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,r.width,r.height);
+  ctx.fillStyle='#f6f7f9'; ctx.fillRect(0,0,r.width,r.height);
 
-  // Ausschnitt in LV95 bestimmen – von Hand verschoben/gezoomt hat Vorrang vor GPS-Folgen
-  var voll = Math.max(geo.maxE-geo.minE, geo.maxN-geo.minN);
-  var mitte = kMitte || (pos ? lv95(pos.lat,pos.lon) : {E:(geo.minE+geo.maxE)/2, N:(geo.minN+geo.maxN)/2});
-  var spann = kSpann!=null ? kSpann : (zoomNah ? 90 : voll);
-  var mPerPx = spann/br;
-  var hM = 430*mPerPx;
-  var vE = mitte.E-spann/2, vN = mitte.N-hM/2;
-  kView={ br:br, mPerPx:mPerPx, vE:vE, vN:vN, spann:spann, voll:voll, mitte:mitte };
-  function P(E,N){ return { x:(E-vE)/mPerPx, y:430-(N-vN)/mPerPx }; }
+  /* Radius am echten Pfahlabstand ausrichten: innerhalb eines Tisches liegen die
+     Pfähle ~2.5 m auseinander – der Kreis darf den Nachbarn nicht überdecken. */
+  var rad = Math.max(3, Math.min(11, 1.05/view.mpp));
+  var beschriften = view.mpp < 0.75;
+  var gezeichnet=0, tischLabel={};
 
-  // Luftbild
-  if(bild){
-    var sx=(vE-geo.minE)/(geo.maxE-geo.minE)*geo.w;
-    var sy=(geo.maxN-(vN+hM))/(geo.maxN-geo.minN)*geo.h;
-    var sw=spann/(geo.maxE-geo.minE)*geo.w;
-    var sh=hM/(geo.maxN-geo.minN)*geo.h;
-    try{ c.drawImage(bild,sx,sy,sw,sh,0,0,br,430); }catch(e){}
-  }
-  // Pfaehle einzeln – Farbe je nach Ansicht: Gewinde oder Kopf-Status
-  tische.forEach(function(t){
-    var pts=t.pf.map(function(p){ var v=lv95(p.lat,p.lon); var q=P(v.E,v.N); q.s=p.s; return q; });
-    var mx=pts.reduce(function(a,q){return a+q.x;},0)/pts.length;
-    var my=pts.reduce(function(a,q){return a+q.y;},0)/pts.length;
-    if(mx<-40||mx>br+40||my<-40||my>470) return;
-    if(zoomNah && pts.length>2){
-      // Tischumriss als Orientierung (im Uhrzeigersinn um den Mittelpunkt)
-      var srt=pts.slice().sort(function(a,b){
-        return Math.atan2(a.y-my,a.x-mx)-Math.atan2(b.y-my,b.x-mx); });
-      c.beginPath(); srt.forEach(function(q,i){ i?c.lineTo(q.x,q.y):c.moveTo(q.x,q.y); }); c.closePath();
-      c.fillStyle='rgba(255,255,255,.14)';
-      c.fill(); c.lineWidth=1.5; c.strokeStyle='rgba(255,255,255,.75)'; c.stroke();
+  for(var i=0;i<pfaehle.length;i++){
+    var p=pfaehle[i];
+    if(!sichtbar(p)) continue;
+    var q=s2p(p);
+    if(q.x<-30||q.y<-30||q.x>r.width+30||q.y>r.height+30) continue;
+    gezeichnet++;
+    var z=zustand(p), g=gewindeVon(p);
+    ctx.beginPath(); ctx.arc(q.x,q.y,rad,0,6.2832);
+    if(z==='leer'){ ctx.fillStyle='#ffffff'; ctx.fill();
+      ctx.setLineDash([2,2]); ctx.strokeStyle='#b6bac1'; ctx.lineWidth=1.4; ctx.stroke(); ctx.setLineDash([]); }
+    else if(z==='fertig'){ ctx.fillStyle='#1e9e5a'; ctx.fill();
+      ctx.strokeStyle='#177c47'; ctx.lineWidth=1.2; ctx.stroke(); }
+    else if(g===5){ ctx.fillStyle='#1565c0'; ctx.fill(); ctx.strokeStyle='#0d47a1'; ctx.lineWidth=1.2; ctx.stroke(); }
+    else if(g){ ctx.fillStyle='#e0a800'; ctx.fill(); ctx.strokeStyle='#a97e00'; ctx.lineWidth=1.2; ctx.stroke(); }
+    else { ctx.fillStyle='#c9ccd2'; ctx.fill(); ctx.strokeStyle='#8b9099'; ctx.lineWidth=1.6; ctx.stroke(); }
+
+    if(p.tb==='E' && z==='offen'){       // Typ E hervorheben – darum geht es gerade
+      ctx.beginPath(); ctx.arc(q.x,q.y,rad+3.2,0,6.2832);
+      ctx.strokeStyle='#D72622'; ctx.lineWidth=1.8; ctx.stroke();
     }
-    pts.forEach(function(q){
-      var m=messungen[t.id+'-'+q.s], k=koepfe[t.id+'-'+q.s], f;
-      if(ansicht==='kopf'){ f = k ? (k.montiert?'#1e9e5a':'#d84343') : 'rgba(150,157,166,.85)'; }
-      else { f = m ? (m.gewinde==='5'?'#1565c0':'#e0a800') : 'rgba(150,157,166,.85)'; }
-      c.beginPath(); c.arc(q.x,q.y,zoomNah?7:2.4,0,6.283);
-      c.fillStyle=f;
-      c.fill();
-      if(zoomNah){ c.lineWidth=1.5; c.strokeStyle='rgba(255,255,255,.9)'; c.stroke(); }
-      if(zoomNah && ziel && t.id===ziel.id && stuetzeSel===q.s){
-        c.beginPath(); c.arc(q.x,q.y,13,0,6.283);
-        c.strokeStyle='#D72622'; c.lineWidth=3.5; c.stroke();
-      }
+    if(sel && sel.t===p.t && sel.s===p.s){
+      ctx.beginPath(); ctx.arc(q.x,q.y,rad+7,0,6.2832);
+      ctx.strokeStyle='#1a1a1a'; ctx.lineWidth=3; ctx.stroke();
+    }
+    if(beschriften && !tischLabel[p.t]){ tischLabel[p.t]={x:q.x,y:q.y,typ:p.tb}; }
+  }
+  if(beschriften){
+    ctx.font='700 11px Arial'; ctx.textAlign='center';
+    Object.keys(tischLabel).forEach(function(t){
+      var l=tischLabel[t];
+      ctx.fillStyle='rgba(255,255,255,.85)';
+      var w=ctx.measureText(t).width+6;
+      ctx.fillRect(l.x-w/2, l.y-rad-16, w, 13);
+      ctx.fillStyle='#1a1a1a'; ctx.fillText(t, l.x, l.y-rad-6);
     });
-    if(zoomNah && ziel && t.id===ziel.id){
-      c.font='800 14px Arial'; c.textAlign='center';
-      c.strokeStyle='rgba(0,0,0,.7)'; c.lineWidth=3.5;
-      var lbl=t.id+(stuetzeSel?('-'+stuetzeSel):'');
-      c.strokeText(lbl, mx, my-26); c.fillStyle='#fff'; c.fillText(lbl, mx, my-26);
-    }
-  });
-  // Material: Muffen = Quadrat, Pfahlkoepfe = Dreieck (Farbe = Gewinde)
-  // In der Kopf-Ansicht nur die Pfahlkopf-Lager zeigen
-  alleMat().forEach(function(m){
-    if(m.lat==null||m.lon==null) return;
-    if(ansicht==='kopf' && m.art!=='pfahlkopf') return;
-    var v=lv95(m.lat,m.lon), s=P(v.E,v.N);
-    if(s.x<-20||s.x>br+20||s.y<-20||s.y>450) return;
-    var r=zoomNah?8:4;
-    c.beginPath();
-    if(m.art==='muffe'){ c.rect(s.x-r,s.y-r,2*r,2*r); }
-    else { c.moveTo(s.x,s.y-r-1); c.lineTo(s.x+r,s.y+r-1); c.lineTo(s.x-r,s.y+r-1); c.closePath(); }
-    c.fillStyle = m.gewinde==='5'?'#1565c0':'#e0a800';
-    c.fill(); c.lineWidth=1.5; c.strokeStyle='#fff'; c.stroke();
-    if(zoomNah && m.anzahl>1){
-      c.font='800 11px Arial'; c.textAlign='center';
-      c.strokeStyle='rgba(0,0,0,.7)'; c.lineWidth=3;
-      c.strokeText(m.anzahl+'×', s.x, s.y-r-4);
-      c.fillStyle='#fff'; c.fillText(m.anzahl+'×', s.x, s.y-r-4);
-    }
-  });
-  // eigene Position
-  if(pos){
-    var q=lv95(pos.lat,pos.lon), s=P(q.E,q.N);
-    if(pos.acc && zoomNah){
-      c.beginPath(); c.arc(s.x,s.y,Math.max(6,pos.acc/mPerPx),0,6.283);
-      c.fillStyle='rgba(21,101,192,.16)'; c.fill();
-    }
-    c.beginPath(); c.arc(s.x,s.y,7,0,6.283);
-    c.fillStyle='#1565c0'; c.fill(); c.lineWidth=3; c.strokeStyle='#fff'; c.stroke();
   }
-  // Massstab
-  c.font='700 11px Arial'; c.textAlign='left';
-  c.fillStyle='rgba(255,255,255,.9)'; c.fillRect(6,406,118,18);
-  c.fillStyle='#1a1a1a';
-  c.fillText(spann>=voll*0.95?'ganzer Perimeter':('Ausschnitt '+Math.round(spann)+' m'), 11, 419);
+  var breite=Math.round(r.width*view.mpp);
+  $('kInfo').textContent = gezeichnet+' Pfähle sichtbar · Ausschnitt ca. '+breite+' m'+(beschriften?'':' · reinzoomen für Tisch-Nr');
 }
-function zoomWechsel(){
-  zoomNah=!zoomNah;
-  kMitte=null; kSpann=null;                 // manuelle Ansicht verwerfen
-  $('zoomBtn').textContent = zoomNah?'🔍 Übersicht':'🎯 Nahbereich';
+function zoomen(f, zx, zy){
+  var r=cv.getBoundingClientRect();
+  var mx=zx==null?r.width/2:zx, my=zy==null?r.height/2:zy;
+  var vor=p2s(mx,my);
+  view.mpp=Math.max(0.06, Math.min(12, view.mpp/f));
+  var nach=p2s(mx,my);
+  view.cx+=vor.x-nach.x; view.cy+=vor.y-nach.y;
   malen();
 }
-function folgen(){                          // zurueck zum eigenen Standort (GPS folgen)
-  if(!pos){ toast('Noch kein GPS',true); return; }
-  kMitte=null; kSpann=null; zoomNah=true;
-  $('zoomBtn').textContent='🔍 Übersicht';
-  malen();
-}
-/* Karte frei verschieben (1 Finger/Maus) und zoomen (2 Finger/Mausrad) */
-function kZoomUm(faktor, cx, cy){
-  if(!kView) return;
-  var E=kView.vE+cx*kView.mPerPx, N=kView.vN+(430-cy)*kView.mPerPx;   // Punkt unter dem Finger
-  var neu=Math.max(15, Math.min(kView.spann*faktor, kView.voll*1.3));
-  var mpp=neu/kView.br;
-  kMitte={ E:E-cx*mpp+neu/2, N:N-(430-cy)*mpp+215*mpp };
-  kSpann=neu;
-  malen();
-}
-(function(){
-  var cv=$('karte'); if(!cv||!cv.addEventListener) return;
+function springen(x,y,mpp){ view.cx=x; view.cy=y; if(mpp) view.mpp=mpp; malen(); }
+
+/* Pointer: 1 Finger schieben, 2 Finger zoomen, Tippen wählt */
+var ptr={}, tapStart=null, bewegt=0;
+function kartenEvents(){
   cv.addEventListener('pointerdown', function(e){
-    if(cv.setPointerCapture) try{ cv.setPointerCapture(e.pointerId); }catch(err){}
-    kPtr[e.pointerId]={x:e.clientX, y:e.clientY};
-    e.preventDefault();
+    cv.setPointerCapture(e.pointerId);
+    ptr[e.pointerId]={x:e.clientX,y:e.clientY};
+    if(Object.keys(ptr).length===1){ tapStart=Date.now(); bewegt=0; }
   });
   cv.addEventListener('pointermove', function(e){
-    var p=kPtr[e.pointerId]; if(!p||!kView) return;
-    var ids=Object.keys(kPtr);
-    if(ids.length===1){                                  // verschieben
-      var dx=e.clientX-p.x, dy=e.clientY-p.y;
-      if(!kMitte) kMitte={E:kView.mitte.E, N:kView.mitte.N};
-      kMitte.E-=dx*kView.mPerPx; kMitte.N+=dy*kView.mPerPx;
-      p.x=e.clientX; p.y=e.clientY;
+    if(!ptr[e.pointerId]) return;
+    var ids=Object.keys(ptr), r=cv.getBoundingClientRect();
+    if(ids.length===1){
+      var dx=e.clientX-ptr[e.pointerId].x, dy=e.clientY-ptr[e.pointerId].y;
+      bewegt+=Math.abs(dx)+Math.abs(dy);
+      view.cx-=dx*view.mpp; view.cy+=dy*view.mpp;
+      ptr[e.pointerId]={x:e.clientX,y:e.clientY};
       malen();
-    } else if(ids.length>=2){                            // Pinch-Zoom um die Fingermitte
-      var a=kPtr[ids[0]], b=kPtr[ids[1]];
-      var altD=Math.max(10, Math.hypot(a.x-b.x, a.y-b.y));
-      p.x=e.clientX; p.y=e.clientY;
-      var neuD=Math.max(10, Math.hypot(a.x-b.x, a.y-b.y));
+    } else if(ids.length===2){
+      var a=ptr[ids[0]], b=ptr[ids[1]];
+      var altD=Math.hypot(a.x-b.x, a.y-b.y);
+      ptr[e.pointerId]={x:e.clientX,y:e.clientY};
+      a=ptr[ids[0]]; b=ptr[ids[1]];
+      var neuD=Math.hypot(a.x-b.x, a.y-b.y);
+      if(altD>4&&neuD>4){
+        bewegt+=20;
+        zoomen(neuD/altD, (a.x+b.x)/2-r.left, (a.y+b.y)/2-r.top);
+      }
+    }
+  });
+  function hoch(e){
+    if(Object.keys(ptr).length===1 && bewegt<10 && Date.now()-tapStart<500){
       var r=cv.getBoundingClientRect();
-      kZoomUm(altD/neuD, (a.x+b.x)/2-r.left, (a.y+b.y)/2-r.top);
+      waehlenBeiPixel(e.clientX-r.left, e.clientY-r.top);
     }
-    e.preventDefault();
-  });
-  /* Tippen auf einen Pfahl = auswaehlen. Kein GPS noetig: der Punkt auf der
-     Karte bestimmt Tisch UND Stuetze. Verschieben/Zoomen zaehlt nicht als Tipp
-     (Weg < 10 px, Dauer < 600 ms, nur ein Finger). */
-  cv.addEventListener('pointerdown', function(e){
-    var p=kPtr[e.pointerId]; if(p){ p.t0=Date.now(); p.x0=e.clientX; p.y0=e.clientY; }
-  });
-  function ende(e){
-    var p=kPtr[e.pointerId];
-    var einFinger = Object.keys(kPtr).length===1;
-    delete kPtr[e.pointerId];
-    if(!p || !p.t0 || !einFinger) return;
-    var weg=Math.hypot(e.clientX-p.x0, e.clientY-p.y0);
-    if(weg>10 || Date.now()-p.t0>600) return;      // war Verschieben, kein Tipp
-    var r=cv.getBoundingClientRect();
-    kartenTipp(e.clientX-r.left, e.clientY-r.top);
+    delete ptr[e.pointerId];
   }
-  cv.addEventListener('pointerup', ende);
-  cv.addEventListener('pointercancel', function(e){ delete kPtr[e.pointerId]; });
+  cv.addEventListener('pointerup', hoch);
+  cv.addEventListener('pointercancel', function(e){ delete ptr[e.pointerId]; });
   cv.addEventListener('wheel', function(e){
-    var r=cv.getBoundingClientRect();
-    kZoomUm(e.deltaY>0?1.25:0.8, e.clientX-r.left, e.clientY-r.top);
     e.preventDefault();
-  }, {passive:false});
-})();
-/* Bildschirmpunkt -> naechster Pfahl. Waehlt Tisch + Stuetze direkt aus,
-   ohne GPS. In der Uebersicht wird zusaetzlich auf den Tisch gezoomt, weil
-   die Punkte dort nur wenige Pixel gross sind. */
-function kartenTipp(x, y){
-  if(!kView || !tische.length) return;
-  var mPerPx=kView.mPerPx, vE=kView.vE, vN=kView.vN;
-  var best=null, bd=1e9;
-  tische.forEach(function(t){
-    t.pf.forEach(function(p){
-      var v=lv95(p.lat,p.lon);
-      var px=(v.E-vE)/mPerPx, py=430-(v.N-vN)/mPerPx;
-      var d=Math.hypot(px-x, py-y);
-      if(d<bd){ bd=d; best={t:t, p:p, px:px, py:py}; }
-    });
-  });
-  var radius = zoomNah ? 26 : 18;
-  if(!best || bd>radius){ toast('Kein Pfahl an dieser Stelle'); return; }
-
-  zielManuell=best.t; ziel=best.t; ziel._d=null;
-  if(pos){ var q=lv95(pos.lat,pos.lon), w=lv95(best.p.lat,best.p.lon);
-           ziel._d=Math.hypot(q.E-w.E, q.N-w.N); }
-  stuetzeSel=best.p.s;
-
-  if(!zoomNah){                       // aus der Uebersicht auf den Tisch zoomen
-    var es=0, ns=0;
-    best.t.pf.forEach(function(p){ var v=lv95(p.lat,p.lon); es+=v.E; ns+=v.N; });
-    kMitte={ E:es/best.t.pf.length, N:ns/best.t.pf.length };
-    kSpann=40; zoomNah=true;
-    $('zoomBtn').textContent='🔍 Übersicht';
+    var r=cv.getBoundingClientRect();
+    zoomen(e.deltaY<0?1.18:1/1.18, e.clientX-r.left, e.clientY-r.top);
+  },{passive:false});
+  window.addEventListener('resize', malen);
+}
+function waehlenBeiPixel(px,py){
+  var best=null, bestD=1e9;
+  for(var i=0;i<pfaehle.length;i++){
+    var p=pfaehle[i]; if(!sichtbar(p)) continue;
+    var q=s2p(p), d=Math.hypot(q.x-px, q.y-py);
+    if(d<bestD){ bestD=d; best=p; }
   }
-  zielMalen(); malen();
-  var st=messungen[ziel.id+'-'+stuetzeSel], kp=koepfe[ziel.id+'-'+stuetzeSel];
-  toast(ziel.id+'-'+stuetzeSel+(st||kp ? ' (schon erfasst)' : ' gewählt'));
-  try{ $('ziel').scrollIntoView({behavior:'smooth', block:'center'}); }catch(e){}
-}
-function legendeMalen(){
-  $('legende').innerHTML = ansicht==='kopf'
-    ? '<span><span class="pkt" style="background:#9aa0a8"></span>unbekannt</span>'
-     +'<span><span class="pkt" style="background:#1e9e5a"></span>Kopf montiert</span>'
-     +'<span><span class="pkt" style="background:#d84343"></span>Kopf fehlt</span>'
-     +'<span>▲ Kopf-Lager</span>'
-    : '<span><span class="pkt" style="background:#9aa0a8"></span>offen</span>'
-     +'<span><span class="pkt" style="background:#1565c0"></span>5 mm</span>'
-     +'<span><span class="pkt" style="background:#e0a800"></span>6.35 mm</span>'
-     +'<span>◼ Muffen</span><span>▲ Köpfe</span>';
-  $('ansichtBtn').textContent = ansicht==='kopf' ? '🔁 Gewinde' : '🔁 Köpfe';
-}
-function ansichtWechsel(){
-  ansicht = ansicht==='kopf' ? 'gewinde' : 'kopf';
-  legendeMalen(); malen();
-}
-window.addEventListener('resize', malen);
-
-/* ---------- Liste + Zähler ---------- */
-function alleMessungen(){
-  return Object.keys(messungen).map(function(k){ return messungen[k]; })
-    .sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
-}
-function alleKoepfe(){
-  return Object.keys(koepfe).map(function(k){ return koepfe[k]; })
-    .sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
-}
-function listeMalen(){
-  var a=alleMessungen().map(function(m){ return {t:'gew', m:m}; })
-    .concat(alleKoepfe().map(function(m){ return {t:'kopf', m:m}; }))
-    .sort(function(x,y){ return (y.m.ts||0)-(x.m.ts||0); }).slice(0,10);
-  $('letzte').innerHTML = a.length ? a.map(function(e){
-    var m=e.m;
-    if(e.t==='gew'){
-      var f=m.gewinde==='5'?'#1565c0':'#e0a800';
-      return '<div><b>'+esc(m.tischId)+'-'+esc(m.stuetze)+'</b> · '
-        +'<span style="color:'+f+';font-weight:900">'+esc(m.gewinde)+' mm</span> · '
-        +esc(m.typ?('Typ '+String(m.typ).charAt(0)):'')+' · '+esc(m.von||'')+' '+fmtZ(m.ts)+'</div>';
-    }
-    var g=m.montiert?'#12703f':'#a01c19';
-    return '<div><b>'+esc(m.tischId)+'-'+esc(m.stuetze)+'</b> · '
-      +'<span style="color:'+g+';font-weight:900">'+(m.montiert?'Kopf ✓ montiert':'Kopf fehlt')+'</span> · '
-      +esc(m.typ?('Typ '+String(m.typ).charAt(0)):'')+' · '+esc(m.von||'')+' '+fmtZ(m.ts)+'</div>';
-  }).join('') : '<div style="color:var(--mut)">noch nichts erfasst</div>';
-}
-function statMalen(){
-  var a=alleMessungen();
-  var n5=a.filter(function(m){return m.gewinde==='5';}).length;
-  var n6=a.length-n5;
-  var kk=alleKoepfe();
-  var km=kk.filter(function(m){return m.montiert;}).length;
-  var kf=kk.length-km;
-  var voll=tische.filter(function(t){
-    return t.pf.length && t.pf.every(function(p){ return messungen[t.id+'-'+p.s]; });
-  }).length;
-  $('stat').innerHTML = 'Gewinde: '+a.length+' von '+(pfaehle.length||'…')+' Pfählen · '
-    +n5+'× 5 mm · '+n6+'× 6.35 mm · '+voll+' Tische komplett<br>'
-    +'Köpfe: '+km+' montiert · '+kf+' ohne Kopf · '
-    +(pfaehle.length?Math.max(0,pfaehle.length-kk.length)+' unbekannt':'–');
-}
-function csv(){
-  var kopf=['TischID','Stuetze','Typ','Gewinde_mm','Datum','Zeit','Erfasst_von','lat','lon','GPS_m','Abstand_m'];
-  var zeilen=alleMessungen().map(function(m){
-    return [m.tischId,m.stuetze,m.typ,m.gewinde,m.datum,fmtZ(m.ts),m.von,m.lat,m.lon,m.acc,m.dist];
-  });
-  var lines=[kopf.join(';')].concat(zeilen.map(function(z){
-    return z.map(function(v){ return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'; }).join(';'); }));
-  var b=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
-  var a=document.createElement('a'); a.href=URL.createObjectURL(b);
-  a.download='Gewinde_Inventur_'+heute()+'.csv'; a.click();
-}
-function kopfCsv(){
-  var kopf=['TischID','Stuetze','Typ','Kopf_montiert','Datum','Zeit','Erfasst_von','lat','lon','GPS_m','Abstand_m'];
-  var zeilen=alleKoepfe().map(function(m){
-    return [m.tischId,m.stuetze,m.typ,(m.montiert?'ja':'nein'),m.datum,fmtZ(m.ts),m.von,m.lat,m.lon,m.acc,m.dist];
-  });
-  var lines=[kopf.join(';')].concat(zeilen.map(function(z){
-    return z.map(function(v){ return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'; }).join(';'); }));
-  var b=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
-  var a=document.createElement('a'); a.href=URL.createObjectURL(b);
-  a.download='Pfahlkopf_Montage_'+heute()+'.csv'; a.click();
+  // Trefferradius knapp über dem Punktradius – sonst erwischt man den Nachbarpfahl
+  var rad=Math.max(3, Math.min(11, 1.05/view.mpp));
+  if(!best || bestD>Math.max(16, rad*1.7)){ toast('Kein Pfahl getroffen – näher ranzoomen'); return; }
+  sel=best; malen(); zielMalen();
+  if(navigator.vibrate) navigator.vibrate(20);
 }
 
-/* ---------- Start ---------- */
-$('f_von').value=getVon(); $('m_von').value=getVon();
-netzMalen(); pendSenden(); matListeMalen(); legendeMalen();
-setMatArt('pfahlkopf');                      // Lager-Tab: Pfahlkopf vorausgewaehlt
-if(location.search.indexOf('f=material')>=0 || location.search.indexOf('f=lager')>=0) tabG(2);
-if(location.search.indexOf('f=typen')>=0) tabG(3);
-fetch('uploads/perimeter_geo.json').then(function(r){ return r.json(); }).then(function(g){
-  geo=g;
-  var im=new Image(); im.onload=function(){ bild=im; malen(); };
-  im.src='assets/img/perimeter.jpg';
-}).catch(function(){});
-fetch('uploads/pfaehle.json').then(function(r){ return r.json(); }).then(function(p){
-  pfaehle=p; tischeBauen(); zielSuchen(); malen(); statMalen();
-  if(!pos) $('zSub').textContent='Warte auf GPS …';
-}).catch(function(){ $('zSub').textContent='Pfahldaten konnten nicht geladen werden'; });
-laden();
-setInterval(function(){ if(netzAn()) laden(); }, 60000);
+/* ─────────── Auswahl anzeigen ─────────── */
+function typLang(p){
+  var n={A:'Typ A',B:'Typ B',C:'Typ C',D:'Typ D',E:'Typ E'}[p.tb]||'Typ ?';
+  var j=(p.tv.match(/_(\d{4})$/)||[])[1];
+  return n+(j?' · '+j:'');
+}
+function kopfMasse(tb){
+  if(tb==='A') return 'Kopfplatte 290×280×20 · ~16.5 kg · Muffe Ø114';
+  if(tb==='B') return 'Kopfplatte B1 290×280×20 / B2 320×280×20 · Muffe Ø114';
+  if(tb==='C'||tb==='D') return 'Kopfplatte 350×320×25 · ~26.7 kg · Muffe Ø140 · zu zweit!';
+  if(tb==='E') return 'Kopfplatte 350×370×30 · ~36 kg · Muffe Ø140 · zu zweit!';
+  return '';
+}
+function zielMalen(){
+  var an=!!sel;
+  ['b5','b6','bk1','bk0'].forEach(function(id){ $(id).disabled=!an; });
+  $('undoBtn').disabled=!letzte;
+  if(!an){
+    $('zTisch').textContent='–'; $('zSub').textContent='Pfahl auf der Karte antippen';
+    $('zTyp').style.display='none'; $('zKopf').textContent=''; $('zStand').textContent='';
+    $('sBtns').innerHTML=''; $('zHinweis').innerHTML=''; return;
+  }
+  var p=sel, k=schluessel(p.t,p.s), z=zustand(p), g=gewindeVon(p);
+  $('zTisch').textContent='Tisch '+p.t;
+  $('zSub').textContent='Pfahl S'+p.s+' · '+(bereiche[p.ber]||'–');
+  $('zTyp').style.display=''; $('zTyp').textContent=typLang(p);
+  $('zKopf').textContent=kopfMasse(p.tb);
+  $('zStand').innerHTML = g
+      ? ('Gewinde: <span class="'+(g===5?'g5c':'g6c')+'">'+g+' mm</span>')
+      : '<span style="color:#63676d">Gewinde noch nicht gemessen</span>';
+
+  // Geschwister S1–S4 desselben Tisches als Schnellwahl
+  var gesch=pfaehle.filter(function(q){ return q.t===p.t; }).sort(function(a,b){ return a.s-b.s; });
+  $('sBtns').innerHTML=gesch.map(function(q){
+    var gg=gewindeVon(q), zz=zustand(q);
+    var cls=(q.s===p.s?'on ':'')+(gg===5?'g5':gg?'g6':'');
+    var sub=zz==='fertig'?'Kopf ✓':(gg?gg+' mm':(zz==='leer'?'–':'offen'));
+    return '<button class="'+cls+'" onclick="waehlenS('+q.s+')">S'+q.s+'<small>'+sub+'</small></button>';
+  }).join('');
+
+  var h='';
+  if(z==='fertig'){
+    h='<div class="ok">'+(p.pk?'Primärkonstruktion steht bereits – der Pfahlkopf ist zwingend montiert. Nur erfassen, wenn du wirklich am Pfahl stehst.'
+                            :'Kopf ist als montiert erfasst.')+'</div>';
+  } else if(z==='leer'){
+    h='<div class="warn">Dieser Pfahl ist laut Nalpi noch nicht gebohrt (Stand '+esc(stand.bohr||'')+') – es steht also nichts im Boden, was du messen könntest.</div>';
+  }
+  $('zHinweis').innerHTML=h;
+}
+function waehlenS(s){
+  var q=pfaehle.filter(function(x){ return x.t===sel.t && x.s===s; })[0];
+  if(q){ sel=q; malen(); zielMalen(); }
+}
+
+/* ─────────── Erfassen ─────────── */
+function gewindeSetzen(g){
+  if(!sel){ toast('Kein Pfahl gewählt',true); return; }
+  var von=$('f_von').value.trim();
+  if(!von){ toast('Bitte Namen eintragen',true); $('f_von').focus(); return; }
+  setVon(von);
+  var k=schluessel(sel.t,sel.s);
+  if(messungen[k] && +messungen[k].gewinde!==g &&
+     !confirm('Pfahl '+k+' ist schon mit '+messungen[k].gewinde+' mm erfasst.\nÜberschreiben?')) return;
+  var rec={ tischId:sel.t, stuetze:'S'+sel.s, typ:sel.tv||'', gewinde:g,
+            lat:sel.lat, lon:sel.lon, acc:null, dist:null,
+            von:von, datum:heute(), ts:Date.now() };
+  messungen[k]=rec;
+  letzte={pfad:P_GEW, key:k, rec:rec, art:'gew'};
+  weiterZumNaechsten();
+  if(navigator.vibrate) navigator.vibrate(60);
+  toast('✔ '+k+' · '+g+' mm');
+  senden(P_GEW,rec);
+}
+function kopfSetzen(m){
+  if(!sel){ toast('Kein Pfahl gewählt',true); return; }
+  var von=$('f_von').value.trim();
+  if(!von){ toast('Bitte Namen eintragen',true); $('f_von').focus(); return; }
+  setVon(von);
+  var k=schluessel(sel.t,sel.s), alt=koepfe[k];
+  if(alt && !!alt.montiert===!!m){ toast(k+' ist schon so erfasst ✓'); return; }
+  var rec={ tischId:sel.t, stuetze:'S'+sel.s, typ:sel.tv||'', montiert:m?1:0,
+            lat:sel.lat, lon:sel.lon, acc:null, dist:null,
+            von:von, datum:heute(), ts:Date.now() };
+  koepfe[k]=rec;
+  letzte={pfad:P_KOPF, key:k, rec:rec, art:'kopf'};
+  weiterZumNaechsten();
+  if(navigator.vibrate) navigator.vibrate(60);
+  toast(m?('✔ '+k+' · Kopf drauf'):('✔ '+k+' · Kopf fehlt'));
+  senden(P_KOPF,rec);
+}
+function weiterZumNaechsten(){
+  // innerhalb des Tisches zum naechsten Pfahl ohne Gewinde springen
+  var offen=pfaehle.filter(function(q){
+    return q.t===sel.t && zustand(q)==='offen' && !gewindeVon(q);
+  }).sort(function(a,b){ return a.s-b.s; });
+  if(offen.length) sel=offen[0];
+  malen(); zielMalen(); heuteMalen(); chipsMalen();
+}
+function senden(pfad,rec){
+  if(!netzAn()){ pendAdd(pfad,rec); return; }
+  apiPost(pfad,rec).then(function(k){ if(!k) throw 0; rec._k=k; })
+    .catch(function(){ pendAdd(pfad,rec); toast('Kein Empfang – lokal gespeichert',true); });
+}
+function undo(){
+  if(!letzte) return;
+  var l=letzte;
+  if(l.art==='gew') delete messungen[l.key]; else delete koepfe[l.key];
+  if(l.rec._k) fetch(DB+'/'+l.pfad+'/'+l.rec._k+'.json',{method:'DELETE'}).catch(function(){});
+  letzte=null;
+  malen(); zielMalen(); heuteMalen(); chipsMalen();
+  toast('↶ '+l.key+' zurückgenommen');
+}
+
+/* ─────────── Chips ─────────── */
+function chipsMalen(){
+  var zOffen=pfaehle.filter(function(p){ return zustand(p)==='offen'; });
+  var zE=zOffen.filter(function(p){ return p.tb==='E'; });
+  $('filter').innerHTML=
+    '<button class="'+(filter==='offen'?'on':'')+'" onclick="setFilter(\'offen\')">Nur offene<small>'+zOffen.length+'</small></button>'+
+    '<button class="'+(filter==='e'?'on':'')+'" onclick="setFilter(\'e\')">Nur Typ E<small>'+zE.length+'</small></button>'+
+    '<button class="'+(filter==='alle'?'on':'')+'" onclick="setFilter(\'alle\')">Alle<small>'+pfaehle.length+'</small></button>';
+
+  var proBer={};
+  zOffen.forEach(function(p){ (proBer[p.ber]=proBer[p.ber]||[]).push(p); });
+  var keys=Object.keys(proBer).sort(function(a,b){ return proBer[b].length-proBer[a].length; });
+  $('bereiche').innerHTML=keys.map(function(b){
+    var e=proBer[b].filter(function(p){ return p.tb==='E'; }).length;
+    return '<button onclick="zuBereich('+b+')">'+esc(bereiche[b]||'?')+
+           '<small>'+proBer[b].length+(e?' · '+e+'×E':'')+'</small></button>';
+  }).join('') || '<span style="font-size:12px;color:#63676d">Nichts offen 🎉</span>';
+}
+function setFilter(f){ filter=f; sel=null; chipsMalen(); malen(); zielMalen(); }
+function zuBereich(b){
+  var pp=pfaehle.filter(function(p){ return p.ber===b && zustand(p)==='offen'; });
+  if(!pp.length) return;
+  var x=0,y=0, minx=1e9,maxx=-1e9,miny=1e9,maxy=-1e9;
+  pp.forEach(function(p){ x+=p.x; y+=p.y;
+    minx=Math.min(minx,p.x); maxx=Math.max(maxx,p.x);
+    miny=Math.min(miny,p.y); maxy=Math.max(maxy,p.y); });
+  var r=cv.getBoundingClientRect();
+  var mpp=Math.max((maxx-minx)/Math.max(r.width-60,60), (maxy-miny)/Math.max(r.height-60,60), 0.12);
+  springen(x/pp.length, y/pp.length, mpp);
+  toast(bereiche[b]+' · '+pp.length+' offen');
+}
+function suchen(){
+  var t=$('suche').value.trim();
+  if(!t) return;
+  var pp=pfaehle.filter(function(p){ return p.t===t; });
+  if(!pp.length){ toast('Tisch '+t+' nicht gefunden',true); return; }
+  if(filter!=='alle' && !pp.some(sichtbar)) setFilter('alle');
+  var x=0,y=0; pp.forEach(function(p){ x+=p.x; y+=p.y; });
+  springen(x/pp.length, y/pp.length, 0.25);
+  var off=pp.filter(function(p){ return zustand(p)==='offen'; });
+  sel=off.length?off[0]:pp[0];
+  malen(); zielMalen();
+  toast('Tisch '+t+' · '+typLang(pp[0]));
+}
+
+/* ─────────── Heute erfasst ─────────── */
+function heuteMalen(){
+  var h=heute(), z=[];
+  Object.keys(messungen).forEach(function(k){ var m=messungen[k];
+    if(m.datum===h) z.push({k:k, ts:m.ts||0, txt:m.gewinde+' mm', cls:+m.gewinde===5?'g5c':'g6c'}); });
+  Object.keys(koepfe).forEach(function(k){ var m=koepfe[k];
+    if(m.datum===h) z.push({k:k, ts:m.ts||0, txt:m.montiert?'Kopf drauf':'Kopf fehlt', cls:''}); });
+  z.sort(function(a,b){ return b.ts-a.ts; });
+  $('heuteListe').innerHTML = z.length
+    ? z.slice(0,60).map(function(e){
+        return '<div class="z"><b>'+esc(e.k)+'</b><span class="'+e.cls+'">'+esc(e.txt)+'</span><span style="flex:0">'+fmtZ(e.ts)+'</span></div>';
+      }).join('')
+    : '<div style="color:#63676d;font-size:12.5px">Heute noch nichts erfasst.</div>';
+}
+
+/* ─────────── Lager ─────────── */
+var lArt='kopf', lTyp='E', lGew=5, lZahl=0;
+var TYPEN_KOPF=[['A','A / B1'],['B2','B2'],['CD','C / D'],['E','E'],['R38','R38']];
+var TYPEN_PFAHL=[['AB','A / B · Ø88.9'],['CD','C / D · Ø114 · 2.5 m'],['E','E · Ø114 · 3.0 m']];
+function lagerChips(){
+  $('lArt').innerHTML=
+    '<button class="'+(lArt==='kopf'?'on':'')+'" onclick="setArt(\'kopf\')">🔩 Pfahlköpfe</button>'+
+    '<button class="'+(lArt==='pfahl'?'on':'')+'" onclick="setArt(\'pfahl\')">🪵 Pfähle</button>';
+  var liste=lArt==='kopf'?TYPEN_KOPF:TYPEN_PFAHL;
+  if(!liste.some(function(t){ return t[0]===lTyp; })) lTyp=liste[0][0];
+  $('lTyp').innerHTML=liste.map(function(t){
+    return '<button class="'+(lTyp===t[0]?'on':'')+'" onclick="setTyp(\''+t[0]+'\')">'+esc(t[1])+'</button>';
+  }).join('');
+  $('lGew').innerHTML=
+    '<button class="'+(lGew===5?'on':'')+'" onclick="setGew(5)">🔵 5.0 mm</button>'+
+    '<button class="'+(lGew===6.35?'on':'')+'" onclick="setGew(6.35)">🟡 6.35 mm</button>'+
+    '<button class="'+(lGew===0?'on':'')+'" onclick="setGew(0)">❔ ungemessen</button>';
+}
+function setArt(a){ lArt=a; lagerChips(); vorbelegen(); }
+function setTyp(t){ lTyp=t; lagerChips(); vorbelegen(); }
+function setGew(g){ lGew=g; lagerChips(); vorbelegen(); }
+function zahlSetzen(n){ lZahl=Math.max(0,n); $('zahl').textContent=lZahl; }
+function zaehlen(d){ zahlSetzen(lZahl+d); if(navigator.vibrate) navigator.vibrate(15); }
+function lagerKey(){ return [lArt,lTyp,lGew,($('l_ort').value||'').trim().toLowerCase()].join('|'); }
+function vorbelegen(){                 // schon gezaehlter Posten -> alten Wert zeigen
+  var e=lager[lagerKey()];
+  zahlSetzen(e?+e.anzahl||0:0);
+}
+function lagerSpeichern(){
+  var ort=$('l_ort').value.trim();
+  if(!ort){ toast('Bitte Lagerort eintragen',true); $('l_ort').focus(); return; }
+  var von=$('l_von').value.trim();
+  if(!von){ toast('Bitte Namen eintragen',true); $('l_von').focus(); return; }
+  setVon(von);
+  var rec={ art:lArt, typ:lTyp, gewinde:lGew, ort:ort, anzahl:lZahl,
+            von:von, datum:heute(), ts:Date.now() };
+  lager[lagerKey()]=rec;
+  lagerListeMalen(); bilanzMalen();
+  toast('✔ '+lZahl+'× '+(lArt==='kopf'?'Kopf':'Pfahl')+' '+lTyp+' · '+(lGew?lGew+' mm':'ungemessen')+' @ '+ort);
+  senden(P_LAGER,rec);
+}
+function lagerListeMalen(){
+  lagerChips();
+  var keys=Object.keys(lager).sort();
+  $('lagerListe').innerHTML = keys.length
+    ? keys.map(function(k){
+        var m=lager[k];
+        var art=m.art==='kopf'?'Kopf':'Pfahl';
+        var g=+m.gewinde?(+m.gewinde+' mm'):'ungemessen';
+        return '<div class="z"><b>'+m.anzahl+'×</b><span>'+esc(art+' '+m.typ+' · '+g+' · '+m.ort)+'</span>'+
+               '<span style="flex:0;color:#63676d">'+esc(m.datum||'')+'</span></div>';
+      }).join('')
+    : '<div style="color:#63676d;font-size:12.5px">Noch nichts gezählt.</div>';
+}
+
+/* ─────────── Bilanz ─────────── */
+/* Kopfgruppen: ein Kopf passt nur auf seinen Pfahltyp.
+   A/B = Muffe Ø114 · C/D = Ø140 Platte 350×320×25 · E = Ø140 Platte 350×370×30 */
+var GRUPPEN=['A/B','C/D','E'];
+function gruppeVonTisch(tb){
+  if(tb==='A'||tb==='B') return 'A/B';
+  if(tb==='C'||tb==='D') return 'C/D';
+  if(tb==='E') return 'E';
+  return '?';
+}
+function gruppeVonLager(typ){
+  if(typ==='A'||typ==='B2'||typ==='AB') return 'A/B';
+  if(typ==='CD') return 'C/D';
+  if(typ==='E') return 'E';
+  return typ;                       // R38 u. a. bleiben eigenständig
+}
+function istZulauf(ort){ return /zulauf|bestellt|unterwegs/i.test(String(ort||'')); }
+
+function bedarfDaten(){
+  /* je Kopfgruppe: offene Pfähle, aufgeteilt nach gemessenem Gewinde */
+  var d={};
+  pfaehle.forEach(function(p){
+    if(zustand(p)!=='offen') return;
+    var t=gruppeVonTisch(p.tb);
+    d[t]=d[t]||{g5:0,g6:0,offen:0,summe:0};
+    var g=gewindeVon(p);
+    if(g===5) d[t].g5++; else if(g) d[t].g6++; else d[t].offen++;
+    d[t].summe++;
+  });
+  return d;
+}
+function bestandDaten(){
+  /* Pfahlköpfe je Kopfgruppe, getrennt nach vorhanden und Zulauf */
+  var d={};
+  Object.keys(lager).forEach(function(k){
+    var m=lager[k]; if(m.art!=='kopf') return;
+    var t=gruppeVonLager(m.typ);
+    d[t]=d[t]||{lager:{g5:0,g6:0,offen:0}, zulauf:{g5:0,g6:0,offen:0}};
+    var ziel=istZulauf(m.ort)?d[t].zulauf:d[t].lager;
+    var g=+m.gewinde, n=+m.anzahl||0;
+    if(g===5) ziel.g5+=n; else if(g) ziel.g6+=n; else ziel.offen+=n;
+  });
+  return d;
+}
+function bilanzMalen(){
+  var bd=bedarfDaten(), bs=bestandDaten();
+
+  /* ── Bedarf ── */
+  var h='<table class="t"><tr><th class="l">Kopfgruppe</th><th>🔵 5.0</th><th>🟡 6.35</th><th>noch nicht<br>gemessen</th><th>Summe</th></tr>';
+  var s={g5:0,g6:0,offen:0,summe:0};
+  GRUPPEN.forEach(function(t){
+    var d=bd[t]; if(!d) return;
+    s.g5+=d.g5; s.g6+=d.g6; s.offen+=d.offen; s.summe+=d.summe;
+    h+='<tr><td class="l"><b>'+t+'</b></td><td class="g5c">'+d.g5+'</td><td class="g6c">'+d.g6+'</td>'+
+       '<td>'+d.offen+'</td><td><b>'+d.summe+'</b></td></tr>';
+  });
+  h+='<tr class="sum"><td class="l">Total</td><td>'+s.g5+'</td><td>'+s.g6+'</td><td>'+s.offen+'</td><td>'+s.summe+'</td></tr></table>';
+  $('bedarfTab').innerHTML=h;
+  $('bedarfHint').textContent='Grundlage: Nalpi-Bohrstand '+(stand.bohr||'')+' und Baustand '+(stand.bau||'')+
+    '. Gezählt wird jeder Pfahl, der im Boden steht und dessen Primärkonstruktion noch nicht montiert ist. '+
+    'Bereits erfasste Köpfe fallen automatisch raus.';
+
+  /* ── Bestand ── */
+  var grpBestand=Object.keys(bs);
+  var h2='<table class="t"><tr><th class="l">Kopfgruppe</th><th>🔵 5.0</th><th>🟡 6.35</th><th>ungemessen</th><th>davon<br>Zulauf</th></tr>';
+  grpBestand.sort().forEach(function(t){
+    var d=bs[t];
+    var zu=d.zulauf.g5+d.zulauf.g6+d.zulauf.offen;
+    h2+='<tr><td class="l"><b>'+esc(t)+'</b></td>'+
+        '<td class="g5c">'+(d.lager.g5+d.zulauf.g5)+'</td>'+
+        '<td class="g6c">'+(d.lager.g6+d.zulauf.g6)+'</td>'+
+        '<td>'+(d.lager.offen+d.zulauf.offen)+'</td><td>'+(zu||'–')+'</td></tr>';
+  });
+  h2+='</table>';
+  $('bestandTab').innerHTML = grpBestand.length
+    ? h2 : '<div style="color:#63676d;font-size:12.5px">Noch kein Bestand gezählt – Reiter 📦 Lager.</div>';
+
+  /* ── Reicht es? je Gruppe und Gewinde ── */
+  var h3='';
+  [['g5','🔵 5.0 mm','g5c'],['g6','🟡 6.35 mm','g6c']].forEach(function(sp){
+    h3+='<div style="font-size:13px;font-weight:900;margin:10px 0 5px" class="'+sp[2]+'">'+sp[1]+'</div>'+
+        '<table class="t"><tr><th class="l">Gruppe</th><th>Bedarf</th><th>am Lager</th><th>Zulauf</th><th>Differenz</th></tr>';
+    GRUPPEN.forEach(function(t){
+      var d=bd[t]; if(!d) return;
+      var b=bs[t]||{lager:{g5:0,g6:0},zulauf:{g5:0,g6:0}};
+      var bedarf=d[sp[0]], amLager=b.lager[sp[0]], zulauf=b.zulauf[sp[0]];
+      var diff=amLager+zulauf-bedarf;
+      h3+='<tr><td class="l"><b>'+t+'</b></td><td>'+bedarf+'</td><td>'+amLager+'</td><td>'+zulauf+'</td>'+
+          '<td class="'+(diff<0?'fehlt':'deckt')+'">'+(diff<0?('fehlen '+(-diff)):('+'+diff))+'</td></tr>';
+    });
+    h3+='</table>';
+  });
+  if(s.offen){
+    var jeGruppe=GRUPPEN.filter(function(t){ return bd[t]&&bd[t].offen; })
+      .map(function(t){ return t+' '+bd[t].offen; }).join(' · ');
+    h3+='<div class="warn" style="margin-top:11px">'+s.offen+' Pfähle sind noch nicht gemessen ('+jeGruppe+'). '+
+        'Solange die offen sind, ist die Differenz oben nur eine Momentaufnahme – im schlechtesten Fall '+
+        'brauchen alle dasselbe Gewinde.</div>';
+  }
+  $('bilanzTab').innerHTML=h3;
+
+  var pf={}, leer2=true;
+  Object.keys(lager).forEach(function(k){
+    var m=lager[k]; if(m.art!=='pfahl') return; leer2=false;
+    var t=m.typ; pf[t]=pf[t]||{g5:0,g6:0,offen:0};
+    var g=+m.gewinde, n=+m.anzahl||0;
+    if(g===5) pf[t].g5+=n; else if(g) pf[t].g6+=n; else pf[t].offen+=n;
+  });
+  var h4='<table class="t"><tr><th class="l">Typ</th><th>🔵 5.0</th><th>🟡 6.35</th><th>ungemessen</th></tr>';
+  Object.keys(pf).sort().forEach(function(t){
+    h4+='<tr><td class="l"><b>'+esc(t)+'</b></td><td class="g5c">'+pf[t].g5+'</td><td class="g6c">'+pf[t].g6+'</td><td>'+pf[t].offen+'</td></tr>';
+  });
+  h4+='</table>';
+  $('pfahlTab').innerHTML = leer2
+    ? '<div style="color:#63676d;font-size:12.5px">Noch keine Pfähle gezählt.</div>' : h4;
+
+  $('standHint').textContent='Datenstand: Bohren '+(stand.bohr||'?')+' · Bau '+(stand.bau||'?')+
+    ' · Typen '+(stand.typen||'?')+'. Neu einlesen mit tools/build_inventar.py.';
+}
+
+/* ─────────── CSV ─────────── */
+function csv(name,zeilen){
+  var b=new Blob(['﻿'+zeilen.map(function(z){ return z.join(';'); }).join('\r\n')],
+                 {type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(b); a.download=name; a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); },4000);
+}
+function csvGewinde(){
+  var z=[['Tisch','Stuetze','Typ','Gewinde_mm','Von','Datum','Zeit']];
+  Object.keys(messungen).sort().forEach(function(k){
+    var m=messungen[k];
+    z.push([m.tischId,m.stuetze,m.typ||'',m.gewinde,m.von||'',m.datum||'',m.ts?new Date(m.ts).toLocaleTimeString('de-CH'):'']);
+  });
+  csv('gewinde_'+heute()+'.csv',z);
+}
+function csvLager(){
+  var z=[['Art','Typ','Gewinde_mm','Lagerort','Anzahl','Von','Datum']];
+  Object.keys(lager).sort().forEach(function(k){
+    var m=lager[k];
+    z.push([m.art,m.typ,+m.gewinde||'ungemessen',m.ort,m.anzahl,m.von||'',m.datum||'']);
+  });
+  csv('lagerbestand_'+heute()+'.csv',z);
+}
+function csvBedarf(){
+  var z=[['Tisch','Stuetze','Typ','Bereich','Bohrstatus','Gewinde_mm','Kopf']];
+  var L=['Geplant','Abgesteckt','Gebohrt','Vermessen','Injiziert'];
+  pfaehle.forEach(function(p){
+    if(zustand(p)!=='offen') return;
+    var g=gewindeVon(p), k=koepfe[schluessel(p.t,p.s)];
+    z.push([p.t,'S'+p.s,p.tv||p.tb,bereiche[p.ber]||'',L[p.st]||p.st,g||'',k?(k.montiert?'drauf':'fehlt'):'']);
+  });
+  csv('bedarf_pfahlkoepfe_'+heute()+'.csv',z);
+}
+
+/* ─────────── Start ─────────── */
+netzMalen();
+$('f_von').value=getVon(); $('l_von').value=getVon();
+canvasSetzen(); kartenEvents();
+/* Startausschnitt: der Bereich mit den meisten offenen Typ-E-Pfählen.
+   Ueber den Schwerpunkt ALLER E-Pfaehle zu zoomen ist sinnlos - die liegen
+   ueber die ganze Baustelle verstreut, der Ausschnitt waere ~2 km breit. */
+function startAusschnitt(){
+  var zaehl={}, best=null;
+  pfaehle.forEach(function(p){
+    if(zustand(p)!=='offen') return;
+    zaehl[p.ber]=zaehl[p.ber]||{e:0,n:0};
+    zaehl[p.ber].n++; if(p.tb==='E') zaehl[p.ber].e++;
+  });
+  Object.keys(zaehl).forEach(function(b){
+    var z=zaehl[b];
+    if(!best || z.e>zaehl[best].e || (z.e===zaehl[best].e && z.n>zaehl[best].n)) best=b;
+  });
+  if(best!==null) zuBereich(+best);
+}
+inventarLaden().then(function(){
+  chipsMalen(); malen(); zielMalen(); lagerChips(); bilanzMalen(); startAusschnitt(); tabAusHash();
+  return erfassungLaden();
+}).then(function(){ startAusschnitt(); tabAusHash(); pendSenden(); })
+  .catch(function(){ toast('Daten konnten nicht geladen werden',true); });
+window.addEventListener('hashchange', tabAusHash);
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
 </script>
 </body>
 </html>
