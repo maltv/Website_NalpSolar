@@ -97,7 +97,6 @@ html, body { width:100%; height:100%; overflow:hidden; background:#0d1117;
 .lbl-menzi { background:rgba(30,30,34,.88); border-color:#f2b705; color:#ffe89a; font-size:10.5px; font-weight:800; }
 .lbl-menzi.rot { border-color:#d8232a; color:#ffb3b6; }
 .lbl-stahl.pk { background:rgba(11,95,255,.92); border-color:#0b5fff; color:#fff; }
-.lbl-rentner { background:rgba(146,208,80,.92); border-color:#92d050; color:#111; font-size:10.5px; font-weight:800; }
 .lbl-tisch { background:rgba(255,220,0,.85); color:#111; border-color:#ffd700; font-size:9px; padding:1px 4px;
              transition:opacity .25s linear; will-change:opacity; }
 .lbl-status { font-size:10px; font-weight:800; padding:1px 5px;
@@ -130,6 +129,25 @@ html, body { width:100%; height:100%; overflow:hidden; background:#0d1117;
 }
 .leg { display:flex; align-items:center; gap:7px; }
 .leg-dot { width:10px; height:10px; border-radius:2px; flex-shrink:0; }
+
+/* ── Angetippte Leitung ──────────────────────────────────── */
+#leitPanel {
+  display:none; position:fixed; right:10px; bottom:64px; z-index:110;
+  min-width:212px; max-width:min(320px,calc(100vw - 20px));
+  background:rgba(5,10,20,.9); border:1px solid rgba(255,220,80,.45);
+  border-radius:10px; padding:8px 10px; font-size:12px;
+  backdrop-filter:blur(8px); box-shadow:0 6px 22px rgba(0,0,0,.45);
+}
+#leitPanel.show { display:block; }
+.lp-head { display:flex; align-items:center; gap:7px; font-weight:800; margin-bottom:5px; }
+.lp-dot { width:11px; height:11px; border-radius:3px; flex-shrink:0; background:#29cc73; }
+.lp-x {
+  background:none; border:none; color:rgba(255,255,255,.5);
+  font-size:15px; cursor:pointer; padding:0 2px; line-height:1;
+}
+.lp-x:hover { color:#fff; }
+.lp-body { display:flex; flex-direction:column; gap:2px; color:rgba(255,255,255,.78); }
+.lp-body b { color:#ffe066; font-weight:700; }
 
 /* ── Long-press hint ─────────────────────────────────────── */
 #orbitHint {
@@ -429,17 +447,9 @@ body.ar-mode { background:transparent!important; }
   <div class="tb-menu-h">Ebenen ein/aus</div>
   <button class="tb-btn active" id="btnTerrain" onclick="toggleTerrain()">🏔 Terrain</button>
   <button class="tb-btn active" id="btnSat"     onclick="toggleSat()">🛰 Satellit</button>
-  <button class="tb-btn active" id="btnWL"      onclick="toggleLayer('wl')">🔵 WL 2025 (alt)</button>
+  <button class="tb-btn active" id="btnLeit"    onclick="toggleLayer('leitungen')">🟩 Werkleitungen PZ1–PZ3</button>
   <button class="tb-btn active" id="btnErdung"  onclick="toggleLayer('erdung')">🟠 Erdung</button>
-  <button class="tb-btn active" id="btnL26"     onclick="toggleLayer('leitungen26')">🟩 Leitungen 26/27</button>
   <button class="tb-btn active" id="btnTische"  onclick="toggleTische()">🟨 Modultische</button>
-  <button class="tb-btn" id="btnBohr" onclick="toggleBohr()">⛏ Bohrpunkte</button>
-  <button class="tb-btn" id="btnPk" onclick="togglePkModelle()">🏗 Echte PK-Modelle</button>
-  <button class="tb-btn active" id="btnWorkers" onclick="toggleWorkers()">👷 Bauarbeiter</button>
-  <button class="tb-btn active" id="btnCows"    onclick="toggleCows()">🐄 Kühe</button>
-  <button class="tb-btn active" id="btnRentner" onclick="toggleRentner()">👴 Führung 31.08.</button>
-  <button class="tb-btn active" id="btnVeg"     onclick="toggleVegetation()">🌿 Vegetation</button>
-  <button class="tb-btn active" id="btnCrane"   onclick="toggleCrane()">🏗 Pneukran</button>
 </div>
 
 <div id="menuMore" class="tb-menu">
@@ -483,16 +493,26 @@ body.ar-mode { background:transparent!important; }
 </div>
 
 <div id="legend">
-  <div class="leg"><div class="leg-dot" style="background:#00aaff"></div>Werkleitungen (alt)</div>
-  <div class="leg"><div class="leg-dot" style="background:#FF9800"></div>Erdung</div>
-  <div class="leg"><div class="leg-dot" style="background:#29cc73"></div>Leitung 60</div>
-  <div class="leg"><div class="leg-dot" style="background:#ff4d4d"></div>Leitung 120</div>
-  <div class="leg"><div class="leg-dot" style="background:#1e94f2"></div>HRB (Hauptrohr)</div>
+  <div class="leg"><div class="leg-dot" style="background:#29cc73"></div>KSR DN60 (Feinverteilung)</div>
+  <div class="leg"><div class="leg-dot" style="background:#ff4d4d"></div>KSR DN120</div>
+  <div class="leg"><div class="leg-dot" style="background:#1e94f2"></div>HRB (Haupttrasse)</div>
   <div class="leg"><div class="leg-dot" style="background:#cccccc"></div>Schacht</div>
+  <div class="leg"><div class="leg-dot" style="background:#FF9800"></div>Erdung</div>
   <div class="leg"><div class="leg-dot" style="background:rgba(140,210,140,.7)"></div>Terrain</div>
   <div class="leg"><div class="leg-dot" style="background:rgba(80,160,255,.7);border:1px solid #ffd700"></div>Modultische</div>
-  <div class="leg" style="opacity:.85">▨ schraffiert/durchscheinend = Leitung noch nicht gebaut (Stand 23.07.)</div>
+  <div class="leg" style="opacity:.85">👆 Leitung antippen = ganzer Verlauf leuchtet</div>
   <div id="bohrLeg"></div>
+</div>
+
+<!-- Angetippte Leitung: Kategorie, Zone, Länge, Ziel -->
+<div id="leitPanel">
+  <div class="lp-head">
+    <span class="lp-dot" id="lpDot"></span>
+    <span id="lpTitel">Leitung</span>
+    <span style="flex:1"></span>
+    <button class="lp-x" onclick="leitAuswahlLoesen()" title="Auswahl aufheben">✕</button>
+  </div>
+  <div class="lp-body" id="lpBody"></div>
 </div>
 
 <div id="orbitHint">📍 Orbit-Punkt gesetzt</div>
@@ -646,35 +666,16 @@ var OE = 2701555, ON = 1165641, OZ = 1950;
 var EXTENT = 700;   // ±700m covers full IFC extent (North goes to +535m)
 var GRID   = 64;
 
+// EIN Werkleitungslayer für alle Planungszonen: der frühere Layer "WL 2025 (alt)"
+// war in Wahrheit die Feinverteilung PZ1 (NalpSolar_51_M_0460_A2_TB-2026-PZ1-WL)
+// und damit dieselbe Ebene wie "Leitungen 26/27" — auf Hinweis Victor 12.08.2026
+// zusammengelegt. Erzeugt von tools/build_leitungen.py (PZ1+PZ2+PZ3 inkl. der
+// neuen Feinverteilung PZ3, Plan 0475_A1 vom 12.08.2026).
 var IFC = [
-  { slot:'wl',    base:'uploads/ifc/werkleitungen',
-    col:[0,0.6,1], emissive:[0,0.2,0.5], baustatus:true },   // WL 2025 (alt), NW-Cluster
+  { slot:'leitungen', base:'uploads/ifc/leitungen', emissive:[0.05,0.05,0.05] },
   { slot:'erdung', base:'uploads/ifc/erdung',
-    col:[1,0.55,0], emissive:[0.4,0.15,0] },      // glowing orange
-  { slot:'leitungen26', base:'uploads/ifc/leitungen26',
-    emissive:[0.05,0.05,0.05], baustatus:true }   // vertex-coloured: 60/120/HRB/Schacht
+    col:[1,0.55,0], emissive:[0.4,0.15,0] }       // glowing orange
 ];
-
-// Baustatus Werkleitungen (Victor-Skizze 23.07.2026): orange nachgefahren
-// (= 120er/HRB-Hauptstrang, per Vertexfarbe erkannt) und orange eingekreiste
-// Bereiche (Rechtecke NW/NE/SE, aus dem Vertex-Plot kalibriert) sind FERTIG;
-// alles andere wird gestrichelt (Schraffur-Discard im Shader) dargestellt.
-function wlFertigAttr(slot, raw, colors){
-  var NW=[35,165,405,545], NE=[160,205,455,530], SE=[315,420,190,310];
-  function inR(e,n,r){ return e>=r[0]&&e<=r[1]&&n>=r[2]&&n<=r[3]; }
-  var nV=raw.length/3, a=new Float32Array(nV), i, e, n, f;
-  for(i=0;i<nV;i++){
-    e=raw[i*3]; n=raw[i*3+1]; f=0;
-    if(slot==='wl'){ f=inR(e,n,NW)?1:0; }
-    else {
-      var r=colors?colors[i*3]:0, b=colors?colors[i*3+2]:0, g=colors?colors[i*3+1]:0;
-      if((r>0.9&&g<0.5)||(b>0.9&&r<0.3)) f=1;          // 120er (rot) + HRB (blau) = Strang
-      else if(inR(e,n,NE)||inR(e,n,SE)) f=1;           // eingekreiste Bereiche
-    }
-    a[i]=f;
-  }
-  return a;
-}
 
 // WMS BBOX for satellite texture
 var BBOX = (OE-EXTENT)+','+(ON-EXTENT)+','+(OE+EXTENT)+','+(ON+EXTENT);
@@ -838,7 +839,11 @@ async function loadLayer(cfg){
   if(meta.vertexColors){
     fetchJobs.push(fetch(cfg.base+'.c.bin').then(function(r){ if(!r.ok) throw new Error(r.status); return r.arrayBuffer(); }));
   }
+  if(meta.elemIds){
+    fetchJobs.push(fetch(cfg.base+'.e.bin').then(function(r){ if(!r.ok) throw new Error(r.status); return r.arrayBuffer(); }));
+  }
   var bufs=await Promise.all(fetchJobs);
+  var elemBuf=meta.elemIds ? bufs[bufs.length-1] : null;
 
   // Raw: [East-OE, North-ON, Elev-OZ]  →  Y-up: [East-OE, Elev-OZ, -(North-ON)]
   var raw=new Float32Array(bufs[0]);
@@ -852,36 +857,62 @@ async function loadLayer(cfg){
   var geom=new THREE.BufferGeometry();
   geom.setAttribute('position',new THREE.BufferAttribute(verts,3));
   geom.setIndex(new THREE.BufferAttribute(idxs,1));
-  if(meta.vertexColors){
+
+  // Strang-IDs (.e.bin): ein Wert je Vertex, zeigt auf meta.straenge[i].
+  // Daraus entstehen sowohl die Vertexfarben (Kategorie) als auch das
+  // Klick-Highlight – eine eigene .c.bin (3.5 MB für 5 Farbwerte) entfällt.
+  var elemIds=null, legMap={};
+  if(elemBuf && meta.straenge){
+    elemIds=new Uint16Array(elemBuf);
+    (meta.legend||[]).forEach(function(l){ legMap[l.key]=l.color; });
+    var cols=new Float32Array(elemIds.length*3);
+    for(var k=0;k<elemIds.length;k++){
+      var st=meta.straenge[elemIds[k]], cc=(st&&legMap[st.k])||[0.9,0.75,0.2];
+      cols[k*3]=cc[0]; cols[k*3+1]=cc[1]; cols[k*3+2]=cc[2];
+    }
+    geom.setAttribute('color',new THREE.BufferAttribute(cols,3));
+    geom.setAttribute('elemId',new THREE.BufferAttribute(new Float32Array(elemIds),1));
+  } else if(meta.vertexColors){
     geom.setAttribute('color',new THREE.BufferAttribute(new Float32Array(bufs[2]),3));
   }
+  var hatColor=!!(elemIds||meta.vertexColors);
 
   var c=meta.color||cfg.col||[1,1,1], e=cfg.emissive||[0,0,0];
   var mat=new THREE.MeshPhongMaterial({
-    color:    meta.vertexColors? new THREE.Color(1,1,1) : new THREE.Color(c[0],c[1],c[2]),
-    vertexColors: !!meta.vertexColors,
+    color:    hatColor? new THREE.Color(1,1,1) : new THREE.Color(c[0],c[1],c[2]),
+    vertexColors: hatColor,
     emissive: new THREE.Color(e[0],e[1],e[2]),
     flatShading:true, specular:0x333333, shininess:40,
     side:THREE.DoubleSide
   });
 
-  // Noch nicht gebaute Leitungen schraffiert (Baustatus-Skizze Victor 23.07.).
-  // Bildschirm-Schraffur statt Weltraster: das alte 2.5-m-Karo hat schräge
-  // Rohre in grossen Brocken abgeschnitten (Victor 27.07.) – das feine
-  // gl_FragCoord-Muster wirkt wie halbtransparent gestrichelt, richtungsunabhängig.
-  if(cfg.baustatus){
-    geom.setAttribute('fertig', new THREE.BufferAttribute(
-      wlFertigAttr(cfg.slot, raw, meta.vertexColors?new Float32Array(bufs[2]):null), 1));
+  // Klick-Highlight: die angetippte Leitung leuchtet pulsierend, alle anderen
+  // treten grau zurück – so ist auf einen Blick zu sehen, wo ein Strang
+  // hinführt (Wunsch Noel/Victor 12.08.2026). uSel = -1 → normale Ansicht.
+  if(elemIds){
+    mat.userData.uSel  ={value:-1};
+    mat.userData.uPulse={value:0};
     mat.onBeforeCompile=function(sh){
-      sh.vertexShader='attribute float fertig; varying float vFertig;\n'
+      sh.uniforms.uSel  =mat.userData.uSel;
+      sh.uniforms.uPulse=mat.userData.uPulse;
+      sh.vertexShader='attribute float elemId; varying float vElem;\n'
         + sh.vertexShader.replace('#include <begin_vertex>',
-          '#include <begin_vertex>\nvFertig=fertig;');
-      sh.fragmentShader='varying float vFertig;\n'
-        + sh.fragmentShader.replace('#include <clipping_planes_fragment>',
-          'if(vFertig<0.5 && mod(gl_FragCoord.x+gl_FragCoord.y,7.0)<3.5) discard;\n#include <clipping_planes_fragment>');
+          '#include <begin_vertex>\nvElem=elemId;');
+      sh.fragmentShader='uniform float uSel; uniform float uPulse; varying float vElem;\n'
+        + sh.fragmentShader.replace('#include <dithering_fragment>',
+          '#include <dithering_fragment>\n'
+        + 'if(uSel>=0.0){\n'
+        + '  if(abs(vElem-uSel)<0.5){\n'
+        + '    gl_FragColor.rgb=mix(gl_FragColor.rgb, vec3(1.0,0.93,0.30), 0.40+0.40*uPulse);\n'
+        + '  } else {\n'
+        + '    gl_FragColor.rgb=mix(gl_FragColor.rgb, vec3(0.30,0.32,0.36), 0.60);\n'
+        + '  }\n'
+        + '}');
     };
   }
   var mesh=new THREE.Mesh(geom,mat);
+  mesh.userData.straenge=meta.straenge||null;
+  mesh.userData.elemIds=elemIds;
   scene.add(mesh);
   layers[cfg.slot]=mesh;
 
@@ -894,6 +925,114 @@ async function loadLayer(cfg){
   });
   console.info(cfg.slot+': '+meta.vCount+'v '+meta.fCount+'f '+(meta.labels||[]).length+'lbl');
   return mesh;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LEITUNG ANTIPPEN — der ganze Strang leuchtet, dazu eine
+   Verlaufslinie, die auch durch Gelände und Tische scheint.
+   Noel muss auf der Baustelle sehen, wo eine Leitung hinführt;
+   im Plan ist das kaum zu entziffern (Victor 12.08.2026).
+═══════════════════════════════════════════════════════════ */
+var leitSel=-1, leitLinie=null;
+var LEIT_LAB={'60':'KSR DN60 (Feinverteilung)','120':'KSR DN120',
+              'hrb':'HRB (Haupttrasse)','schacht':'Schacht','other':'Leitung'};
+var LEIT_COL={'60':'#29cc73','120':'#ff4d4d','hrb':'#1e94f2','schacht':'#cccccc','other':'#e6bf33'};
+
+/* raw-Frame [E-OE, N-ON, Elev-OZ] → Szene (Y-up) */
+function leitPt(q){ return new THREE.Vector3(q[0], q[2], -q[1]); }
+
+function pickLeitung(cx,cy){
+  var mesh=layers['leitungen'];
+  if(!mesh || !mesh.visible || !mesh.userData.elemIds) return false;
+  var rect=renderer.domElement.getBoundingClientRect();
+  var m=new THREE.Vector2(((cx-rect.left)/rect.width)*2-1, -((cy-rect.top)/rect.height)*2+1);
+  raycaster.setFromCamera(m,camera);
+  var hits=raycaster.intersectObject(mesh,false);      // trifft auch durch das Terrain
+  if(!hits.length || !hits[0].face) return false;
+  // Rohre liegen 0.4–1.1 m unter Terrain. Liegt der Treffer deutlich weiter
+  // hinten, war das Gelände gemeint (Blick über einen Grat) – nicht auswählen.
+  if(terrainMesh && terrainMesh.visible){
+    var th=raycaster.intersectObject(terrainMesh,false);
+    if(th.length && hits[0].distance > th[0].distance+8) return false;
+  }
+  leitAuswahlSetzen(mesh.userData.elemIds[hits[0].face.a]);
+  return true;
+}
+
+window.leitAuswahlSetzen=function(idx){
+  var mesh=layers['leitungen']; if(!mesh || !mesh.userData.straenge) return;
+  var st=mesh.userData.straenge[idx]; if(!st) return;
+  leitSel=idx;
+  if(mesh.material.userData.uSel) mesh.material.userData.uSel.value=idx;
+  leitLinieZeichnen(st);
+  leitPanelFuellen(st);
+  if(navigator.vibrate) navigator.vibrate(25);
+};
+
+window.leitAuswahlLoesen=function(){
+  if(leitSel<0) return;
+  leitSel=-1;
+  var mesh=layers['leitungen'];
+  if(mesh && mesh.material.userData.uSel) mesh.material.userData.uSel.value=-1;
+  if(leitLinie){ scene.remove(leitLinie); leitLinie.geometry.dispose(); leitLinie.material.dispose(); leitLinie=null; }
+  var p=document.getElementById('leitPanel'); if(p) p.classList.remove('show');
+};
+
+function leitLinieZeichnen(st){
+  if(leitLinie){ scene.remove(leitLinie); leitLinie.geometry.dispose(); leitLinie.material.dispose(); leitLinie=null; }
+  var p=st.p||[]; if(p.length<2) return;
+  var pts=p.map(leitPt);
+  var geo=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),
+            Math.max(8,Math.min(300,pts.length*3)), 0.5, 6, false);
+  leitLinie=new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+    color:0xffe066, transparent:true, opacity:0.8, depthTest:false }));
+  leitLinie.renderOrder=20;
+  scene.add(leitLinie);
+}
+
+/* nächster Modultisch zu einem Endpunkt (raw-Frame) */
+function leitNaechsterTisch(q,maxD){
+  if(!q) return null;
+  var p=leitPt(q), best=null, bd=maxD||14;
+  for(var id in tischeIndex){
+    var d=tischeIndex[id].pos.distanceTo(p);
+    if(d<bd){ bd=d; best={id:id, d:d}; }
+  }
+  return best;
+}
+
+/* Pulsieren der Auswahl (Aufruf im Animationsloop) */
+function updateLeitPuls(now){
+  if(leitSel<0) return;
+  var mesh=layers['leitungen']; if(!mesh) return;
+  var u=mesh.material.userData.uPulse;
+  if(u) u.value=0.5+0.5*Math.sin(now/260);
+  if(leitLinie) leitLinie.material.opacity=0.55+0.35*Math.sin(now/260);
+}
+
+function leitPanelFuellen(st){
+  var panel=document.getElementById('leitPanel'); if(!panel) return;
+  document.getElementById('lpTitel').textContent=LEIT_LAB[st.k]||'Leitung';
+  document.getElementById('lpDot').style.background=LEIT_COL[st.k]||'#e6bf33';
+  var z=['Planungszone <b>'+(st.q||'?')+'</b>'];
+  if(st.k!=='schacht' && st.l>0) z.push('Länge <b>'+st.l.toFixed(1).replace('.',',')+' m</b>');
+  // Rohrhöhe aus dem Modell. KEINE Überdeckung ausrechnen: das Terrainraster
+  // hat nur 64×64 Stützpunkte auf 1400 m (≈22 m Maschenweite), daraus käme
+  // Unsinn heraus. Sollmass steht in der AAW PZ3 (min. 40 cm).
+  if(st.a && st.b){
+    var h1=st.a[2]+OZ, h2=st.b[2]+OZ;
+    z.push('Rohr auf <b>'+Math.round(Math.min(h1,h2))+'–'+Math.round(Math.max(h1,h2))+' m ü.M.</b>');
+  }
+  // Wo endet der Strang? Für die Feinverteilung ist das die Kernfrage.
+  var ta=leitNaechsterTisch(st.a), tb=leitNaechsterTisch(st.b);
+  if(tb && (!ta || tb.d<ta.d)) z.push('führt zu Tisch <b>'+tb.id+'</b>');
+  else if(ta) z.push('führt zu Tisch <b>'+ta.id+'</b>');
+  if(ta && tb && ta.id!==tb.id) z.push('anderes Ende: Tisch <b>'+ta.id+'</b>');
+  // LV95 des Endpunkts – direkt für die Absteckung ablesbar
+  var e=st.b||st.a;
+  if(e) z.push('Ende LV95 <b>'+Math.round(e[0]+OE)+' / '+Math.round(e[1]+ON)+'</b>');
+  document.getElementById('lpBody').innerHTML=z.join('<br>');
+  panel.classList.add('show');
 }
 
 /* ── Modultische ─────────────────────────────────────────── */
@@ -2378,120 +2517,6 @@ window.toggleCows=function(){
 };
 
 /* ═══════════════════════════════════════════════════════════
-   PENSIONIERTENFÜHRUNG Mo 31.08. — Besuchergruppe mit Rollator,
-   schlurft hinter dem Guide her, mit Erklär-Pausen
-═══════════════════════════════════════════════════════════ */
-var rentnerGroup=null, rentners=[], rentnerOn=true;
-var rentnerPath={cx:0,cz:0,r:50,ang:0};
-var rentnerMode='walk', rentnerT=24;
-function makeRollator(){
-  var g=new THREE.Group();
-  var frame=new THREE.MeshPhongMaterial({color:0xb0243a,shininess:60});   // klassisch bordeauxrot
-  var grau =new THREE.MeshPhongMaterial({color:0x2b2b2f,shininess:15});
-  function tube(x1,y1,z1,x2,y2,z2,r){
-    var dx=x2-x1,dy=y2-y1,dz=z2-z1,len=Math.sqrt(dx*dx+dy*dy+dz*dz);
-    var m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,len,6),frame);
-    m.position.set((x1+x2)/2,(y1+y2)/2,(z1+z2)/2);
-    m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3(dx/len,dy/len,dz/len));
-    return m;
-  }
-  [-0.2,0.2].forEach(function(z){
-    g.add(tube(0.05,0.84,z, 0.05,0.10,z, 0.022));                        // Hinterbein (Griffseite)
-    g.add(tube(0.05,0.62,z, 0.40,0.10,z, 0.022));                        // Vorderbein schräg
-    var w1=new THREE.Mesh(new THREE.CylinderGeometry(0.085,0.085,0.035,10),grau);
-    w1.rotation.x=Math.PI/2; w1.position.set(0.05,0.085,z); g.add(w1);   // Räder
-    var w2=w1.clone(); w2.position.set(0.40,0.085,z); g.add(w2);
-    var h=new THREE.Mesh(new THREE.CylinderGeometry(0.028,0.028,0.15,8),grau);
-    h.rotation.z=Math.PI/2; h.position.set(-0.02,0.86,z); g.add(h);      // Handgriffe
-  });
-  g.add(tube(0.05,0.50,-0.2, 0.05,0.50,0.2, 0.02));                      // Querstrebe
-  var seat=new THREE.Mesh(new THREE.BoxGeometry(0.24,0.03,0.34),grau); seat.position.set(0.20,0.52,0); g.add(seat); // Sitzbrett
-  return g;
-}
-function makeRentner(i){
-  var g=new THREE.Group();
-  var farben=[0x8a6d3b,0x5b6e8c,0x6e8a5b,0x8c5b6e];                      // Strickjacken-Töne
-  var coat=new THREE.MeshPhongMaterial({color:farben[i%farben.length],shininess:8});
-  var skin=new THREE.MeshPhongMaterial({color:0xe0ac69});
-  var hose=new THREE.MeshPhongMaterial({color:0x4a4a52,shininess:10});
-  var helmM=new THREE.MeshPhongMaterial({color:0xf2f2f2,shininess:70});  // weisser Besucherhelm
-  var haar=new THREE.MeshLambertMaterial({color:0xd9d9d9});
-  function limb(hipY,x,len,rad,mat){
-    var grp=new THREE.Group(); grp.position.set(x,hipY,0);
-    var m=new THREE.Mesh(new THREE.CylinderGeometry(rad,rad*0.9,len,8),mat); m.position.y=-len/2; grp.add(m); return grp;
-  }
-  var legL=limb(0.78,0.10,0.78,0.08,hose), legR=limb(0.78,-0.10,0.78,0.08,hose);
-  var torso=new THREE.Mesh(new THREE.BoxGeometry(0.44,0.55,0.30),coat); torso.position.y=1.02; torso.rotation.z=-0.16; // leicht gebückt
-  var armL=limb(1.26,0.27,0.55,0.055,coat), armR=limb(1.26,-0.27,0.55,0.055,coat);
-  armL.rotation.z=-0.45; armR.rotation.z=-0.45;                          // Hände vorn auf den Griffen
-  var head=new THREE.Mesh(new THREE.SphereGeometry(0.145,12,10),skin); head.position.set(0.06,1.45,0);
-  var kranz=new THREE.Mesh(new THREE.SphereGeometry(0.152,10,6,0,Math.PI*2,Math.PI*0.45,Math.PI*0.18),haar);
-  kranz.position.set(0.06,1.45,0);                                       // grauer Haarkranz unterm Helm
-  var helm=new THREE.Mesh(new THREE.SphereGeometry(0.165,14,8,0,Math.PI*2,0,Math.PI/2),helmM); helm.position.set(0.06,1.48,0);
-  g.add(legL,legR,torso,armL,armR,head,kranz,helm);
-  var rolli=makeRollator(); rolli.position.x=0.42; g.add(rolli);
-  g.userData={legL:legL,legR:legR,armL:armL,armR:armR,head:head};
-  return g;
-}
-function spawnRentner(){
-  rentnerGroup=new THREE.Group(); rentnerGroup.renderOrder=5;
-  rentnerPath.cx=workerArea.cx; rentnerPath.cz=workerArea.cz;
-  rentnerPath.r=Math.max(35,Math.min(60,workerArea.hx*0.35));
-  var guide=makeWorker();                                                // Guide in STRABAG-PSA
-  var d=document.createElement('div'); d.className='lbl lbl-rentner';
-  d.textContent='👴 Pensioniertenführung · Mo 31.08.';
-  var lbl=new THREE.CSS2DObject(d); lbl.position.set(0,2.5,0); guide.add(lbl);
-  rentners.push({group:guide,isGuide:true,dist:0,phase:Math.random()*6});
-  rentnerGroup.add(guide);
-  for(var i=0;i<4;i++){
-    var r=makeRentner(i);
-    rentners.push({group:r,isGuide:false,dist:3.4*(i+1),phase:Math.random()*6});
-    rentnerGroup.add(r);
-  }
-  setCast(rentnerGroup);
-  scene.add(rentnerGroup);
-  console.info('Pensioniertenführung: Guide + 4 (mit Rollator)');
-}
-function updateRentner(dt){
-  if(!rentnerGroup) return;
-  rentnerGroup.visible=rentnerOn && !arActive;
-  if(!rentnerGroup.visible) return;
-  rentnerT-=dt;
-  if(rentnerT<=0){
-    if(rentnerMode==='walk'){ rentnerMode='pause'; rentnerT=7+Math.random()*5; }   // Erklär-Pause
-    else { rentnerMode='walk'; rentnerT=22+Math.random()*10; }
-  }
-  var speed=(rentnerMode==='walk')?0.55:0;                               // Rentnertempo
-  rentnerPath.ang+=speed/rentnerPath.r*dt;
-  for(var i=0;i<rentners.length;i++){
-    var p=rentners[i], u=p.group.userData;
-    var ai=rentnerPath.ang-p.dist/rentnerPath.r;
-    var px=rentnerPath.cx+Math.cos(ai)*rentnerPath.r;
-    var pz=rentnerPath.cz+Math.sin(ai)*rentnerPath.r;
-    p.group.position.set(px,terraY(px,pz),pz);
-    var head=Math.atan2(-Math.cos(ai),-Math.sin(ai));                    // Tangente = Gehrichtung
-    if(rentnerMode==='pause' && p.isGuide) head+=Math.PI;                // Guide dreht sich zur Gruppe
-    p.group.rotation.y=head;
-    if(rentnerMode==='walk'){
-      p.phase+=dt*(p.isGuide?5.5:4.0);
-      var s=Math.sin(p.phase)*(p.isGuide?0.45:0.16);                     // Rentner: Trippelschritte
-      u.legL.rotation.z=s; u.legR.rotation.z=-s;
-      if(p.isGuide){ u.armL.rotation.x=-s*0.6; u.armR.rotation.x=s*0.6; }
-    } else {
-      u.legL.rotation.z*=0.85; u.legR.rotation.z*=0.85;
-      if(p.isGuide){ u.armR.rotation.z=-1.9+Math.sin(rentnerT*4)*0.4; u.armL.rotation.z=-0.25; } // erklärt gestikulierend
-      else if(u.head){ u.head.rotation.x=Math.sin(rentnerT*2.2+p.phase)*0.08; }                  // nickt verständig
-    }
-  }
-}
-window.toggleRentner=function(){
-  rentnerOn=!rentnerOn;
-  if(rentnerOn && !rentnerGroup){ try{ spawnRentner(); }catch(e){ console.warn('rentner',e); } }
-  if(rentnerGroup) rentnerGroup.visible=rentnerOn && !arActive;
-  var b=document.getElementById('btnRentner'); if(b) b.classList.toggle('active',rentnerOn);
-};
-
-/* ═══════════════════════════════════════════════════════════
    POLIER SAMUEL — weisser Helm, langer Bart, treibt die Arbeiter an
 ═══════════════════════════════════════════════════════════ */
 function playCrack(pos){
@@ -3141,8 +3166,10 @@ function initBuildings(){
     gable.scale.set(1.35,1,0.94); gable.rotation.y=Math.PI/4; gable.position.y=4.35; g.add(gable);
     var roofM=new THREE.MeshPhongMaterial({color:0x4a4a4a});
     [1,-1].forEach(function(s){
+      // Traufe muss nach AUSSEN abfallen (Satteldach Λ). Mit dem früheren
+      // Vorzeichen stand das Dach auf dem Kopf – Victor 12.08.2026.
       var r=new THREE.Mesh(new THREE.BoxGeometry(11.6,0.18,4.7),roofM);
-      r.position.set(0,4.35,s*1.9); r.rotation.x=s*-0.44; g.add(r);
+      r.position.set(0,4.35,s*1.9); r.rotation.x=s*0.44; g.add(r);
     });
     g.position.set(x,y,z); g.rotation.y=rot||0; setCast(g); scene.add(g);
   }
@@ -3320,8 +3347,7 @@ window.tbMenu=function(id){
 
 /* ── Tap detection (distinguish tap from orbit drag) ─────── */
 function onTapDown(e){
-  if(!gamePlaying && !birdARon && !measurePlacing() && !measEditOn && !stahlPickDone &&
-     !(stahlGroup && stahlGroup.children.length)) return;
+  // Immer mitschneiden: ein Tap wählt jetzt auch Leitungen aus.
   tapStart={x:e.clientX, y:e.clientY, t:performance.now()};
 }
 function onTapUp(e){
@@ -3340,7 +3366,9 @@ function onTapUp(e){
   if(measEditOn){ measEditTap(e.clientX, e.clientY); return; }
   if(stahlPickTap(e.clientX, e.clientY)) return;   // Stahlteil-Position antippen (Erfassung ohne GPS)
   if(pickStahl(e.clientX, e.clientY)) return;      // Stahlteil antippen = löschen
-  pickTischLink(e.clientX, e.clientY);             // Tisch antippen = 🚀-Linien zu erfassten Teilen
+  if(pickTischLink(e.clientX, e.clientY)) return;  // Tisch antippen = 🚀-Linien zu erfassten Teilen
+  if(pickLeitung(e.clientX, e.clientY)) return;    // Leitung antippen = ganzer Verlauf leuchtet
+  leitAuswahlLoesen();                             // ins Leere getippt = Auswahl weg
 }
 function pickBird(cx,cy){
   if(!birdGroup) return;
@@ -4069,11 +4097,11 @@ function disposeMeasGroup(g){
    1) Strahl direkt auf die Leitungs-Meshes (durch das Gelände hindurch).
    2) Fallback: horizontaler (XZ) Nächster-Vertex-Fang am Bodenpunkt –
       übernimmt die echte Verlegetiefe (y) des Leitungs-Vertex. */
-function wlMeshes(){ var a=[]; if(layers['wl'])a.push(layers['wl']); if(layers['leitungen26'])a.push(layers['leitungen26']); return a; }
+function wlMeshes(){ var a=[]; if(layers['leitungen'])a.push(layers['leitungen']); return a; }
 function buildSnapIndex(){
   if(snapIndex) return;
   var cells=new Map(), pts=[];
-  ['wl','leitungen26'].forEach(function(slot){
+  ['leitungen'].forEach(function(slot){
     var mesh=layers[slot]; if(!mesh||!mesh.geometry) return;
     var pos=mesh.geometry.attributes.position; if(!pos) return;
     for(var i=0;i<pos.count;i++){
@@ -5007,10 +5035,11 @@ window.toggleSat=function(){
   }
   document.getElementById('btnSat').classList.toggle('active',satOn);
 };
-var SLOT_BTN={wl:'btnWL',erdung:'btnErdung',leitungen26:'btnL26'};
+var SLOT_BTN={leitungen:'btnLeit',erdung:'btnErdung'};
 window.toggleLayer=function(slot){
   var m=layers[slot]; if(!m) return;
   m.visible=!m.visible;
+  if(slot==='leitungen' && !m.visible) leitAuswahlLoesen();
   var b=document.getElementById(SLOT_BTN[slot]);
   if(b) b.classList.toggle('active',m.visible);
 };
@@ -5368,8 +5397,8 @@ function animate(){
   updateWorkers(gdt);
   updateClimbers(gdt);
   updateCows(gdt);
-  updateRentner(gdt);
   updateSamuel(gdt);
+  updateLeitPuls(_fnow);
   updateBauablauf(gdt);
   updateTischLinks();
   updateStahlLabels();
@@ -5607,13 +5636,12 @@ async function init(){
     workerArea={cx:pC.x, cz:pC.z, hx:Math.max(pS.x/2,80), hz:Math.max(pS.z/2,80)};
     spawnWorkers(5); if(workerGroup) setCast(workerGroup);
     try{ spawnCows(4); }catch(e){ console.warn('cows',e); }
-    try{ spawnRentner(); }catch(e){ console.warn('rentner',e); }
     try{ spawnSamuel(); }catch(e){ console.warn('samuel',e); }
     try{ renderStahlteile(); }catch(e){ console.warn('stahlteile',e); }   // jetzt mit Terrain-Höhe
-    // Direktlinks: viewer3d.html#bohr = Bohrebene an, #tisch=350 = gleich hinfliegen
+    // Direktlink: viewer3d.html#tisch=350 = gleich hinfliegen.
+    // (#bohr / #pk sind weg – Ebenen Bohrpunkte + echte PK-Modelle
+    //  auf Wunsch Victor 12.08.2026 aus dem 3D entfernt.)
     try{
-      if(/bohr/i.test(location.hash)) toggleBohr();
-      if(/pk/i.test(location.hash)) togglePkModelle();
       var mt=/tisch=([A-Za-z0-9_-]+)/i.exec(location.hash);
       if(mt){
         var fld=document.getElementById('tischSearch');

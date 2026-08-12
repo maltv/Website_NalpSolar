@@ -1,5 +1,5 @@
 ﻿'use strict';
-var CACHE = 'nalpsolar-v103';
+var CACHE = 'nalpsolar-v104';
 var PRECACHE = [
   './index.html',
   './protokoll.html',
@@ -43,16 +43,15 @@ var PRECACHE = [
   './assets/js/three/OrbitControls.js',
   './assets/js/three/CSS2DRenderer.js',
   './uploads/terrain/terrain.json',
-  './uploads/ifc/werkleitungen.meta.json',
-  './uploads/ifc/werkleitungen.v.bin',
-  './uploads/ifc/werkleitungen.f.bin',
+  // Werkleitungen PZ1+PZ2+PZ3 in EINEM Layer (tools/build_leitungen.py);
+  // loest werkleitungen.* + leitungen26.* ab (Victor 12.08.2026)
+  './uploads/ifc/leitungen.meta.json',
+  './uploads/ifc/leitungen.v.bin',
+  './uploads/ifc/leitungen.f.bin',
+  './uploads/ifc/leitungen.e.bin',
   './uploads/ifc/erdung.meta.json',
   './uploads/ifc/erdung.v.bin',
   './uploads/ifc/erdung.f.bin',
-  './uploads/ifc/leitungen26.meta.json',
-  './uploads/ifc/leitungen26.v.bin',
-  './uploads/ifc/leitungen26.f.bin',
-  './uploads/ifc/leitungen26.c.bin',
   './uploads/tables/modultische.json',
   './uploads/tables/modultische_all.json',
   './uploads/tables/baustand.json',
