@@ -26,7 +26,8 @@ ERD   = os.path.join(PROJ, 'Erdungsdokumentation')
 ZIEL  = os.path.join(WEB, 'uploads', 'erdung')
 ZFOTO = os.path.join(ZIEL, 'fotos')
 sys.path.insert(0, os.path.join(ERD, 'Tools'))
-from erdleiter import ROHDATEN, doku_lesen, rohdaten_lesen, abstand   # noqa: E402
+from erdleiter import (ROHDATEN, doku_lesen, rohdaten_lesen, abstand,   # noqa: E402
+                       survey123_fotos)
 from doku_bauen import datum_aus_dateiname                            # noqa: E402
 
 LV95_NACH_WGS84 = Transformer.from_crs('EPSG:2056', 'EPSG:4326', always_xy=True)
@@ -179,10 +180,14 @@ def hauptachse(pts, bin_m=2.0):
 
 
 def fotos_verkleinern(namen):
+    """Bilder auf 900 px bringen. Quelle ist entweder der WhatsApp-Ordner
+    Fotos_2026\\ oder der Survey123-Ordner Fotos_Survey123\\."""
     os.makedirs(ZFOTO, exist_ok=True)
     gebaut = 0
     for name in namen:
         quelle = os.path.join(ERD, 'Fotos_2026', name)
+        if not os.path.exists(quelle):
+            quelle = os.path.join(ERD, 'Fotos_Survey123', name)
         ziel = os.path.join(ZFOTO, name)
         if not os.path.exists(quelle) or os.path.exists(ziel):
             continue
@@ -205,6 +210,14 @@ def main():
                                                 b=satz['Bemerkung aus Bild'])
             for p in [x.strip() for x in (satz['Punktnummern'] or '').split(',') if x.strip()]:
                 je_punkt.setdefault(p, []).append(satz['Dateiname'])
+
+    s123 = survey123_fotos()
+    for nr, dateien in s123.items():
+        je_punkt.setdefault(nr, [])
+        for d in dateien:
+            if d not in je_punkt[nr]:
+                je_punkt[nr].append(d)
+        foto_meta.setdefault(d, dict(d='', b='aus Survey123'))
 
     kollisionen = {nr for nr in roh26
                    if nr in doku25 and abstand(roh26[nr], doku25[nr]) > 0.10}
