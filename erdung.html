@@ -50,6 +50,10 @@
   .chip.an{ background:var(--rot); border-color:var(--rot); color:#fff; }
   .chip.an.b25{ background:var(--blau); border-color:var(--blau); }
   .chip.an.bof{ background:var(--orange); border-color:var(--orange); }
+  .chip.an.bgr{ background:#1e8f52; border-color:#1e8f52; }
+  .chip.an.bvi{ background:#c47800; border-color:#c47800; }
+  .lin{ display:inline-block; width:20px; height:4px; border-radius:2px; margin:0 4px -1px 10px;
+        box-shadow:0 0 0 1px rgba(0,0,0,.25); }
   #suche{ padding:7px 10px; font-size:14px; border:1px solid #c9ccd2; border-radius:5px;
           width:150px; font-family:inherit; margin-left:auto; }
   .legende{ font-size:11.5px; color:var(--mut); margin-top:9px; line-height:1.7; }
@@ -98,6 +102,11 @@
       <button class="chip bof" id="cof">nur ohne Foto</button>
       <input id="suche" placeholder="Punktnummer …" inputmode="numeric">
     </div>
+    <div class="steuer" style="margin-top:-2px">
+      <span style="font-size:12px;color:var(--mut);font-weight:700">Hintergrund:</span>
+      <button class="chip bgr" id="cwl">Werkleitungen</button>
+      <button class="chip bvi" id="cerd">Erdung PZ1 (Plan)</button>
+    </div>
 
     <div id="karte"></div>
 
@@ -105,7 +114,12 @@
       <span class="pkt" style="background:#1a5fb4"></span>2025 &nbsp;
       <span class="pkt" style="background:#D72622"></span>2026 &nbsp;
       <span class="pkt" style="background:#fff;border-color:#e08a00;box-shadow:0 0 0 2px #e08a00"></span>ohne Foto
-      &nbsp;·&nbsp; <span id="zaehler"></span>
+      &nbsp;·&nbsp; <span id="zaehler"></span><br>
+      <span class="lin" style="background:#28cc73"></span>KSR DN60 &nbsp;
+      <span class="lin" style="background:#ff4d4d"></span>DN120 &nbsp;
+      <span class="lin" style="background:#1e94f2"></span>HRB &nbsp;
+      <span class="lin" style="background:#ff9800"></span>Erdungsband PZ1 laut Plan &nbsp;
+      <span class="lin" style="background:#ffd54a"></span>Oberflächenerder
     </div>
   </div>
 
@@ -127,6 +141,41 @@
       <tbody id="ofListe"></tbody></table>
   </div>
 
+  <div class="card" style="border-left-color:var(--blau)">
+    <h2>Wie diese Punkte entstehen</h2>
+    <div class="sub" style="font-size:12.5px">
+      <b>Die Punkte stammen aus keinem Plan.</b> Es gibt keine Soll-Liste von Punktnummern.
+      Was hier steht, ist die <b>Aufnahme im Feld</b>: der Vermesser läuft dem verlegten
+      Erdungsband nach und misst es ein. Die Nummern sind fortlaufende Feldnummern und
+      beginnen jede Saison neu – daher die Kollision 1101–1115 zwischen 2025 und 2026.<br><br>
+
+      François Borner am 13.01.2026 an Benjamin Ruede: <i>«Wir hatten lediglich die
+      Erdungsbänder aufgenommen (ca. 1 Punkt pro 30 m).»</i> Verbindlich ist NO005
+      Pos. 151/483.202: aufzunehmen sind die <b>Verbindungsstellen</b> – Stösse, Klemmen,
+      Abzweige. Deshalb liegen die Punkte nicht im 30-m-Raster, sondern dort dicht,
+      wo viel verbunden wird.<br><br>
+
+      <b>Der Soll-Stand steht in 2D-Plänen, nicht im Modell.</b> ILF (F. Nothdurfter) am
+      29.07.2026 auf Borners Frage nach Widersprüchen zwischen den Plänen 0463 A2 / 0466 A1 /
+      0410 A5: <i>«Der Grund, warum es mehrere Pläne gibt, ist jener, dass letztes Jahr der
+      ganze Perimeter abgebildet wurde und laufend ergänzt wurde (Plan 0410 – A5). Dieses Jahr
+      gibt es aber einen Erdungsplan für die jeweilige PZ (Pläne 0463 &amp; 0466). … Ein
+      3D-Modell der Erdung ist nicht geplant, dies wurde auch damals mit Axpo und A+W so
+      definiert, da es hinsichtlich Abnahme einen 2D-Plan braucht.»</i><br><br>
+
+      Für <b>PZ1</b> existiert trotzdem ein Modell (M_0463_A1) – das ist die orange Ebene
+      «Erdung PZ1 (Plan)» oben: 14 Bandzüge mit 447 m und 82 Oberflächenerder. Für PZ2 und PZ3
+      gibt es nur die 2D-Pläne, dort lässt sich der Soll-Verlauf nicht einblenden.<br><br>
+
+      <b>Damit zur Frage, ob Punkte fehlen:</b> Aus den Daten allein lässt sich das nicht
+      beantworten – ohne Soll-Punktliste gibt es kein Soll-Ist. Prüfbar ist nur die Trasse:
+      Band einblenden und schauen, wo Bandzüge ohne Punkte liegen. Ein Punkt ohne Vermessung
+      <b>und</b> ohne Foto würde in keiner Liste auftauchen; er wäre schlicht nicht
+      dokumentiert. Die 67 nur fotografierten Punkte sind genau der Grenzfall, der zeigt,
+      dass das vorkommt.
+    </div>
+  </div>
+
   <div class="card" style="border-left-color:var(--mut)">
     <h2>Herkunft der Daten</h2>
     <div class="sub" id="quellen"></div>
@@ -145,9 +194,37 @@ function $(id){ return document.getElementById(id); }
 var karte = L.map('karte', { scrollWheelZoom:false }).setView([46.6215, 8.7215], 16);
 L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg',
   { maxZoom:19, maxNativeZoom:19, attribution:'© swisstopo' }).addTo(karte);
+/* Eigener Pane, damit die Punkte immer ueber Leitungen und Erdungsband liegen.
+   (LayerGroup hat kein bringToFront - das kann nur ein Path.) */
+karte.createPane('punkte').style.zIndex = 650;
+var lagLeitung = L.layerGroup(), lagErdung = L.layerGroup();
 var gruppe = L.layerGroup().addTo(karte);
 
 var DATEN = null, marker = [], zeige = { j25:true, j26:true, nurOhne:false, suche:'' };
+
+var LEITFARBE = { '60':'#28cc73', '120':'#ff4d4d', 'hrb':'#1e94f2', 'schacht':'#cfd3d8' };
+var LEITTEXT  = { '60':'KSR DN60 (Feinverteilung)', '120':'KSR DN120',
+                  'hrb':'HRB (Haupttrasse)', 'schacht':'Schacht' };
+
+function hintergrundZeichnen(){
+  (DATEN.leitungen || []).forEach(function(s){
+    L.polyline(s.pp, { color:LEITFARBE[s.k] || '#e6c23a', weight:s.k === 'hrb' ? 4 : 2.5,
+                       opacity:.85 })
+     .bindPopup('<div class="pop"><h3>' + (LEITTEXT[s.k] || s.k) + '</h3><div class="meta">' +
+                s.n + '<br>Planungszone ' + s.q + ' · Länge ' + s.l + ' m<br>' +
+                'Quelle: ILF-Werkleitungsmodell</div></div>')
+     .addTo(lagLeitung);
+  });
+  (DATEN.erdung_soll || []).forEach(function(s){
+    var band = s.art === 'band';
+    L.polyline(s.pp, { color:band ? '#ff9800' : '#ffd54a', weight:band ? 4 : 3,
+                       opacity:.9, dashArray:band ? null : '4,4' })
+     .bindPopup('<div class="pop"><h3>' + (band ? 'Erdungsband' : 'Oberflächenerder') +
+                '</h3><div class="meta">' + s.l + ' m<br>Planstand PZ1 · Modell M_0463_A1' +
+                '<br>Das ist der <b>Soll-Verlauf aus dem Plan</b>, nicht die Aufnahme.</div></div>')
+     .addTo(lagErdung);
+  });
+}
 
 function farbe(p){ return p.k === 'ohne_foto' ? '#fff' : (p.j === 2025 ? '#1a5fb4' : '#D72622'); }
 function rand(p){ return p.k === 'ohne_foto' ? '#e08a00' : '#fff'; }
@@ -190,6 +267,7 @@ function zeichnen(){
     if (!passt(p)) return;
     n++;
     var m = L.circleMarker([p.lat, p.lon], {
+      pane: 'punkte',
       radius: p.k === 'ohne_foto' ? 6 : 5.5, weight: p.k === 'ohne_foto' ? 2.5 : 2,
       color: rand(p), fillColor: farbe(p), fillOpacity: .95
     }).bindPopup(popup(p), { maxWidth:300 });
@@ -229,13 +307,25 @@ function aufbauen(){
     'Punkte 2025 und ihre Fotolinks: <b>' + DATEN.quellen.doku2025 + '</b><br>' +
     'Koordinaten 2026: <b>' + DATEN.quellen.roh2026 + '</b><br>' +
     'Fotos 2026: <b>' + DATEN.quellen.fotos2026 + '</b><br>' +
+    'Werkleitungen: <b>' + DATEN.quellen.leitungen + '</b><br>' +
+    'Erdung Soll: <b>' + DATEN.quellen.erdungsoll + '</b><br>' +
     'Strang und Abschnitt sind für 2026 leer – sie stehen in keiner Rohdatei und lassen sich nur ' +
-    'über die Erdungspläne 0463 (PZ1) und PL_0466_K1 (PZ2) bzw. das Modell erdung.ifc zuordnen.';
+    'über die Erdungspläne 0463 (PZ1) und 0466 (PZ2) zuordnen.';
   $('stand').textContent = DATEN.stand;
 
   chip('c25', true,  function(){ zeige.j25 = !zeige.j25; $('c25').classList.toggle('an', zeige.j25); });
   chip('c26', true,  function(){ zeige.j26 = !zeige.j26; $('c26').classList.toggle('an', zeige.j26); });
   chip('cof', false, function(){ zeige.nurOhne = !zeige.nurOhne; $('cof').classList.toggle('an', zeige.nurOhne); });
+
+  hintergrundZeichnen();
+  function ebene(id, lag, standard){
+    var el = $(id), an = standard;
+    function setzen(){ el.classList.toggle('an', an); if (an) lag.addTo(karte); else karte.removeLayer(lag); }
+    el.onclick = function(){ an = !an; setzen(); };
+    setzen();
+  }
+  ebene('cwl',  lagLeitung, true);
+  ebene('cerd', lagErdung,  true);
 
   $('suche').oninput = function(){
     zeige.suche = this.value.trim(); zeichnen();
