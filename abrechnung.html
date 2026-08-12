@@ -66,7 +66,8 @@
   .tag.o{ background:#eef0f2; color:#4a4f55; }
   #karte{ height:440px; border-radius:6px; border:1px solid var(--line); }
   .legende{ font-size:12px; color:var(--mut); margin-top:8px; display:flex; gap:16px; flex-wrap:wrap; }
-  .legende i{ width:11px; height:11px; border-radius:50%; display:inline-block; margin-right:5px; }
+  .legende i{ width:14px; height:9px; display:inline-block; margin-right:5px; opacity:.75;
+              border:1.5px solid currentColor; vertical-align:middle; }
   .fuss{ font-size:11.5px; color:var(--mut); line-height:1.6; }
   .rechnung{ font-family:"Consolas",monospace; font-size:13px; line-height:1.85; background:#f7f8f9;
              border:1px solid var(--line); border-radius:5px; padding:12px 14px; overflow-x:auto; }
@@ -121,13 +122,15 @@
 
   <div class="card">
     <h2>Karte</h2>
-    <div class="sub">Ein Punkt je Tisch. Rot = mindestens ein Pfahl mehrfach gebohrt,
-      orange = Neubohrung vermerkt, grau = einmal gebohrt. Antippen zeigt die Details.</div>
+    <div class="sub">Die <b>Flächen</b> sind die Tische (echter Umriss aus den vier Stützpunkten),
+      die <b>roten Kreuze</b> die einzelnen mehrfach gebohrten Pfähle. Beides antippbar.
+      Zum Reinzoomen die Ebenen rechts oben einzeln zuschalten.</div>
     <div id="karte"></div>
     <div class="legende">
-      <span><i style="background:#D72622"></i>mehrfach gebohrt</span>
-      <span><i style="background:#e08a00"></i>Neubohrung vermerkt</span>
-      <span><i style="background:#8a9099"></i>einmal gebohrt</span>
+      <span><i style="background:#D72622"></i>Tisch mit Doppelbohrung</span>
+      <span><i style="background:#e08a00"></i>Tisch mit vermerkter Neubohrung</span>
+      <span><i style="background:#5c6470"></i>Tisch einmal gebohrt</span>
+      <span><b style="color:#D72622">✕</b>&nbsp; doppelt gebohrter Pfahl</span>
     </div>
   </div>
 
@@ -253,29 +256,42 @@ function zeichnen(d){
   $('#tabMehrfach').innerHTML = tab(mfV.slice(0,15));
   $('#tabMehrfachAlle').innerHTML = tab(d.mehrfach);
 
-  // ---- Karte: Tische als Übersicht, mehrfach gebohrte Pfähle punktgenau darüber
+  // ---- Karte: Tische = Fläche (echter Umriss aus den Stützpunkten),
+  //             mehrfach gebohrte Pfähle = rotes Kreuz. Bewusst zwei verschiedene Formen.
   const karte = L.map('karte', {scrollWheelZoom:false});
   L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg',
     { maxZoom:19, attribution:'© swisstopo' }).addTo(karte);
   const pts = d.karte;
   const ebTisch = L.layerGroup().addTo(karte), ebPfahl = L.layerGroup().addTo(karte);
-  pts.forEach(p => {
-    const farbe = p.mf>0 ? '#D72622' : (p.rd>0 ? '#e08a00' : '#8a9099');
-    L.circleMarker([p.lat,p.lon], {radius:p.mf>0?7:5, color:'#fff', weight:1.5,
-      fillColor:farbe, fillOpacity:.92})
-     .bindPopup(`<b>Tisch ${p.t}</b><br>${p.n} Bohrungen · ${nf(p.m,1)} m`
+
+  const tischPopup = p => `<b>Tisch ${p.t}</b><br>${p.n} Bohrungen · ${nf(p.m,1)} m`
       + (p.mf>0?`<br><b style="color:#D72622">${p.mf} Mehrfachbohrung${p.mf>1?'en':''}</b>`:'')
       + (p.rd>0?`<br>${p.rd} als Neubohrung vermerkt`:'')
-      + `<br><span style="color:#63676d">${p.von} bis ${p.bis}</span>`)
-     .addTo(ebTisch);
+      + `<br><span style="color:#63676d">${p.von} bis ${p.bis}</span>`;
+
+  pts.forEach(p => {
+    const farbe = p.mf>0 ? '#D72622' : (p.rd>0 ? '#e08a00' : '#5c6470');
+    const stil = { color:farbe, weight:1.5, opacity:.95, fillColor:farbe,
+                   fillOpacity: p.mf>0 ? .55 : .3 };
+    const form = p.poly && p.poly.length>=3
+      ? L.polygon(p.poly, stil)
+      : L.rectangle(L.latLng(p.lat,p.lon).toBounds(6), stil);   // Notnagel ohne Umriss
+    form.bindPopup(tischPopup(p)).addTo(ebTisch);
   });
+
+  // Kreuz-Symbol – klar unterscheidbar von der Tischfläche
+  const kreuz = L.divIcon({ className:'', iconSize:[16,16], iconAnchor:[8,8],
+    html:'<svg width="16" height="16" viewBox="0 0 16 16">'
+       + '<path d="M3 3 L13 13 M13 3 L3 13" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/>'
+       + '<path d="M3 3 L13 13 M13 3 L3 13" stroke="#D72622" stroke-width="2.6" stroke-linecap="round"/></svg>' });
   mfV.filter(x => x.lat).forEach(x => {
-    L.circleMarker([x.lat,x.lon], {radius:4, color:'#7a0f0d', weight:1, fillColor:'#D72622', fillOpacity:1})
+    L.marker([x.lat,x.lon], {icon:kreuz, riseOnHover:true})
      .bindPopup(`<b>Pfahl ${x.pfahl}</b><br>${x.n}× gebohrt: ${x.tage.join(', ')}`
        + `<br>${nf(x.m_zuviel,1)} m über Einmalbedarf = CHF ${chf(x.chf)}<br><i>${x.gruppe}</i>`)
      .addTo(ebPfahl);
   });
-  L.control.layers(null, {'Tische':ebTisch, 'Mehrfach gebohrte Pfähle':ebPfahl},
+
+  L.control.layers(null, {'Tische (Fläche)':ebTisch, 'Doppelbohrungen (✕)':ebPfahl},
                    {collapsed:false}).addTo(karte);
   if (pts.length) karte.fitBounds(L.latLngBounds(pts.map(p=>[p.lat,p.lon])).pad(.06));
 
