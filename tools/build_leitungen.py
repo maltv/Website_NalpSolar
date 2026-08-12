@@ -144,6 +144,45 @@ def dreiecke(s):
             for a, b, c in re.findall(r"\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)", s)]
 
 
+def flaechen_je_element(ents):
+    """{element_id: {'Area': float, 'Typ': str}} aus den IfcPropertySets."""
+    werte = {}
+    for eid, (typ, args) in ents.items():
+        if typ != "IFCPROPERTYSET":
+            continue
+        a = split_args(args)
+        if len(a) < 5:
+            continue
+        for pid in re.findall(r"#(\d+)", a[4]):
+            pt, pa = ents.get(int(pid), ("", ""))
+            if pt != "IFCPROPERTYSINGLEVALUE":
+                continue
+            p = split_args(pa)
+            nm = p[0].strip("'")
+            if nm == "Area":
+                m = re.search(r"\(([-0-9.eE+]+)\)", p[2])
+                if m:
+                    werte.setdefault(eid, {})["Area"] = float(m.group(1))
+            elif nm == "Typ":
+                m = re.search(r"\('(.*)'\)", p[2])
+                if m:
+                    werte.setdefault(eid, {})["Typ"] = m.group(1)
+    # PropertySet -> Elemente (ein Element haengt an mehreren Sets)
+    out = {}
+    for eid, (typ, args) in ents.items():
+        if typ != "IFCRELDEFINESBYPROPERTIES":
+            continue
+        a = split_args(args)
+        if len(a) < 6:
+            continue
+        psid = ref(a[5])
+        if psid not in werte:
+            continue
+        for o in re.findall(r"#(\d+)", a[4]):
+            out.setdefault(int(o), {}).update(werte[psid])
+    return out
+
+
 def placement_offset(ents, pid):
     """IFCLOCALPLACEMENT-Kette zu einer reinen Verschiebung aufsummieren."""
     dx = dy = dz = 0.0
@@ -169,37 +208,63 @@ def placement_offset(ents, pid):
 
 
 def achse(pts, tris):
-    """Rohrachse als Folge von Querschnitts-Schwerpunkten.
+    """Rohrachse als Stuetzpunktfolge fuer die Verlaufslinie im Viewer.
 
-    Die Punktlisten von Civil3D laufen ringweise entlang der Achse. Die
-    Ringgroesse wird aus dem Abstandsmuster bestimmt: innerhalb eines Rings
-    sind aufeinanderfolgende Punkte nah beieinander (Rohrumfang), beim
-    Ringwechsel springt der Abstand. Faellt die Erkennung durch, wird die
-    Laenge aus dem Streckenzug der Punkte selbst geschaetzt.
+    ACHTUNG: Die Punktlisten von Civil3D laufen NICHT ringweise, sondern
+    spaltenweise entlang der Rohrachse (aufeinanderfolgende Punkte liegen in
+    benachbarten Querschnitten, nicht im selben). Eine Ringgruppierung liefert
+    darum Unsinn (geprueft 12.08.2026 am PZ3-Modell).
+
+    Robuster Weg ohne Annahme ueber die Reihenfolge: die Punkte auf die
+    Verbindung der beiden Rohrenden projizieren, in Scheiben schneiden und je
+    Scheibe den Schwerpunkt nehmen. Fuer die reine Darstellung genuegt das
+    auch bei gekruemmten Rohren.
+
+    Die LAENGE kommt NICHT von hier, sondern aus der IFC-Eigenschaft `Area`
+    (siehe laenge_aus_area) - das ist die im Ausmass etablierte und gegen die
+    Geometrie gepruefte Methode.
     """
     n = len(pts)
     if n < 4:
-        return [], 0.0
-    for ring in (2, 3, 4, 6, 8, 12, 16, 24, 32):
-        if n % ring or n // ring < 2:
-            continue
-        mids = []
-        for i in range(0, n, ring):
-            g = pts[i:i + ring]
-            mids.append((sum(p[0] for p in g) / ring,
-                         sum(p[1] for p in g) / ring,
-                         sum(p[2] for p in g) / ring))
-        # plausibel, wenn die Schwerpunkte einen glatten Zug bilden:
-        # Schritte gleichmaessig und deutlich groesser als die Ringstreuung
-        steps = [math.dist(mids[i], mids[i - 1]) for i in range(1, len(mids))]
-        if not steps:
-            continue
-        streu = sum(math.dist(p, mids[i // ring]) for i, p in enumerate(pts)) / n
-        s_med = sorted(steps)[len(steps) // 2]
-        if s_med > 1e-6 and streu < s_med * 8 and max(steps) < s_med * 60:
-            return mids, sum(steps)
-    zug = sum(math.dist(pts[i], pts[i - 1]) for i in range(1, n))
-    return [pts[0], pts[-1]], zug
+        return list(pts[:2]), 0.0
+    c = (sum(p[0] for p in pts) / n, sum(p[1] for p in pts) / n, sum(p[2] for p in pts) / n)
+    a = max(pts, key=lambda p: (p[0] - c[0]) ** 2 + (p[1] - c[1]) ** 2 + (p[2] - c[2]) ** 2)
+    b = max(pts, key=lambda p: (p[0] - a[0]) ** 2 + (p[1] - a[1]) ** 2 + (p[2] - a[2]) ** 2)
+    d = (b[0] - a[0], b[1] - a[1], b[2] - a[2])
+    span = math.sqrt(d[0] ** 2 + d[1] ** 2 + d[2] ** 2)
+    if span < 1e-6:
+        return [a, b], 0.0
+    d = (d[0] / span, d[1] / span, d[2] / span)
+    scheiben = max(2, min(60, int(span / 1.5) + 1))
+    eimer = [[] for _ in range(scheiben)]
+    for p in pts:
+        t = ((p[0] - a[0]) * d[0] + (p[1] - a[1]) * d[1] + (p[2] - a[2]) * d[2]) / span
+        eimer[min(scheiben - 1, max(0, int(t * scheiben)))].append(p)
+    mids = [(sum(p[0] for p in g) / len(g), sum(p[1] for p in g) / len(g),
+             sum(p[2] for p in g) / len(g)) for g in eimer if g]
+    zug = sum(math.dist(mids[i], mids[i - 1]) for i in range(1, len(mids)))
+    return mids, zug
+
+
+def laenge_aus_area(info):
+    """Rohrlaenge = Mantelflaeche / (pi * Aussendurchmesser).
+
+    Gegen die Geometrie validiert (12.08.2026): bei den geraden Rohren des
+    PZ3-Modells deckt sich das Ergebnis auf 0-4 % mit der Bounding-Box-
+    Diagonale. Gleiche Methode wie im Ausmass-Auszug Plika/KSR.
+
+    NUR fuer Einzelrohre. Die HRB-Bauteile sind Buendel (Typ z.B.
+    '21 x KSR DN120/132 + 1 x KSR DN60/72') - dort ist die Flaeche die
+    Oberflaeche des ganzen Rohrblocks, die Formel gaebe Unsinn. In dem Fall
+    None zurueckgeben, der Aufrufer nimmt dann den Achsenzug.
+    """
+    if not info:
+        return None
+    od = {"KSR DN 60/72": 0.072, "KSR DN 120/132": 0.132}.get((info.get("Typ") or "").strip())
+    area = info.get("Area")
+    if not od or not area:
+        return None
+    return area / (math.pi * od)
 
 
 def vereinfachen(pts, tol=0.25):
@@ -234,6 +299,7 @@ def main():
             sys.stderr.write("FEHLT (uebersprungen): %s\n" % pfad)
             continue
         ents = step_entities(pfad)
+        flaechen = flaechen_je_element(ents)
         # Geometrie je BuiltElement einsammeln
         n_el = 0
         for eid, (typ, args) in ents.items():
@@ -289,7 +355,11 @@ def main():
                 except IndexError:
                     pass
 
-            mids, laenge = achse([(p[0] - OE, p[1] - ON, p[2] - OZ) for p in el_pts], el_tris)
+            mids, zug = achse([(p[0] - OE, p[1] - ON, p[2] - OZ) for p in el_pts], el_tris)
+            # Laenge bevorzugt aus der Mantelflaeche (validiert), sonst Achsenzug
+            laenge = laenge_aus_area(flaechen.get(eid))
+            if laenge is None:
+                laenge = zug
             xs = [p[0] - OE for p in el_pts]; ys = [p[1] - ON for p in el_pts]; zs = [p[2] - OZ for p in el_pts]
             poly = vereinfachen(mids) if len(mids) > 1 else mids
             straenge.append({
