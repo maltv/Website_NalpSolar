@@ -246,8 +246,9 @@ def main():
                            k='ok' if dateien else 'ohne_foto',
                            koll=nr in kollisionen))
 
-    # Punkte, die nur auf Fotos vorkommen - ohne Koordinaten, deshalb nicht auf der Karte
-    nur_foto = sorted((p for p in je_punkt if p not in roh26), key=int)
+    # Punkte, die nur auf Fotos vorkommen - ohne Koordinaten, deshalb nicht auf der
+    # Karte. Auch gegen die 2025er Doku pruefen (sonst faellt z.B. 1039 hier rein).
+    nur_foto = sorted((p for p in je_punkt if p not in roh26 and p not in doku25), key=int)
 
     os.makedirs(ZIEL, exist_ok=True)
     alle_fotos = sorted({f for liste in je_punkt.values() for f in liste})
