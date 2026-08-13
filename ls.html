@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NalpSolar · Lieferschein hochladen / Upload delivery note</title>
+<meta name="theme-color" content="#D72622">
+<!-- OFFENE SEITE - BEWUSST OHNE GATE-CODE (Auftrag V. Malt 13.08.2026).
+     Schreibt in dieselbe Firebase-RTDB wie lieferscheine.html, damit alles
+     an EINEM Ort liegt. Der Mailversand an Victor macht Tools\Lieferschein_Mail.py. -->
+<style>
+  :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
+         --gruen:#1e9e5a; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body{ margin:0; background:#eef0f3; min-height:100vh; color:var(--ink);
+        font-family:Arial,"Helvetica Neue",sans-serif; }
+  body::before{ content:""; position:fixed; inset:0; z-index:-1;
+        background:linear-gradient(rgba(240,242,245,.86),rgba(240,242,245,.94)),
+        url('assets/img/hero.jpg') center 40%/cover no-repeat; }
+  header{ display:flex; align-items:center; gap:12px; padding:12px 14px;
+          background:#fff; border-bottom:4px solid var(--rot); }
+  header .logo img{ height:24px; display:block; }
+  header h1{ font-size:16px; margin:0; flex:1; min-width:0; font-weight:800; }  /* min-width:0 = darf auf schmalen Handys schrumpfen */
+  .langsw{ display:flex; border:1px solid #c9ccd2; border-radius:7px; overflow:hidden; }
+  .langsw button{ background:#fff; border:none; padding:7px 11px; font-size:13px;
+          font-weight:800; cursor:pointer; color:var(--mut); font-family:inherit; }
+  .langsw button.on{ background:var(--rot); color:#fff; }
+  main{ max-width:640px; margin:0 auto; padding:14px 12px 90px; }
+  .box{ background:#fff; border:1px solid var(--line); border-left:5px solid var(--rot);
+        border-radius:6px; padding:15px; margin-bottom:14px; box-shadow:0 1px 4px rgba(20,25,32,.07); }
+  .box h2{ margin:0 0 4px; font-size:17px; }
+  .box p.sub{ margin:0 0 12px; font-size:13.5px; color:var(--mut); line-height:1.5; }
+  label.fl{ display:block; font-size:11.5px; font-weight:700; color:var(--mut); margin:13px 0 5px;
+            text-transform:uppercase; letter-spacing:.04em; }
+  label.fl .opt{ text-transform:none; letter-spacing:0; font-weight:400; }
+  input,textarea{ width:100%; background:#fff; border:1px solid #c9ccd2;
+          border-radius:6px; color:var(--ink); padding:11px 10px; font-size:16px; font-family:inherit; }
+  input:focus,textarea:focus{ outline:2px solid rgba(215,38,34,.35); }
+  .pick{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .pick label{ display:flex; flex-direction:column; align-items:center; justify-content:center;
+          gap:6px; padding:20px 10px; border:2px dashed #bfc4cb; border-radius:8px;
+          background:#fafbfc; cursor:pointer; text-align:center; }
+  .pick label:active{ background:#f0f2f5; }
+  .pick .ic{ font-size:30px; line-height:1; }
+  .pick .tx{ font-size:13.5px; font-weight:800; }
+  .pick input[type=file]{ display:none; }
+  #prev{ margin-top:12px; display:none; }
+  #prev img{ max-width:100%; border-radius:6px; border:1px solid var(--line); display:block; }
+  #prev .pdf{ display:flex; align-items:center; gap:10px; padding:14px; background:#f5f6f8;
+          border:1px solid var(--line); border-radius:6px; font-size:14px; font-weight:700; }
+  #prev .meta{ font-size:12px; color:var(--mut); margin-top:6px; }
+  .btn{ display:block; width:100%; border:none; border-radius:7px; padding:16px;
+        font-size:17px; font-weight:800; cursor:pointer; color:#fff; background:var(--rot);
+        font-family:inherit; margin-top:18px; }
+  .btn[disabled]{ opacity:.45; }
+  #status{ font-size:13px; color:var(--mut); min-height:18px; margin-top:10px; text-align:center; }
+  .ok{ display:none; text-align:center; padding:26px 16px; }
+  .ok .hk{ font-size:56px; line-height:1; }
+  .ok h2{ margin:12px 0 6px; font-size:20px; color:var(--gruen); }
+  .ok p{ margin:0 0 18px; font-size:14.5px; color:var(--mut); line-height:1.55; }
+  .hint{ font-size:12.5px; color:var(--mut); background:rgba(255,255,255,.9);
+         border-radius:6px; padding:11px 13px; line-height:1.55; }
+  .en{ display:none; }
+  html[data-l="en"] .de{ display:none; }
+  html[data-l="en"] .en{ display:inline; }
+  html[data-l="en"] div.en, html[data-l="en"] p.en{ display:block; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><img src="assets/img/strabag-logo.png" alt="STRABAG"></div>
+  <h1><span class="de">Lieferschein hochladen</span><span class="en">Upload delivery note</span></h1>
+  <div class="langsw">
+    <button id="bDe" onclick="setL('de')">DE</button>
+    <button id="bEn" onclick="setL('en')">EN</button>
+  </div>
+</header>
+
+<main>
+  <div id="form">
+    <div class="box">
+      <h2><span class="de">Lieferschein senden</span><span class="en">Send delivery note</span></h2>
+
+      <div class="pick">
+        <label>
+          <span class="ic">📷</span>
+          <span class="tx"><span class="de">Foto machen</span><span class="en">Take photo</span></span>
+          <input type="file" id="fCam" accept="image/*" capture="environment">
+        </label>
+        <label>
+          <span class="ic">📎</span>
+          <span class="tx"><span class="de">Datei / Scan</span><span class="en">File / scan</span></span>
+          <input type="file" id="fFile" accept="image/*,application/pdf">
+        </label>
+      </div>
+      <div id="prev"></div>
+
+      <label class="fl"><span class="de">Lieferant / Transporteur</span><span class="en">Supplier / haulier</span> *</label>
+      <input id="fLief" list="lieferanten" autocomplete="off"
+             placeholder="Schuoler, Röfix, Mäder …">
+      <datalist id="lieferanten">
+        <option>Schuoler Logistik</option><option>Röfix</option><option>Mäder / Mauchle</option>
+        <option>Zeitler</option><option>Barit / bmsuisse</option><option>Geowork</option>
+        <option>CKW</option><option>Terno</option><option>Vulkanox</option>
+      </datalist>
+
+      <label class="fl"><span class="de">Dein Name</span><span class="en">Your name</span> *</label>
+      <input id="fVon" autocomplete="name" placeholder="Name / Firma">
+
+      <label class="fl"><span class="de">Lieferschein-Nr.</span><span class="en">Delivery note no.</span>
+        <span class="opt"><span class="de">(optional)</span><span class="en">(optional)</span></span></label>
+      <input id="fNr" placeholder="z.B. LS-4711">
+
+      <label class="fl"><span class="de">Material / Bemerkung</span><span class="en">Material / remark</span>
+        <span class="opt"><span class="de">(optional)</span><span class="en">(optional)</span></span></label>
+      <input id="fText" placeholder="…">
+
+      <button class="btn" id="btnSend" onclick="senden()">
+        <span class="de">📤 Absenden</span><span class="en">📤 Send</span>
+      </button>
+      <div id="status"></div>
+    </div>
+
+    <div class="hint">
+      <span class="de">Der Lieferschein muss <b>unterschrieben</b> sein.</span>
+      <span class="en">The delivery note must be <b>signed</b>.</span>
+    </div>
+  </div>
+
+  <div class="ok" id="ok">
+    <div class="hk">✅</div>
+    <h2><span class="de">Danke – angekommen!</span><span class="en">Thank you – received!</span></h2>
+    <button class="btn" onclick="location.reload()">
+      <span class="de">➕ Noch einen senden</span><span class="en">➕ Send another one</span>
+    </button>
+  </div>
+</main>
+
+<script>
+'use strict';
+var DB='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app';
+var P_LS='lieferscheine/eintraege', P_LSF='lieferscheine/fotos';
+var LS_VON='nalp_erfasser_v1';
+var datei=null, dateiMime='', dateiName='', gpsFix=null;
+
+function $(id){ return document.getElementById(id); }
+
+/* Sprache: Umschalter + Vorauswahl nach Browsersprache */
+function setL(l){
+  document.documentElement.setAttribute('data-l',l);
+  document.documentElement.lang = l;
+  $('bDe').className = l==='de'?'on':'';
+  $('bEn').className = l==='en'?'on':'';
+  try{ localStorage.setItem('nalp_ls_lang',l); }catch(e){}
+}
+(function(){
+  var l='de';
+  try{ l=localStorage.getItem('nalp_ls_lang')||''; }catch(e){}
+  if(!l) l=(navigator.language||'de').toLowerCase().indexOf('de')===0?'de':'en';
+  setL(l);
+})();
+function T(de,en){ return document.documentElement.getAttribute('data-l')==='en'?en:de; }
+
+/* GPS einmalig, nicht blockierend - gleiches Muster wie lieferscheine.html */
+if(navigator.geolocation) navigator.geolocation.getCurrentPosition(function(p){
+  gpsFix={lat:+p.coords.latitude.toFixed(6), lon:+p.coords.longitude.toFixed(6)};
+},function(){},{enableHighAccuracy:true,timeout:8000,maximumAge:120000});
+
+/* Bild verkleinern (1400 px, muss lesbar bleiben); PDF unveraendert durchreichen */
+function bildLesen(file, cb){
+  var img=new Image();
+  img.onload=function(){
+    var m=1400, w=img.width, h=img.height;
+    if(w>m||h>m){ if(w>h){ h=Math.round(h*m/w); w=m; } else { w=Math.round(w*m/h); h=m; } }
+    var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+    cv.getContext('2d').drawImage(img,0,0,w,h);
+    var d=cv.toDataURL('image/jpeg',0.78);
+    if(d.length>1300000) d=cv.toDataURL('image/jpeg',0.6);
+    URL.revokeObjectURL(img.src);
+    cb(d);
+  };
+  img.onerror=function(){ URL.revokeObjectURL(img.src); cb(null); };
+  img.src=URL.createObjectURL(file);
+}
+function pdfLesen(file, cb){
+  var r=new FileReader();
+  r.onload=function(){ cb(r.result); };
+  r.onerror=function(){ cb(null); };
+  r.readAsDataURL(file);
+}
+function gewaehlt(file){
+  if(!file) return;
+  dateiName=file.name||'';
+  $('status').textContent=T('Datei wird vorbereitet …','Preparing file …');
+  if(file.type==='application/pdf'){
+    if(file.size>3500000){
+      $('status').textContent='';
+      alert(T('Das PDF ist zu gross (max. 3,5 MB). Bitte stattdessen ein Foto machen.',
+              'This PDF is too large (max 3.5 MB). Please take a photo instead.'));
+      return;
+    }
+    pdfLesen(file,function(d){
+      if(!d){ $('status').textContent=''; alert(T('Datei konnte nicht gelesen werden.','Could not read file.')); return; }
+      datei=d; dateiMime='application/pdf';
+      $('prev').style.display='block';
+      $('prev').innerHTML='<div class="pdf">📄 '+(dateiName||'PDF')+'</div>'
+        +'<div class="meta">'+Math.round(file.size/1024)+' KB</div>';
+      $('status').textContent='';
+    });
+  } else {
+    bildLesen(file,function(d){
+      if(!d){ $('status').textContent=''; alert(T('Bild konnte nicht gelesen werden.','Could not read image.')); return; }
+      datei=d; dateiMime='image/jpeg';
+      $('prev').style.display='block';
+      $('prev').innerHTML='<img src="'+d+'" alt="">'
+        +'<div class="meta">'+T('Lesbar? Sonst nochmals fotografieren.','Readable? Otherwise take a new photo.')+'</div>';
+      $('status').textContent='';
+    });
+  }
+}
+$('fCam').addEventListener('change',function(){ gewaehlt(this.files&&this.files[0]); });
+$('fFile').addEventListener('change',function(){ gewaehlt(this.files&&this.files[0]); });
+
+/* REST auf dieselbe RTDB wie lieferscheine.html */
+function apiPost(p,body){ return fetch(DB+'/'+p+'.json',{method:'POST',body:JSON.stringify(body)})
+  .then(function(r){ return r.ok?r.json():null; }).then(function(j){ return j&&j.name?j.name:null; }); }
+function apiPut(p,body){ return fetch(DB+'/'+p+'.json',{method:'PUT',body:JSON.stringify(body)})
+  .then(function(r){ return r.ok; }); }
+function heute(){ var d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+function senden(){
+  var lief=$('fLief').value.trim(), von=$('fVon').value.trim();
+  if(!datei){ alert(T('Bitte zuerst den Lieferschein fotografieren oder eine Datei wählen.',
+                      'Please photograph the delivery note or select a file first.')); return; }
+  if(!lief){ alert(T('Bitte den Lieferanten angeben.','Please enter the supplier.')); return; }
+  if(!von){ alert(T('Bitte deinen Namen angeben.','Please enter your name.')); return; }
+  try{ localStorage.setItem(LS_VON,von); }catch(e){}
+
+  $('btnSend').disabled=true;
+  $('status').textContent=T('Wird gesendet …','Sending …');
+
+  /* Datenmodell identisch zu lieferscheine.html, plus quelle/mail fuer das Mail-Skript */
+  var rec={ ts:Date.now(), datum:heute(), lieferant:lief, nr:$('fNr').value.trim(),
+            text:$('fText').value.trim(), ort:'', von:von, auftrag:'',
+            status:'neu', quelle:'qr', mail:'offen' };
+  if(gpsFix){ rec.lat=gpsFix.lat; rec.lon=gpsFix.lon; }
+
+  apiPost(P_LS,rec).then(function(key){
+    if(!key) throw 0;
+    return apiPost(P_LSF,{eintrag:key, von:von, ts:Date.now(), data:datei,
+                          mime:dateiMime, name:dateiName})
+      .then(function(fk){ if(!fk) throw 0; return apiPut(P_LS+'/'+key+'/fotos/'+fk,true); });
+  }).then(function(){
+    $('form').style.display='none';
+    $('ok').style.display='block';
+    window.scrollTo(0,0);
+  }).catch(function(){
+    $('btnSend').disabled=false;
+    $('status').textContent='';
+    alert(T('Senden fehlgeschlagen – bitte Empfang prüfen und nochmals versuchen.',
+            'Sending failed – please check your signal and try again.'));
+  });
+}
+
+/* Name merken, falls schon einmal erfasst */
+try{ $('fVon').value=localStorage.getItem(LS_VON)||''; }catch(e){}
+</script>
+</body>
+</html>

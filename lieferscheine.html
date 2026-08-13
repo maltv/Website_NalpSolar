@@ -349,18 +349,23 @@ function thumbLaden(r){
   var fk=r.fotos?Object.keys(r.fotos)[0]:null;
   if(!fk) return;
   var el=$('th_'+r._k); if(!el) return;
-  if(fotoCache[fk]){ el.innerHTML='<img src="'+fotoCache[fk].data+'">'; return; }
+  /* PDF-Scans (ueber ls.html hochgeladen) haben mime=application/pdf und kein Bild */
+  function zeigThumb(el2,f){
+    if(!el2||!f||!f.data) return;
+    el2.innerHTML = f.mime==='application/pdf' ? '📄' : '<img src="'+f.data+'">';
+  }
+  if(fotoCache[fk]){ zeigThumb(el,fotoCache[fk]); return; }
   apiGet(P_LSF+'/'+fk).then(function(f){
     if(!f||!f.data) return;
     fotoCache[fk]=f;
-    var el2=$('th_'+r._k);
-    if(el2) el2.innerHTML='<img src="'+f.data+'">';
+    zeigThumb($('th_'+r._k),f);
   });
 }
 function fotoGross(k){
   var r=eintraege[k]; if(!r||!r.fotos) return;
   var fk=Object.keys(r.fotos)[0]; if(!fk) return;
   function zeig(f){ if(!f||!f.data) return;
+    if(f.mime==='application/pdf'){ window.open(f.data,'_blank'); return; }   /* Scan-PDF separat oeffnen */
     $('bigfotoImg').src=f.data; $('bigfoto').style.display='flex'; }
   if(fotoCache[fk]) zeig(fotoCache[fk]);
   else apiGet(P_LSF+'/'+fk).then(function(f){ fotoCache[fk]=f; zeig(f); });

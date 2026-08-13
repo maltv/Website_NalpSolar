@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Erdleiter · Dokumentation</title>
+<meta name="robots" content="noindex,nofollow">
+<!-- Erdleiterdokumentation 2025 + 2026 (Admin-Reiter, nur Victor).
+     Daten: uploads/erdung/erdungspunkte.json + uploads/erdung/fotos/
+     Bauen: python tools\build_erdung_karte.py  (nach jedem neuen Vermessungs-/Fotostand)
+     Gegenstueck im KI-Projekt: Erdungsdokumentation\ (Excel + Rohzuordnung). -->
+<script>
+  window.NALP_GATE_CODE  = '8813';
+  window.NALP_GATE_KEY   = 'nalp_admin_unlock_v1';
+  window.NALP_GATE_TITEL = 'Erdleiter';
+  window.NALP_GATE_SUB   = 'Nur für Victor · Code = Losnummer';
+</script>
+<script src="assets/js/nalp-gate.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
+         --gruen:#2e9e46; --orange:#e08a00; --blau:#1a5fb4; --bg:#f2f3f5; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; }
+  body{ font-family:Arial,"Helvetica Neue",sans-serif; color:var(--ink); background:var(--bg); }
+  .topbar{ background:#fff; border-bottom:4px solid var(--rot); padding:12px 18px;
+           display:flex; align-items:center; gap:14px; position:sticky; top:0; z-index:600; }
+  .topbar img{ height:26px; display:block; }
+  .topbar .t{ font-weight:900; font-size:17px; }
+  .topbar .los{ font-size:11.5px; color:var(--mut); font-weight:700; letter-spacing:.06em; margin-left:auto; }
+  .wrap{ max-width:1080px; margin:0 auto; padding:16px 14px 60px; }
+  .card{ background:#fff; border:1px solid var(--line); border-left:5px solid var(--rot);
+         border-radius:6px; padding:14px 16px; margin-bottom:14px; box-shadow:0 1px 4px rgba(20,25,32,.07); }
+  .card h2{ margin:0 0 4px; font-size:16px; }
+  .sub{ font-size:12px; color:var(--mut); margin-bottom:12px; line-height:1.55; }
+
+  .kacheln{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:14px; }
+  .k{ background:#fff; border:1px solid var(--line); border-top:4px solid var(--rot); border-radius:6px; padding:12px 14px; }
+  .k .lab{ font-size:11.5px; color:var(--mut); font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+  .k .val{ font-size:26px; font-weight:900; line-height:1.15; margin-top:3px; }
+  .k .note{ font-size:11.5px; color:var(--mut); margin-top:4px; line-height:1.45; }
+  .k.gruen{ border-top-color:var(--gruen); } .k.orange{ border-top-color:var(--orange); }
+  .k.blau{ border-top-color:var(--blau); }
+
+  #karte{ height:min(68vh,620px); border-radius:5px; }
+  .steuer{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px; }
+  .chip{ border:1px solid #c9ccd2; background:#fff; border-radius:14px; padding:6px 13px;
+         font-size:13px; font-weight:700; cursor:pointer; color:var(--mut); }
+  .chip.an{ background:var(--rot); border-color:var(--rot); color:#fff; }
+  .chip.an.b25{ background:var(--blau); border-color:var(--blau); }
+  .chip.an.bof{ background:var(--orange); border-color:var(--orange); }
+  .chip.an.bgr{ background:#1e8f52; border-color:#1e8f52; }
+  .chip.an.bvi{ background:#c47800; border-color:#c47800; }
+  .lin{ display:inline-block; width:20px; height:4px; border-radius:2px; margin:0 4px -1px 10px;
+        box-shadow:0 0 0 1px rgba(0,0,0,.25); }
+  #suche{ padding:7px 10px; font-size:14px; border:1px solid #c9ccd2; border-radius:5px;
+          width:150px; font-family:inherit; margin-left:auto; }
+  .legende{ font-size:11.5px; color:var(--mut); margin-top:9px; line-height:1.7; }
+  .pkt{ display:inline-block; width:12px; height:12px; border-radius:50%; margin:0 4px -2px 10px;
+        border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.35); }
+
+  .leaflet-popup-content{ margin:10px 12px; font-size:13px; line-height:1.55; min-width:210px; }
+  .pop h3{ margin:0 0 2px; font-size:15px; }
+  .pop .meta{ color:var(--mut); font-size:11.5px; line-height:1.6; }
+  .pop img{ width:100%; border-radius:4px; margin-top:8px; display:block; cursor:zoom-in; }
+  .pop .warn{ color:var(--rot); font-weight:700; }
+  .pop .bem{ font-size:11.5px; background:#fff8e6; border-left:3px solid var(--orange);
+             padding:5px 7px; margin-top:6px; border-radius:3px; }
+
+  #lupe{ position:fixed; inset:0; z-index:1400; background:rgba(12,16,22,.92); display:none;
+         align-items:center; justify-content:center; padding:18px; }
+  #lupe img{ max-width:100%; max-height:100%; border-radius:5px; }
+
+  .liste{ border-collapse:collapse; width:100%; font-size:13px; }
+  .liste td,.liste th{ border-bottom:1px solid var(--line); padding:5px 8px; text-align:left; }
+  .liste thead th{ background:#f7f8f9; font-size:11.5px; text-transform:uppercase; color:var(--mut); }
+  .foot{ text-align:center; font-size:11.5px; color:var(--mut); padding:10px 0 30px; }
+  .foot a{ color:var(--rot); font-weight:700; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <img src="assets/img/strabag-logo.png" alt="STRABAG">
+  <div class="t">Erdleiter · Dokumentation</div>
+  <div class="los">NALPSOLAR · B8-13</div>
+</div>
+
+<div class="wrap">
+
+  <div class="kacheln" id="kacheln"></div>
+
+  <div class="card">
+    <h2>Karte der Verbindungsstellen</h2>
+    <div class="sub">Jeder Punkt ist eine eingemessene Verbindungsstelle des Erdungsbands.
+      Antippen zeigt Koordinaten, Vermessungsquelle und das Baustellenfoto.
+      GPS-Aufnahme und Fotodoku sind laut NO005 Pos. 151/483.202 Voraussetzung für die Vergütung.</div>
+
+    <div class="steuer">
+      <button class="chip an b25" id="c25">2025</button>
+      <button class="chip an" id="c26">2026</button>
+      <button class="chip bof" id="cof">nur ohne Foto</button>
+      <input id="suche" placeholder="Punktnummer …" inputmode="numeric">
+    </div>
+    <div class="steuer" style="margin-top:-2px">
+      <span style="font-size:12px;color:var(--mut);font-weight:700">Hintergrund:</span>
+      <button class="chip bgr" id="cwl">Werkleitungen</button>
+      <button class="chip bvi" id="cerd">Erdung PZ1 (Plan)</button>
+    </div>
+
+    <div id="karte"></div>
+
+    <div class="legende">
+      <span class="pkt" style="background:#1a5fb4"></span>2025 &nbsp;
+      <span class="pkt" style="background:#D72622"></span>2026 &nbsp;
+      <span class="pkt" style="background:#fff;border-color:#e08a00;box-shadow:0 0 0 2px #e08a00"></span>ohne Foto
+      &nbsp;·&nbsp; <span id="zaehler"></span><br>
+      <span class="lin" style="background:#28cc73"></span>KSR DN60 &nbsp;
+      <span class="lin" style="background:#ff4d4d"></span>DN120 &nbsp;
+      <span class="lin" style="background:#1e94f2"></span>HRB &nbsp;
+      <span class="lin" style="background:#ff9800"></span>Erdungsband PZ1 laut Plan &nbsp;
+      <span class="lin" style="background:#ffd54a"></span>Oberflächenerder
+    </div>
+  </div>
+
+  <div class="card" style="border-left-color:var(--orange)">
+    <h2>Nicht auf der Karte: <span id="nvZahl">–</span> Punkte ohne Vermessung</h2>
+    <div class="sub">Diese Punkte sind fotografiert und im Bild beschriftet, es liegt aber keine
+      Vermessungsdatei dazu vor – ohne Koordinaten lassen sie sich nicht darstellen.
+      Betroffen sind <b>1144–1147</b> (Fotos vom 26.06.2026) und <b>alles ab 1272</b>
+      (Fotos vom 06.08. bis 12.08.2026) – dort steht die Aufnahme noch aus.
+      Der Bereich Schacht&nbsp;4–5 (1186–1212) fehlte bis zum 12.08.2026 ebenfalls; die
+      Vermessung dazu lag als Mailanhang vor und ist jetzt eingearbeitet.</div>
+    <div id="nvListe" style="font-size:12.5px;line-height:1.9;color:var(--mut)"></div>
+  </div>
+
+  <div class="card">
+    <h2>Punkte ohne Foto</h2>
+    <div class="sub">Vermessen, aber kein Bild vorhanden – nachfotografieren, solange die Stellen
+      offen liegen. Punktnummer wie bisher gross im Bild beschriften: das ist die einzige
+      Zuordnung, die die WhatsApp-Übertragung übersteht.</div>
+    <table class="liste"><thead><tr><th>Punkt</th><th>Jahr</th><th>Vermessung</th></tr></thead>
+      <tbody id="ofListe"></tbody></table>
+  </div>
+
+  <div class="card" style="border-left-color:var(--blau)">
+    <h2>Wie diese Punkte entstehen</h2>
+    <div class="sub" style="font-size:12.5px">
+      <b>Die Punkte stammen aus keinem Plan.</b> Es gibt keine Soll-Liste von Punktnummern.
+      Was hier steht, ist die <b>Aufnahme im Feld</b>: der Vermesser läuft dem verlegten
+      Erdungsband nach und misst es ein. Die Nummern sind fortlaufende Feldnummern und
+      beginnen jede Saison neu – daher die Kollision 1101–1115 zwischen 2025 und 2026.<br><br>
+
+      François Borner am 13.01.2026 an Benjamin Ruede: <i>«Wir hatten lediglich die
+      Erdungsbänder aufgenommen (ca. 1 Punkt pro 30 m).»</i> Verbindlich ist NO005
+      Pos. 151/483.202: aufzunehmen sind die <b>Verbindungsstellen</b> – Stösse, Klemmen,
+      Abzweige. Deshalb liegen die Punkte nicht im 30-m-Raster, sondern dort dicht,
+      wo viel verbunden wird.<br><br>
+
+      <b>Der Soll-Stand steht in 2D-Plänen, nicht im Modell.</b> ILF (F. Nothdurfter) am
+      29.07.2026 auf Borners Frage nach Widersprüchen zwischen den Plänen 0463 A2 / 0466 A1 /
+      0410 A5: <i>«Der Grund, warum es mehrere Pläne gibt, ist jener, dass letztes Jahr der
+      ganze Perimeter abgebildet wurde und laufend ergänzt wurde (Plan 0410 – A5). Dieses Jahr
+      gibt es aber einen Erdungsplan für die jeweilige PZ (Pläne 0463 &amp; 0466). … Ein
+      3D-Modell der Erdung ist nicht geplant, dies wurde auch damals mit Axpo und A+W so
+      definiert, da es hinsichtlich Abnahme einen 2D-Plan braucht.»</i><br><br>
+
+      Für <b>PZ1</b> existiert trotzdem ein Modell (M_0463_A1) – das ist die orange Ebene
+      «Erdung PZ1 (Plan)» oben: 14 Bandzüge mit 447 m und 82 Oberflächenerder. Für PZ2 und PZ3
+      gibt es nur die 2D-Pläne, dort lässt sich der Soll-Verlauf nicht einblenden.<br><br>
+
+      <b>Damit zur Frage, ob Punkte fehlen:</b> Aus den Daten allein lässt sich das nicht
+      beantworten – ohne Soll-Punktliste gibt es kein Soll-Ist. Prüfbar ist nur die Trasse:
+      Band einblenden und schauen, wo Bandzüge ohne Punkte liegen. Ein Punkt ohne Vermessung
+      <b>und</b> ohne Foto würde in keiner Liste auftauchen; er wäre schlicht nicht
+      dokumentiert. Die nur fotografierten Punkte sind genau der Grenzfall, der zeigt,
+      dass das vorkommt.<br><br>
+
+      <b>Nachtrag 12.08.2026 – eine Lücke war keine.</b> Die Vermessung der Punkte 1167–1212
+      (Bereich Schacht 4–5) lag die ganze Zeit vor: Christopher Zimmermann hat sie am
+      <b>07.07.2026</b> als Anhang <i>TOPO.03.07.POINTS.txt</i> gemailt (Betreff «Topo punkte
+      auf 03.07.2026», Mail ohne Text). Die Datei wurde nie in den Dropbox-Rohdatenordner
+      gelegt und fehlte deshalb in der Dokumentation – 46 Punkte, davon 19 (1167–1185), die
+      bis dahin in keiner Liste standen. Gefunden beim Durchsuchen aller 3184 Mails.
+      <b>Lehre:</b> die Topo-Mails kommen unregelmässig, teils ohne Text und mit wechselnden
+      Dateinamen; ohne festen Ablageschritt gehen sie unter.
+    </div>
+  </div>
+
+  <div class="card" style="border-left-color:var(--mut)">
+    <h2>Herkunft der Daten</h2>
+    <div class="sub" id="quellen"></div>
+  </div>
+
+  <div class="foot"><a href="admin.html">← zurück zum Admin</a> ·
+    Stand <span id="stand">–</span> · Dropbox ist Originalquelle und wurde nur gelesen</div>
+</div>
+
+<div id="lupe"><img id="lupeImg" alt=""></div>
+
+<script>
+'use strict';
+function $(id){ return document.getElementById(id); }
+
+var karte = L.map('karte', { scrollWheelZoom:false }).setView([46.6215, 8.7215], 16);
+L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg',
+  { maxZoom:19, maxNativeZoom:19, attribution:'© swisstopo' }).addTo(karte);
+/* Eigener Pane, damit die Punkte immer ueber Leitungen und Erdungsband liegen.
+   (LayerGroup hat kein bringToFront - das kann nur ein Path.) */
+karte.createPane('punkte').style.zIndex = 650;
+var lagLeitung = L.layerGroup(), lagErdung = L.layerGroup();
+var gruppe = L.layerGroup().addTo(karte);
+
+var DATEN = null, marker = [], zeige = { j25:true, j26:true, nurOhne:false, suche:'' };
+
+var LEITFARBE = { '60':'#28cc73', '120':'#ff4d4d', 'hrb':'#1e94f2', 'schacht':'#cfd3d8' };
+var LEITTEXT  = { '60':'KSR DN60 (Feinverteilung)', '120':'KSR DN120',
+                  'hrb':'HRB (Haupttrasse)', 'schacht':'Schacht' };
+
+function hintergrundZeichnen(){
+  (DATEN.leitungen || []).forEach(function(s){
+    L.polyline(s.pp, { color:LEITFARBE[s.k] || '#e6c23a', weight:s.k === 'hrb' ? 4 : 2.5,
+                       opacity:.85 })
+     .bindPopup('<div class="pop"><h3>' + (LEITTEXT[s.k] || s.k) + '</h3><div class="meta">' +
+                s.n + '<br>Planungszone ' + s.q + ' · Länge ' + s.l + ' m<br>' +
+                'Quelle: ILF-Werkleitungsmodell</div></div>')
+     .addTo(lagLeitung);
+  });
+  (DATEN.erdung_soll || []).forEach(function(s){
+    var band = s.art === 'band';
+    L.polyline(s.pp, { color:band ? '#ff9800' : '#ffd54a', weight:band ? 4 : 3,
+                       opacity:.9, dashArray:band ? null : '4,4' })
+     .bindPopup('<div class="pop"><h3>' + (band ? 'Erdungsband' : 'Oberflächenerder') +
+                '</h3><div class="meta">' + s.l + ' m<br>Planstand PZ1 · Modell M_0463_A1' +
+                '<br>Das ist der <b>Soll-Verlauf aus dem Plan</b>, nicht die Aufnahme.</div></div>')
+     .addTo(lagErdung);
+  });
+}
+
+function farbe(p){ return p.k === 'ohne_foto' ? '#fff' : (p.j === 2025 ? '#1a5fb4' : '#D72622'); }
+function rand(p){ return p.k === 'ohne_foto' ? '#e08a00' : '#fff'; }
+
+function popup(p){
+  var h = '<div class="pop"><h3>Punkt ' + p.nr + (p.j === 2026 ? ' <small style="color:#63676d">(2026)</small>' : '') + '</h3>';
+  h += '<div class="meta">Schlüssel <b>' + p.s + '</b>';
+  if (p.st) h += ' · Strang ' + p.st + ' / ' + p.ab;
+  h += '<br>LV95 ' + p.e.toFixed(3) + ' / ' + p.n.toFixed(3) + ' · ' + p.z.toFixed(3) + ' m ü.M.';
+  h += '<br>Vermessung: ' + p.q + '</div>';
+  if (p.koll) h += '<div class="bem">Nummer 1101–1115 ist 2025 <b>und</b> 2026 vergeben – die beiden Punkte liegen weit auseinander. Deshalb der Schlüssel 25-/26-.</div>';
+  if (!p.f.length) {
+    h += '<div class="warn" style="margin-top:7px">Kein Foto vorhanden</div>';
+  } else if (p.fj === 2026) {
+    p.f.forEach(function(f){
+      h += '<img loading="lazy" src="uploads/erdung/fotos/' + f + '" data-f="' + f + '" alt="' + f + '">';
+      var m = DATEN.fotos[f];
+      if (m && m.b) h += '<div class="bem">' + m.b + '</div>';
+      h += '<div class="meta">' + f + (m ? ' · ' + m.d : '') + '</div>';
+    });
+  } else {
+    h += '<div class="meta" style="margin-top:7px">Fotos 2025 (Dropbox-Ordner <i>Erdleiter\\Fotos</i>):<br><b>'
+       + p.f.join('</b>, <b>') + '</b></div>';
+  }
+  return h + '</div>';
+}
+
+function passt(p){
+  if (p.j === 2025 && !zeige.j25) return false;
+  if (p.j === 2026 && !zeige.j26) return false;
+  if (zeige.nurOhne && p.k !== 'ohne_foto') return false;
+  if (zeige.suche && String(p.nr).indexOf(zeige.suche) !== 0) return false;
+  return true;
+}
+
+function zeichnen(){
+  gruppe.clearLayers(); marker = [];
+  var n = 0;
+  DATEN.punkte.forEach(function(p){
+    if (!passt(p)) return;
+    n++;
+    var m = L.circleMarker([p.lat, p.lon], {
+      pane: 'punkte',
+      radius: p.k === 'ohne_foto' ? 6 : 5.5, weight: p.k === 'ohne_foto' ? 2.5 : 2,
+      color: rand(p), fillColor: farbe(p), fillOpacity: .95
+    }).bindPopup(popup(p), { maxWidth:300 });
+    m.punkt = p;
+    m.addTo(gruppe); marker.push(m);
+  });
+  $('zaehler').textContent = n + ' von ' + DATEN.punkte.length + ' Punkten sichtbar';
+}
+
+function chip(id, an, fn){
+  var el = $(id);
+  el.classList.toggle('an', an);
+  el.onclick = function(){ fn(); zeichnen(); };
+}
+
+function aufbauen(){
+  var kz = DATEN.kennzahlen;
+  $('kacheln').innerHTML =
+    '<div class="k blau"><div class="lab">Punkte gesamt</div><div class="val">' + kz.gesamt +
+      '</div><div class="note">' + kz.p2025 + ' aus 2025 · ' + kz.p2026 + ' aus 2026</div></div>' +
+    '<div class="k gruen"><div class="lab">mit Foto belegt</div><div class="val">' +
+      (kz.gesamt - kz.ohne_foto) + '</div><div class="note">Fotodoku vollständig</div></div>' +
+    '<div class="k orange"><div class="lab">ohne Foto</div><div class="val">' + kz.ohne_foto +
+      '</div><div class="note">nachfotografieren</div></div>' +
+    '<div class="k"><div class="lab">ohne Vermessung</div><div class="val">' + kz.ohne_vermessung +
+      '</div><div class="note">nur fotografiert, nicht kartierbar</div></div>';
+
+  $('nvZahl').textContent = kz.ohne_vermessung;
+  $('nvListe').textContent = DATEN.nur_foto.join(' · ');
+
+  var rows = '';
+  DATEN.punkte.filter(function(p){ return p.k === 'ohne_foto'; })
+    .forEach(function(p){ rows += '<tr><td><b>' + p.nr + '</b></td><td>' + p.j + '</td><td>' + p.q + '</td></tr>'; });
+  $('ofListe').innerHTML = rows;
+
+  $('quellen').innerHTML =
+    'Punkte 2025 und ihre Fotolinks: <b>' + DATEN.quellen.doku2025 + '</b><br>' +
+    'Koordinaten 2026: <b>' + DATEN.quellen.roh2026 + '</b><br>' +
+    'Fotos 2026: <b>' + DATEN.quellen.fotos2026 + '</b><br>' +
+    'Werkleitungen: <b>' + DATEN.quellen.leitungen + '</b><br>' +
+    'Erdung Soll: <b>' + DATEN.quellen.erdungsoll + '</b><br>' +
+    'Strang und Abschnitt sind für 2026 leer – sie stehen in keiner Rohdatei und lassen sich nur ' +
+    'über die Erdungspläne 0463 (PZ1) und 0466 (PZ2) zuordnen.';
+  $('stand').textContent = DATEN.stand;
+
+  chip('c25', true,  function(){ zeige.j25 = !zeige.j25; $('c25').classList.toggle('an', zeige.j25); });
+  chip('c26', true,  function(){ zeige.j26 = !zeige.j26; $('c26').classList.toggle('an', zeige.j26); });
+  chip('cof', false, function(){ zeige.nurOhne = !zeige.nurOhne; $('cof').classList.toggle('an', zeige.nurOhne); });
+
+  hintergrundZeichnen();
+  function ebene(id, lag, standard){
+    var el = $(id), an = standard;
+    function setzen(){ el.classList.toggle('an', an); if (an) lag.addTo(karte); else karte.removeLayer(lag); }
+    el.onclick = function(){ an = !an; setzen(); };
+    setzen();
+  }
+  ebene('cwl',  lagLeitung, true);
+  ebene('cerd', lagErdung,  true);
+
+  $('suche').oninput = function(){
+    zeige.suche = this.value.trim(); zeichnen();
+    if (zeige.suche && marker.length) {
+      karte.setView(marker[0].getLatLng(), Math.max(karte.getZoom(), 18));
+      marker[0].openPopup();
+    }
+  };
+
+  zeichnen();
+  var mit = DATEN.punkte.filter(function(p){ return p.lat; });
+  if (mit.length) karte.fitBounds(L.latLngBounds(mit.map(function(p){ return [p.lat, p.lon]; })).pad(0.08));
+}
+
+document.addEventListener('click', function(e){
+  if (e.target.tagName === 'IMG' && e.target.dataset.f) {
+    $('lupeImg').src = e.target.src; $('lupe').style.display = 'flex';
+  } else if (e.target.id === 'lupe' || e.target.id === 'lupeImg') {
+    $('lupe').style.display = 'none';
+  }
+});
+
+fetch('uploads/erdung/erdungspunkte.json', { cache:'no-store' })
+  .then(function(r){ return r.json(); })
+  .then(function(d){ DATEN = d; aufbauen(); })
+  .catch(function(){ $('kacheln').innerHTML = '<div class="k"><div class="lab">Fehler</div>' +
+    '<div class="note">erdungspunkte.json nicht ladbar – tools\\build_erdung_karte.py laufen lassen</div></div>'; });
+</script>
+</body>
+</html>
