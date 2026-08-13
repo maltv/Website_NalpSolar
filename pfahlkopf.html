@@ -168,11 +168,13 @@
     <div style="font-size:15.5px;font-weight:800">📦 Pfahlköpfe &amp; Muffen am Lager erfassen</div>
     <div style="font-size:12px;color:var(--mut);margin-top:4px;line-height:1.45">
       Wo liegt welches Material? Standort kommt vom GPS – am Lagerort erfassen,
-      dann Gewinde antippen zum Speichern.</div>
+      dann Gewinde antippen zum Speichern. Schon verschraubte (vormontierte) Köpfe
+      ohne Gewinde speichern – das Gewinde ist dort verdeckt.</div>
     <label class="fl">Was liegt hier? *</label>
     <div class="sBtns" style="margin-top:2px">
       <button type="button" id="ma_k" onclick="setMatArt('pfahlkopf')">🔩 Pfahlkopf<small>Kopfplatte + Muffe</small></button>
       <button type="button" id="ma_m" onclick="setMatArt('muffe')">⚪ Muffe<small>Verbindungsmuffe</small></button>
+      <button type="button" id="ma_v" onclick="setMatArt('kopf_vormontiert')">🔧 Vormontiert<small>schon verschraubt</small></button>
     </div>
     <div class="row" style="margin-top:4px">
       <div style="flex:1">
@@ -194,11 +196,15 @@
     </div>
     <label class="fl">Erfasst von *</label>
     <input id="m_von" placeholder="Name">
-    <label class="fl">Gewinde antippen = speichern</label>
-    <div class="mess">
+    <label class="fl" id="m_gwlbl">Gewinde antippen = speichern</label>
+    <div class="mess" id="messGw">
       <button class="m5" id="mb5" onclick="matMessen('5')">🔵 5 mm<small>Steigung 5 mm</small></button>
       <button class="m6" id="mb6" onclick="matMessen('6.35')">🟡 6.35 mm<small>Steigung 6.35 mm</small></button>
     </div>
+    <button id="mbV" onclick="matMessen('')" style="display:none;width:100%;border:none;border-radius:10px;
+      padding:22px 8px;font-size:20px;font-weight:900;color:#fff;background:#5b3fa8;cursor:pointer;
+      box-shadow:0 2px 6px rgba(20,25,32,.2)">💾 Speichern<small style="display:block;font-size:13px;
+      font-weight:700;opacity:.92;margin-top:5px">Gewinde verdeckt – Kopf schon verschraubt</small></button>
     <div class="row" style="margin-top:10px">
       <span class="zaehler" id="m_gps" style="flex:1">Warte auf GPS …</span>
       <button class="btn ghost" onclick="matRueckgaengig()">↶ letzte zurück</button>
@@ -585,27 +591,35 @@ function setMatArt(a){
   matArt=(matArt===a)?null:a;
   $('ma_m').classList.toggle('on', matArt==='muffe');
   $('ma_k').classList.toggle('on', matArt==='pfahlkopf');
+  $('ma_v').classList.toggle('on', matArt==='kopf_vormontiert');
+  // Vormontiert = Kopf und Muffe schon verschraubt -> Gewinde nicht bestimmbar
+  var vm = matArt==='kopf_vormontiert';
+  $('messGw').style.display = vm?'none':'';
+  $('mbV').style.display = vm?'':'none';
+  $('m_gwlbl').textContent = vm?'Gewinde nicht bestimmbar – direkt speichern':'Gewinde antippen = speichern';
 }
 function anz(d){ $('m_anz').value=Math.max(1,(parseInt($('m_anz').value,10)||1)+d); }
-function matName(a){ return a==='muffe'?'Muffe':'Pfahlkopf'; }
+function matName(a){
+  return a==='muffe'?'Muffe':(a==='kopf_vormontiert'?'Pfahlkopf vormontiert':'Pfahlkopf');
+}
 function alleMat(){
   return Object.keys(material).map(function(k){ return material[k]; })
     .sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
 }
 function matMessen(g){
-  if(!matArt){ toast('Bitte wählen: Pfahlkopf oder Muffe',true); return; }
+  if(!matArt){ toast('Bitte wählen: Pfahlkopf, Muffe oder Vormontiert',true); return; }
   if(!pos){ toast('Noch kein GPS – Standort nötig',true); return; }
   var von=$('m_von').value.trim();
   if(!von){ toast('Bitte Namen eintragen',true); $('m_von').focus(); return; }
   setVon(von); $('f_von').value=von;
   var n=Math.max(1,parseInt($('m_anz').value,10)||1);
-  var rec={ art:matArt, gewinde:g, anzahl:n, typ:$('m_typ').value.trim(),
+  var rec={ art:matArt, gewinde:g||'', anzahl:n, typ:$('m_typ').value.trim(),
             lat:+pos.lat.toFixed(6), lon:+pos.lon.toFixed(6), acc:Math.round(pos.acc),
             von:von, datum:heute(), ts:Date.now() };
   material['loc_'+rec.ts]=rec;              // sofort sichtbar
   matListeMalen(); malen();
   if(navigator.vibrate) navigator.vibrate(60);
-  toast('✔ '+n+'× '+matName(matArt)+(rec.typ?(' '+rec.typ):'')+' · '+g+' mm');
+  toast('✔ '+n+'× '+matName(matArt)+(rec.typ?(' '+rec.typ):'')+(g?(' · '+g+' mm'):''));
   if(!netzAn()){ pendAdd(P_MAT,rec); return; }
   apiPost(P_MAT,rec).then(function(k){
     if(!k) throw 0;
@@ -619,7 +633,7 @@ function matRueckgaengig(){
   var a=alleMat();
   if(!a.length){ toast('Nichts zum Zurücknehmen',true); return; }
   var m=a[0];
-  if(!confirm('Letzte Ablage löschen?\n'+m.anzahl+'× '+matName(m.art)+' · '+m.gewinde+' mm')) return;
+  if(!confirm('Letzte Ablage löschen?\n'+m.anzahl+'× '+matName(m.art)+(m.gewinde?(' · '+m.gewinde+' mm'):''))) return;
   Object.keys(material).forEach(function(k){ if(material[k]===m) delete material[k]; });
   if(m._k) fetch(DB+'/'+P_MAT+'/'+m._k+'.json',{method:'DELETE'}).catch(function(){});
   matListeMalen(); malen();
@@ -629,14 +643,21 @@ function matListeMalen(){
   if(!$('matLetzte')) return;
   var a=alleMat();
   $('matLetzte').innerHTML = a.length ? a.slice(0,8).map(function(m){
-    var f=m.gewinde==='5'?'#1565c0':'#e0a800';
+    var vm=m.art==='kopf_vormontiert';
+    var f=vm?'#5b3fa8':(m.gewinde==='5'?'#1565c0':'#e0a800');
     return '<div>'+(m.art==='muffe'?'◼':'▲')+' <b>'+esc(m.anzahl)+'× '+matName(m.art)+'</b> · '
-      +'<span style="color:'+f+';font-weight:900">'+esc(m.gewinde)+' mm</span>'
+      +'<span style="color:'+f+';font-weight:900">'+(vm?'verschraubt':esc(m.gewinde)+' mm')+'</span>'
       +(m.typ?' · Typ '+esc(m.typ):'')+' · '+esc(m.von||'')+' '+fmtZ(m.ts)+'</div>';
   }).join('') : '<div style="color:var(--mut)">noch nichts abgelegt</div>';
-  var mu=0, ko=0;
-  a.forEach(function(m){ if(m.art==='muffe') mu+=(+m.anzahl||0); else ko+=(+m.anzahl||0); });
-  $('matStat').textContent = a.length+' Ablagen · '+ko+' Pfahlköpfe · '+mu+' Muffen';
+  var mu=0, ko=0, vm=0, vmTyp={};
+  a.forEach(function(m){
+    var n=+m.anzahl||0;
+    if(m.art==='muffe') mu+=n;
+    else if(m.art==='kopf_vormontiert'){ vm+=n; var t=m.typ||'?'; vmTyp[t]=(vmTyp[t]||0)+n; }
+    else ko+=n;
+  });
+  $('matStat').textContent = a.length+' Ablagen · '+ko+' Pfahlköpfe · '+mu+' Muffen'
+    +(vm?(' · '+vm+' vormontiert ('+Object.keys(vmTyp).sort().map(function(t){ return t+': '+vmTyp[t]; }).join(' · ')+')'):'');
 }
 function matCsv(){
   var kopf=['Art','Typ','Gewinde_mm','Anzahl','Datum','Zeit','Erfasst_von','lat','lon','GPS_m'];
@@ -753,18 +774,19 @@ function malen(){
       c.strokeText(lbl, mx, my-26); c.fillStyle='#fff'; c.fillText(lbl, mx, my-26);
     }
   });
-  // Material: Muffen = Quadrat, Pfahlkoepfe = Dreieck (Farbe = Gewinde)
+  // Material: Muffen = Quadrat, Pfahlkoepfe = Dreieck (Farbe = Gewinde,
+  // violett = vormontiert/verschraubt, Gewinde verdeckt)
   // In der Kopf-Ansicht nur die Pfahlkopf-Lager zeigen
   alleMat().forEach(function(m){
     if(m.lat==null||m.lon==null) return;
-    if(ansicht==='kopf' && m.art!=='pfahlkopf') return;
+    if(ansicht==='kopf' && m.art==='muffe') return;
     var v=lv95(m.lat,m.lon), s=P(v.E,v.N);
     if(s.x<-20||s.x>br+20||s.y<-20||s.y>450) return;
     var r=zoomNah?8:4;
     c.beginPath();
     if(m.art==='muffe'){ c.rect(s.x-r,s.y-r,2*r,2*r); }
     else { c.moveTo(s.x,s.y-r-1); c.lineTo(s.x+r,s.y+r-1); c.lineTo(s.x-r,s.y+r-1); c.closePath(); }
-    c.fillStyle = m.gewinde==='5'?'#1565c0':'#e0a800';
+    c.fillStyle = m.art==='kopf_vormontiert' ? '#5b3fa8' : (m.gewinde==='5'?'#1565c0':'#e0a800');
     c.fill(); c.lineWidth=1.5; c.strokeStyle='#fff'; c.stroke();
     if(zoomNah && m.anzahl>1){
       c.font='800 11px Arial'; c.textAlign='center';
@@ -902,10 +924,12 @@ function legendeMalen(){
      +'<span><span class="pkt" style="background:#1e9e5a"></span>Kopf montiert</span>'
      +'<span><span class="pkt" style="background:#d84343"></span>Kopf fehlt</span>'
      +'<span>▲ Kopf-Lager</span>'
+     +'<span style="color:#5b3fa8;font-weight:800">▲ vormontiert</span>'
     : '<span><span class="pkt" style="background:#9aa0a8"></span>offen</span>'
      +'<span><span class="pkt" style="background:#1565c0"></span>5 mm</span>'
      +'<span><span class="pkt" style="background:#e0a800"></span>6.35 mm</span>'
-     +'<span>◼ Muffen</span><span>▲ Köpfe</span>';
+     +'<span>◼ Muffen</span><span>▲ Köpfe</span>'
+     +'<span style="color:#5b3fa8;font-weight:800">▲ vormontiert</span>';
   $('ansichtBtn').textContent = ansicht==='kopf' ? '🔁 Gewinde' : '🔁 Köpfe';
 }
 function ansichtWechsel(){
