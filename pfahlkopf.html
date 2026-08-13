@@ -172,6 +172,7 @@
       <div id="kZoom">
         <button onclick="zoomen(1.6)" aria-label="Vergrössern">+</button>
         <button onclick="zoomen(1/1.6)" aria-label="Verkleinern">−</button>
+        <button onclick="zuMir()" aria-label="Mein Standort" title="Mein Standort">📍</button>
       </div>
       <div id="kSchalter">
         <button id="swSat"  class="on" onclick="schalter('sat')"  title="Satellitenbild">🛰</button>
@@ -439,6 +440,22 @@ function zuMeter(lat,lon){
            y:(lat-ORIGIN.lat)*111320 };
 }
 
+/* ── eigener GPS-Standort: nur ANZEIGEN (blauer Punkt), gewaehlt wird
+      weiterhin per Antippen - GPS war fuer die Pfahlwahl zu ungenau ── */
+var gps=null;
+if(navigator.geolocation){
+  navigator.geolocation.watchPosition(function(p){
+    gps={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
+    malen();
+  }, function(){}, {enableHighAccuracy:true, maximumAge:3000, timeout:20000});
+}
+function zuMir(){
+  if(!gps||!ORIGIN){ toast('Noch kein GPS – bitte Standort erlauben',true); return; }
+  var m=zuMeter(gps.lat,gps.lon);
+  springen(m.x, m.y, Math.min(view.mpp, 0.35));
+  toast('📍 Mein Standort · GPS ±'+Math.round(gps.acc||0)+' m');
+}
+
 function erfassungLaden(){
   if(!netzAn()){ malen(); return Promise.resolve(); }
   return Promise.all([apiGet(P_GEW),apiGet(P_KOPF),apiGet(P_LAGER)]).then(function(r){
@@ -668,6 +685,20 @@ function malen(){
     });
   }
   grenzenSchilder();
+  // eigener Standort: Genauigkeitskreis + blauer Punkt mit weissem Ring
+  if(gps && ORIGIN){
+    var gq=s2p(zuMeter(gps.lat,gps.lon));
+    if(gq.x>-80&&gq.y>-80&&gq.x<r.width+80&&gq.y<r.height+80){
+      if(gps.acc){
+        ctx.beginPath(); ctx.arc(gq.x,gq.y,Math.max(9,gps.acc/view.mpp),0,6.2832);
+        ctx.fillStyle='rgba(21,101,192,.14)'; ctx.fill();
+        ctx.strokeStyle='rgba(21,101,192,.4)'; ctx.lineWidth=1; ctx.stroke();
+      }
+      ctx.beginPath(); ctx.arc(gq.x,gq.y,7,0,6.2832);
+      ctx.fillStyle='#1565c0'; ctx.fill();
+      ctx.lineWidth=3; ctx.strokeStyle='#fff'; ctx.stroke();
+    }
+  }
   var breite=Math.round(r.width*view.mpp);
   $('kInfo').textContent = gezeichnet+' Pfähle sichtbar · Ausschnitt ca. '+breite+' m';
 }
