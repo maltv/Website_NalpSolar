@@ -61,16 +61,8 @@
         border-radius:6px; font-size:14.5px; font-weight:700; color:var(--mut); background:#fff; cursor:pointer; }
   .firmen input:checked + span{ border-color:var(--rot); background:var(--rot); color:#fff; }
 
-  /* Umschalter Klassiker / eigene Kreation */
-  .tabs{ display:flex; gap:8px; margin:16px 0 0; }
-  .tabs button{ flex:1; padding:12px 8px; border:1.5px solid #c9ccd2; background:#fff;
-        border-radius:6px; font-family:inherit; font-size:14.5px; font-weight:800;
-        color:var(--mut); cursor:pointer; line-height:1.3; }
-  .tabs button.on{ border-color:var(--rot); background:var(--rot); color:#fff; }
-  .tabs button small{ display:block; font-weight:400; font-size:11.5px; margin-top:2px; }
-
   /* Pizzaliste */
-  .liste{ margin-top:12px; }
+  .liste{ margin-top:14px; }
   .liste label{ display:block; position:relative; margin-bottom:9px; }
   .liste input{ position:absolute; opacity:0; pointer-events:none; }
   .liste .k{ display:block; border:1.5px solid #d5d8dc; border-radius:7px; padding:12px 13px 12px 44px;
@@ -82,22 +74,6 @@
         box-shadow:inset 0 0 0 3.5px #fff; }
   .liste .n{ font-size:16px; font-weight:800; display:block; }
   .liste .z{ font-size:12.5px; color:var(--mut); display:block; margin-top:2px; line-height:1.4; }
-
-  /* Zutaten fuer die eigene Kreation */
-  .basis{ margin-top:12px; background:#f5f6f8; border:1px solid var(--line); border-radius:6px;
-        padding:11px 13px; font-size:13.5px; line-height:1.5; }
-  .basis b{ font-size:14.5px; }
-  .zut{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
-  .zut label{ position:relative; }
-  .zut input{ position:absolute; opacity:0; pointer-events:none; }
-  .zut span{ display:block; border:1.5px solid #d5d8dc; border-radius:6px; padding:10px 9px 10px 32px;
-        font-size:13.5px; background:#fff; cursor:pointer; line-height:1.3; }
-  .zut span::before{ content:""; position:absolute; left:9px; top:50%; margin-top:-8px;
-        width:16px; height:16px; border:2px solid #b9bec5; border-radius:3px; background:#fff; }
-  .zut input:checked + span{ border-color:var(--rot); background:#fff7f7; font-weight:700; }
-  .zut input:checked + span::before{ border-color:var(--rot); background:var(--rot); }
-  .zut input:checked + span::after{ content:""; position:absolute; left:14px; top:50%; margin-top:-6px;
-        width:5px; height:9px; border:solid #fff; border-width:0 2.5px 2.5px 0; transform:rotate(43deg); }
 
   /* Dessert */
   .dess{ position:relative; display:block; margin-top:16px; }
@@ -184,20 +160,8 @@
         <label><input type="radio" name="firma" value="Andere"><span>Andere</span></label>
       </div>
 
-      <div class="tabs">
-        <button type="button" id="tabK" onclick="setArt('klassiker')">Klassiker<small>fertige Pizza wählen</small></button>
-        <button type="button" id="tabE" onclick="setArt('eigen')">Eigene Kreation<small>Grundpizza + Zutaten</small></button>
-      </div>
-
-      <div id="boxK">
-        <div class="liste" id="listeK"></div>
-      </div>
-
-      <div id="boxE" style="display:none">
-        <div class="basis"><b>Grundpizza</b> – Tomatensauce und Mozzarella.<br>
-          Zutaten ankreuzen, die draufkommen sollen:</div>
-        <div class="zut" id="listeZ"></div>
-      </div>
+      <label class="fl">Pizza *</label>
+      <div class="liste" id="listeK"></div>
 
       <label class="dess">
         <input type="checkbox" id="fTira">
@@ -253,8 +217,13 @@ var P='erfassung/pizza_20260821/bestellungen';
 var LS_NAME='nalp_pizza_name_v1', LS_MEIN='nalp_pizza_meine_v1';
 var FRIST=new Date(2026,7,21,9,0,0);          /* Fr 21.08.2026 09:00 - Dennis braucht die Liste um 09:30 */
 
-/* Speisekarte 1:1 aus "Pizza_Bestellformular (strabag).pdf" (CKW-Mail 13.08.2026) */
+/* Speisekarte 1:1 aus "Pizza_Bestellformular (strabag).pdf" (CKW-Mail 13.08.2026).
+   Die "eigene Kreation" (Grundpizza + 18 Zutaten zum Ankreuzen) ist auf Weisung
+   V. Malt am 14.08.2026 rausgeflogen - es gibt nur noch fertige Pizzen. Die
+   Grundpizza selbst bleibt waehlbar, sie steht so auf dem CKW-Formular.
+   Sonderwuensche laufen ueber das Feld "Ohne / Aenderung". */
 var PIZZEN=[
+  ['Grundpizza','Tomatensauce und Mozzarella'],
   ['Pizza Bufalina','Tomatensauce, Bufala, Basilikum'],
   ['Pizza Diavola','Tomatensauce, Mozzarella, scharfe Salami, Chili'],
   ['Pizza Truck','Weisse Pizza, Mascarpone, Rucola, Rohschinken, Parmesan, Mozzarella'],
@@ -263,12 +232,7 @@ var PIZZEN=[
   ['Pizza Gemüse','Tomatensauce, Mozzarella, Oliven, Artischocken, Champignons, Rucola, getrocknete Cherry-Tomaten'],
   ['Panino Truck','Rucola, Rohschinken, Bufala Mozzarella, getrocknete Cherry-Tomaten']
 ];
-var ZUTATEN=['Frische Champignons','Oliven','Artischocken','Schinken',
-  'Getrocknete Cherry-Tomaten','Rucola','Knoblauch','Mascarpone','Gorgonzola','Taleggio',
-  'scharfe Salami','Chili','Mozzarella','Basilikum','Spanischer Thon','Rohschinken',
-  'Parmesan','Bufala Mozzarella'];
-
-var art='klassiker', alle=[], meine=[];
+var alle=[], meine=[];
 
 function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
@@ -283,22 +247,7 @@ function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
       +'<span class="z">'+esc(PIZZEN[i][1])+'</span></span></label>';
   }
   $('listeK').innerHTML=h;
-  h='';
-  for(var j=0;j<ZUTATEN.length;j++){
-    h+='<label><input type="checkbox" class="zt" value="'+esc(ZUTATEN[j])+'">'
-      +'<span>'+esc(ZUTATEN[j])+'</span></label>';
-  }
-  $('listeZ').innerHTML=h;
 })();
-
-function setArt(a){
-  art=a;
-  $('tabK').className = a==='klassiker'?'on':'';
-  $('tabE').className = a==='eigen'?'on':'';
-  $('boxK').style.display = a==='klassiker'?'block':'none';
-  $('boxE').style.display = a==='eigen'?'block':'none';
-}
-setArt('klassiker');
 
 /* Frist-Hinweis, sobald sie durch ist */
 (function(){
@@ -329,16 +278,9 @@ function gewaehltePizza(){
   var r=document.querySelector('input[name=pizza]:checked');
   return r?r.value:'';
 }
-function gewaehlteZutaten(){
-  var out=[], n=document.querySelectorAll('input.zt:checked');
-  for(var i=0;i<n.length;i++) out.push(n[i].value);
-  return out;
-}
 function textVon(rec){
-  var t = rec.art==='eigen'
-    ? 'Grundpizza' + (rec.zutaten&&rec.zutaten.length ? ' + '+rec.zutaten.join(', ') : ' (nur Tomatensauce und Mozzarella)')
-    : rec.pizza;
-  if(rec.tiramisu) t+=' + Pizza Tiramisu';
+  var t=rec.pizza||'';
+  if(rec.tiramisu) t+=(t?' + ':'')+'Pizza Tiramisu';
   return t;
 }
 
@@ -348,17 +290,11 @@ function senden(){
   if(!name){ alert('Bitte deinen Namen angeben.'); return; }
   if(!fr){ alert('Bitte die Firma wählen.'); return; }
 
-  var rec={ ts:Date.now(), name:name, firma:fr.value, art:art,
-            pizza:'', zutaten:[], tiramisu:$('fTira').checked,
+  var rec={ ts:Date.now(), name:name, firma:fr.value,
+            pizza:gewaehltePizza(), tiramisu:$('fTira').checked,
             ohne:$('fOhne').value.trim(), bemerkung:$('fBem').value.trim() };
 
-  if(art==='klassiker'){
-    rec.pizza=gewaehltePizza();
-    if(!rec.pizza && !rec.tiramisu){ alert('Bitte eine Pizza auswählen.'); return; }
-  } else {
-    rec.zutaten=gewaehlteZutaten();
-    rec.pizza='Grundpizza';
-  }
+  if(!rec.pizza && !rec.tiramisu){ alert('Bitte eine Pizza auswählen.'); return; }
 
   try{ localStorage.setItem(LS_NAME,name); }catch(e){}
   $('btnSend').disabled=true;
@@ -392,8 +328,6 @@ function neuStart(aendern){
     $('fName').value=''; $('fOhne').value=''; $('fBem').value='';
     $('fTira').checked=false;
     var r=document.querySelector('input[name=pizza]:checked'); if(r) r.checked=false;
-    var z=document.querySelectorAll('input.zt:checked');
-    for(var i=0;i<z.length;i++) z[i].checked=false;
   }
   $('ok').style.display='none';
   $('form').style.display='block';
@@ -422,7 +356,7 @@ function zeichnen(){
   var nP=0, nT=0;
   for(var i=0;i<alle.length;i++){
     if(alle[i].tiramisu) nT++;
-    if(alle[i].art==='eigen' || alle[i].pizza) nP++;
+    if(alle[i].pizza) nP++;
   }
   $('nPizza').textContent=nP;
   $('nTira').textContent=nT;
@@ -451,7 +385,7 @@ function zeichnen(){
   /* Zusammenzug pro Pizza - das ist, was der Bäcker braucht */
   var z={}, reihen=[];
   for(var m=0;m<alle.length;m++){
-    var t=alle[m].art==='eigen'?'Eigene Kreation':(alle[m].pizza||'');
+    var t=alle[m].pizza||'';
     if(!t) continue;
     if(!z[t]){ z[t]=0; reihen.push(t); }
     z[t]++;
@@ -471,7 +405,7 @@ function listeText(){
   for(var i=0;i<alle.length;i++){
     var d=alle[i];
     if(d.tiramisu) nT++;
-    var t=d.art==='eigen'?'Eigene Kreation (Grundpizza)':(d.pizza||'');
+    var t=d.pizza||'';
     if(t){ if(!z[t]){ z[t]=0; reihen.push(t); } z[t]++; }
   }
   reihen.sort(function(a,b){ return z[b]-z[a]; });
