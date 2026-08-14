@@ -117,6 +117,7 @@
   table.t td.l,table.t th.l{ text-align:left; }
   table.t tr.sum td{ font-weight:900; background:#f9fafb; }
   .g5c{ color:var(--blau); font-weight:900; } .g6c{ color:#8a6800; font-weight:900; }
+  .gvc{ color:#5b3fa8; font-weight:900; }
   .fehlt{ background:#fdeaea; color:#a01c19; font-weight:900; }
   .deckt{ background:#e8f5ec; color:#12703f; font-weight:900; }
   .liste{ font-size:12.5px; }
@@ -171,6 +172,7 @@
       <div id="kZoom">
         <button onclick="zoomen(1.6)" aria-label="Vergrössern">+</button>
         <button onclick="zoomen(1/1.6)" aria-label="Verkleinern">−</button>
+        <button onclick="zuMir()" aria-label="Mein Standort" title="Mein Standort">📍</button>
       </div>
       <div id="kSchalter">
         <button id="swSat"  class="on" onclick="schalter('sat')"  title="Satellitenbild">🛰</button>
@@ -438,6 +440,22 @@ function zuMeter(lat,lon){
            y:(lat-ORIGIN.lat)*111320 };
 }
 
+/* ── eigener GPS-Standort: nur ANZEIGEN (blauer Punkt), gewaehlt wird
+      weiterhin per Antippen - GPS war fuer die Pfahlwahl zu ungenau ── */
+var gps=null;
+if(navigator.geolocation){
+  navigator.geolocation.watchPosition(function(p){
+    gps={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
+    malen();
+  }, function(){}, {enableHighAccuracy:true, maximumAge:3000, timeout:20000});
+}
+function zuMir(){
+  if(!gps||!ORIGIN){ toast('Noch kein GPS – bitte Standort erlauben',true); return; }
+  var m=zuMeter(gps.lat,gps.lon);
+  springen(m.x, m.y, Math.min(view.mpp, 0.35));
+  toast('📍 Mein Standort · GPS ±'+Math.round(gps.acc||0)+' m');
+}
+
 function erfassungLaden(){
   if(!netzAn()){ malen(); return Promise.resolve(); }
   return Promise.all([apiGet(P_GEW),apiGet(P_KOPF),apiGet(P_LAGER)]).then(function(r){
@@ -667,6 +685,20 @@ function malen(){
     });
   }
   grenzenSchilder();
+  // eigener Standort: Genauigkeitskreis + blauer Punkt mit weissem Ring
+  if(gps && ORIGIN){
+    var gq=s2p(zuMeter(gps.lat,gps.lon));
+    if(gq.x>-80&&gq.y>-80&&gq.x<r.width+80&&gq.y<r.height+80){
+      if(gps.acc){
+        ctx.beginPath(); ctx.arc(gq.x,gq.y,Math.max(9,gps.acc/view.mpp),0,6.2832);
+        ctx.fillStyle='rgba(21,101,192,.14)'; ctx.fill();
+        ctx.strokeStyle='rgba(21,101,192,.4)'; ctx.lineWidth=1; ctx.stroke();
+      }
+      ctx.beginPath(); ctx.arc(gq.x,gq.y,7,0,6.2832);
+      ctx.fillStyle='#1565c0'; ctx.fill();
+      ctx.lineWidth=3; ctx.strokeStyle='#fff'; ctx.stroke();
+    }
+  }
   var breite=Math.round(r.width*view.mpp);
   $('kInfo').textContent = gezeichnet+' Pfähle sichtbar · Ausschnitt ca. '+breite+' m';
 }
@@ -933,14 +965,20 @@ function lagerChips(){
   $('lTyp').innerHTML=liste.map(function(t){
     return '<button class="'+(lTyp===t[0]?'on':'')+'" onclick="setTyp(\''+t[0]+'\')">'+esc(t[1])+'</button>';
   }).join('');
+  if(lArt!=='kopf' && lGew==='vm') lGew=5;   // verschraubt gibt es nur bei Koepfen
   $('lGew').innerHTML=
     '<button class="'+(lGew===5?'on':'')+'" onclick="setGew(5)">🔵 5.0 mm</button>'+
     '<button class="'+(lGew===6.35?'on':'')+'" onclick="setGew(6.35)">🟡 6.35 mm</button>'+
-    '<button class="'+(lGew===0?'on':'')+'" onclick="setGew(0)">❔ ungemessen</button>';
+    '<button class="'+(lGew===0?'on':'')+'" onclick="setGew(0)">❔ ungemessen</button>'+
+    (lArt==='kopf'?'<button class="'+(lGew==='vm'?'on':'')+'" onclick="setGew(\'vm\')">🔧 verschraubt</button>':'');
 }
 function setArt(a){ lArt=a; lagerChips(); vorbelegen(); }
 function setTyp(t){ lTyp=t; lagerChips(); vorbelegen(); }
 function setGew(g){ lGew=g; lagerChips(); vorbelegen(); }
+function gewText(g){
+  if(g==='vm') return 'verschraubt (vormontiert)';
+  return +g ? (+g+' mm') : 'ungemessen';
+}
 function zahlSetzen(n){ lZahl=Math.max(0,n); $('zahl').textContent=lZahl; }
 function zaehlen(d){ zahlSetzen(lZahl+d); if(navigator.vibrate) navigator.vibrate(15); }
 function lagerKey(){ return [lArt,lTyp,lGew,($('l_ort').value||'').trim().toLowerCase()].join('|'); }
@@ -958,7 +996,7 @@ function lagerSpeichern(){
             von:von, datum:heute(), ts:Date.now() };
   lager[lagerKey()]=rec;
   lagerListeMalen(); bilanzMalen();
-  toast('✔ '+lZahl+'× '+(lArt==='kopf'?'Kopf':'Pfahl')+' '+lTyp+' · '+(lGew?lGew+' mm':'ungemessen')+' @ '+ort);
+  toast('✔ '+lZahl+'× '+(lArt==='kopf'?'Kopf':'Pfahl')+' '+lTyp+' · '+gewText(lGew)+' @ '+ort);
   senden(P_LAGER,rec);
 }
 function lagerListeMalen(){
@@ -968,7 +1006,7 @@ function lagerListeMalen(){
     ? keys.map(function(k){
         var m=lager[k];
         var art=m.art==='kopf'?'Kopf':'Pfahl';
-        var g=+m.gewinde?(+m.gewinde+' mm'):'ungemessen';
+        var g=gewText(m.gewinde);
         return '<div class="z"><b>'+m.anzahl+'×</b><span>'+esc(art+' '+m.typ+' · '+g+' · '+m.ort)+'</span>'+
                '<span style="flex:0;color:#63676d">'+esc(m.datum||'')+'</span></div>';
       }).join('')
@@ -1012,10 +1050,11 @@ function bestandDaten(){
   Object.keys(lager).forEach(function(k){
     var m=lager[k]; if(m.art!=='kopf') return;
     var t=gruppeVonLager(m.typ);
-    d[t]=d[t]||{lager:{g5:0,g6:0,offen:0}, zulauf:{g5:0,g6:0,offen:0}};
+    d[t]=d[t]||{lager:{g5:0,g6:0,offen:0,vm:0}, zulauf:{g5:0,g6:0,offen:0,vm:0}};
     var ziel=istZulauf(m.ort)?d[t].zulauf:d[t].lager;
     var g=+m.gewinde, n=+m.anzahl||0;
-    if(g===5) ziel.g5+=n; else if(g) ziel.g6+=n; else ziel.offen+=n;
+    if(m.gewinde==='vm') ziel.vm+=n;
+    else if(g===5) ziel.g5+=n; else if(g) ziel.g6+=n; else ziel.offen+=n;
   });
   return d;
 }
@@ -1039,14 +1078,16 @@ function bilanzMalen(){
 
   /* ── Bestand ── */
   var grpBestand=Object.keys(bs);
-  var h2='<table class="t"><tr><th class="l">Kopfgruppe</th><th>🔵 5.0</th><th>🟡 6.35</th><th>ungemessen</th><th>davon<br>Zulauf</th></tr>';
+  var h2='<table class="t"><tr><th class="l">Kopfgruppe</th><th>🔵 5.0</th><th>🟡 6.35</th><th>ungemessen</th><th>🔧 ver-<br>schraubt</th><th>davon<br>Zulauf</th></tr>';
   grpBestand.sort().forEach(function(t){
     var d=bs[t];
-    var zu=d.zulauf.g5+d.zulauf.g6+d.zulauf.offen;
+    var zu=d.zulauf.g5+d.zulauf.g6+d.zulauf.offen+d.zulauf.vm;
     h2+='<tr><td class="l"><b>'+esc(t)+'</b></td>'+
         '<td class="g5c">'+(d.lager.g5+d.zulauf.g5)+'</td>'+
         '<td class="g6c">'+(d.lager.g6+d.zulauf.g6)+'</td>'+
-        '<td>'+(d.lager.offen+d.zulauf.offen)+'</td><td>'+(zu||'–')+'</td></tr>';
+        '<td>'+(d.lager.offen+d.zulauf.offen)+'</td>'+
+        '<td class="gvc">'+((d.lager.vm+d.zulauf.vm)||'–')+'</td>'+
+        '<td>'+(zu||'–')+'</td></tr>';
   });
   h2+='</table>';
   $('bestandTab').innerHTML = grpBestand.length
@@ -1067,6 +1108,11 @@ function bilanzMalen(){
     });
     h3+='</table>';
   });
+  var vmProGrp=Object.keys(bs).filter(function(t){ return (bs[t].lager.vm+bs[t].zulauf.vm)>0; });
+  if(vmProGrp.length){
+    h3+='<div class="hint" style="margin-top:11px;color:#5b3fa8;font-weight:700">🔧 Dazu verschraubt vormontiert (Gewinde verdeckt, oben nicht eingerechnet): '
+      +vmProGrp.sort().map(function(t){ return t+': '+(bs[t].lager.vm+bs[t].zulauf.vm); }).join(' · ')+'</div>';
+  }
   if(s.offen){
     var jeGruppe=GRUPPEN.filter(function(t){ return bd[t]&&bd[t].offen; })
       .map(function(t){ return t+' '+bd[t].offen; }).join(' · ');
@@ -1115,7 +1161,7 @@ function csvLager(){
   var z=[['Art','Typ','Gewinde_mm','Lagerort','Anzahl','Von','Datum']];
   Object.keys(lager).sort().forEach(function(k){
     var m=lager[k];
-    z.push([m.art,m.typ,+m.gewinde||'ungemessen',m.ort,m.anzahl,m.von||'',m.datum||'']);
+    z.push([m.art,m.typ,(m.gewinde==='vm'?'verschraubt':(+m.gewinde||'ungemessen')),m.ort,m.anzahl,m.von||'',m.datum||'']);
   });
   csv('lagerbestand_'+heute()+'.csv',z);
 }
