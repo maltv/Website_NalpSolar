@@ -60,6 +60,29 @@
   #saveMsg { font-size:13px; font-weight:700; margin-left:10px; }
   .foot { text-align:center; font-size:11.5px; color:var(--mut); padding:10px 0 30px; }
   .foot a { color:var(--rot); font-weight:700; }
+  /* Aufgabenliste */
+  .knopf.mini { padding:6px 11px; font-size:12.5px; margin:0; }
+  .knopf.mini.an { background:var(--rot); color:#fff; }
+  .aufkopf { display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
+  .aufkopf input[type=search] { flex:1; min-width:130px; padding:7px 9px; font-size:14px;
+        border:1px solid #c9ccd2; border-radius:5px; }
+  .aufliste { list-style:none; margin:0; padding:0; max-height:60vh; overflow-y:auto;
+        border-top:1px solid var(--line); }
+  .aufliste li { border-bottom:1px solid var(--line); padding:8px 2px; display:flex; gap:9px;
+        align-items:flex-start; font-size:13.5px; line-height:1.45; }
+  .aufliste li.leer { color:var(--mut); justify-content:center; padding:16px; }
+  .aufliste input[type=checkbox] { width:19px; height:19px; margin:1px 0 0; flex:0 0 19px; }
+  .aufliste .tt { flex:1; min-width:0; cursor:pointer; }
+  .aufliste .tt b { font-weight:700; }
+  .aufliste li.fertig .tt { text-decoration:line-through; color:var(--mut); }
+  .aufliste .frist { display:inline-block; background:#eef0f2; color:var(--mut); font-size:11px;
+        font-weight:700; border-radius:9px; padding:1px 7px; margin-left:6px; white-space:nowrap; }
+  .aufliste .frist.rot { background:var(--rot); color:#fff; }
+  .aufliste .mehr { display:none; margin-top:5px; font-size:12.5px; color:var(--mut); }
+  .aufliste li.offen_detail .mehr { display:block; }
+  .aufneu { display:flex; gap:6px; margin-top:10px; }
+  .aufneu input { flex:1; padding:8px 9px; font-size:14px; border:1px solid #c9ccd2; border-radius:5px; }
+  .aufneu .knopf { margin:0; padding:8px 16px; font-size:17px; font-weight:900; }
 </style>
 </head>
 <body>
@@ -71,7 +94,29 @@
 
 <div class="wrap">
 
-  <!-- ── 0. Weitere Admin-Werkzeuge ──────────────────────────────────── -->
+  <!-- ── 0. Aufgabenliste ────────────────────────────────────────────── -->
+  <div class="card auf">
+    <h2>Aufgaben <span id="aufZahl" style="font-weight:400;color:var(--mut);font-size:13px"></span></h2>
+    <div class="sub">Dieselbe Liste wie <b>Dashboard\aufgaben.md</b> im KI-Projekt. Hier abhaken,
+      der nächste Abgleich (<code>Tools\Aufgaben_Sync.py</code>) trägt es dort nach – und umgekehrt.
+      Auf den Titel tippen zeigt den ganzen Eintrag.</div>
+
+    <div class="aufkopf">
+      <input type="search" id="aufSuche" placeholder="suchen …">
+      <button class="knopf mini" data-f="offen">offen</button>
+      <button class="knopf mini" data-f="frist">mit Frist</button>
+      <button class="knopf mini" data-f="alle">alle</button>
+    </div>
+
+    <ul id="aufListe" class="aufliste"><li class="leer">lade …</li></ul>
+
+    <div class="aufneu">
+      <input type="text" id="aufNeuText" placeholder="neue Aufgabe …">
+      <button class="knopf rot" id="aufNeu">+</button>
+    </div>
+  </div>
+
+  <!-- ── 0b. Weitere Admin-Werkzeuge ─────────────────────────────────── -->
   <div class="card">
     <h2>Erdleiter · Dokumentation</h2>
     <div class="sub">Alle eingemessenen Verbindungsstellen 2025 und 2026 auf der Karte,
@@ -348,6 +393,96 @@ $('speichern').onclick=function(){
     setTimeout(function(){ $('saveMsg').textContent=''; },5000);
   }).catch(function(){ $('saveMsg').textContent='⚠ Speichern fehlgeschlagen'; $('saveMsg').style.color='#D72622'; });
 };
+
+/* ── Aufgabenliste (Gegenstueck: Tools\Aufgaben_Sync.py) ── */
+var DBA='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app/erfassung/aufgaben';
+var aufDaten={}, aufFilter='offen';
+
+function heuteISO(){ var d=new Date(); return d.toISOString().slice(0,10); }
+function fristISO(f){ var t=/^(\d{2})\.(\d{2})\.(\d{4})$/.exec(f||''); return t?(t[3]+'-'+t[2]+'-'+t[1]):''; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+function aufZeichnen(){
+  var such=($('aufSuche').value||'').toLowerCase();
+  var keys=Object.keys(aufDaten).filter(function(k){ return aufDaten[k] && aufDaten[k].titel; });
+  var offen=keys.filter(function(k){ return !aufDaten[k].erledigt; }).length;
+  $('aufZahl').textContent='· '+offen+' offen von '+keys.length;
+
+  keys=keys.filter(function(k){
+    var a=aufDaten[k];
+    if(aufFilter==='offen' && a.erledigt) return false;
+    if(aufFilter==='frist' && (!a.frist || a.erledigt)) return false;
+    if(such && ((a.titel||'')+' '+(a.text||'')).toLowerCase().indexOf(such)<0) return false;
+    return true;
+  });
+  /* mit Frist zuerst (die naechste oben), danach die Reihenfolge aus der md */
+  keys.sort(function(x,y){
+    var a=aufDaten[x], b=aufDaten[y];
+    var fa=fristISO(a.frist), fb=fristISO(b.frist);
+    if(fa&&!fb) return -1; if(fb&&!fa) return 1;
+    if(fa&&fb&&fa!==fb) return fa<fb?-1:1;
+    return (a.nr||0)-(b.nr||0);
+  });
+
+  if(!keys.length){ $('aufListe').innerHTML='<li class="leer">nichts gefunden</li>'; return; }
+  var h='';
+  keys.forEach(function(k){
+    var a=aufDaten[k], f=fristISO(a.frist), spaet=f&&f<heuteISO();
+    h+='<li data-k="'+k+'"'+(a.erledigt?' class="fertig"':'')+'>'+
+       '<input type="checkbox"'+(a.erledigt?' checked':'')+'>'+
+       '<div class="tt"><b>'+esc(a.titel)+'</b>'+
+       (a.frist?'<span class="frist'+(spaet?' rot':'')+'">bis '+esc(a.frist)+'</span>':'')+
+       '<div class="mehr">'+esc(a.text||'').slice(0,900)+
+       (a.quelle?'<br><i>Quelle: '+esc(a.quelle)+'</i>':'')+'</div></div></li>';
+  });
+  $('aufListe').innerHTML=h;
+}
+
+function ladeAufgaben(){
+  fetch(DBA+'.json?_='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();})
+  .then(function(d){ aufDaten=d||{}; aufZeichnen(); })
+  .catch(function(){ $('aufListe').innerHTML='<li class="leer">⚠ Aufgaben nicht erreichbar</li>'; });
+}
+
+$('aufListe').addEventListener('click',function(ev){
+  var li=ev.target.closest('li[data-k]'); if(!li) return;
+  var k=li.getAttribute('data-k');
+  if(ev.target.type==='checkbox'){
+    var fertig=ev.target.checked;
+    aufDaten[k].erledigt=fertig;
+    li.classList.toggle('fertig',fertig);
+    fetch(DBA+'/'+k+'.json',{method:'PATCH',body:JSON.stringify(
+      {erledigt:fertig, erledigt_am:fertig?new Date().toLocaleDateString('de-CH'):''})})
+    .then(function(){ aufZeichnen(); })
+    .catch(function(){ alert('Konnte nicht gespeichert werden.'); ev.target.checked=!fertig; });
+  } else {
+    li.classList.toggle('offen_detail');
+  }
+});
+
+Array.prototype.forEach.call(document.querySelectorAll('.aufkopf .knopf'),function(b){
+  b.onclick=function(){
+    aufFilter=b.getAttribute('data-f');
+    Array.prototype.forEach.call(document.querySelectorAll('.aufkopf .knopf'),function(o){
+      o.classList.toggle('an',o===b); });
+    aufZeichnen();
+  };
+  if(b.getAttribute('data-f')==='offen') b.classList.add('an');
+});
+$('aufSuche').oninput=aufZeichnen;
+
+$('aufNeu').onclick=function(){
+  var t=($('aufNeuText').value||'').trim(); if(!t) return;
+  var k='web'+Date.now();
+  var obj={titel:t, text:'', quelle:'Web-Admin', frist:'', erledigt:false,
+           herkunft:'web', stand:new Date().toLocaleDateString('de-CH'), nr:9999};
+  fetch(DBA+'/'+k+'.json',{method:'PUT',body:JSON.stringify(obj)})
+  .then(function(){ $('aufNeuText').value=''; aufDaten[k]=obj; aufZeichnen(); })
+  .catch(function(){ alert('Konnte nicht gespeichert werden.'); });
+};
+
+ladeAufgaben(); setInterval(ladeAufgaben,3*60*1000);
 
 ladeWind(); ladeDp(); ladeStatus(); ladeSteuerung();
 setInterval(ladeWind,5*60*1000); setInterval(ladeDp,5*60*1000); setInterval(ladeStatus,2*60*1000);

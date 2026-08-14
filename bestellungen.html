@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Bestellungen &amp; offene Punkte · NalpSolar</title>
+<meta name="robots" content="noindex,nofollow">
+<!-- Übersicht Werkzeug-/Materialbestellungen Stahlbau. Quelle im KI-Projekt:
+     Bestellungen\20260814_Bestellliste_Stahlbau.md + Auswahlblatt_Werkzeug.html -->
+<script>
+  window.NALP_GATE_CODE  = '7188';
+  window.NALP_GATE_KEY   = 'nalp_logistik_unlock_v1';
+  window.NALP_GATE_TITEL = 'Bestellungen';
+  window.NALP_GATE_SUB   = 'Baustelle NalpSolar · Code = Postleitzahl';
+</script>
+<script src="assets/js/nalp-gate.js"></script>
+<style>
+  :root { color-scheme: light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
+          --gruen:#2e9e46; --orange:#e08a00; --hell:#f6f7f8; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin:0; }
+  body { font-family:Arial,"Helvetica Neue",sans-serif; color:var(--ink); background:#f2f3f5; }
+  .topbar { background:#fff; border-bottom:4px solid var(--rot); padding:12px 18px;
+            display:flex; align-items:center; gap:14px; }
+  .topbar img { height:26px; display:block; }
+  .topbar .t { font-weight:900; font-size:17px; }
+  .topbar .los { font-size:11.5px; color:var(--mut); font-weight:700; letter-spacing:.06em; margin-left:auto; }
+  .wrap { max-width:940px; margin:0 auto; padding:16px 14px 40px; }
+  .card { background:#fff; border:1px solid var(--line); border-left:5px solid var(--rot);
+          border-radius:6px; padding:14px 16px; margin-bottom:14px; box-shadow:0 1px 4px rgba(20,25,32,.07); }
+  .card.gelb { border-left-color:var(--orange); }
+  .card h2 { margin:0 0 8px; font-size:16px; }
+  .sub { font-size:12.5px; color:var(--mut); margin-bottom:10px; line-height:1.5; }
+  table { border-collapse:collapse; width:100%; font-size:13px; }
+  th,td { padding:6px 8px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
+  th { background:var(--hell); font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--mut); }
+  td.mng { white-space:nowrap; font-weight:700; }
+  .tabhuelle { overflow-x:auto; }
+  .st { display:inline-block; padding:2px 9px; border-radius:11px; font-size:11px;
+        font-weight:700; color:#fff; white-space:nowrap; }
+  .st.raus { background:var(--gruen); }
+  .st.warten { background:var(--orange); }
+  .st.offen { background:#8a8e94; }
+  .st.stop { background:var(--rot); }
+  .wer { display:inline-block; background:var(--hell); border:1px solid var(--line);
+         border-radius:11px; padding:1px 9px; font-size:11.5px; font-weight:700; white-space:nowrap; }
+  .legende { font-size:11.5px; color:var(--mut); margin-top:10px; line-height:1.9; }
+  .opt { border:1px solid var(--line); border-radius:6px; padding:10px 12px; margin:8px 0; }
+  .opt.top { border-color:var(--gruen); border-width:2px; background:#f4fbf5; }
+  .opt b { font-size:14px; }
+  .opt .pr { float:right; font-weight:900; }
+  .foot { text-align:center; font-size:11.5px; color:var(--mut); padding:10px 0 30px; }
+  .foot a { color:var(--rot); font-weight:700; }
+  @media (max-width:560px){ th,td{ padding:5px 6px; font-size:12.5px; } }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <img src="assets/img/strabag-logo.png" alt="STRABAG">
+  <div class="t">Bestellungen &amp; offene Punkte</div>
+  <div class="los">NALPSOLAR · B8-13</div>
+</div>
+
+<div class="wrap">
+
+  <div class="card">
+    <h2>Worum es geht</h2>
+    <div class="sub">Werkzeug und Material für den Stahlbau, aus den Handnotizen von Victor und
+      der Wunschliste von Chris. Diese Seite zeigt, <b>was wo bestellt ist</b> und
+      <b>was noch fehlt – und von wem</b>. Stand 14.08.2026, 18:00.</div>
+    <div class="legende">
+      <span class="st raus">gesendet</span> Bestellung ist beim Lieferanten, AB steht aus &nbsp;
+      <span class="st warten">wartet</span> Anfrage läuft, Antwort ausstehend &nbsp;
+      <span class="st offen">offen</span> noch nicht bestellt &nbsp;
+      <span class="st stop">Freigabe</span> braucht einen Entscheid
+    </div>
+  </div>
+
+  <!-- ── bestellt ────────────────────────────────────────────────────── -->
+  <div class="card">
+    <h2>Bestellt am 14.08.2026</h2>
+    <div class="tabhuelle">
+    <table>
+      <tr><th>Lieferant</th><th>Was</th><th>Menge</th><th>Status</th></tr>
+      <tr>
+        <td><b>Arthur Weber</b><br><span class="sub">Schattdorf</span></td>
+        <td>Winkelschleifer Makita GA9020RF 230 mm · Gelenkleiter HB Typ 310 ·
+            Ganzstahl-Zwingen Bessey GZ-2K 300/400/500 · Ratschenringschlüssel 17 + 19 ·
+            Gliedermeter · Anreissnadeln · Schutzbrillen · Hebeleisen-Sets ·
+            Elektroden rutil Ø 2.5 + 3.2<br>
+            <i>dazu Offerte für einen Drehmomentschlüssel bis 1600 Nm</i></td>
+        <td class="mng">2<br>2<br>je 2<br>je 3<br>20<br>5<br>5<br>2 Sets<br>2 Pkg</td>
+        <td><span class="st raus">gesendet</span><br><span class="sub">17:34</span></td>
+      </tr>
+      <tr>
+        <td><b>Berner</b><br><span class="sub">Reinach BL</span></td>
+        <td>Schweisserhandschuhe Art. 23814 Gr. 8/9/10 · Baueimer Premium · Toolbox leer ·
+            Transport-Stapelbox · Mörtelkübel gross · Tasche für die Nüsse</td>
+        <td class="mng">75 Paar<br>16<br>3<br>8<br>2<br>1</td>
+        <td><span class="st raus">gesendet</span><br><span class="sub">17:33</span></td>
+      </tr>
+      <tr>
+        <td><b>Hebetech</b><br><span class="sub">Christian Igrek</span></td>
+        <td>Rundschlinge 6 t, 3 m · Kettenzug 3 t, Hubhöhe 3 m<br>
+            <i>mit Rückfrage: «orange» wäre nach Farbcode 10 t, 6 t ist braun</i></td>
+        <td class="mng">4<br>2</td>
+        <td><span class="st raus">gesendet</span><br><span class="sub">17:33</span></td>
+      </tr>
+      <tr>
+        <td><b>Barit</b><br><span class="sub">Bene Albin</span></td>
+        <td>SBB-Palettenkisten mit Deckel · ohne Deckel – Anfrage, ob sie die haben und
+            ob kaufen oder mieten günstiger ist</td>
+        <td class="mng">16<br>20</td>
+        <td><span class="st warten">wartet</span><br><span class="sub">17:32</span></td>
+      </tr>
+      <tr>
+        <td><b>BMTI Erstfeld</b><br><span class="sub">Corsin Giger / Wisi</span></td>
+        <td>MAG-Schweissanlage 400 A für rund 3 Monate aus dem Pool ·
+            Funkgeräte · Bereich und Kalibrierung des 2025 übernommenen Drehmomentschlüssels</td>
+        <td class="mng">1<br>?<br>–</td>
+        <td><span class="st warten">wartet</span><br><span class="sub">16:34 / 17:32</span></td>
+      </tr>
+      <tr>
+        <td><b>Anker Swiss</b><br><span class="sub">Personalverleih</span></td>
+        <td>Regenkleider für Kasper – Anfrage, ob der Verleiher sie stellt</td>
+        <td class="mng">–</td>
+        <td><span class="st warten">wartet</span></td>
+      </tr>
+    </table>
+    </div>
+  </div>
+
+  <!-- ── offen ───────────────────────────────────────────────────────── -->
+  <div class="card gelb">
+    <h2>Noch nicht bestellt – wer liefert die fehlende Angabe?</h2>
+    <div class="sub">Ohne diese Angaben kann man nicht seriös bestellen. Wer genannt ist, ist gebeten,
+      die Antwort an Victor zu geben.</div>
+    <div class="tabhuelle">
+    <table>
+      <tr><th>Sache</th><th>Was fehlt</th><th>Wer</th><th>Status</th></tr>
+      <tr>
+        <td><b>Kernbohrer</b> für die Magnetbohrmaschine</td>
+        <td><b>Pfettenhöhe ist geklärt: 100 mm</b> (siehe unten). Offen bleibt nur noch der
+            <b>Durchmesser</b> der Löcher, die gebohrt werden sollen.</td>
+        <td><span class="wer">Przemek</span></td>
+        <td><span class="st offen">offen</span></td>
+      </tr>
+      <tr>
+        <td><b>Rundschlingen</b> 6 t</td>
+        <td>Länge – und ob wirklich 6 t oder doch 10 t gemeint sind (orange = 10 t)</td>
+        <td><span class="wer">Przemek</span></td>
+        <td><span class="st offen">offen</span></td>
+      </tr>
+      <tr>
+        <td><b>Kettenzüge</b></td>
+        <td>Tragkraft und Hubhöhe – sollen es die gleichen sein wie die zwei vorhandenen?</td>
+        <td><span class="wer">Chris</span></td>
+        <td><span class="st offen">offen</span></td>
+      </tr>
+      <tr>
+        <td><b>Lange Seile</b></td>
+        <td>Was genau: Führungsseile zum Steuern der Last oder etwas anderes? Länge und Durchmesser</td>
+        <td><span class="wer">Chris</span></td>
+        <td><span class="st offen">offen</span></td>
+      </tr>
+      <tr>
+        <td><b>Funkgeräte</b></td>
+        <td>Welches Modell ist im Einsatz, damit die neuen dazu passen</td>
+        <td><span class="wer">Chris</span></td>
+        <td><span class="st offen">offen</span></td>
+      </tr>
+      <tr>
+        <td><b>Stahlprofile</b><br>U 35/40/35×5 · L 45×45×5 · L 100×100</td>
+        <td>Arthur Weber führt keinen Profilstahl → Stahlhändler wählen. Beim U-Profil fehlt noch,
+            ob die Masse innen oder aussen gelten. Beim 100er gibt es warmgewalzt nur 8/10/12 mm,
+            aufgenommen ist 10 mm.</td>
+        <td><span class="wer">Victor</span> <span class="wer">Przemek</span></td>
+        <td><span class="st offen">offen</span></td>
+      </tr>
+      <tr>
+        <td><b>Schweisswinkel</b></td>
+        <td>Nach dem Foto vom 14.08. werden die selbst gebaut – dann deckt die Profilbestellung
+            den Punkt ab. Kurz bestätigen.</td>
+        <td><span class="wer">Przemek</span></td>
+        <td><span class="st offen">offen</span></td>
+      </tr>
+      <tr>
+        <td><b>Elektroden</b></td>
+        <td>Der Typ muss zur Schweissanweisung passen (Vorbereitungsgrad mind. P2).
+            Offen ist, wer das nach dem Wegfall der Werksmeister-Stelle zeichnet.</td>
+        <td><span class="wer">François</span></td>
+        <td><span class="st offen">offen</span></td>
+      </tr>
+      <tr>
+        <td><b>MAG-Anlage am Berg</b></td>
+        <td>400 A brauchen Strom – Anschlussleistung und Generator prüfen, bevor die Anlage kommt</td>
+        <td><span class="wer">Samuel</span></td>
+        <td><span class="st offen">offen</span></td>
+      </tr>
+    </table>
+    </div>
+  </div>
+
+  <!-- ── Freigabe Magnetbohrmaschine ─────────────────────────────────── -->
+  <div class="card">
+    <h2>Freigabe nötig: eigene Magnetbohrmaschine <span class="st stop">François</span></h2>
+    <div class="sub"><b>Warum:</b> Am 11./12.08. mussten wir eine Magnetbohrmaschine (Ø 25 mm) bei
+      Wisi in Erstfeld ausleihen und am nächsten Abend wieder zurückbringen. Der Stahlbau braucht sie
+      laufend, um durch die Pfetten zu bohren. Eine eigene Maschine spart die Fahrten und die
+      Abhängigkeit vom Boxenbestand.</div>
+    <div class="sub">Preise sind Listenpreise Arthur Weber; dort gibt es erfahrungsgemäss
+      <b>20–33 % Rabatt</b>, der Endpreis liegt also deutlich tiefer.</div>
+
+    <div class="opt top">
+      <span class="pr">CHF 1'070.19</span>
+      <b>FEIN KBU 35 QW</b> · Art. 615575 · Aktion &nbsp;<span class="st raus">Vorschlag</span>
+      <div class="sub" style="margin:6px 0 0">1'100 W, Kernbohrer bis Ø 35 mm (Leihgerät konnte 25),
+        Weldon 3/4″, <b>135 mm Hub</b> – damit reicht der Weg für die 100 mm hohe Pfette, wenn eine
+        Weldon-Verlängerung dazukommt. Werkzeugloser Schnellwechsel. FEIN ist auf dem Bau die
+        eingeführte Marke, Service und Ersatzteile sind kein Thema.
+        Mit Rabatt landen wir bei rund CHF 750–860.
+        <br><b>Dazu bestellen:</b> Weldon-Verlängerung 19 mm und Kernbohrer im gebrauchten
+        Durchmesser – sobald Przemek den durchgibt.</div>
+    </div>
+
+    <div class="opt">
+      <span class="pr">CHF 788.05</span>
+      <b>BDS MABasic 400</b> · Art. 844203 · Aktion
+      <div class="sub" style="margin:6px 0 0">Die günstigste brauchbare Maschine. Weniger verbreitet,
+        dafür rund 280 Franken billiger.</div>
+    </div>
+
+    <div class="opt">
+      <span class="pr">CHF 2'191.08</span>
+      <b>FEIN KBM 50 Q</b> · Art. 610637 · 1'200 W
+      <div class="sub" style="margin:6px 0 0">Die schwere Klasse, bis Ø 50 mm. Nur nötig, wenn wir
+        grosse Löcher oder sehr dicke Profile bohren müssen.</div>
+    </div>
+
+    <div class="opt">
+      <span class="pr">CHF 0.–</span>
+      <b>Weiter ausleihen bei BMTI</b>
+      <div class="sub" style="margin:6px 0 0">Kostet nichts, aber jedes Mal zwei Fahrten nach Erstfeld
+        und die Maschine ist nicht verfügbar, wenn sie dort gebraucht wird.</div>
+    </div>
+
+  </div>
+
+  <!-- ── Pfetten ─────────────────────────────────────────────────────── -->
+  <div class="card">
+    <h2>Wie hoch sind die Pfetten? 100 mm</h2>
+    <div class="sub">Danach richtet sich, wie lang der Kernbohrer sein muss. Ausgelesen aus den
+      Tekla-Modellen des Modultischs (<code>NalpSolar_51_PL_0350/0354_A1_MT-3D-Ges-10er</code>) –
+      bei Typ A und Typ E identisch, der Modulträger ist für alle Typen derselbe.</div>
+    <div class="tabhuelle">
+    <table>
+      <tr><th>Bauteil</th><th>Profil</th><th>Stück</th><th>Höhe in Bohrrichtung</th></tr>
+      <tr><td>Pfette (obere / untere)</td><td>Rechteckrohr RRK 100 × 60 × 4</td><td class="mng">2</td><td class="mng">100 mm</td></tr>
+      <tr><td>Pfette (mittlere)</td><td>Quadratrohr RRW 100 × 100 × 5</td><td class="mng">1</td><td class="mng">100 mm</td></tr>
+      <tr><td>Aussteifung / Rahmen</td><td>U 40 × 40 × 3 und RRK 40 × 3</td><td class="mng">8 + 4</td><td class="mng">40 mm</td></tr>
+      <tr><td>Auflagerträger (Primärkonstruktion)</td><td>HEA 140 bzw. RRK 100 × 100 × 5</td><td class="mng">–</td><td class="mng">–</td></tr>
+    </table>
+    </div>
+    <div class="sub" style="margin-top:10px">Das Montagekonzept nennt genau drei Pfetten – obere,
+      mittlere und untere – und im Modell gibt es genau drei Träger mit 100 mm Höhe. Die Wandstärke
+      beträgt 4 bzw. 5 mm, dazwischen ist Hohlraum.
+      <br><br><b>Was das für den Bohrer heisst:</b> Um von oben bis auf die untere Wand
+      durchzukommen, muss das Werkzeug rund 100 mm überbrücken. Ein normaler Kernbohrer schneidet
+      nur 50 mm tief – das reicht nicht. Zwei Wege: entweder ein Kernbohrer in langer Ausführung
+      (100 mm Schnitttiefe) oder eine <b>Weldon-Verlängerung</b> mit den normalen 50-mm-Bohrern.
+      Die Verlängerung ist der günstigere Weg und passt zur vorgeschlagenen Maschine, die
+      135 mm Hub hat.</div>
+  </div>
+
+  <div class="foot"><a href="index.html">← zurück zum Portal</a> · Stand 14.08.2026 ·
+    Fragen an Victor</div>
+</div>
+</body>
+</html>
