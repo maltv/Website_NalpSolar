@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>NalpSolar · Betonspurfertiger</title>
+<meta name="theme-color" content="#ffffff">
+<script src="assets/js/nalp-gate.js"></script>
+<style>
+  :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
+         --blau:#0b5394; --gelb:#a05a00; --gruen:#1c8a4a; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; overflow-x:hidden; }
+  body{ background:#eef0f3; color:var(--ink); font-family:Arial,"Helvetica Neue",sans-serif; line-height:1.5; }
+  header{ position:sticky; top:0; z-index:30; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+          padding:10px 14px calc(10px + env(safe-area-inset-top)); background:#fff; border-bottom:4px solid var(--rot); }
+  header a.home{ color:var(--ink); text-decoration:none; font-size:20px; }
+  header .logo img{ height:22px; display:block; }
+  header h1{ font-size:15.5px; margin:0; flex:1; font-weight:900; }
+  .btn{ display:inline-block; border:none; border-radius:6px; padding:8px 12px; font-size:12.5px;
+        font-weight:800; cursor:pointer; color:#fff; background:var(--rot); text-decoration:none; white-space:nowrap; }
+  .btn.ghost{ background:#fff; color:var(--ink); border:1px solid #c9ccd2; font-weight:700; }
+  .wrap{ max-width:880px; margin:0 auto; padding:14px 14px 60px; }
+
+  .karte{ background:#fff; border:1px solid var(--line); border-radius:10px; padding:14px 16px;
+          margin-bottom:14px; box-shadow:0 2px 8px rgba(20,25,32,.06); max-width:100%; }
+  .karte h2{ font-size:16px; font-weight:900; margin:0 0 8px; }
+  .karte h3{ font-size:14px; font-weight:900; margin:14px 0 4px; }
+  .karte p{ margin:0 0 8px; font-size:14px; }
+  .karte ul{ margin:4px 0 8px; padding-left:20px; font-size:14px; }
+  .karte li{ margin-bottom:4px; }
+  .lead{ color:var(--mut); font-size:13.5px; }
+
+  .alarm{ border-left:6px solid var(--rot); background:#fff5f5; }
+  .alarm h2{ color:#a00000; }
+  .tipp{ border-left:6px solid var(--blau); background:#f3f7fc; }
+
+  .kennwerte{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-top:6px; }
+  .kw{ background:#f7f8fa; border:1px solid var(--line); border-radius:8px; padding:10px 12px; }
+  .kw .z{ font-size:20px; font-weight:900; line-height:1.1; }
+  .kw .b{ font-size:11.5px; color:var(--mut); margin-top:2px; }
+
+  .bruch{ display:grid; gap:12px; }
+  .bcard{ border:1px solid var(--line); border-left:6px solid var(--rot); border-radius:10px; padding:12px 14px; background:#fff; }
+  .bcard .nr{ display:inline-block; background:var(--rot); color:#fff; font-weight:900; font-size:12px;
+              border-radius:20px; padding:2px 10px; margin-bottom:6px; }
+  .bcard .t{ font-size:15px; font-weight:900; margin-bottom:4px; }
+  .bcard .s{ font-size:13.5px; }
+  .bcard .rechnung{ font-family:"Courier New",monospace; font-size:12px; background:#f4f5f7;
+                    border:1px solid var(--line); border-radius:6px; padding:8px 10px; margin-top:8px;
+                    white-space:pre-wrap; overflow-wrap:anywhere; max-width:100%; }
+  .gut{ color:var(--gruen); font-weight:900; }
+  .schlecht{ color:var(--rot); font-weight:900; }
+
+  .zeichnung{ overflow-x:auto; -webkit-overflow-scrolling:touch; background:#fff; border:1px solid var(--line);
+              border-radius:8px; padding:8px; margin-bottom:6px; }
+  .zeichnung svg{ display:block; min-width:560px; width:100%; height:auto; }
+  .zcap{ font-size:12px; color:var(--mut); margin:0 0 14px; }
+
+  .galerie{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:8px; }
+  .galerie figure{ margin:0; }
+  .galerie img{ width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:6px; border:1px solid var(--line);
+                cursor:zoom-in; display:block; }
+  .galerie figcaption{ font-size:11px; color:var(--mut); margin-top:3px; line-height:1.35; }
+
+  #lb{ position:fixed; inset:0; background:rgba(0,0,0,.92); display:none; z-index:100; padding:10px; }
+  #lb.on{ display:flex; align-items:center; justify-content:center; }
+  #lb img{ max-width:100%; max-height:100%; object-fit:contain; }
+  #lb .zu{ position:absolute; top:calc(10px + env(safe-area-inset-top)); right:14px; color:#fff; font-size:30px;
+           font-weight:900; cursor:pointer; line-height:1; }
+
+  .quellen{ font-size:11.5px; color:var(--mut); line-height:1.6; }
+  .dl{ display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
+  @media(max-width:520px){ header h1{ font-size:14px; flex-basis:100%; } }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="home" href="index.html" title="Startseite">🏠</a>
+  <div class="logo"><img src="assets/img/strabag-logo.png" alt="STRABAG"></div>
+  <h1>🛤 Betonspurfertiger</h1>
+  <a class="btn" href="Betonspur/Werkstattzeichnung_Betonspurfertiger.pdf" target="_blank">⬇ Zeichnung</a>
+  <a class="btn ghost" href="Betonspur/Bemessung_Betonspurfertiger.pdf" target="_blank">⬇ Bemessung</a>
+</header>
+
+<div class="wrap">
+
+  <div class="karte alarm">
+    <h2>⚠ Ausführung ist offen</h2>
+    <p>Der vorgesehene Erbauer steht seit dem <b>13.08.2026</b> nicht mehr zur Verfügung, gebraucht wird
+       das Gerät im <b>September</b>. Zeichnung und Statik sind fertig und bewusst so gehalten, dass eine
+       fremde Werkstatt ohne Vorwissen danach bauen kann.</p>
+    <h3>Drei Wege – Entscheid Bauführung</h3>
+    <ul>
+      <li><b>Eigene Werkstatt Erstfeld</b> – Zeichnung + Stückliste liegen vor, ≈ 760 kg Stahlbau, 14 Positionen.</li>
+      <li><b>Externer Stahlbauer</b> – die Unterlage ist vergabefähig, keine Sonderwerkstoffe.</li>
+      <li><b>Gar nicht selber bauen:</b> die <b>E. Gloggner AG</b> baut solche Spuren gewerblich ein
+          (sie hat es in Rehetobel gemacht) – Angebot für den Einbau im Unterakkord einholen.</li>
+    </ul>
+    <p class="lead">Ebenfalls offen: Wo liegt das Prototyp-Material aus der Bestellung vom Juni
+       (Protokoll Abstimmungssitzung 43, 22.06.2026)?</p>
+  </div>
+
+  <div class="karte">
+    <h2>Worum es geht</h2>
+    <p>Ein gezogener Schlitten, der die Betonspur der Baupiste in einem Zug einbaut: Beton aus der Mulde
+       läuft in eine Kammer, wird verdichtet und hinter der Abziehbohle als fertige Spur abgelegt.
+       Vorbild ist der Schlitten, mit dem die <b>E. Gloggner AG</b> 2022 in Rehetobel zwei Fahrspuren
+       eingebaut hat.</p>
+    <div class="kennwerte">
+      <div class="kw"><div class="z">3.00 m</div><div class="b">Spurbreite (Vorgabe)</div></div>
+      <div class="kw"><div class="z">16 cm</div><div class="b">Betondicke, durchgängig</div></div>
+      <div class="kw"><div class="z">20 %</div><div class="b">max. Längsneigung (Alphüttenstrasse)</div></div>
+      <div class="kw"><div class="z">2.5 t</div><div class="b">Betriebsgewicht mit Mulde + Ballast</div></div>
+      <div class="kw"><div class="z">42 kN</div><div class="b">Zugkraft im Betrieb</div></div>
+      <div class="kw"><div class="z">0.85 m</div><div class="b">Spur je Muldenfüllung (0.4 m³)</div></div>
+    </div>
+  </div>
+
+  <div class="karte">
+    <h2>Die drei Stellen, an denen so ein Schlitten bricht</h2>
+    <p class="lead">Der Frischbetondruck ist <b>nicht</b> das Problem: 7.5–12.5 kN/m², die Bleche sind zu
+       13 % ausgelastet. Gefährlich ist anderes.</p>
+    <div class="bruch">
+
+      <div class="bcard">
+        <div class="nr">1</div>
+        <div class="t">Die Zugkraft reisst den Querträger auf</div>
+        <div class="s">Kette mittig angeschlagen – so wie beim Vorbild – macht aus dem Querträger einen
+          Einfeldträger über 3.3 m mit Einzellast in der Mitte. Lösung: <b>A-Deichsel</b>, Zugauge 1 m vor
+          dem Rahmen, zwei Streben in die Seitenwangen. Gleiche Kraft, elffach kleineres Moment.</div>
+        <div class="rechnung">Kette mittig:  M = 90 kN · 3.30 m / 4 = 74 kNm
+  RHS 200×100×8 → <span class="schlecht">η = 1.20  bricht</span>
+A-Deichsel:    N = 90 / (2 · cos 41°) = 59.6 kN
+  RHS 100×60×5  → <span class="gut">η = 0.19  hält</span></div>
+      </div>
+
+      <div class="bcard">
+        <div class="nr">2</div>
+        <div class="t">Der Bagger ist stärker als jede sinnvolle Konstruktion</div>
+        <div class="s">Ein 20-Tönner zieht am Haken rund 120 kN – das Dreifache der Betriebszugkraft.
+          Bleibt der Schlitten an einem Stein hängen, reisst der Rahmen. Deshalb gehört eine
+          <b>definierte Sollbruchstelle</b> in den Zugstrang.</div>
+        <div class="rechnung">Scherbolzen Ø18 mm, S235 <b>blank</b> (kein Vergütungsstahl!)
+schert ab bei ≈ 55 kN · Betriebszugkraft 42 kN
+→ 10 Ersatzbolzen ins Werkzeugfach</div>
+      </div>
+
+      <div class="bcard">
+        <div class="nr">3</div>
+        <div class="t">Die Vibronadeln zerstören die Schweissnähte</div>
+        <div class="s">200 Hz heisst <b>5.8 Millionen Lastwechsel pro Schicht</b>. Starr angeschweisste
+          Rüttlerhalterungen reissen innerhalb weniger Tage. Rüttler auf
+          <b>Gummi-Metall-Puffer</b> lagern und die Nähte nach der ersten Woche kontrollieren.</div>
+        <div class="rechnung">starr:      Δσ = 64 N/mm²  gegen 45 zulässig → <span class="schlecht">η = 1.41</span>
+mit Puffern: Δσ = 9.6 N/mm²                → <span class="gut">η = 0.21</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="karte">
+    <h2>Zeichnung</h2>
+    <p class="lead">Seitlich wischen zum Schauen · vollständige Blätter im PDF (3 × A3, Massstab 1:25).</p>
+
+    <div class="zeichnung">
+      <svg viewBox="-2050 -900 7000 5000" role="img" aria-label="Draufsicht Betonspurfertiger">
+        <defs>
+          <marker id="p1" markerWidth="60" markerHeight="60" refX="30" refY="6" orient="auto">
+            <path d="M0,0 L36,6 L0,12 z" fill="#a00000"/>
+          </marker>
+        </defs>
+        <g stroke="#111" stroke-width="14" fill="none">
+          <rect x="0" y="0" width="2600" height="150" fill="#cfd8e3"/>
+          <rect x="0" y="3150" width="2600" height="150" fill="#cfd8e3"/>
+          <rect x="0" y="150" width="140" height="3000" fill="#9fb3c8"/>
+          <rect x="330" y="150" width="120" height="3000" fill="#e2e8f0"/>
+          <rect x="140" y="150" width="1860" height="3000" fill="#f7f7f5" stroke="#888" stroke-width="7" stroke-dasharray="40 30"/>
+          <rect x="600" y="850" width="1150" height="1600" fill="none" stroke="#c08000" stroke-width="12" stroke-dasharray="70 45"/>
+          <rect x="1620" y="600" width="230" height="230" fill="#ffd9a0" stroke="#a05a00" stroke-width="11"/>
+          <rect x="1620" y="2470" width="230" height="230" fill="#ffd9a0" stroke="#a05a00" stroke-width="11"/>
+          <rect x="2000" y="150" width="600" height="3000" fill="#dde5ee"/>
+          <rect x="2180" y="150" width="160" height="3000" fill="#b9c6d6"/>
+          <rect x="2680" y="600" width="400" height="2100" fill="none" stroke="#555" stroke-width="11" stroke-dasharray="70 45"/>
+          <line x1="-1000" y1="1650" x2="900" y2="0" stroke="#0b5394" stroke-width="30"/>
+          <line x1="-1000" y1="1650" x2="900" y2="3300" stroke="#0b5394" stroke-width="30"/>
+          <circle cx="-1000" cy="1650" r="150" fill="#fff" stroke="#0b5394" stroke-width="30"/>
+          <circle cx="-1000" cy="1650" r="55" fill="#0b5394" stroke="none"/>
+          <g stroke="#a00000" stroke-width="9">
+            <line x1="4150" y1="150" x2="4150" y2="3150" marker-start="url(#p1)" marker-end="url(#p1)"/>
+            <line x1="0" y1="3560" x2="2600" y2="3560" marker-start="url(#p1)" marker-end="url(#p1)"/>
+          </g>
+        </g>
+        <g stroke="none" font-family="Arial">
+          <text x="1070" y="1620" font-size="130" fill="#555" text-anchor="middle">BETONKAMMER</text>
+          <text x="1070" y="1780" font-size="110" fill="#555" text-anchor="middle">Füllmarke 300 mm</text>
+          <text x="1175" y="790" font-size="110" fill="#a06a00" text-anchor="middle">Vorratsmulde 0.4 m³</text>
+          <text x="1735" y="480" font-size="105" fill="#a05a00" text-anchor="middle">Vibronadeln auf Puffern</text>
+          <text x="2300" y="1650" font-size="115" fill="#333" text-anchor="middle" transform="rotate(-90 2300 1650)">ABZIEHBOHLE</text>
+          <text x="3280" y="1700" font-size="105" fill="#555" text-anchor="middle">Ballast</text>
+          <text x="-1000" y="1000" font-size="115" fill="#0b5394" text-anchor="middle">Zugauge mit</text>
+          <text x="-1000" y="1140" font-size="115" fill="#0b5394" text-anchor="middle">Scherbolzen Ø18</text>
+          <text x="-60" y="2620" font-size="110" fill="#0b5394" transform="rotate(41 -60 2620)">A-Deichsel · 59.6 kN</text>
+          <text x="4090" y="1650" font-size="120" fill="#a00000" text-anchor="middle" transform="rotate(-90 4090 1650)">3000 = SPURBREITE</text>
+          <text x="1300" y="3710" font-size="120" fill="#a00000" text-anchor="middle">2600</text>
+          <text x="1300" y="-350" font-size="130" fill="#111" text-anchor="middle" font-weight="bold">DRAUFSICHT · Zug nach links</text>
+        </g>
+      </svg>
+    </div>
+    <p class="zcap">Draufsicht: Die Zugkraft geht über die A-Deichsel in die beiden Seitenwangen –
+       nicht mittig in den Querträger.</p>
+
+    <div class="zeichnung">
+      <svg viewBox="-2000 -1500 6900 2500" role="img" aria-label="Längsschnitt Betonspurfertiger">
+        <g stroke="#111" stroke-width="14" fill="none">
+          <line x1="-1950" y1="0" x2="4600" y2="0" stroke="#111" stroke-width="16"/>
+          <rect x="2600" y="-160" width="1900" height="160" fill="#d9d9d9" stroke="#555" stroke-width="10"/>
+          <path d="M 140,0 L 140,-300 L 1700,-300 L 2000,-160 L 2000,0 Z" fill="#c9c9c4" stroke="#555" stroke-width="10"/>
+          <line x1="140" y1="-300" x2="2000" y2="-300" stroke="#a00000" stroke-width="12" stroke-dasharray="80 50"/>
+          <rect x="0" y="-500" width="140" height="500" fill="#9fb3c8"/>
+          <rect x="0" y="-400" width="2600" height="400" fill="none" stroke="#888" stroke-width="9" stroke-dasharray="70 45"/>
+          <path d="M 2000,-160 L 2180,-340 L 2600,-340 L 2600,-160 Z" fill="#dde5ee"/>
+          <rect x="2180" y="-500" width="160" height="160" fill="#b9c6d6"/>
+          <line x1="2520" y1="-340" x2="2520" y2="-820" stroke="#0b5394" stroke-width="20"/>
+          <circle cx="2520" cy="-860" r="80" fill="#fff" stroke="#0b5394" stroke-width="20"/>
+          <path d="M 750,-560 L 620,-1180 L 1780,-1180 L 1650,-560 Z" fill="#ffe9c0" stroke="#c08000" stroke-width="14"/>
+          <rect x="2680" y="-600" width="400" height="240" fill="#e8e8e8" stroke="#555" stroke-width="11"/>
+          <line x1="1620" y1="-430" x2="1620" y2="-120" stroke="#a05a00" stroke-width="24"/>
+          <line x1="-1000" y1="-250" x2="900" y2="-250" stroke="#0b5394" stroke-width="30"/>
+          <circle cx="-1000" cy="-250" r="120" fill="#fff" stroke="#0b5394" stroke-width="24"/>
+          <line x1="-1900" y1="-250" x2="-1150" y2="-250" stroke="#0b5394" stroke-width="16" stroke-dasharray="90 50"/>
+        </g>
+        <g stroke="none" font-family="Arial">
+          <text x="-1900" y="-360" font-size="125" fill="#0b5394">← Zug bergwärts</text>
+          <text x="230" y="-480" font-size="115" fill="#a00000">Füllmarke 300 mm</text>
+          <text x="1000" y="-80" font-size="115" fill="#333" text-anchor="middle">Beton erdfeucht C0/C1</text>
+          <text x="1200" y="-860" font-size="120" fill="#a06a00" text-anchor="middle">Mulde 0.4 m³</text>
+          <text x="2620" y="-920" font-size="110" fill="#0b5394">Spindel: Dicke 140–200 mm</text>
+          <text x="3550" y="-280" font-size="120" fill="#333" text-anchor="middle">fertige Spur 16 cm</text>
+          <text x="4500" y="330" font-size="110" fill="#666" text-anchor="end">Planum</text>
+          <text x="1300" y="-1330" font-size="130" fill="#111" text-anchor="middle" font-weight="bold">LÄNGSSCHNITT</text>
+        </g>
+      </svg>
+    </div>
+    <p class="zcap">Längsschnitt: Die Kufen laufen auf dem Planum, die Bohle ist 160 mm darüber fix
+       eingestellt – so hängt die Dicke nicht vom Betondruck ab.</p>
+
+    <div class="dl">
+      <a class="btn" href="Betonspur/Werkstattzeichnung_Betonspurfertiger.pdf" target="_blank">Zeichnung 3 × A3 (PDF)</a>
+      <a class="btn ghost" href="Betonspur/Bemessung_Betonspurfertiger.pdf" target="_blank">Bemessung mit allen Nachweisen (PDF)</a>
+    </div>
+  </div>
+
+  <div class="karte tipp">
+    <h2>Regeln im Einsatz</h2>
+    <ul>
+      <li><b>Füllmarke 300 mm</b> nie überschreiten – bei 500 mm schwimmt die Bohle auf und die Spur wird zu dick.</li>
+      <li><b>Beton erdfeucht (C0/C1)</b> bestellen – weicher Beton läuft bei 20 % Neigung unter der Bohle weg.</li>
+      <li><b>Bergwärts betonieren</b> – dann drückt der Hangabtrieb den Beton in die Kammer statt heraus.</li>
+      <li><b>Ruckfrei anfahren</b> – ruckartiges Anreissen kostet den Scherbolzen und damit die Fuhre.</li>
+      <li><b>Vor jeder Etappe:</b> beide Spindeln gleich einstellen, Bohlenunterkante plan, Kufen auf Verschleiss prüfen.</li>
+      <li><b>Nach der ersten Woche:</b> Nähte an Deichsel, Zugauge und Rüttlerkonsole sichtprüfen.</li>
+      <li><b>Kranen</b> nur am 4-Strang-Gehänge an den vier Anschlagpunkten (WLL 2.0 t), nicht am 1-t-Hebeband.</li>
+    </ul>
+  </div>
+
+  <div class="karte">
+    <h2>Vorbild: Rehetobel 2022</h2>
+    <p class="lead">13 Fotos vom Einbau der zwei Fahrspuren an der Nordstrasse Rehetobel.
+       <b>Wichtig:</b> Die Maschine gehört der <b>E. Gloggner AG</b> – Graf Bau war der Bauunternehmer.
+       Detailfragen also dorthin. Tippen zum Vergrössern.</p>
+    <div class="galerie" id="gal">
+      <figure><img src="Betonspur/fotos/GrafBau_12_Gesamtansicht_Schlitten.jpeg" alt="Gesamtansicht des Schlittens">
+        <figcaption>Gesamtaufbau: Rahmen, Mulde, Aggregat, Ballastriegel</figcaption></figure>
+      <figure><img src="Betonspur/fotos/GrafBau_04_Rahmen_Zugoese_Detail.jpeg" alt="Rahmen mit Zugöse">
+        <figcaption>Rahmen von vorne – der kritische Querträger</figcaption></figure>
+      <figure><img src="Betonspur/fotos/GrafBau_11_Mulde_Beschickung_Zugkette.jpeg" alt="Zugkette am Querträger">
+        <figcaption>Zugkette mittig; Beton bleibt auf der Schaufel stehen</figcaption></figure>
+      <figure><img src="Betonspur/fotos/GrafBau_01_Beschickung_Bagger_Mulde.jpeg" alt="Bagger füllt die Mulde">
+        <figcaption>Bagger beschickt die Mulde direkt</figcaption></figure>
+      <figure><img src="Betonspur/fotos/GrafBau_02_Fertige_Spur_Ballastriegel.jpeg" alt="Ballastriegel">
+        <figcaption>Betonriegel als Auflast, Handrüttler, Abziehlatte</figcaption></figure>
+      <figure><img src="Betonspur/fotos/GrafBau_03_Rahmen_Aggregat_Detail.jpeg" alt="Aggregat auf dem Rahmen">
+        <figcaption>Aggregat und Rahmenrippen</figcaption></figure>
+      <figure><img src="Betonspur/fotos/GrafBau_13_Bagger_beschickt_Mulde.jpeg" alt="Bagger mit Schaufel">
+        <figcaption>Beton wird mit der Schaufel angeliefert</figcaption></figure>
+      <figure><img src="Betonspur/fotos/GrafBau_08_Zwei_Spuren_Besenstrich.jpeg" alt="Fertige Spuren">
+        <figcaption>Ergebnis mit Besenstrich quer zur Fahrtrichtung</figcaption></figure>
+      <figure><img src="Betonspur/fotos/GrafBau_09_Profil_Leitplanke_Schalung.jpeg" alt="Profil mit Leitplanke">
+        <figcaption>Randausbildung mit alter Leitplanke als Formteil</figcaption></figure>
+      <figure><img src="Betonspur/fotos/GrafBau_10_Profil_Detail_Kante.jpeg" alt="Kante im Detail">
+        <figcaption>Kante und Anschluss im Detail</figcaption></figure>
+      <figure><img src="Betonspur/fotos/GrafBau_06_Fertige_Flaeche_Holzschalung.jpeg" alt="Fläche mit Holzschalung">
+        <figcaption>Seitliche Kanthölzer, mit Eisen gepflockt</figcaption></figure>
+      <figure><img src="Betonspur/fotos/GrafBau_07_Fertige_Flaeche_Anschluss.jpeg" alt="Anschluss an die Strasse">
+        <figcaption>Anschluss an die bestehende Strasse</figcaption></figure>
+      <figure><img src="Betonspur/fotos/GrafBau_05_Uebersicht_Piste.jpeg" alt="Übersicht der Piste">
+        <figcaption>Ausgangslage: Naturweg im Hang</figcaption></figure>
+    </div>
+  </div>
+
+  <div class="karte">
+    <h2>Was noch entschieden werden muss</h2>
+    <ul>
+      <li><b>Wer baut</b> – Werkstatt, externer Stahlbauer oder Einbau durch Gloggner (siehe oben).</li>
+      <li><b>Zugmaschine</b> festlegen (Bagger, Raupe oder Seilwinde) – davon hängen Anhängehöhe und Zugpunkt ab.</li>
+      <li><b>Fliehkraft der Vibronadeln</b> beim Hersteller abfragen (8 kN angenommen), Standorte mit Martin Schmid.</li>
+      <li><b>Quergefälle</b>: eben oder mit Querabschlag für die Entwässerung.</li>
+      <li><b>Bewehrung und Fugen</b> der Spur: Vorgabe bei ILF einholen – nicht Teil dieser Bemessung.</li>
+      <li><b>Statik gegenzeichnen</b> lassen und Suva-Themen prüfen (Anschlagpunkte, Quetschstellen, Abstellen am Hang).</li>
+    </ul>
+  </div>
+
+  <div class="karte quellen">
+    <b>Grundlagen:</b> Mail V. Malt an den Werksmeister Stahlbau vom 21.04.2026 («Betonspurfertiger/Betonschlitten»,
+    CC Borner/Decurtins): Spurbreite 3.00 m, Dicke 16 cm, durchgängig in der Breite ·
+    Mail U. Decurtins an ILF vom 05.09.2025: Längsneigung bis 20 %, sonst spült die Strasse aus ·
+    Protokoll Abstimmungssitzung 43 vom 22.06.2026: Prototyp-Material bestellt, Bedarf September ·
+    Fotos graf-bau.ch, Projekt «Sanierung Nordstrasse, Rehetobel» 11/2022, Einbau E. Gloggner AG.<br><br>
+    <b>Rechenweg:</b> SIA 262 / DIN 18218 (Frischbetondruck), SIA 263 (Stahlbau), Kerbfall 71 für die
+    Ermüdung. Reibungswinkel und Kohäsion des Frischbetons sind begründete Annahmen – beim ersten
+    Einsatz prüfen, ob der Scherbolzen hält. Stand 14.08.2026, Status Entwurf.
+  </div>
+
+</div>
+
+<div id="lb"><span class="zu">×</span><img id="lbimg" alt=""></div>
+
+<script>
+'use strict';
+(function(){
+  var lb=document.getElementById('lb'), im=document.getElementById('lbimg');
+  document.getElementById('gal').addEventListener('click', function(e){
+    if(e.target.tagName!=='IMG') return;
+    im.src=e.target.src; im.alt=e.target.alt||''; lb.classList.add('on');
+  });
+  lb.addEventListener('click', function(){ lb.classList.remove('on'); im.src=''; });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ lb.classList.remove('on'); im.src=''; } });
+})();
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+}
+</script>
+</body>
+</html>

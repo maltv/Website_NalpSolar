@@ -1,5 +1,5 @@
 ﻿'use strict';
-var CACHE = 'nalpsolar-v114';
+var CACHE = 'nalpsolar-v115';
 var PRECACHE = [
   './index.html',
   './protokoll.html',
@@ -80,7 +80,10 @@ var PRECACHE = [
   './bauprogramm.html',
   './uploads/bauprogramm_gantt.json',
   './game.html',
-  './manifest-game.json'
+  './manifest-game.json',
+  // Betonspurfertiger (14.08.2026): Seite offline halten, die PDFs bewusst NICHT
+  // vorladen (1.4 MB) - die holt man sich im Tal ueber WLAN
+  './betonspur.html'
 ];
 
 self.addEventListener('install', function(e) {
