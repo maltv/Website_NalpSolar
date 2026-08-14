@@ -5,8 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>NalpSolar · Pizza-Truck Freitag 21.08.</title>
 <meta name="theme-color" content="#D72622">
-<!-- OFFENE SEITE - BEWUSST OHNE GATE-CODE: soll jeder auf der Baustelle mit dem
-     Handy ausfuellen koennen (auch Geowork/CKW), ohne Code und ohne Login.
+<!-- OFFENE SEITE - BEWUSST OHNE GATE-CODE: soll jeder aus der STRABAG-Mannschaft
+     mit dem Handy ausfuellen koennen, ohne Code und ohne Login.
+     Nur STRABAG (Weisung V. Malt 15.08.2026): STRABAG offeriert, darum keine
+     Firmenwahl mehr - jede Bestellung wird fix als STRABAG gespeichert.
+     Sprachen DE/EN/IT (Weisung V. Malt 15.08.2026).
 
      Grundlage: Bestellformular "PIZZA TRUCK - DISENTIS GASTRO CATRINA", Anhang der
      Mail Dennis Leifels (CKW) vom 13.08.2026 14:35 "Bestellliste fuer Pizza-Truck
@@ -29,6 +32,11 @@
           background:#fff; border-bottom:4px solid var(--rot); }
   header .logo img{ height:24px; display:block; }
   header h1{ font-size:16px; margin:0; flex:1; min-width:0; font-weight:800; }
+  .lang{ display:flex; border:1px solid #c9ccd2; border-radius:6px; overflow:hidden; }
+  .lang button{ border:none; background:#fff; color:var(--mut); font-weight:800; font-size:12px;
+        padding:6px 8px; cursor:pointer; border-right:1px solid #e3e5e8; font-family:inherit; }
+  .lang button:last-child{ border-right:none; }
+  .lang button.on{ background:var(--rot); color:#fff; }
   main{ max-width:640px; margin:0 auto; padding:14px 12px 90px; }
 
   .box{ background:#fff; border:1px solid var(--line); border-left:5px solid var(--rot);
@@ -52,14 +60,6 @@
           border-radius:6px; color:var(--ink); padding:11px 10px; font-size:16px; font-family:inherit; }
   input:focus,textarea:focus{ outline:2px solid rgba(215,38,34,.35); }
   textarea{ resize:vertical; min-height:56px; }
-
-  /* Firma: Knopfreihe */
-  .firmen{ display:flex; flex-wrap:wrap; gap:8px; }
-  .firmen label{ flex:1 1 auto; }
-  .firmen input{ position:absolute; opacity:0; pointer-events:none; }
-  .firmen span{ display:block; text-align:center; padding:11px 12px; border:1.5px solid #c9ccd2;
-        border-radius:6px; font-size:14.5px; font-weight:700; color:var(--mut); background:#fff; cursor:pointer; }
-  .firmen input:checked + span{ border-color:var(--rot); background:var(--rot); color:#fff; }
 
   /* Pizzaliste */
   .liste{ margin-top:14px; }
@@ -131,82 +131,74 @@
 <header>
   <div class="logo"><img src="assets/img/strabag-logo.png" alt="STRABAG"></div>
   <h1>Pizza-Truck</h1>
+  <div class="lang" id="langBox">
+    <button data-lang="de" onclick="setLang('de')">DE</button>
+    <button data-lang="en" onclick="setLang('en')">EN</button>
+    <button data-lang="it" onclick="setLang('it')">IT</button>
+  </div>
 </header>
 
 <main>
 
   <div class="box wann">
-    <h2>🍕 Freitag, 21. August</h2>
-    <div class="zeile">Pizza-Truck auf der Baustelle · Pizzen ab ca. <b>13:00 Uhr</b><br>
-      Disentis Gastro Catrina</div>
-    <div class="frist" id="frist"><b>Anmeldung bis Freitag, 21.08. um 09:00 Uhr.</b><br>
-      Wer nicht angemeldet ist, bekommt keine Pizza.</div>
+    <h2 data-i18n="wann_titel">🍕 Freitag, 21. August</h2>
+    <div class="zeile" id="wannZeile"></div>
+    <div class="frist" id="frist"></div>
   </div>
 
   <div id="form">
     <div class="box">
-      <h2>Deine Bestellung</h2>
-      <p class="sub">Eine Pizza pro Person. Du kannst auch für jemanden mitbestellen,
-        der kein Handy dabei hat.</p>
+      <h2 data-i18n="form_titel">Deine Bestellung</h2>
+      <p class="sub" data-i18n="form_sub">Eine Pizza pro Person – STRABAG offeriert. Du kannst auch für
+        jemanden mitbestellen, der kein Handy dabei hat.</p>
 
-      <label class="fl">Name *</label>
-      <input type="text" id="fName" autocomplete="name" placeholder="Vorname Name">
-
-      <label class="fl">Firma *</label>
-      <div class="firmen" id="fFirma">
-        <label><input type="radio" name="firma" value="STRABAG"><span>STRABAG</span></label>
-        <label><input type="radio" name="firma" value="Geowork"><span>Geowork</span></label>
-        <label><input type="radio" name="firma" value="CKW"><span>CKW</span></label>
-        <label><input type="radio" name="firma" value="Andere"><span>Andere</span></label>
-      </div>
+      <label class="fl" data-i18n="lbl_name">Name *</label>
+      <input type="text" id="fName" autocomplete="name" data-i18n-ph="ph_name" placeholder="Vorname Name">
 
       <label class="fl">Pizza *</label>
       <div class="liste" id="listeK"></div>
 
       <label class="dess">
         <input type="checkbox" id="fTira">
-        <span>🍫 Dazu ein <b>Pizza Tiramisu</b>
+        <span id="tiraTxt">🍫 Dazu ein <b>Pizza Tiramisu</b>
           <small>Dessert: Mascarpone-Creme, Kakao</small></span>
       </label>
 
-      <label class="fl">Ohne / Änderung <span class="opt">(optional)</span></label>
-      <input type="text" id="fOhne" placeholder="z. B. «ohne Oliven» oder «mit extra Mozzarella»">
+      <label class="fl"><span data-i18n="lbl_ohne">Ohne / Änderung</span> <span class="opt" data-i18n="opt">(optional)</span></label>
+      <input type="text" id="fOhne" data-i18n-ph="ph_ohne" placeholder="z. B. «ohne Oliven» oder «mit extra Mozzarella»">
 
-      <label class="fl">Weitere Wünsche / Hinweise <span class="opt">(optional)</span></label>
+      <label class="fl"><span data-i18n="lbl_bem">Weitere Wünsche / Hinweise</span> <span class="opt" data-i18n="opt">(optional)</span></label>
       <textarea id="fBem" placeholder="…"></textarea>
 
-      <button class="btn" id="btnSend" onclick="senden()">🍕 Bestellung abschicken</button>
+      <button class="btn" id="btnSend" onclick="senden()" data-i18n="btn_senden">🍕 Bestellung abschicken</button>
       <div id="status"></div>
     </div>
   </div>
 
   <div class="ok" id="ok">
     <div class="hk">🍕</div>
-    <h2>Bestellt – danke!</h2>
-    <p>Du stehst auf der Liste für Freitag, 21.08.</p>
+    <h2 data-i18n="ok_titel">Bestellt – danke!</h2>
+    <p data-i18n="ok_sub">Du stehst auf der Liste für Freitag, 21.08.</p>
     <div class="meins" id="meins"></div>
-    <button class="btn klein grau" onclick="neuStart(true)">✏️ Meine Bestellung ändern</button>
-    <button class="btn klein" onclick="neuStart(false)">➕ Für jemanden anderen bestellen</button>
+    <button class="btn klein grau" onclick="neuStart(true)" data-i18n="btn_aendern">✏️ Meine Bestellung ändern</button>
+    <button class="btn klein" onclick="neuStart(false)" data-i18n="btn_weitere">➕ Für jemanden anderen bestellen</button>
   </div>
 
   <div class="box">
-    <h2>Wer isst was?</h2>
-    <p class="sub">Alle Bestellungen – aktualisiert sich beim Öffnen der Seite.</p>
+    <h2 data-i18n="ue_titel">Wer isst was?</h2>
+    <p class="sub" data-i18n="ue_sub">Alle Bestellungen – aktualisiert sich beim Öffnen der Seite.</p>
     <div class="zahl">
-      <div><b id="nPizza">–</b><small>Pizzen</small></div>
+      <div><b id="nPizza">–</b><small data-i18n="z_pizzen">Pizzen</small></div>
       <div><b id="nTira">–</b><small>Tiramisu</small></div>
-      <div><b id="nLeute">–</b><small>Personen</small></div>
+      <div><b id="nLeute">–</b><small data-i18n="z_leute">Personen</small></div>
     </div>
-    <div id="ueTab"><div class="leer">Wird geladen …</div></div>
+    <div id="ueTab"><div class="leer" data-i18n="laedt">Wird geladen …</div></div>
     <div class="summe" id="summe"></div>
-    <button class="btn klein grau" onclick="listeKopieren()">📋 Liste für den Pizza-Bäcker kopieren</button>
+    <button class="btn klein grau" onclick="listeKopieren()" data-i18n="btn_kopieren">📋 Liste für den Pizza-Bäcker kopieren</button>
     <div id="kopStatus" style="font-size:12.5px;color:var(--mut);text-align:center;margin-top:8px;min-height:16px"></div>
   </div>
 
-  <div class="hint">
-    Fragen? Victor Malt · +41 76 835 21 75<br>
-    Die Sammelliste geht am Freitag um 09:30 Uhr an die CKW.
-  </div>
+  <div class="hint" id="hintBox"></div>
 
 </main>
 
@@ -217,20 +209,106 @@ var P='erfassung/pizza_20260821/bestellungen';
 var LS_NAME='nalp_pizza_name_v1', LS_MEIN='nalp_pizza_meine_v1';
 var FRIST=new Date(2026,7,21,9,0,0);          /* Fr 21.08.2026 09:00 - Dennis braucht die Liste um 09:30 */
 
+/* ══════════ Sprachen DE / EN / IT ══════════ */
+var I18N={
+ de:{
+  wann_titel:'🍕 Freitag, 21. August',
+  wann_zeile:'Pizza-Truck auf der Baustelle · Pizzen ab ca. <b>13:00 Uhr</b><br>Disentis Gastro Catrina',
+  frist:'<b>Anmeldung bis Freitag, 21.08. um 09:00 Uhr.</b><br>Wer nicht angemeldet ist, bekommt keine Pizza.',
+  form_titel:'Deine Bestellung',
+  form_sub:'Eine Pizza pro Person – STRABAG offeriert. Du kannst auch für jemanden mitbestellen, der kein Handy dabei hat.',
+  lbl_name:'Name *', ph_name:'Vorname Name',
+  lbl_ohne:'Ohne / Änderung', lbl_bem:'Weitere Wünsche / Hinweise', opt:'(optional)',
+  ph_ohne:'z. B. «ohne Oliven» oder «mit extra Mozzarella»',
+  tira:'🍫 Dazu ein <b>Pizza Tiramisu</b><small>Dessert: Mascarpone-Creme, Kakao</small>',
+  btn_senden:'🍕 Bestellung abschicken',
+  ok_titel:'Bestellt – danke!', ok_sub:'Du stehst auf der Liste für Freitag, 21.08.',
+  btn_aendern:'✏️ Meine Bestellung ändern', btn_weitere:'➕ Für jemanden anderen bestellen',
+  ue_titel:'Wer isst was?', ue_sub:'Alle Bestellungen – aktualisiert sich beim Öffnen der Seite.',
+  z_pizzen:'Pizzen', z_leute:'Personen', laedt:'Wird geladen …',
+  leer:'Noch niemand angemeldet – mach den Anfang.',
+  btn_kopieren:'📋 Liste für den Pizza-Bäcker kopieren',
+  kopiert:'Liste kopiert – kannst du jetzt einfügen.', kopiert_nein:'Kopieren hat nicht geklappt.',
+  hint:'Fragen? Victor Malt · +41 76 835 21 75<br>Die Sammelliste geht am Freitag um 09:30 Uhr raus.',
+  zu:'<b>Anmeldeschluss ist vorbei.</b> Die Liste ist bereits raus. Du kannst dich noch eintragen – ob es noch reicht, sagt dir Victor (076 835 21 75).',
+  dessert:'Pizza Tiramisu (Dessert)',
+  err_name:'Bitte deinen Namen angeben.', err_pizza:'Bitte eine Pizza auswählen.',
+  err_senden:'Senden fehlgeschlagen – bitte Empfang prüfen und nochmals versuchen.',
+  sendet:'Wird gesendet …', del_frage:'Diese Bestellung wirklich löschen?'
+ },
+ en:{
+  wann_titel:'🍕 Friday, 21 August',
+  wann_zeile:'Pizza truck on site · pizzas from approx. <b>1:00 p.m.</b><br>Disentis Gastro Catrina',
+  frist:'<b>Sign up by Friday, 21 Aug, 9:00 a.m.</b><br>No sign-up, no pizza.',
+  form_titel:'Your order',
+  form_sub:'One pizza per person – STRABAG is paying. You can also order for someone who has no phone with them.',
+  lbl_name:'Name *', ph_name:'First name Last name',
+  lbl_ohne:'Without / change', lbl_bem:'Other requests / notes', opt:'(optional)',
+  ph_ohne:'e.g. "no olives" or "extra mozzarella"',
+  tira:'🍫 Add a <b>Pizza Tiramisu</b><small>Dessert: mascarpone cream, cocoa</small>',
+  btn_senden:'🍕 Send order',
+  ok_titel:'Ordered – thank you!', ok_sub:'You are on the list for Friday, 21 Aug.',
+  btn_aendern:'✏️ Change my order', btn_weitere:'➕ Order for someone else',
+  ue_titel:'Who eats what?', ue_sub:'All orders – updates when you open the page.',
+  z_pizzen:'pizzas', z_leute:'people', laedt:'Loading …',
+  leer:'Nobody signed up yet – be the first.',
+  btn_kopieren:'📋 Copy list for the pizza baker',
+  kopiert:'List copied – you can paste it now.', kopiert_nein:'Copying failed.',
+  hint:'Questions? Victor Malt · +41 76 835 21 75<br>The list goes out on Friday at 9:30 a.m.',
+  zu:'<b>The deadline has passed.</b> The list is already out. You can still sign up – Victor will tell you if it still works (076 835 21 75).',
+  dessert:'Pizza Tiramisu (dessert)',
+  err_name:'Please enter your name.', err_pizza:'Please choose a pizza.',
+  err_senden:'Sending failed – check your signal and try again.',
+  sendet:'Sending …', del_frage:'Really delete this order?'
+ },
+ it:{
+  wann_titel:'🍕 Venerdì 21 agosto',
+  wann_zeile:'Pizza truck in cantiere · pizze dalle <b>13:00</b> circa<br>Disentis Gastro Catrina',
+  frist:'<b>Iscrizione entro venerdì 21.08 alle 09:00.</b><br>Chi non è iscritto non riceve la pizza.',
+  form_titel:'Il tuo ordine',
+  form_sub:'Una pizza a persona – offre la STRABAG. Puoi ordinare anche per un collega senza telefono.',
+  lbl_name:'Nome *', ph_name:'Nome Cognome',
+  lbl_ohne:'Senza / modifica', lbl_bem:'Altre richieste / note', opt:'(facoltativo)',
+  ph_ohne:'es. «senza olive» o «mozzarella extra»',
+  tira:'🍫 In più un <b>Pizza Tiramisu</b><small>Dolce: crema al mascarpone, cacao</small>',
+  btn_senden:'🍕 Invia l\'ordine',
+  ok_titel:'Ordinato – grazie!', ok_sub:'Sei sulla lista per venerdì 21.08.',
+  btn_aendern:'✏️ Modifica il mio ordine', btn_weitere:'➕ Ordina per un altro',
+  ue_titel:'Chi mangia cosa?', ue_sub:'Tutti gli ordini – si aggiorna aprendo la pagina.',
+  z_pizzen:'pizze', z_leute:'persone', laedt:'Caricamento …',
+  leer:'Ancora nessun iscritto – fai tu il primo passo.',
+  btn_kopieren:'📋 Copia la lista per il pizzaiolo',
+  kopiert:'Lista copiata – ora puoi incollarla.', kopiert_nein:'Copia non riuscita.',
+  hint:'Domande? Victor Malt · +41 76 835 21 75<br>La lista parte venerdì alle 09:30.',
+  zu:'<b>Il termine è scaduto.</b> La lista è già partita. Puoi ancora iscriverti – Victor ti dice se si riesce (076 835 21 75).',
+  dessert:'Pizza Tiramisu (dolce)',
+  err_name:'Inserisci il tuo nome.', err_pizza:'Scegli una pizza.',
+  err_senden:'Invio non riuscito – controlla la ricezione e riprova.',
+  sendet:'Invio in corso …', del_frage:'Cancellare davvero questo ordine?'
+ }
+};
+var LS_LANG='nalp_lang_v1';
+var lang=(function(){
+  try{ var g=localStorage.getItem(LS_LANG); if(g&&I18N[g]) return g; }catch(e){}
+  var n=(navigator.language||'de').slice(0,2).toLowerCase();
+  return I18N[n]?n:'de';
+})();
+function T(k){ return (I18N[lang]&&I18N[lang][k]) || I18N.de[k] || k; }
+
 /* Speisekarte 1:1 aus "Pizza_Bestellformular (strabag).pdf" (CKW-Mail 13.08.2026).
    Die "eigene Kreation" (Grundpizza + 18 Zutaten zum Ankreuzen) ist auf Weisung
-   V. Malt am 14.08.2026 rausgeflogen - es gibt nur noch fertige Pizzen. Die
-   Grundpizza selbst bleibt waehlbar, sie steht so auf dem CKW-Formular.
-   Sonderwuensche laufen ueber das Feld "Ohne / Aenderung". */
+   V. Malt am 14.08.2026 rausgeflogen - es gibt nur noch fertige Pizzen.
+   Pizza-NAMEN bleiben in allen Sprachen gleich (so bestellt der Baecker),
+   nur die Zutatenzeile ist uebersetzt. */
 var PIZZEN=[
-  ['Grundpizza','Tomatensauce und Mozzarella'],
-  ['Pizza Bufalina','Tomatensauce, Bufala, Basilikum'],
-  ['Pizza Diavola','Tomatensauce, Mozzarella, scharfe Salami, Chili'],
-  ['Pizza Truck','Weisse Pizza, Mascarpone, Rucola, Rohschinken, Parmesan, Mozzarella'],
-  ['Pizza 4 Formaggi','Tomatensauce, Mozzarella, Gorgonzola, Taleggio, Parmesan'],
-  ['Pizza Capricciosa','Tomatensauce, Mozzarella, Oliven, Artischocken, Champignons, Schinken'],
-  ['Pizza Gemüse','Tomatensauce, Mozzarella, Oliven, Artischocken, Champignons, Rucola, getrocknete Cherry-Tomaten'],
-  ['Panino Truck','Rucola, Rohschinken, Bufala Mozzarella, getrocknete Cherry-Tomaten']
+  ['Grundpizza',{de:'Tomatensauce und Mozzarella',en:'tomato sauce and mozzarella',it:'pomodoro e mozzarella'}],
+  ['Pizza Bufalina',{de:'Tomatensauce, Bufala, Basilikum',en:'tomato sauce, buffalo mozzarella, basil',it:'pomodoro, bufala, basilico'}],
+  ['Pizza Diavola',{de:'Tomatensauce, Mozzarella, scharfe Salami, Chili',en:'tomato sauce, mozzarella, spicy salami, chili',it:'pomodoro, mozzarella, salame piccante, peperoncino'}],
+  ['Pizza Truck',{de:'Weisse Pizza, Mascarpone, Rucola, Rohschinken, Parmesan, Mozzarella',en:'white pizza, mascarpone, rocket, cured ham, parmesan, mozzarella',it:'pizza bianca, mascarpone, rucola, prosciutto crudo, parmigiano, mozzarella'}],
+  ['Pizza 4 Formaggi',{de:'Tomatensauce, Mozzarella, Gorgonzola, Taleggio, Parmesan',en:'tomato sauce, mozzarella, gorgonzola, taleggio, parmesan',it:'pomodoro, mozzarella, gorgonzola, taleggio, parmigiano'}],
+  ['Pizza Capricciosa',{de:'Tomatensauce, Mozzarella, Oliven, Artischocken, Champignons, Schinken',en:'tomato sauce, mozzarella, olives, artichokes, mushrooms, ham',it:'pomodoro, mozzarella, olive, carciofi, funghi, prosciutto'}],
+  ['Pizza Gemüse',{de:'Tomatensauce, Mozzarella, Oliven, Artischocken, Champignons, Rucola, getrocknete Cherry-Tomaten',en:'tomato sauce, mozzarella, olives, artichokes, mushrooms, rocket, dried cherry tomatoes',it:'pomodoro, mozzarella, olive, carciofi, funghi, rucola, pomodorini secchi'}],
+  ['Panino Truck',{de:'Rucola, Rohschinken, Bufala Mozzarella, getrocknete Cherry-Tomaten',en:'rocket, cured ham, buffalo mozzarella, dried cherry tomatoes',it:'rucola, prosciutto crudo, bufala, pomodorini secchi'}]
 ];
 var alle=[], meine=[];
 
@@ -238,24 +316,44 @@ function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
 
-/* ── Aufbau der Listen ────────────────────────────────── */
-(function(){
+/* ── Aufbau der Listen (in der gewaehlten Sprache) ─────── */
+function pizzaListeBauen(){
+  var vorher=gewaehltePizza();
   var h='';
   for(var i=0;i<PIZZEN.length;i++){
-    h+='<label><input type="radio" name="pizza" value="'+esc(PIZZEN[i][0])+'">'
+    h+='<label><input type="radio" name="pizza" value="'+esc(PIZZEN[i][0])+'"'
+      +(PIZZEN[i][0]===vorher?' checked':'')+'>'
       +'<span class="k"><span class="n">'+esc(PIZZEN[i][0])+'</span>'
-      +'<span class="z">'+esc(PIZZEN[i][1])+'</span></span></label>';
+      +'<span class="z">'+esc(PIZZEN[i][1][lang]||PIZZEN[i][1].de)+'</span></span></label>';
   }
   $('listeK').innerHTML=h;
-})();
+}
+
+function setLang(l){
+  if(!I18N[l]) return;
+  lang=l;
+  try{ localStorage.setItem(LS_LANG,l); }catch(e){}
+  document.documentElement.lang=l;
+  document.querySelectorAll('[data-i18n]').forEach(function(el){ el.textContent=T(el.getAttribute('data-i18n')); });
+  document.querySelectorAll('[data-i18n-ph]').forEach(function(el){ el.placeholder=T(el.getAttribute('data-i18n-ph')); });
+  document.querySelectorAll('#langBox button').forEach(function(b){
+    b.classList.toggle('on', b.getAttribute('data-lang')===l);
+  });
+  $('wannZeile').innerHTML=T('wann_zeile');
+  $('frist').innerHTML=T('frist');
+  $('tiraTxt').innerHTML=T('tira');
+  $('hintBox').innerHTML=T('hint');
+  var zu=$('zuBox'); if(zu) zu.innerHTML=T('zu');
+  pizzaListeBauen();
+  zeichnen();
+}
 
 /* Frist-Hinweis, sobald sie durch ist */
 (function(){
   if(new Date()>FRIST){
     var d=document.createElement('div');
-    d.className='zu';
-    d.innerHTML='<b>Anmeldeschluss ist vorbei.</b> Die Liste ist bereits bei der CKW. '
-      +'Du kannst dich noch eintragen – ob es noch reicht, sagt dir Victor (076 835 21 75).';
+    d.className='zu'; d.id='zuBox';
+    d.innerHTML=T('zu');
     $('form').insertBefore(d,$('form').firstChild);
   }
 })();
@@ -286,19 +384,18 @@ function textVon(rec){
 
 function senden(){
   var name=$('fName').value.trim();
-  var fr=document.querySelector('input[name=firma]:checked');
-  if(!name){ alert('Bitte deinen Namen angeben.'); return; }
-  if(!fr){ alert('Bitte die Firma wählen.'); return; }
+  if(!name){ alert(T('err_name')); return; }
 
-  var rec={ ts:Date.now(), name:name, firma:fr.value,
+  /* Nur STRABAG bestellt (STRABAG offeriert) - Firma fix, keine Auswahl mehr */
+  var rec={ ts:Date.now(), name:name, firma:'STRABAG',
             pizza:gewaehltePizza(), tiramisu:$('fTira').checked,
             ohne:$('fOhne').value.trim(), bemerkung:$('fBem').value.trim() };
 
-  if(!rec.pizza && !rec.tiramisu){ alert('Bitte eine Pizza auswählen.'); return; }
+  if(!rec.pizza && !rec.tiramisu){ alert(T('err_pizza')); return; }
 
   try{ localStorage.setItem(LS_NAME,name); }catch(e){}
   $('btnSend').disabled=true;
-  $('status').textContent='Wird gesendet …';
+  $('status').textContent=T('sendet');
 
   apiPost(rec).then(function(key){
     if(!key) throw 0;
@@ -314,7 +411,7 @@ function senden(){
   }).catch(function(){
     $('btnSend').disabled=false;
     $('status').textContent='';
-    alert('Senden fehlgeschlagen – bitte Empfang prüfen und nochmals versuchen.');
+    alert(T('err_senden'));
   });
 }
 
@@ -335,7 +432,7 @@ function neuStart(aendern){
 }
 
 function loeschen(key){
-  if(!confirm('Diese Bestellung wirklich löschen?')) return;
+  if(!confirm(T('del_frage'))) return;
   apiDel(key).then(function(){
     var i=meine.indexOf(key); if(i>=0){ meine.splice(i,1); meineSchreiben(); }
     laden();
@@ -363,7 +460,7 @@ function zeichnen(){
   $('nLeute').textContent=alle.length;
 
   if(!alle.length){
-    $('ueTab').innerHTML='<div class="leer">Noch niemand angemeldet – mach den Anfang.</div>';
+    $('ueTab').innerHTML='<div class="leer">'+T('leer')+'</div>';
     $('summe').innerHTML='';
     return;
   }
@@ -394,7 +491,7 @@ function zeichnen(){
   var s='';
   for(var n=0;n<reihen.length;n++)
     s+='<div class="z"><span>'+esc(reihen[n])+'</span><b>'+z[reihen[n]]+'×</b></div>';
-  if(nT) s+='<div class="z"><span>Pizza Tiramisu (Dessert)</span><b>'+nT+'×</b></div>';
+  if(nT) s+='<div class="z"><span>'+T('dessert')+'</span><b>'+nT+'×</b></div>';
   $('summe').innerHTML=s;
 }
 
@@ -426,7 +523,7 @@ function listeText(){
 }
 function listeKopieren(){
   var t=listeText();
-  var fertig=function(){ $('kopStatus').textContent='Liste kopiert – kannst du jetzt einfügen.'; };
+  var fertig=function(){ $('kopStatus').textContent=T('kopiert'); };
   if(navigator.clipboard && navigator.clipboard.writeText){
     navigator.clipboard.writeText(t).then(fertig,function(){ notfall(t); });
   } else notfall(t);
@@ -434,12 +531,13 @@ function listeKopieren(){
     var ta=document.createElement('textarea');
     ta.value=txt; ta.style.position='fixed'; ta.style.opacity='0';
     document.body.appendChild(ta); ta.select();
-    try{ document.execCommand('copy'); fertig(); }catch(e){ $('kopStatus').textContent='Kopieren hat nicht geklappt.'; }
+    try{ document.execCommand('copy'); fertig(); }catch(e){ $('kopStatus').textContent=T('kopiert_nein'); }
     document.body.removeChild(ta);
   }
 }
 
-/* Name merken */
+/* Name merken + Sprache anwenden */
+setLang(lang);
 try{ $('fName').value=localStorage.getItem(LS_NAME)||''; }catch(e){}
 laden();
 </script>
