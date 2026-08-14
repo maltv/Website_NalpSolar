@@ -1,5 +1,5 @@
 ﻿'use strict';
-var CACHE = 'nalpsolar-v117';
+var CACHE = 'nalpsolar-v118';
 var PRECACHE = [
   './index.html',
   './protokoll.html',
@@ -83,7 +83,10 @@ var PRECACHE = [
   './manifest-game.json',
   // Betonspurfertiger (14.08.2026): Seite offline halten, die PDFs bewusst NICHT
   // vorladen (1.4 MB) - die holt man sich im Tal ueber WLAN
-  './betonspur.html'
+  './betonspur.html',
+  // Pizza-Truck 21.08.2026: Speisekarte auch am Berg ohne Empfang lesbar
+  // (zum Abschicken braucht es dann trotzdem Netz). Nach dem Termin raus.
+  './pizza.html'
 ];
 
 self.addEventListener('install', function(e) {

@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NalpSolar · Pizza-Truck Freitag 21.08.</title>
+<meta name="theme-color" content="#D72622">
+<!-- OFFENE SEITE - BEWUSST OHNE GATE-CODE: soll jeder auf der Baustelle mit dem
+     Handy ausfuellen koennen (auch Geowork/CKW), ohne Code und ohne Login.
+
+     Grundlage: Bestellformular "PIZZA TRUCK - DISENTIS GASTRO CATRINA", Anhang der
+     Mail Dennis Leifels (CKW) vom 13.08.2026 14:35 "Bestellliste fuer Pizza-Truck
+     naechsten Freitag 21.08". Pizzen, Zutaten und Hinweise 1:1 aus diesem PDF.
+     Dennis braucht alle Listen am Fr 21.08. bis 09:30 Uhr, Pizzen ca. 13:00 Uhr.
+
+     Datenbank: dieselbe Firebase-RTDB wie die uebrigen Seiten, ABER unter dem
+     bereits freigegebenen Knoten "erfassung" - ein neuer Top-Level-Knoten "pizza"
+     wird von den Regeln abgelehnt (getestet 14.08.2026, "Permission denied"). -->
+<style>
+  :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
+         --gruen:#1e9e5a; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body{ margin:0; background:#eef0f3; min-height:100vh; color:var(--ink);
+        font-family:Arial,"Helvetica Neue",sans-serif; }
+  body::before{ content:""; position:fixed; inset:0; z-index:-1;
+        background:linear-gradient(rgba(240,242,245,.86),rgba(240,242,245,.94)),
+        url('assets/img/hero.jpg') center 40%/cover no-repeat; }
+  header{ display:flex; align-items:center; gap:12px; padding:12px 14px;
+          background:#fff; border-bottom:4px solid var(--rot); }
+  header .logo img{ height:24px; display:block; }
+  header h1{ font-size:16px; margin:0; flex:1; min-width:0; font-weight:800; }
+  main{ max-width:640px; margin:0 auto; padding:14px 12px 90px; }
+
+  .box{ background:#fff; border:1px solid var(--line); border-left:5px solid var(--rot);
+        border-radius:6px; padding:15px; margin-bottom:14px; box-shadow:0 1px 4px rgba(20,25,32,.07); }
+  .box h2{ margin:0 0 4px; font-size:17px; }
+  .box p.sub{ margin:0 0 12px; font-size:13.5px; color:var(--mut); line-height:1.5; }
+
+  /* Kopf: wann, wo, bis wann */
+  .wann{ background:var(--rot); color:#fff; border:none; }
+  .wann h2{ font-size:22px; font-weight:900; margin:0; }
+  .wann .zeile{ font-size:14.5px; margin-top:7px; line-height:1.5; }
+  .wann .frist{ margin-top:12px; background:rgba(255,255,255,.16); border-radius:5px;
+        padding:10px 12px; font-size:14px; font-weight:700; line-height:1.45; }
+  .wann .frist b{ font-size:15.5px; }
+
+  label.fl{ display:block; font-size:11.5px; font-weight:700; color:var(--mut); margin:15px 0 5px;
+            text-transform:uppercase; letter-spacing:.04em; }
+  label.fl:first-child{ margin-top:0; }
+  label.fl .opt{ text-transform:none; letter-spacing:0; font-weight:400; }
+  input[type=text],textarea{ width:100%; background:#fff; border:1px solid #c9ccd2;
+          border-radius:6px; color:var(--ink); padding:11px 10px; font-size:16px; font-family:inherit; }
+  input:focus,textarea:focus{ outline:2px solid rgba(215,38,34,.35); }
+  textarea{ resize:vertical; min-height:56px; }
+
+  /* Firma: Knopfreihe */
+  .firmen{ display:flex; flex-wrap:wrap; gap:8px; }
+  .firmen label{ flex:1 1 auto; }
+  .firmen input{ position:absolute; opacity:0; pointer-events:none; }
+  .firmen span{ display:block; text-align:center; padding:11px 12px; border:1.5px solid #c9ccd2;
+        border-radius:6px; font-size:14.5px; font-weight:700; color:var(--mut); background:#fff; cursor:pointer; }
+  .firmen input:checked + span{ border-color:var(--rot); background:var(--rot); color:#fff; }
+
+  /* Umschalter Klassiker / eigene Kreation */
+  .tabs{ display:flex; gap:8px; margin:16px 0 0; }
+  .tabs button{ flex:1; padding:12px 8px; border:1.5px solid #c9ccd2; background:#fff;
+        border-radius:6px; font-family:inherit; font-size:14.5px; font-weight:800;
+        color:var(--mut); cursor:pointer; line-height:1.3; }
+  .tabs button.on{ border-color:var(--rot); background:var(--rot); color:#fff; }
+  .tabs button small{ display:block; font-weight:400; font-size:11.5px; margin-top:2px; }
+
+  /* Pizzaliste */
+  .liste{ margin-top:12px; }
+  .liste label{ display:block; position:relative; margin-bottom:9px; }
+  .liste input{ position:absolute; opacity:0; pointer-events:none; }
+  .liste .k{ display:block; border:1.5px solid #d5d8dc; border-radius:7px; padding:12px 13px 12px 44px;
+        background:#fff; cursor:pointer; }
+  .liste .k::before{ content:""; position:absolute; left:14px; top:14px; width:18px; height:18px;
+        border:2px solid #b9bec5; border-radius:50%; background:#fff; }
+  .liste input:checked + .k{ border-color:var(--rot); background:#fff7f7; }
+  .liste input:checked + .k::before{ border-color:var(--rot); background:var(--rot);
+        box-shadow:inset 0 0 0 3.5px #fff; }
+  .liste .n{ font-size:16px; font-weight:800; display:block; }
+  .liste .z{ font-size:12.5px; color:var(--mut); display:block; margin-top:2px; line-height:1.4; }
+
+  /* Zutaten fuer die eigene Kreation */
+  .basis{ margin-top:12px; background:#f5f6f8; border:1px solid var(--line); border-radius:6px;
+        padding:11px 13px; font-size:13.5px; line-height:1.5; }
+  .basis b{ font-size:14.5px; }
+  .zut{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+  .zut label{ position:relative; }
+  .zut input{ position:absolute; opacity:0; pointer-events:none; }
+  .zut span{ display:block; border:1.5px solid #d5d8dc; border-radius:6px; padding:10px 9px 10px 32px;
+        font-size:13.5px; background:#fff; cursor:pointer; line-height:1.3; }
+  .zut span::before{ content:""; position:absolute; left:9px; top:50%; margin-top:-8px;
+        width:16px; height:16px; border:2px solid #b9bec5; border-radius:3px; background:#fff; }
+  .zut input:checked + span{ border-color:var(--rot); background:#fff7f7; font-weight:700; }
+  .zut input:checked + span::before{ border-color:var(--rot); background:var(--rot); }
+  .zut input:checked + span::after{ content:""; position:absolute; left:14px; top:50%; margin-top:-6px;
+        width:5px; height:9px; border:solid #fff; border-width:0 2.5px 2.5px 0; transform:rotate(43deg); }
+
+  /* Dessert */
+  .dess{ position:relative; display:block; margin-top:16px; }
+  .dess input{ position:absolute; opacity:0; pointer-events:none; }
+  .dess span{ display:block; border:1.5px dashed #c9ccd2; border-radius:7px; padding:12px 13px 12px 44px;
+        background:#fff; cursor:pointer; font-size:14.5px; line-height:1.4; }
+  .dess span::before{ content:""; position:absolute; left:14px; top:15px; width:18px; height:18px;
+        border:2px solid #b9bec5; border-radius:3px; background:#fff; }
+  .dess input:checked + span{ border-style:solid; border-color:var(--rot); background:#fff7f7; }
+  .dess input:checked + span::before{ border-color:var(--rot); background:var(--rot); }
+  .dess input:checked + span::after{ content:""; position:absolute; left:20px; top:19px;
+        width:5px; height:10px; border:solid #fff; border-width:0 2.5px 2.5px 0; transform:rotate(43deg); }
+  .dess small{ display:block; color:var(--mut); font-size:12.5px; margin-top:2px; }
+
+  .btn{ display:block; width:100%; border:none; border-radius:7px; padding:16px;
+        font-size:17px; font-weight:800; cursor:pointer; color:#fff; background:var(--rot);
+        font-family:inherit; margin-top:18px; }
+  .btn[disabled]{ opacity:.45; }
+  .btn.grau{ background:#5b6067; }
+  .btn.klein{ padding:12px; font-size:15px; margin-top:10px; }
+  #status{ font-size:13px; color:var(--mut); min-height:18px; margin-top:10px; text-align:center; }
+
+  .ok{ display:none; text-align:center; padding:26px 16px; }
+  .ok .hk{ font-size:56px; line-height:1; }
+  .ok h2{ margin:12px 0 6px; font-size:20px; color:var(--gruen); }
+  .ok p{ margin:0 0 6px; font-size:14.5px; color:var(--mut); line-height:1.55; }
+  .ok .meins{ background:#f5f6f8; border-radius:6px; padding:12px 14px; text-align:left;
+        font-size:14px; line-height:1.5; margin:14px 0 4px; }
+
+  /* Uebersicht */
+  .zahl{ display:flex; gap:10px; margin:0 0 12px; }
+  .zahl div{ flex:1; background:#f5f6f8; border-radius:6px; padding:11px 8px; text-align:center; }
+  .zahl b{ display:block; font-size:24px; font-weight:900; line-height:1.1; }
+  .zahl small{ font-size:11.5px; color:var(--mut); }
+  table.ue{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  table.ue td{ border-top:1px solid var(--line); padding:9px 2px; vertical-align:top; }
+  table.ue tr:first-child td{ border-top:none; }
+  table.ue .nm{ font-weight:700; white-space:nowrap; padding-right:8px; }
+  table.ue .fa{ font-weight:400; color:var(--mut); font-size:11.5px; display:block; }
+  table.ue .zus{ color:var(--rot); font-size:12.5px; display:block; margin-top:2px; }
+  table.ue .del{ width:26px; text-align:right; }
+  table.ue .del button{ background:none; border:none; color:var(--mut); font-size:17px;
+        cursor:pointer; padding:0 2px; font-family:inherit; }
+  .leer{ font-size:13.5px; color:var(--mut); }
+  .summe{ margin-top:14px; border-top:2px solid var(--line); padding-top:12px; font-size:13.5px; }
+  .summe .z{ display:flex; justify-content:space-between; gap:10px; padding:4px 0; }
+  .summe .z b{ font-weight:800; }
+  .hint{ font-size:12.5px; color:var(--mut); background:rgba(255,255,255,.9);
+         border-radius:6px; padding:11px 13px; line-height:1.55; }
+  .zu{ background:#fff4e5; border:1px solid #f0c98a; border-radius:6px; padding:11px 13px;
+       font-size:13.5px; line-height:1.5; margin-bottom:14px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><img src="assets/img/strabag-logo.png" alt="STRABAG"></div>
+  <h1>Pizza-Truck</h1>
+</header>
+
+<main>
+
+  <div class="box wann">
+    <h2>🍕 Freitag, 21. August</h2>
+    <div class="zeile">Pizza-Truck auf der Baustelle · Pizzen ab ca. <b>13:00 Uhr</b><br>
+      Disentis Gastro Catrina</div>
+    <div class="frist" id="frist"><b>Anmeldung bis Freitag, 21.08. um 09:00 Uhr.</b><br>
+      Wer nicht angemeldet ist, bekommt keine Pizza.</div>
+  </div>
+
+  <div id="form">
+    <div class="box">
+      <h2>Deine Bestellung</h2>
+      <p class="sub">Eine Pizza pro Person. Du kannst auch für jemanden mitbestellen,
+        der kein Handy dabei hat.</p>
+
+      <label class="fl">Name *</label>
+      <input type="text" id="fName" autocomplete="name" placeholder="Vorname Name">
+
+      <label class="fl">Firma *</label>
+      <div class="firmen" id="fFirma">
+        <label><input type="radio" name="firma" value="STRABAG"><span>STRABAG</span></label>
+        <label><input type="radio" name="firma" value="Geowork"><span>Geowork</span></label>
+        <label><input type="radio" name="firma" value="CKW"><span>CKW</span></label>
+        <label><input type="radio" name="firma" value="Andere"><span>Andere</span></label>
+      </div>
+
+      <div class="tabs">
+        <button type="button" id="tabK" onclick="setArt('klassiker')">Klassiker<small>fertige Pizza wählen</small></button>
+        <button type="button" id="tabE" onclick="setArt('eigen')">Eigene Kreation<small>Grundpizza + Zutaten</small></button>
+      </div>
+
+      <div id="boxK">
+        <div class="liste" id="listeK"></div>
+      </div>
+
+      <div id="boxE" style="display:none">
+        <div class="basis"><b>Grundpizza</b> – Tomatensauce und Mozzarella.<br>
+          Zutaten ankreuzen, die draufkommen sollen:</div>
+        <div class="zut" id="listeZ"></div>
+      </div>
+
+      <label class="dess">
+        <input type="checkbox" id="fTira">
+        <span>🍫 Dazu ein <b>Pizza Tiramisu</b>
+          <small>Dessert: Mascarpone-Creme, Kakao</small></span>
+      </label>
+
+      <label class="fl">Ohne / Änderung <span class="opt">(optional)</span></label>
+      <input type="text" id="fOhne" placeholder="z. B. «ohne Oliven» oder «mit extra Mozzarella»">
+
+      <label class="fl">Weitere Wünsche / Hinweise <span class="opt">(optional)</span></label>
+      <textarea id="fBem" placeholder="…"></textarea>
+
+      <button class="btn" id="btnSend" onclick="senden()">🍕 Bestellung abschicken</button>
+      <div id="status"></div>
+    </div>
+  </div>
+
+  <div class="ok" id="ok">
+    <div class="hk">🍕</div>
+    <h2>Bestellt – danke!</h2>
+    <p>Du stehst auf der Liste für Freitag, 21.08.</p>
+    <div class="meins" id="meins"></div>
+    <button class="btn klein grau" onclick="neuStart(true)">✏️ Meine Bestellung ändern</button>
+    <button class="btn klein" onclick="neuStart(false)">➕ Für jemanden anderen bestellen</button>
+  </div>
+
+  <div class="box">
+    <h2>Wer isst was?</h2>
+    <p class="sub">Alle Bestellungen – aktualisiert sich beim Öffnen der Seite.</p>
+    <div class="zahl">
+      <div><b id="nPizza">–</b><small>Pizzen</small></div>
+      <div><b id="nTira">–</b><small>Tiramisu</small></div>
+      <div><b id="nLeute">–</b><small>Personen</small></div>
+    </div>
+    <div id="ueTab"><div class="leer">Wird geladen …</div></div>
+    <div class="summe" id="summe"></div>
+    <button class="btn klein grau" onclick="listeKopieren()">📋 Liste für den Pizza-Bäcker kopieren</button>
+    <div id="kopStatus" style="font-size:12.5px;color:var(--mut);text-align:center;margin-top:8px;min-height:16px"></div>
+  </div>
+
+  <div class="hint">
+    Fragen? Victor Malt · +41 76 835 21 75<br>
+    Die Sammelliste geht am Freitag um 09:30 Uhr an die CKW.
+  </div>
+
+</main>
+
+<script>
+'use strict';
+var DB='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app';
+var P='erfassung/pizza_20260821/bestellungen';
+var LS_NAME='nalp_pizza_name_v1', LS_MEIN='nalp_pizza_meine_v1';
+var FRIST=new Date(2026,7,21,9,0,0);          /* Fr 21.08.2026 09:00 - Dennis braucht die Liste um 09:30 */
+
+/* Speisekarte 1:1 aus "Pizza_Bestellformular (strabag).pdf" (CKW-Mail 13.08.2026) */
+var PIZZEN=[
+  ['Pizza Bufalina','Tomatensauce, Bufala, Basilikum'],
+  ['Pizza Diavola','Tomatensauce, Mozzarella, scharfe Salami, Chili'],
+  ['Pizza Truck','Weisse Pizza, Mascarpone, Rucola, Rohschinken, Parmesan, Mozzarella'],
+  ['Pizza 4 Formaggi','Tomatensauce, Mozzarella, Gorgonzola, Taleggio, Parmesan'],
+  ['Pizza Capricciosa','Tomatensauce, Mozzarella, Oliven, Artischocken, Champignons, Schinken'],
+  ['Pizza Gemüse','Tomatensauce, Mozzarella, Oliven, Artischocken, Champignons, Rucola, getrocknete Cherry-Tomaten'],
+  ['Panino Truck','Rucola, Rohschinken, Bufala Mozzarella, getrocknete Cherry-Tomaten']
+];
+var ZUTATEN=['Frische Champignons','Oliven','Artischocken','Schinken',
+  'Getrocknete Cherry-Tomaten','Rucola','Knoblauch','Mascarpone','Gorgonzola','Taleggio',
+  'scharfe Salami','Chili','Mozzarella','Basilikum','Spanischer Thon','Rohschinken',
+  'Parmesan','Bufala Mozzarella'];
+
+var art='klassiker', alle=[], meine=[];
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+/* ── Aufbau der Listen ────────────────────────────────── */
+(function(){
+  var h='';
+  for(var i=0;i<PIZZEN.length;i++){
+    h+='<label><input type="radio" name="pizza" value="'+esc(PIZZEN[i][0])+'">'
+      +'<span class="k"><span class="n">'+esc(PIZZEN[i][0])+'</span>'
+      +'<span class="z">'+esc(PIZZEN[i][1])+'</span></span></label>';
+  }
+  $('listeK').innerHTML=h;
+  h='';
+  for(var j=0;j<ZUTATEN.length;j++){
+    h+='<label><input type="checkbox" class="zt" value="'+esc(ZUTATEN[j])+'">'
+      +'<span>'+esc(ZUTATEN[j])+'</span></label>';
+  }
+  $('listeZ').innerHTML=h;
+})();
+
+function setArt(a){
+  art=a;
+  $('tabK').className = a==='klassiker'?'on':'';
+  $('tabE').className = a==='eigen'?'on':'';
+  $('boxK').style.display = a==='klassiker'?'block':'none';
+  $('boxE').style.display = a==='eigen'?'block':'none';
+}
+setArt('klassiker');
+
+/* Frist-Hinweis, sobald sie durch ist */
+(function(){
+  if(new Date()>FRIST){
+    var d=document.createElement('div');
+    d.className='zu';
+    d.innerHTML='<b>Anmeldeschluss ist vorbei.</b> Die Liste ist bereits bei der CKW. '
+      +'Du kannst dich noch eintragen – ob es noch reicht, sagt dir Victor (076 835 21 75).';
+    $('form').insertBefore(d,$('form').firstChild);
+  }
+})();
+
+/* ── Datenbank (REST, gleiches Muster wie ls.html) ─────── */
+function apiPost(body){ return fetch(DB+'/'+P+'.json',{method:'POST',body:JSON.stringify(body)})
+  .then(function(r){ return r.ok?r.json():null; }).then(function(j){ return j&&j.name?j.name:null; }); }
+function apiDel(key){ return fetch(DB+'/'+P+'/'+key+'.json',{method:'DELETE'})
+  .then(function(r){ return r.ok; }); }
+function apiGet(){ return fetch(DB+'/'+P+'.json?_='+Date.now())
+  .then(function(r){ return r.ok?r.json():null; }).catch(function(){ return null; }); }
+
+function meineLesen(){ try{ meine=JSON.parse(localStorage.getItem(LS_MEIN)||'[]'); }catch(e){ meine=[]; }
+  if(!meine.length) return; }
+function meineSchreiben(){ try{ localStorage.setItem(LS_MEIN,JSON.stringify(meine)); }catch(e){} }
+meineLesen();
+
+/* ── Absenden ─────────────────────────────────────────── */
+function gewaehltePizza(){
+  var r=document.querySelector('input[name=pizza]:checked');
+  return r?r.value:'';
+}
+function gewaehlteZutaten(){
+  var out=[], n=document.querySelectorAll('input.zt:checked');
+  for(var i=0;i<n.length;i++) out.push(n[i].value);
+  return out;
+}
+function textVon(rec){
+  var t = rec.art==='eigen'
+    ? 'Grundpizza' + (rec.zutaten&&rec.zutaten.length ? ' + '+rec.zutaten.join(', ') : ' (nur Tomatensauce und Mozzarella)')
+    : rec.pizza;
+  if(rec.tiramisu) t+=' + Pizza Tiramisu';
+  return t;
+}
+
+function senden(){
+  var name=$('fName').value.trim();
+  var fr=document.querySelector('input[name=firma]:checked');
+  if(!name){ alert('Bitte deinen Namen angeben.'); return; }
+  if(!fr){ alert('Bitte die Firma wählen.'); return; }
+
+  var rec={ ts:Date.now(), name:name, firma:fr.value, art:art,
+            pizza:'', zutaten:[], tiramisu:$('fTira').checked,
+            ohne:$('fOhne').value.trim(), bemerkung:$('fBem').value.trim() };
+
+  if(art==='klassiker'){
+    rec.pizza=gewaehltePizza();
+    if(!rec.pizza && !rec.tiramisu){ alert('Bitte eine Pizza auswählen.'); return; }
+  } else {
+    rec.zutaten=gewaehlteZutaten();
+    rec.pizza='Grundpizza';
+  }
+
+  try{ localStorage.setItem(LS_NAME,name); }catch(e){}
+  $('btnSend').disabled=true;
+  $('status').textContent='Wird gesendet …';
+
+  apiPost(rec).then(function(key){
+    if(!key) throw 0;
+    meine.push(key); meineSchreiben();
+    $('meins').innerHTML='<b>'+esc(rec.name)+'</b> ('+esc(rec.firma)+')<br>'+esc(textVon(rec))
+      +(rec.ohne?'<br><span style="color:#D72622">'+esc(rec.ohne)+'</span>':'')
+      +(rec.bemerkung?'<br>'+esc(rec.bemerkung):'');
+    $('form').style.display='none';
+    $('ok').style.display='block';
+    $('btnSend').disabled=false; $('status').textContent='';
+    laden();
+    window.scrollTo(0,0);
+  }).catch(function(){
+    $('btnSend').disabled=false;
+    $('status').textContent='';
+    alert('Senden fehlgeschlagen – bitte Empfang prüfen und nochmals versuchen.');
+  });
+}
+
+/* "ändern" = letzten eigenen Eintrag löschen und neu ausfüllen;
+   "für jemanden anderen" = leeres Formular, Name frei */
+function neuStart(aendern){
+  if(aendern && meine.length){
+    var key=meine[meine.length-1];
+    apiDel(key).then(function(){ meine.pop(); meineSchreiben(); laden(); });
+  } else {
+    $('fName').value=''; $('fOhne').value=''; $('fBem').value='';
+    $('fTira').checked=false;
+    var r=document.querySelector('input[name=pizza]:checked'); if(r) r.checked=false;
+    var z=document.querySelectorAll('input.zt:checked');
+    for(var i=0;i<z.length;i++) z[i].checked=false;
+  }
+  $('ok').style.display='none';
+  $('form').style.display='block';
+  window.scrollTo(0,0);
+}
+
+function loeschen(key){
+  if(!confirm('Diese Bestellung wirklich löschen?')) return;
+  apiDel(key).then(function(){
+    var i=meine.indexOf(key); if(i>=0){ meine.splice(i,1); meineSchreiben(); }
+    laden();
+  });
+}
+
+/* ── Übersicht ────────────────────────────────────────── */
+function laden(){
+  apiGet().then(function(daten){
+    alle=[];
+    if(daten) for(var k in daten){ if(daten.hasOwnProperty(k)){ var d=daten[k]||{}; d._key=k; alle.push(d); } }
+    alle.sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
+    zeichnen();
+  });
+}
+
+function zeichnen(){
+  var nP=0, nT=0;
+  for(var i=0;i<alle.length;i++){
+    if(alle[i].tiramisu) nT++;
+    if(alle[i].art==='eigen' || alle[i].pizza) nP++;
+  }
+  $('nPizza').textContent=nP;
+  $('nTira').textContent=nT;
+  $('nLeute').textContent=alle.length;
+
+  if(!alle.length){
+    $('ueTab').innerHTML='<div class="leer">Noch niemand angemeldet – mach den Anfang.</div>';
+    $('summe').innerHTML='';
+    return;
+  }
+
+  var h='<table class="ue">';
+  for(var j=0;j<alle.length;j++){
+    var d=alle[j], zus=[];
+    if(d.ohne) zus.push(d.ohne);
+    if(d.bemerkung) zus.push(d.bemerkung);
+    h+='<tr><td class="nm">'+esc(d.name)+'<span class="fa">'+esc(d.firma||'')+'</span></td>'
+      +'<td>'+esc(textVon(d))
+      +(zus.length?'<span class="zus">'+esc(zus.join(' · '))+'</span>':'')+'</td>'
+      +'<td class="del">'+(meine.indexOf(d._key)>=0
+          ? '<button title="löschen" onclick="loeschen(\''+d._key+'\')">✕</button>' : '')+'</td></tr>';
+  }
+  h+='</table>';
+  $('ueTab').innerHTML=h;
+
+  /* Zusammenzug pro Pizza - das ist, was der Bäcker braucht */
+  var z={}, reihen=[];
+  for(var m=0;m<alle.length;m++){
+    var t=alle[m].art==='eigen'?'Eigene Kreation':(alle[m].pizza||'');
+    if(!t) continue;
+    if(!z[t]){ z[t]=0; reihen.push(t); }
+    z[t]++;
+  }
+  reihen.sort(function(a,b){ return z[b]-z[a]; });
+  var s='';
+  for(var n=0;n<reihen.length;n++)
+    s+='<div class="z"><span>'+esc(reihen[n])+'</span><b>'+z[reihen[n]]+'×</b></div>';
+  if(nT) s+='<div class="z"><span>Pizza Tiramisu (Dessert)</span><b>'+nT+'×</b></div>';
+  $('summe').innerHTML=s;
+}
+
+/* Fertiger Text für die Mail an die CKW */
+function listeText(){
+  var L=['PIZZA-TRUCK NALPSOLAR - Freitag, 21.08.2026','Bestellung STRABAG Los B8-13 / Baustelle Nalps',''];
+  var z={}, reihen=[], nT=0;
+  for(var i=0;i<alle.length;i++){
+    var d=alle[i];
+    if(d.tiramisu) nT++;
+    var t=d.art==='eigen'?'Eigene Kreation (Grundpizza)':(d.pizza||'');
+    if(t){ if(!z[t]){ z[t]=0; reihen.push(t); } z[t]++; }
+  }
+  reihen.sort(function(a,b){ return z[b]-z[a]; });
+  L.push('ZUSAMMENZUG');
+  for(var r=0;r<reihen.length;r++) L.push('  '+z[reihen[r]]+'x  '+reihen[r]);
+  if(nT) L.push('  '+nT+'x  Pizza Tiramisu (Dessert)');
+  L.push('');
+  L.push('EINZELN');
+  for(var j=0;j<alle.length;j++){
+    var e=alle[j], zeile='  '+e.name+' ('+e.firma+'): '+textVon(e);
+    if(e.ohne) zeile+=' - '+e.ohne;
+    if(e.bemerkung) zeile+=' - '+e.bemerkung;
+    L.push(zeile);
+  }
+  L.push('');
+  L.push('Total '+alle.length+' Personen.');
+  return L.join('\n');
+}
+function listeKopieren(){
+  var t=listeText();
+  var fertig=function(){ $('kopStatus').textContent='Liste kopiert – kannst du jetzt einfügen.'; };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(fertig,function(){ notfall(t); });
+  } else notfall(t);
+  function notfall(txt){
+    var ta=document.createElement('textarea');
+    ta.value=txt; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); fertig(); }catch(e){ $('kopStatus').textContent='Kopieren hat nicht geklappt.'; }
+    document.body.removeChild(ta);
+  }
+}
+
+/* Name merken */
+try{ $('fName').value=localStorage.getItem(LS_NAME)||''; }catch(e){}
+laden();
+</script>
+</body>
+</html>
