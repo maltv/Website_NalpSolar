@@ -118,7 +118,31 @@
   .bar{ position:relative; background:#edeff2; border-radius:4px; height:13px; min-width:70px; overflow:hidden; }
   .bar i{ position:absolute; top:0; left:0; bottom:0; background:var(--gruen); border-radius:4px; }
   .bar i.teils{ background:var(--orange); }
+  /* Leistung: Kacheln + 14-Tage-Balken. Serienfarben bewusst wie auf der Karte
+     (orange = vormontiert, gruen = auf dem Berg); das Gruen ist eine Stufe
+     dunkler als das Kartengruen, damit das Paar auch bei Rot-Gruen-Sehschwaeche
+     auseinanderzuhalten ist (geprueft: dE 13.2 protan). Zahlen stehen zusaetzlich
+     ueber den Balken - Farbe allein traegt die Information nie. */
+  .kach{ display:grid; grid-template-columns:repeat(auto-fit,minmax(132px,1fr)); gap:8px; }
+  .kach .k{ border:1px solid var(--line); border-radius:8px; padding:8px 10px; background:#fbfcfd; }
+  .kach .k .lbl{ font-size:11.5px; color:var(--mut); font-weight:700; line-height:1.2; }
+  .kach .k .num{ font-size:29px; font-weight:900; line-height:1.05; margin-top:2px; letter-spacing:-.5px; }
+  .kach .k .sub{ font-size:11px; color:var(--mut); margin-top:1px; }
+  .kach .k.o{ border-left:4px solid var(--orange); }
+  .kach .k.g{ border-left:4px solid #0f7a3d; }
+  .kach .k.b{ border-left:4px solid var(--blau); }
+  .kach .k.n{ border-left:4px solid var(--mut); }
+  .delta{ font-size:11.5px; font-weight:800; }
+  .delta.auf{ color:#0f7a3d; } .delta.ab{ color:var(--rot); } .delta.gleich{ color:var(--mut); }
+  .chartWrap{ margin-top:12px; overflow-x:auto; }
+  .chartWrap svg{ display:block; }
+  .dLeg{ display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--mut);
+         align-items:center; margin-top:7px; }
+  .dLeg span i{ display:inline-block; width:14px; height:11px; border-radius:3px;
+         margin-right:5px; vertical-align:-1px; }
   /* Karten je Batch */
+  .kHinweis{ margin:0 4px 8px; padding:7px 9px; border-radius:6px; background:#e7f0fb;
+             border-left:4px solid var(--blau); font-size:12.5px; color:#123c66; font-weight:600; }
   .kLeg{ display:flex; gap:13px; flex-wrap:wrap; font-size:12px; color:var(--mut); align-items:center; }
   .kLeg .dot{ display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:5px;
         vertical-align:-2px; border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.3); }
@@ -288,6 +312,15 @@
 
   <!-- ══════════ 3 · TABELLEN ══════════ -->
   <section id="s3" style="display:none">
+    <div class="box" id="boxDash" style="border-left-color:var(--blau)">
+      <div class="klapp" onclick="klapp('boxDash')"><h2 data-i18n="s3_titelD">📊 Leistung</h2><span class="pfeil">▾</span></div>
+      <div class="kInhalt">
+        <div class="sub" id="dashSub" data-i18n="dash_sub">Wie viel geht pro Tag durch die Vormontage – aus den erfassten Meldungen.</div>
+        <div class="kach" id="dashKach" style="margin-top:8px"></div>
+        <div class="chartWrap" id="dashChart"></div>
+        <div class="dLeg" id="dashLeg"></div>
+      </div>
+    </div>
     <div class="box" id="box0" style="border-left-color:var(--gruen)">
       <div class="klapp" onclick="klapp('box0')"><h2 data-i18n="s3_titel0">🧾 Bestellbatches – geliefert?</h2><span class="pfeil">▾</span></div>
       <div class="kInhalt">
@@ -418,6 +451,15 @@ var I18N={
   s3_titel1:'🏷 Erfasste Stützen', s3_titel2:'🏗 Fortschritt',
   s3_titel0:'🧾 Bestellbatches – geliefert?',
   batch_sub:'Bestellte Stützen (ab Mauchle-Batch 8) im Vergleich mit den erfassten Stützen. Zeile antippen zeigt, was noch fehlt.',
+  s3_titelD:'📊 Leistung',
+  dash_sub:'Wie viel geht pro Tag durch die Vormontage – gerechnet aus den erfassten Meldungen.',
+  d_woche:'Diese Woche vormontiert', d_woche_berg:'Diese Woche auf den Berg',
+  d_schnitt:'Ø pro Arbeitstag', d_schnitt_sub:'letzte 14 Tage · {n} Arbeitstage',
+  d_tal:'Jetzt im Tal bereit', d_tal_sub:'vormontiert, noch nicht oben',
+  d_ps:'Passstücke diese Woche', d_ps_sub:'{n} insgesamt erfasst',
+  d_vw:'Vorwoche {n}', d_kein:'noch keine Meldungen',
+  d_chart:'Letzte 14 Tage', d_sa:'Sa', d_so:'So',
+  d_tische:'Tische: {n}',
   th_lieferung:'Lieferung', th_batch:'Batch', th_erfasst:'Erfasst',
   badge_komplett:'✔ komplett geliefert', badge_offen:'{n} fehlt', batch_fehlt:'Fehlt:',
   ph_suche:'Suchen (ID, Länge, Name) …', btn_csv:'⬇ CSV / Excel',
@@ -490,6 +532,15 @@ var I18N={
   ocr_zuordnung:'✔ Matched with the order list',
   s3_titel0:'🧾 Order batches – delivered?',
   batch_sub:'Ordered posts (Mauchle batch 8 and later) compared with the saved posts. Tap a row to see what is still missing.',
+  s3_titelD:'📊 Output',
+  dash_sub:'How much goes through pre-assembly per day – calculated from the saved entries.',
+  d_woche:'Pre-assembled this week', d_woche_berg:'Sent up this week',
+  d_schnitt:'Avg per working day', d_schnitt_sub:'last 14 days · {n} working days',
+  d_tal:'Ready in the valley now', d_tal_sub:'pre-assembled, not up yet',
+  d_ps:'Fitting pieces this week', d_ps_sub:'{n} saved in total',
+  d_vw:'Last week {n}', d_kein:'no entries yet',
+  d_chart:'Last 14 days', d_sa:'Sat', d_so:'Sun',
+  d_tische:'Tables: {n}',
   th_lieferung:'Delivery', th_batch:'Batch', th_erfasst:'Saved',
   badge_komplett:'✔ fully delivered', badge_offen:'{n} missing', batch_fehlt:'Missing:',
   ph_suche:'Search (ID, length, name) …', btn_csv:'⬇ CSV / Excel',
@@ -562,6 +613,15 @@ var I18N={
   soll_unbekannt:'⚠ {id}-{s} nie ma w żadnej partii – dopisz uwagę',
   ocr_zuordnung:'✔ Dopasowano do listy zamówień',
   batch_sub:'Zamówione podpory (Mauchle od partii 8) w porównaniu z zapisanymi podporami. Dotknij wiersza, aby zobaczyć czego brakuje.',
+  s3_titelD:'📊 Wydajność',
+  dash_sub:'Ile przechodzi dziennie przez montaż wstępny – liczone z zapisanych wpisów.',
+  d_woche:'Zmontowane w tym tygodniu', d_woche_berg:'Wysłane w góry w tym tygodniu',
+  d_schnitt:'Średnio na dzień roboczy', d_schnitt_sub:'ostatnie 14 dni · dni robocze: {n}',
+  d_tal:'Gotowe w dolinie', d_tal_sub:'zmontowane, jeszcze nie na górze',
+  d_ps:'Passstücke w tym tygodniu', d_ps_sub:'zapisane łącznie: {n}',
+  d_vw:'Poprzedni tydzień: {n}', d_kein:'brak wpisów',
+  d_chart:'Ostatnie 14 dni', d_sa:'sob.', d_so:'niedz.',
+  d_tische:'Stoły: {n}',
   th_lieferung:'Dostawa', th_batch:'Partia', th_erfasst:'Zapisane',
   badge_komplett:'✔ dostarczona w całości', badge_offen:'brakuje: {n}', batch_fehlt:'Brakuje:',
   ph_suche:'Szukaj (ID, długość, imię i nazwisko) …', btn_csv:'⬇ CSV / Excel',
@@ -1262,6 +1322,7 @@ function renderTab(){
   });
   $('z2').textContent=T('zaehler_meldungen',{g:fo.length,v:hv,b:hb});
   renderBatches();
+  renderDash();
   kartenMalen();
 }
 
@@ -1417,12 +1478,145 @@ function csv2(){
     alleFortschritt().map(function(r){ return [r.tischId, r.art==='berg'?'auf den Berg':'vormontiert', r.bem, r.von, fmtD(r.datum), fmtZ(r.ts)]; }));
 }
 
+/* ══════════ Leistung ══════════
+   Zaehlt TISCHE, nicht Meldungen: je Tisch der erste Tag, an dem er
+   vormontiert bzw. auf den Berg gemeldet wurde. Korrekturmeldungen am
+   selben Tisch verfaelschen die Leistung damit nicht. */
+function dTag(r){
+  if(r && r.datum && /^\d{4}-\d{2}-\d{2}$/.test(r.datum)) return r.datum;
+  if(r && r.ts){ var d=new Date(r.ts);
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  return '';
+}
+function dTagPlus(iso, n){                       // Datum verschieben, ISO rein/raus
+  var p=iso.split('-'), d=new Date(+p[0], +p[1]-1, +p[2]);
+  d.setDate(d.getDate()+n);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function dWochenstart(iso){                      // Montag der Woche
+  var p=iso.split('-'), d=new Date(+p[0], +p[1]-1, +p[2]);
+  return dTagPlus(iso, -((d.getDay()+6)%7));
+}
+function dWochentag(iso){ var p=iso.split('-'); return new Date(+p[0], +p[1]-1, +p[2]).getDay(); }
+function dErsteTage(){                           // {v:{id:tag}, b:{id:tag}}
+  var v={}, b={};
+  alleFortschritt().forEach(function(r){
+    var id=normId(r.tischId), t=dTag(r);
+    if(!id || !t) return;
+    var z=(r.art==='berg')?b:v;
+    if(!z[id] || t<z[id]) z[id]=t;
+  });
+  return {v:v, b:b};
+}
+function dZaehl(obj, von, bis){                  // Tische mit erstem Tag im Fenster [von,bis]
+  var n=0;
+  Object.keys(obj).forEach(function(k){ if(obj[k]>=von && obj[k]<=bis) n++; });
+  return n;
+}
+function dDelta(jetzt, vorher){
+  if(vorher===0 && jetzt===0) return '<span class="delta gleich">–</span>';
+  var d=jetzt-vorher;
+  var kl=d>0?'auf':(d<0?'ab':'gleich');
+  var pf=d>0?'▲':(d<0?'▼':'=');
+  return '<span class="delta '+kl+'">'+pf+' '+(d>0?'+':'')+d+'</span> <span style="color:var(--mut)">'
+         +T('d_vw',{n:vorher})+'</span>';
+}
+function renderDash(){
+  var kach=$('dashKach'); if(!kach) return;
+  var E=dErsteTage(), st=alleStuetzen();
+  var heuteS=heute(), moDiese=dWochenstart(heuteS), moLetzte=dTagPlus(moDiese,-7);
+  var soLetzte=dTagPlus(moDiese,-1), von14=dTagPlus(heuteS,-13);
+
+  var wV=dZaehl(E.v,moDiese,heuteS), wVl=dZaehl(E.v,moLetzte,soLetzte);
+  var wB=dZaehl(E.b,moDiese,heuteS), wBl=dZaehl(E.b,moLetzte,soLetzte);
+  var at=0;                                       // Arbeitstage Mo-Fr im 14-Tage-Fenster
+  for(var i=0;i<14;i++){ var g=dWochentag(dTagPlus(von14,i)); if(g>=1&&g<=5) at++; }
+  var v14=dZaehl(E.v,von14,heuteS);
+  var schnitt = at ? (v14/at) : 0;
+  var imTal=0;
+  Object.keys(E.v).forEach(function(id){ if(!E.b[id]) imTal++; });
+  var psW=0;
+  st.forEach(function(r){ var t=dTag(r); if(t && t>=moDiese && t<=heuteS) psW++; });
+
+  kach.innerHTML=
+     '<div class="k o"><div class="lbl">'+T('d_woche')+'</div><div class="num">'+wV+'</div>'
+    +'<div class="sub">'+dDelta(wV,wVl)+'</div></div>'
+    +'<div class="k g"><div class="lbl">'+T('d_woche_berg')+'</div><div class="num">'+wB+'</div>'
+    +'<div class="sub">'+dDelta(wB,wBl)+'</div></div>'
+    +'<div class="k n"><div class="lbl">'+T('d_schnitt')+'</div><div class="num">'
+      +(Math.round(schnitt*10)/10).toString().replace('.',',')+'</div>'
+    +'<div class="sub">'+T('d_schnitt_sub',{n:at})+'</div></div>'
+    +'<div class="k o"><div class="lbl">'+T('d_tal')+'</div><div class="num">'+imTal+'</div>'
+    +'<div class="sub">'+T('d_tal_sub')+'</div></div>'
+    +'<div class="k b"><div class="lbl">'+T('d_ps')+'</div><div class="num">'+psW+'</div>'
+    +'<div class="sub">'+T('d_ps_sub',{n:st.length})+'</div></div>';
+
+  dashChartMalen(E, von14);
+  $('dashLeg').innerHTML=
+     '<span><i style="background:#e08a00"></i>🔧 '+T('leg_vormontiert')+'</span>'
+    +'<span><i style="background:#0f7a3d"></i>⛰ '+T('leg_berg')+'</span>';
+}
+/* 14-Tage-Balken als reines SVG - laeuft offline, ohne Bibliothek.
+   Zwei Serien nebeneinander (nicht gestapelt), Zahl ueber dem Balken:
+   die Information haengt nie allein an der Farbe. */
+function dashChartMalen(E, von14){
+  var el=$('dashChart'); if(!el) return;
+  var tage=[], maxN=0;
+  for(var i=0;i<14;i++){
+    var t=dTagPlus(von14,i);
+    var v=0,b=0;
+    Object.keys(E.v).forEach(function(k){ if(E.v[k]===t) v++; });
+    Object.keys(E.b).forEach(function(k){ if(E.b[k]===t) b++; });
+    tage.push({t:t, v:v, b:b, wt:dWochentag(t)});
+    if(v>maxN) maxN=v; if(b>maxN) maxN=b;
+  }
+  if(!maxN){ el.innerHTML='<div class="sub" style="margin-top:10px">'+T('d_kein')+'</div>'; return; }
+  var BW=13, LU=2, SP=34, H=104, OB=16, UN=30, W=14*SP+8;
+  // viewBox statt fester Breite: passt sich dem Handy an, ohne die Seite breit zu machen
+  var s='<svg width="100%" style="max-width:'+W+'px" height="'+(H+OB+UN)+'" '
+       +'viewBox="0 0 '+W+' '+(H+OB+UN)+'" preserveAspectRatio="xMidYMin meet" role="img">';
+  s+='<line x1="4" y1="'+(OB+H)+'" x2="'+(W-4)+'" y2="'+(OB+H)+'" stroke="#d9dce0" stroke-width="1"/>';
+  tage.forEach(function(d,ix){
+    var x=6+ix*SP, we=(d.wt===0||d.wt===6);
+    if(we) s+='<rect x="'+(x-2)+'" y="'+OB+'" width="'+(SP-4)+'" height="'+H+'" fill="#f4f5f7"/>';
+    var hv=d.v?Math.max(3,Math.round(d.v/maxN*H)):0;
+    var hb=d.b?Math.max(3,Math.round(d.b/maxN*H)):0;
+    var x1=x+(SP-4-2*BW-LU)/2, x2=x1+BW+LU;
+    var lbl=fmtD(d.t);
+    if(hv) s+='<rect x="'+x1+'" y="'+(OB+H-hv)+'" width="'+BW+'" height="'+hv+'" rx="4" fill="#e08a00">'
+             +'<title>'+lbl+' · 🔧 '+d.v+'</title></rect>';
+    if(hb) s+='<rect x="'+x2+'" y="'+(OB+H-hb)+'" width="'+BW+'" height="'+hb+'" rx="4" fill="#0f7a3d">'
+             +'<title>'+lbl+' · ⛰ '+d.b+'</title></rect>';
+    if(d.v) s+='<text x="'+(x1+BW/2)+'" y="'+(OB+H-hv-4)+'" text-anchor="middle" font-size="10.5" font-weight="800" fill="#8a5a00">'+d.v+'</text>';
+    if(d.b) s+='<text x="'+(x2+BW/2)+'" y="'+(OB+H-hb-4)+'" text-anchor="middle" font-size="10.5" font-weight="800" fill="#0f5c33">'+d.b+'</text>';
+    var tag=d.wt===6?T('d_sa'):(d.wt===0?T('d_so'):fmtD(d.t));
+    s+='<text x="'+(x+(SP-4)/2)+'" y="'+(OB+H+13)+'" text-anchor="middle" font-size="9.5" fill="'
+      +(we?'#a3a7ad':'#63676d')+'">'+esc(tag)+'</text>';
+  });
+  s+='</svg>';
+  el.innerHTML='<div class="sub" style="margin:6px 0 2px">'+T('d_chart')+'</div>'+s;
+}
+
 /* ══════════ Karten je Batch ══════════
    Eine Karte pro Bestellbatch (Batch 9 und 10 gehoeren zusammen): je
    Bohrpunkt zeigt ein Punkt, ob das Passstueck erfasst ist; die Tisch-
    flaeche traegt den Fortschritt (orange = vormontiert, gruen = auf dem
    Berg; Berg ueberschreibt). Die Arbeitsreihenfolge gibt die Bauleitung
    muendlich durch - hier steht nur der Stand. */
+/* Hinweise der Bauleitung je Batch-Karte. ids = Tische, die auf der Karte
+   gestrichelt markiert und im Text genannt werden. Erledigt sich ein Hinweis,
+   Eintrag hier loeschen - sonst steht er weiter auf der Karte. */
+var KHINWEIS={
+  '9+10':{ ids:['1082','1083','1084'],
+    de:'⏳ B-Konstruktionen 1082 · 1083 · 1084: die S1-Knieträger werden am Montag 17.08. angeliefert. Diese drei erst danach fertig montieren.',
+    en:'⏳ B structures 1082 · 1083 · 1084: the S1 knee beams (Knieträger) arrive on Monday 17 Aug. Finish these three only after that.',
+    pl:'⏳ Konstrukcje B 1082 · 1083 · 1084: belki kolanowe S1 (Knieträger) przyjadą w poniedziałek 17.08. Te trzy dokończyć dopiero potem.' }
+};
+function kHinweis(lbl){
+  var h=KHINWEIS[lbl];
+  if(!h) return null;
+  return { ids:h.ids||[], txt:h[lang]||h.de };
+}
 function kartenLaden(manuell){
   kartenMalen();                         // Karten sofort bauen - Status kommt nach
   laden(manuell);                        // frische Daten -> renderTab -> kartenMalen
@@ -1524,10 +1718,12 @@ function kMapBauen(wrap,lbl){
   if(!Object.keys(tische).length) return;
 
   var sid=lbl.replace('+','_');
+  var hw=kHinweis(lbl);
   var box=document.createElement('div');
   box.className='box kBatch';
   box.innerHTML='<h2>Batch '+esc(lbl)+'</h2>'
     +'<div class="zaehler" id="kz_'+sid+'">–</div>'
+    +(hw?'<div class="kHinweis">'+esc(hw.txt)+'</div>':'')
     +'<div class="kmap" id="km_'+sid+'"></div>'
     +(Object.keys(ohne).length?'<div class="hint" style="margin:6px 4px 0">'+T('karte_ohne')+' '
       +Object.keys(ohne).sort().join(', ')+'</div>':'');
@@ -1556,12 +1752,14 @@ function kMapBauen(wrap,lbl){
     var mN=0,mE=0; pk.forEach(function(p){ mN+=p.N; mE+=p.E; }); mN/=pk.length; mE/=pk.length;
     var srt=pk.slice().sort(function(a,b){
       return Math.atan2(a.N-mN,a.E-mE)-Math.atan2(b.N-mN,b.E-mE); });
+    var mrk=hw && hw.ids.indexOf(String(tid))>=0;      // im Hinweis genannt
     var poly=L.polygon(srt.map(function(p){ return [p.N,p.E]; }),
-      { color:'#fff', weight:1.2, opacity:.9, fillColor:'#c9ccd2', fillOpacity:.38 }).addTo(m);
+      mrk ? { color:'#1565c0', weight:2.6, opacity:1, dashArray:'6 4', fillColor:'#c9ccd2', fillOpacity:.38 }
+          : { color:'#fff', weight:1.2, opacity:.9, fillColor:'#c9ccd2', fillOpacity:.38 }).addTo(m);
     flaechen[tid]=poly;
     // Beschriftung fest auf den Tisch-Mittelpunkt (nicht an das Polygon gebunden)
     L.tooltip({permanent:true, direction:'center', className:'kLbl', opacity:1})
-      .setLatLng([mN,mE]).setContent(String(tid)).addTo(m);
+      .setLatLng([mN,mE]).setContent(String(tid)+(mrk?' ⏳':'')).addTo(m);
     pk.forEach(function(p){
       punkte[p.key]=L.circleMarker([p.N,p.E],
         { radius:3.2, weight:1.1, color:'#fff', opacity:.95, fillColor:'#e4e7eb', fillOpacity:1 }).addTo(m);
@@ -1606,7 +1804,7 @@ window.addEventListener('resize', function(){
 });
 var qs=location.search;
 if(qs.indexOf('f=fortschritt')>=0) tab(2);
-else if(qs.indexOf('f=tabelle')>=0) tab(3);
+else if(qs.indexOf('f=tabelle')>=0 || qs.indexOf('f=leistung')>=0) tab(3);
 else if(qs.indexOf('f=auftrag')>=0 || qs.indexOf('f=karte')>=0) tab(4);
 if(qs.indexOf('lang=pl')>=0) setLang('pl');
 else if(qs.indexOf('lang=en')>=0) setLang('en');

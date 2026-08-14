@@ -1,5 +1,5 @@
 ﻿'use strict';
-var CACHE = 'nalpsolar-v112';
+var CACHE = 'nalpsolar-v113';
 var PRECACHE = [
   './index.html',
   './protokoll.html',
