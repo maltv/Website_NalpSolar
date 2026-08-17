@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>NalpSolar · Skizzenblock</title>
+<meta name="theme-color" content="#ffffff">
+<script src="assets/js/nalp-gate.js"></script>
+<style>
+  :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8; --blau:#0b5394; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; height:100%; overflow:hidden; }
+  body{ background:#eef0f3; color:var(--ink); font-family:Arial,"Helvetica Neue",sans-serif;
+        display:flex; flex-direction:column; }
+
+  header{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:none;
+          padding:8px 12px calc(8px + env(safe-area-inset-top)); background:#fff; border-bottom:3px solid var(--rot); }
+  header a.home{ color:var(--ink); text-decoration:none; font-size:19px; }
+  header .logo img{ height:20px; display:block; }
+  header h1{ font-size:15px; margin:0; flex:1; font-weight:900; white-space:nowrap; }
+  .kbtn{ border:1px solid #c9ccd2; background:#fff; border-radius:6px; padding:7px 10px; font-size:12.5px;
+         font-weight:800; cursor:pointer; color:var(--ink); text-decoration:none; white-space:nowrap; }
+  .kbtn.rot{ background:var(--rot); border-color:var(--rot); color:#fff; }
+
+  /* Werkzeugleiste */
+  .tools{ flex:none; display:flex; gap:5px; flex-wrap:wrap; align-items:center;
+          padding:6px 10px; background:#fff; border-bottom:1px solid var(--line); }
+  .t{ border:1px solid #c9ccd2; background:#fff; border-radius:7px; min-width:44px; height:40px;
+      font-size:17px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px;
+      padding:0 8px; color:var(--ink); }
+  .t small{ font-size:10.5px; font-weight:800; }
+  .t.an{ background:#12304f; border-color:#12304f; color:#fff; }
+  .sep{ width:1px; height:30px; background:var(--line); margin:0 3px; }
+  .farbe{ width:30px; height:30px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 0 1.5px #c9ccd2; cursor:pointer; }
+  .farbe.an{ box-shadow:0 0 0 3px #12304f; }
+  .staerke{ display:flex; gap:4px; align-items:center; }
+  .sw{ width:34px; height:34px; border:1px solid #c9ccd2; border-radius:6px; background:#fff; cursor:pointer;
+       display:flex; align-items:center; justify-content:center; }
+  .sw.an{ border-color:#12304f; background:#eaf0f7; }
+  .sw i{ display:block; background:#111; border-radius:9px; }
+
+  /* Zeichenfläche */
+  .buehne{ flex:1; min-height:0; position:relative; display:flex; align-items:center; justify-content:center;
+           background:#5a6673; padding:8px; overflow:hidden; }
+  canvas{ background:#fff; box-shadow:0 4px 18px rgba(0,0,0,.35); touch-action:none; max-width:100%; max-height:100%; }
+
+  /* Fusszeile */
+  .fuss{ flex:none; display:flex; gap:6px; flex-wrap:wrap; align-items:center; justify-content:space-between;
+         padding:7px 10px calc(7px + env(safe-area-inset-bottom)); background:#fff; border-top:1px solid var(--line); }
+  .fuss .grp{ display:flex; gap:6px; flex-wrap:wrap; }
+  .hinweis{ font-size:11.5px; color:var(--mut); }
+
+  /* Foto-Auswahl */
+  #fotowahl{ position:fixed; inset:0; background:rgba(12,18,26,.94); z-index:60; display:none;
+             padding:14px; overflow:auto; }
+  #fotowahl.on{ display:block; }
+  #fotowahl h2{ color:#fff; font-size:16px; margin:4px 0 10px; }
+  #fotowahl .gal{ display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:8px; }
+  #fotowahl img{ width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:6px; cursor:pointer; border:2px solid transparent; }
+  #fotowahl img:active{ border-color:var(--rot); }
+  #fotowahl .zu{ position:absolute; top:10px; right:16px; color:#fff; font-size:30px; font-weight:900; cursor:pointer; }
+
+  /* Speichern-Dialog */
+  #wolke{ position:fixed; inset:0; background:rgba(12,18,26,.9); z-index:60; display:none; padding:16px; overflow:auto; }
+  #wolke.on{ display:block; }
+  #wolke .box{ background:#fff; border-radius:10px; padding:14px 16px; max-width:520px; margin:20px auto; }
+  #wolke h2{ margin:0 0 8px; font-size:16px; }
+  #wolke .liste{ margin-top:10px; max-height:50vh; overflow:auto; }
+  #wolke .z{ display:flex; justify-content:space-between; align-items:center; gap:8px;
+             border-top:1px solid var(--line); padding:8px 0; font-size:13.5px; }
+  #wolke .z b{ font-weight:800; }
+  input[type=text]{ width:100%; padding:9px 10px; font-size:14px; border:1px solid #c9ccd2; border-radius:6px; }
+
+  @media(max-width:560px){
+    header h1{ font-size:13.5px; }
+    .t{ min-width:40px; height:38px; font-size:16px; }
+    .hinweis{ display:none; }
+  }
+  @media print{
+    header,.tools,.fuss{ display:none !important; }
+    .buehne{ background:#fff; padding:0; }
+    canvas{ box-shadow:none; width:100%; }
+    @page{ size:A4 landscape; margin:8mm; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="home" href="index.html" title="Startseite">🏠</a>
+  <div class="logo"><img src="assets/img/strabag-logo.png" alt="STRABAG"></div>
+  <h1>✏️ Skizzenblock</h1>
+  <button class="kbtn" id="bFoto">Foto</button>
+  <button class="kbtn" id="bSpeichern">Speichern</button>
+  <button class="kbtn rot" id="bPng">Bild ⬇</button>
+</header>
+
+<div class="tools" id="tools">
+  <button class="t an" data-wz="stift" title="Freihand">✏️</button>
+  <button class="t" data-wz="linie" title="Linie">╱</button>
+  <button class="t" data-wz="pfeil" title="Pfeil">➜</button>
+  <button class="t" data-wz="mass" title="Mass mit Zahl"><small>↔ MASS</small></button>
+  <button class="t" data-wz="rechteck" title="Rechteck">▭</button>
+  <button class="t" data-wz="kreis" title="Kreis">◯</button>
+  <button class="t" data-wz="text" title="Text">T</button>
+  <button class="t" data-wz="loeschen" title="Einzelnes Element löschen">🧽</button>
+  <div class="sep"></div>
+  <div class="farbe an" data-farbe="#111111" style="background:#111111"></div>
+  <div class="farbe" data-farbe="#d40000" style="background:#d40000"></div>
+  <div class="farbe" data-farbe="#0b5394" style="background:#0b5394"></div>
+  <div class="farbe" data-farbe="#1c8a4a" style="background:#1c8a4a"></div>
+  <div class="sep"></div>
+  <div class="staerke">
+    <button class="sw" data-sw="3"><i style="width:16px;height:3px"></i></button>
+    <button class="sw an" data-sw="6"><i style="width:16px;height:6px"></i></button>
+    <button class="sw" data-sw="12"><i style="width:16px;height:11px"></i></button>
+  </div>
+  <div class="sep"></div>
+  <button class="t" id="bUndo" title="Rückgängig">↶</button>
+  <button class="t" id="bRaster" title="Raster ein/aus"><small>RASTER</small></button>
+</div>
+
+<div class="buehne"><canvas id="c"></canvas></div>
+
+<div class="fuss">
+  <div class="grp">
+    <button class="kbtn" id="bNeu">Neues Blatt</button>
+    <button class="kbtn" id="bDrucken">Drucken</button>
+    <button class="kbtn" id="bLaden">Gespeicherte</button>
+  </div>
+  <div class="hinweis" id="status">Stift gewählt · Zeichnen mit Finger oder Maus</div>
+</div>
+
+<!-- Foto-Auswahl -->
+<div id="fotowahl">
+  <div class="zu" onclick="fotoZu()">×</div>
+  <h2>Hintergrund wählen</h2>
+  <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px">
+    <button class="kbtn rot" onclick="eigenesFoto()">📷 Eigenes Foto / Kamera</button>
+    <button class="kbtn" onclick="setzeFoto(null)">Leeres Blatt</button>
+  </div>
+  <h2 style="font-size:14px">Vorbildfotos Gloggner-Schlitten (Rehetobel 2022)</h2>
+  <div class="gal" id="gal"></div>
+  <input type="file" id="datei" accept="image/*" style="display:none">
+</div>
+
+<!-- Speichern / Laden -->
+<div id="wolke">
+  <div class="box">
+    <h2 id="wolkeTitel">Skizze speichern</h2>
+    <div id="wolkeSpeichern">
+      <input type="text" id="skizzeName" placeholder="Name, z.B. Schürfbalken vorne">
+      <div style="display:flex; gap:8px; margin-top:10px">
+        <button class="kbtn rot" onclick="cloudSpeichern()">Speichern</button>
+        <button class="kbtn" onclick="wolkeZu()">Abbrechen</button>
+      </div>
+      <p style="font-size:12px;color:#63676d;margin:10px 0 0">
+        Die Skizze liegt danach auf dem Server – am Handy zeichnen, am PC öffnen und drucken.</p>
+    </div>
+    <div id="wolkeListe" style="display:none">
+      <div class="liste" id="liste">lade …</div>
+      <div style="margin-top:10px"><button class="kbtn" onclick="wolkeZu()">Schliessen</button></div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ─────────────────────────────────────────────────────────────
+   Skizzenblock NalpSolar – zeichnen, bemassen, beschriften.
+   Alles vektorbasiert in `objekte`, damit Undo und Neuzeichnen
+   sauber laufen. Hintergrund wahlweise Raster oder Foto.
+   Speicher: Firebase RTDB unter erfassung/ (gleiche DB wie die
+   uebrigen Erfassungsseiten), zusaetzlich localStorage als Netz.
+   ───────────────────────────────────────────────────────────── */
+
+var DB   = 'https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app';
+var PFAD = 'erfassung/skizzen';
+var LS   = 'nalp_skizze_v1';
+
+var W = 2200, H = 1500;                 // Blattgroesse (Pixel), ~A4 quer
+var cv = document.getElementById('c'), ctx = cv.getContext('2d');
+cv.width = W; cv.height = H;
+
+var objekte = [];                       // {typ, farbe, sw, punkte[], text}
+var wz = 'stift', farbe = '#111111', sw = 6, raster = true;
+var hgBild = null, hgQuelle = null;     // Image + Quelle (Pfad oder 'eigen')
+var aktiv = null;                       // Objekt in Arbeit
+
+/* ── Zeichnen ─────────────────────────────────────────────── */
+function rasterZeichnen(){
+  if(!raster) return;
+  ctx.save();
+  ctx.strokeStyle = '#dfe4ea'; ctx.lineWidth = 1;
+  for(var x=0; x<=W; x+=50){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for(var y=0; y<=H; y+=50){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+  ctx.strokeStyle = '#c8d0d8'; ctx.lineWidth = 1.6;
+  for(var x2=0; x2<=W; x2+=250){ ctx.beginPath(); ctx.moveTo(x2,0); ctx.lineTo(x2,H); ctx.stroke(); }
+  for(var y2=0; y2<=H; y2+=250){ ctx.beginPath(); ctx.moveTo(0,y2); ctx.lineTo(W,y2); ctx.stroke(); }
+  ctx.restore();
+}
+
+function hintergrund(){
+  ctx.fillStyle = '#fff'; ctx.fillRect(0,0,W,H);
+  if(hgBild){
+    // Foto einpassen (contain), Rest bleibt weiss
+    var s = Math.min(W/hgBild.width, H/hgBild.height);
+    var bw = hgBild.width*s, bh = hgBild.height*s;
+    ctx.drawImage(hgBild, (W-bw)/2, (H-bh)/2, bw, bh);
+  } else {
+    rasterZeichnen();
+  }
+}
+
+function pfeilspitze(x1,y1,x2,y2,gr){
+  var w = Math.atan2(y2-y1, x2-x1);
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-gr*Math.cos(w-0.4), y2-gr*Math.sin(w-0.4));
+  ctx.lineTo(x2-gr*Math.cos(w+0.4), y2-gr*Math.sin(w+0.4));
+  ctx.closePath(); ctx.fill();
+}
+
+function objZeichnen(o){
+  ctx.save();
+  ctx.strokeStyle = o.farbe; ctx.fillStyle = o.farbe;
+  ctx.lineWidth = o.sw; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  var p = o.punkte;
+
+  if(o.typ === 'stift'){
+    if(p.length < 2){ ctx.restore(); return; }
+    ctx.beginPath(); ctx.moveTo(p[0].x, p[0].y);
+    for(var i=1;i<p.length;i++) ctx.lineTo(p[i].x, p[i].y);
+    ctx.stroke();
+
+  } else if(o.typ === 'linie'){
+    ctx.beginPath(); ctx.moveTo(p[0].x,p[0].y); ctx.lineTo(p[1].x,p[1].y); ctx.stroke();
+
+  } else if(o.typ === 'pfeil'){
+    ctx.beginPath(); ctx.moveTo(p[0].x,p[0].y); ctx.lineTo(p[1].x,p[1].y); ctx.stroke();
+    pfeilspitze(p[0].x,p[0].y,p[1].x,p[1].y, 8+o.sw*2.4);
+
+  } else if(o.typ === 'mass'){
+    ctx.beginPath(); ctx.moveTo(p[0].x,p[0].y); ctx.lineTo(p[1].x,p[1].y); ctx.stroke();
+    var gr = 7+o.sw*2.2;
+    pfeilspitze(p[1].x,p[1].y,p[0].x,p[0].y,gr);
+    pfeilspitze(p[0].x,p[0].y,p[1].x,p[1].y,gr);
+    if(o.text){
+      var mx=(p[0].x+p[1].x)/2, my=(p[0].y+p[1].y)/2;
+      var w = Math.atan2(p[1].y-p[0].y, p[1].x-p[0].x);
+      if(w > Math.PI/2 || w < -Math.PI/2) w += Math.PI;   // Text nie auf dem Kopf
+      var fs = 22 + o.sw*3.4;
+      ctx.translate(mx,my); ctx.rotate(w);
+      ctx.font = '700 '+fs+'px Arial';
+      var tw = ctx.measureText(o.text).width;
+      ctx.fillStyle = '#fff'; ctx.fillRect(-tw/2-6, -fs-6, tw+12, fs+6);
+      ctx.fillStyle = o.farbe; ctx.textAlign='center'; ctx.textBaseline='bottom';
+      ctx.fillText(o.text, 0, -6);
+    }
+
+  } else if(o.typ === 'rechteck'){
+    ctx.strokeRect(Math.min(p[0].x,p[1].x), Math.min(p[0].y,p[1].y),
+                   Math.abs(p[1].x-p[0].x), Math.abs(p[1].y-p[0].y));
+
+  } else if(o.typ === 'kreis'){
+    var rx = Math.abs(p[1].x-p[0].x)/2, ry = Math.abs(p[1].y-p[0].y)/2;
+    ctx.beginPath();
+    ctx.ellipse(Math.min(p[0].x,p[1].x)+rx, Math.min(p[0].y,p[1].y)+ry, rx, ry, 0, 0, Math.PI*2);
+    ctx.stroke();
+
+  } else if(o.typ === 'text'){
+    var f = 22 + o.sw*4;
+    ctx.font = '700 '+f+'px Arial'; ctx.textBaseline = 'top';
+    var zeilen = String(o.text||'').split('\n');
+    // Text am Blattrand einklemmen, sonst schneidet ihn der Ausdruck ab
+    var breiteste = 0;
+    for(var m=0; m<zeilen.length; m++) breiteste = Math.max(breiteste, ctx.measureText(zeilen[m]).width);
+    var tx = Math.max(6, Math.min(p[0].x, W - breiteste - 10));
+    var ty = Math.max(6, Math.min(p[0].y, H - zeilen.length*(f+6) - 6));
+    for(var z=0; z<zeilen.length; z++){
+      var b = ctx.measureText(zeilen[z]).width;
+      ctx.fillStyle = 'rgba(255,255,255,.82)';
+      ctx.fillRect(tx-4, ty-3 + z*(f+6), b+8, f+6);
+      ctx.fillStyle = o.farbe;
+      ctx.fillText(zeilen[z], tx, ty + z*(f+6));
+    }
+  }
+  ctx.restore();
+}
+
+function neu(){
+  hintergrund();
+  for(var i=0;i<objekte.length;i++) objZeichnen(objekte[i]);
+  if(aktiv) objZeichnen(aktiv);
+  sichern();
+}
+
+/* ── Eingabe ──────────────────────────────────────────────── */
+function pos(e){
+  var r = cv.getBoundingClientRect();
+  return { x:(e.clientX-r.left)*(W/r.width), y:(e.clientY-r.top)*(H/r.height) };
+}
+
+function naheAn(o, p){
+  var d = 18 + o.sw*2;
+  if(o.typ==='text'){ return Math.abs(p.x-o.punkte[0].x)<200 && Math.abs(p.y-o.punkte[0].y)<60; }
+  for(var i=0;i<o.punkte.length;i++){
+    if(Math.hypot(o.punkte[i].x-p.x, o.punkte[i].y-p.y) < d*2) return true;
+  }
+  if(o.punkte.length===2){          // Abstand Punkt-Strecke
+    var a=o.punkte[0], b=o.punkte[1];
+    var L=Math.hypot(b.x-a.x,b.y-a.y); if(!L) return false;
+    var t=((p.x-a.x)*(b.x-a.x)+(p.y-a.y)*(b.y-a.y))/(L*L);
+    if(t<0||t>1) return false;
+    var px=a.x+t*(b.x-a.x), py=a.y+t*(b.y-a.y);
+    return Math.hypot(px-p.x,py-p.y) < d;
+  }
+  return false;
+}
+
+cv.addEventListener('pointerdown', function(e){
+  cv.setPointerCapture(e.pointerId);
+  var p = pos(e);
+
+  if(wz === 'loeschen'){
+    for(var i=objekte.length-1;i>=0;i--){
+      if(naheAn(objekte[i], p)){ objekte.splice(i,1); neu(); return; }
+    }
+    return;
+  }
+  if(wz === 'text'){
+    var t = prompt('Text eingeben:');
+    if(t){ objekte.push({typ:'text', farbe:farbe, sw:sw, punkte:[p], text:t}); neu(); }
+    return;
+  }
+  aktiv = { typ:wz, farbe:farbe, sw:sw, punkte:[p, {x:p.x,y:p.y}] };
+  if(wz === 'stift') aktiv.punkte = [p];
+});
+
+cv.addEventListener('pointermove', function(e){
+  if(!aktiv) return;
+  var p = pos(e);
+  if(aktiv.typ === 'stift') aktiv.punkte.push(p);
+  else aktiv.punkte[1] = p;
+  neu();
+});
+
+function fertig(){
+  if(!aktiv) return;
+  var o = aktiv; aktiv = null;
+  if(o.typ !== 'stift'){
+    var d = Math.hypot(o.punkte[1].x-o.punkte[0].x, o.punkte[1].y-o.punkte[0].y);
+    if(d < 12){ neu(); return; }                    // Fehlklick verwerfen
+  }
+  if(o.typ === 'mass'){
+    var z = prompt('Masszahl (z.B. 3240):', '');
+    o.text = z ? z : '';
+  }
+  objekte.push(o); neu();
+}
+cv.addEventListener('pointerup', fertig);
+cv.addEventListener('pointercancel', fertig);
+cv.addEventListener('pointerleave', function(){ if(aktiv) fertig(); });
+
+/* ── Werkzeugleiste ───────────────────────────────────────── */
+var namen = {stift:'Freihand', linie:'Linie', pfeil:'Pfeil', mass:'Mass – Linie ziehen, dann Zahl eingeben',
+             rechteck:'Rechteck', kreis:'Kreis', text:'Text – auf die Stelle tippen', loeschen:'Löschen – Element antippen'};
+document.querySelectorAll('.t[data-wz]').forEach(function(b){
+  b.addEventListener('click', function(){
+    document.querySelectorAll('.t[data-wz]').forEach(function(x){ x.classList.remove('an'); });
+    b.classList.add('an'); wz = b.dataset.wz;
+    document.getElementById('status').textContent = namen[wz] || wz;
+  });
+});
+document.querySelectorAll('.farbe').forEach(function(b){
+  b.addEventListener('click', function(){
+    document.querySelectorAll('.farbe').forEach(function(x){ x.classList.remove('an'); });
+    b.classList.add('an'); farbe = b.dataset.farbe;
+  });
+});
+document.querySelectorAll('.sw').forEach(function(b){
+  b.addEventListener('click', function(){
+    document.querySelectorAll('.sw').forEach(function(x){ x.classList.remove('an'); });
+    b.classList.add('an'); sw = parseInt(b.dataset.sw,10);
+  });
+});
+document.getElementById('bUndo').addEventListener('click', function(){ objekte.pop(); neu(); });
+document.getElementById('bRaster').addEventListener('click', function(){ raster = !raster; neu(); });
+document.getElementById('bNeu').addEventListener('click', function(){
+  if(objekte.length && !confirm('Blatt wirklich leeren?')) return;
+  objekte = []; neu();
+});
+document.getElementById('bDrucken').addEventListener('click', function(){ window.print(); });
+document.getElementById('bPng').addEventListener('click', function(){
+  var a = document.createElement('a');
+  a.download = 'Skizze_' + new Date().toISOString().slice(0,10) + '.png';
+  a.href = cv.toDataURL('image/png'); a.click();
+});
+
+/* ── Hintergrundfoto ──────────────────────────────────────── */
+var FOTOS = [
+  ['GrafBau_12_Gesamtansicht_Schlitten.jpeg','Gesamtansicht'],
+  ['GrafBau_04_Rahmen_Zugoese_Detail.jpeg','Rahmen mit Kammern'],
+  ['GrafBau_03_Rahmen_Aggregat_Detail.jpeg','Rahmen + Aggregat'],
+  ['GrafBau_11_Mulde_Beschickung_Zugkette.jpeg','Zugkette'],
+  ['GrafBau_02_Fertige_Spur_Ballastriegel.jpeg','Ballast + Glättplatte'],
+  ['GrafBau_01_Beschickung_Bagger_Mulde.jpeg','Beschickung'],
+  ['GrafBau_13_Bagger_beschickt_Mulde.jpeg','Bagger füllt Mulde'],
+  ['GrafBau_08_Zwei_Spuren_Besenstrich.jpeg','Fertige Spuren'],
+  ['GrafBau_09_Profil_Leitplanke_Schalung.jpeg','Profil / Kante'],
+  ['GrafBau_10_Profil_Detail_Kante.jpeg','Kante Detail'],
+  ['GrafBau_05_Uebersicht_Piste.jpeg','Übersicht Piste'],
+  ['GrafBau_06_Fertige_Flaeche_Holzschalung.jpeg','Holzschalung'],
+  ['GrafBau_07_Fertige_Flaeche_Anschluss.jpeg','Anschluss']
+];
+(function(){
+  var g = document.getElementById('gal'), h = '';
+  FOTOS.forEach(function(f){
+    h += '<figure style="margin:0"><img src="Betonspur/fotos/'+f[0]+'" alt="'+f[1]+'" '+
+         'onclick="setzeFoto(\'Betonspur/fotos/'+f[0]+'\')"><div style="color:#cfd6dd;font-size:11px;margin-top:2px">'+f[1]+'</div></figure>';
+  });
+  g.innerHTML = h;
+})();
+
+function fotoAuf(){ document.getElementById('fotowahl').classList.add('on'); }
+function fotoZu(){ document.getElementById('fotowahl').classList.remove('on'); }
+document.getElementById('bFoto').addEventListener('click', fotoAuf);
+
+function setzeFoto(pfad){
+  fotoZu();
+  if(!pfad){ hgBild = null; hgQuelle = null; neu(); return; }
+  var im = new Image();
+  im.onload = function(){ hgBild = im; hgQuelle = pfad; neu(); };
+  im.src = pfad;
+}
+function eigenesFoto(){ document.getElementById('datei').click(); }
+document.getElementById('datei').addEventListener('change', function(e){
+  var f = e.target.files[0]; if(!f) return;
+  var fr = new FileReader();
+  fr.onload = function(ev){
+    var im = new Image();
+    im.onload = function(){
+      // auf max. 1600 px verkleinern, damit das Speichern nicht ausufert
+      var s = Math.min(1, 1600/Math.max(im.width, im.height));
+      var tmp = document.createElement('canvas');
+      tmp.width = im.width*s; tmp.height = im.height*s;
+      tmp.getContext('2d').drawImage(im, 0, 0, tmp.width, tmp.height);
+      var klein = new Image();
+      klein.onload = function(){ hgBild = klein; hgQuelle = 'eigen'; fotoZu(); neu(); };
+      klein.src = tmp.toDataURL('image/jpeg', 0.72);
+    };
+    im.src = ev.target.result;
+  };
+  fr.readAsDataURL(f);
+});
+
+/* ── Speichern ────────────────────────────────────────────── */
+function zustand(){
+  return { objekte:objekte, raster:raster, hg:hgQuelle,
+           hgData: (hgQuelle==='eigen' && hgBild) ? hgBild.src : null };
+}
+function sichern(){
+  try{ localStorage.setItem(LS, JSON.stringify(zustand())); }catch(e){}
+}
+function laden(z){
+  objekte = z.objekte || []; raster = (z.raster !== false);
+  if(z.hg === 'eigen' && z.hgData){
+    var im = new Image(); im.onload = function(){ hgBild = im; hgQuelle='eigen'; neu(); }; im.src = z.hgData;
+  } else if(z.hg){ setzeFoto(z.hg); }
+  else { hgBild = null; hgQuelle = null; neu(); }
+  neu();
+}
+(function(){
+  try{ var z = JSON.parse(localStorage.getItem(LS) || 'null'); if(z) laden(z); else neu(); }
+  catch(e){ neu(); }
+})();
+
+function wolkeZu(){ document.getElementById('wolke').classList.remove('on'); }
+document.getElementById('bSpeichern').addEventListener('click', function(){
+  document.getElementById('wolkeTitel').textContent = 'Skizze speichern';
+  document.getElementById('wolkeSpeichern').style.display = '';
+  document.getElementById('wolkeListe').style.display = 'none';
+  document.getElementById('wolke').classList.add('on');
+  document.getElementById('skizzeName').focus();
+});
+function cloudSpeichern(){
+  var name = (document.getElementById('skizzeName').value || '').trim();
+  if(!name){ alert('Bitte einen Namen eingeben.'); return; }
+  var id = 's' + Date.now();
+  var satz = { name:name, datum:new Date().toISOString(), stand:zustand() };
+  fetch(DB + '/' + PFAD + '/' + id + '.json', {
+    method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(satz)
+  }).then(function(r){
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    wolkeZu(); alert('Gespeichert: ' + name);
+  }).catch(function(err){
+    alert('Speichern fehlgeschlagen (' + err.message + ').\nDie Skizze bleibt lokal erhalten.');
+  });
+}
+document.getElementById('bLaden').addEventListener('click', function(){
+  document.getElementById('wolkeTitel').textContent = 'Gespeicherte Skizzen';
+  document.getElementById('wolkeSpeichern').style.display = 'none';
+  document.getElementById('wolkeListe').style.display = '';
+  document.getElementById('wolke').classList.add('on');
+  var L = document.getElementById('liste'); L.textContent = 'lade …';
+  fetch(DB + '/' + PFAD + '.json', {cache:'no-store'})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(!d){ L.textContent = 'Noch nichts gespeichert.'; return; }
+      var ids = Object.keys(d).sort().reverse(), h = '';
+      ids.forEach(function(id){
+        var s = d[id]; if(!s) return;
+        var dt = (s.datum||'').slice(0,16).replace('T',' ');
+        h += '<div class="z"><div><b>'+ (s.name||id) +'</b><br><span style="color:#63676d;font-size:11.5px">'+dt+'</span></div>'+
+             '<div style="display:flex;gap:6px">'+
+             '<button class="kbtn" onclick="skizzeOeffnen(\''+id+'\')">Öffnen</button>'+
+             '<button class="kbtn" onclick="skizzeLoeschen(\''+id+'\')">🗑</button></div></div>';
+      });
+      L.innerHTML = h || 'Noch nichts gespeichert.';
+    })
+    .catch(function(){ L.textContent = 'Server nicht erreichbar.'; });
+});
+function skizzeOeffnen(id){
+  fetch(DB + '/' + PFAD + '/' + id + '.json', {cache:'no-store'})
+    .then(function(r){ return r.json(); })
+    .then(function(s){ if(s && s.stand){ laden(s.stand); wolkeZu(); } });
+}
+function skizzeLoeschen(id){
+  if(!confirm('Skizze löschen?')) return;
+  fetch(DB + '/' + PFAD + '/' + id + '.json', {method:'DELETE'})
+    .then(function(){ document.getElementById('bLaden').click(); });
+}
+
+/* Warnung beim Verlassen mit ungesicherter Arbeit unterdruecken wir bewusst –
+   der Stand liegt im localStorage und ist beim naechsten Aufruf wieder da. */
+</script>
+</body>
+</html>
