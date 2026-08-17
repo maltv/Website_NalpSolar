@@ -6,7 +6,8 @@
 <title>Bestellungen &amp; offene Punkte · NalpSolar</title>
 <meta name="robots" content="noindex,nofollow">
 <!-- Übersicht Werkzeug-/Materialbestellungen Stahlbau. Quelle im KI-Projekt:
-     Bestellungen\20260814_Bestellliste_Stahlbau.md + Auswahlblatt_Werkzeug.html -->
+     Bestellungen\20260814_Bestellliste_Stahlbau.md + Auswahlblatt_Werkzeug.html
+     Stand der Rückmeldungen: Outlook Posteingang/Gesendete 13.08.–17.08.2026 -->
 <script>
   window.NALP_GATE_CODE  = '7188';
   window.NALP_GATE_KEY   = 'nalp_logistik_unlock_v1';
@@ -29,6 +30,7 @@
   .card { background:#fff; border:1px solid var(--line); border-left:5px solid var(--rot);
           border-radius:6px; padding:14px 16px; margin-bottom:14px; box-shadow:0 1px 4px rgba(20,25,32,.07); }
   .card.gelb { border-left-color:var(--orange); }
+  .card.gruen { border-left-color:var(--gruen); }
   .card h2 { margin:0 0 8px; font-size:16px; }
   .sub { font-size:12.5px; color:var(--mut); margin-bottom:10px; line-height:1.5; }
   table { border-collapse:collapse; width:100%; font-size:13px; }
@@ -38,7 +40,7 @@
   .tabhuelle { overflow-x:auto; }
   .st { display:inline-block; padding:2px 9px; border-radius:11px; font-size:11px;
         font-weight:700; color:#fff; white-space:nowrap; }
-  .st.raus { background:var(--gruen); }
+  .st.ok { background:var(--gruen); }
   .st.warten { background:var(--orange); }
   .st.offen { background:#8a8e94; }
   .st.stop { background:var(--rot); }
@@ -49,6 +51,9 @@
   .opt.top { border-color:var(--gruen); border-width:2px; background:#f4fbf5; }
   .opt b { font-size:14px; }
   .opt .pr { float:right; font-weight:900; }
+  ol.tun { margin:6px 0 0 18px; padding:0; font-size:13.5px; line-height:1.75; }
+  ol.tun li { margin-bottom:7px; }
+  .q { font-size:11.5px; color:var(--mut); }
   .foot { text-align:center; font-size:11.5px; color:var(--mut); padding:10px 0 30px; }
   .foot a { color:var(--rot); font-weight:700; }
   @media (max-width:560px){ th,td{ padding:5px 6px; font-size:12.5px; } }
@@ -66,77 +71,154 @@
   <div class="card">
     <h2>Worum es geht</h2>
     <div class="sub">Werkzeug und Material für den Stahlbau, aus den Handnotizen von Victor und
-      der Wunschliste von Chris. Diese Seite zeigt, <b>was wo bestellt ist</b> und
-      <b>was noch fehlt – und von wem</b>. Stand 14.08.2026, 18:00.</div>
+      der Wunschliste von Chris. Diese Seite zeigt, <b>was wo bestellt ist</b>, <b>was
+      zurückgekommen ist</b> und <b>was noch fehlt – und von wem</b>.
+      <br><b>Stand 17.08.2026, 17:30</b> – nachgeführt aus den Mails vom 13.–17.08.</div>
     <div class="legende">
-      <span class="st raus">gesendet</span> Bestellung ist beim Lieferanten, AB steht aus &nbsp;
-      <span class="st warten">wartet</span> Anfrage läuft, Antwort ausstehend &nbsp;
+      <span class="st ok">bestätigt</span> Auftragsbestätigung oder Zusage ist da &nbsp;
+      <span class="st warten">wartet</span> Bestellung/Anfrage draussen, Antwort fehlt &nbsp;
       <span class="st offen">offen</span> noch nicht bestellt &nbsp;
-      <span class="st stop">Freigabe</span> braucht einen Entscheid
+      <span class="st stop">Handlung</span> jemand muss etwas tun
     </div>
+  </div>
+
+  <!-- ── heute zu tun ─────────────────────────────────────────────────── -->
+  <div class="card">
+    <h2>Was jetzt ansteht <span class="st stop">7 Punkte</span></h2>
+    <ol class="tun">
+      <li><b>Müllsäcke bei Barit in Disentis abholen.</b> 30 Rollen liegen seit Montag bereit –
+        es sind 110 l, 120 l führen sie nicht.
+        <span class="q">(Bene Albin, 14.08. 15:49)</span></li>
+      <li><b>MAG-Anlage: Miete anfragen.</b> Corsin hat intern nachgefragt – BMTI hat keine.
+        <span class="q">(Corsin Giger, 17.08. 15:04)</span> Siehe eigener Block unten.</li>
+      <li><b>Berner nachhaken</b> – Bestellung vom 14.08. (Handschuhe, Eimer, Kisten) und die
+        Augenspülstation vom 17.08.: noch keine Auftragsbestätigung, kein Liefertermin.</li>
+      <li><b>Debrunner Acifer nachhaken</b> – die Profilanfrage vom 14.08. 18:30 ist unbeantwortet.
+        Wir sind dort Neukunde, evtl. bleibt sie liegen. Telefon 058 235 07 10.</li>
+      <li><b>Wisi (BMTI Erstfeld) nachhaken</b> – Funkgeräte-Anfrage vom 14.08. ohne Antwort.</li>
+      <li><b>Chris: zwei Antworten fehlen</b> – lange Seile (Zweck, Länge, Durchmesser) und
+        Funkgeräte-Modell. Die Kettenzüge sind inzwischen ohne ihn entschieden.</li>
+      <li><b>Freigabe eigene Magnetbohrmaschine</b> – Entscheid François steht aus, es ist
+        noch keine Mail dazu draussen.</li>
+    </ol>
   </div>
 
   <!-- ── bestellt ────────────────────────────────────────────────────── -->
   <div class="card">
-    <h2>Bestellt am 14.08.2026</h2>
+    <h2>Bestellt – und was zurückgekommen ist</h2>
     <div class="tabhuelle">
     <table>
-      <tr><th>Lieferant</th><th>Was</th><th>Menge</th><th>Status</th></tr>
+      <tr><th>Lieferant</th><th>Was</th><th>Menge</th><th>Stand</th></tr>
       <tr>
-        <td><b>Arthur Weber</b><br><span class="sub">Schattdorf</span></td>
+        <td><b>Arthur Weber</b><br><span class="sub">Schattdorf / Seewen</span></td>
         <td>Winkelschleifer Makita GA9020RF 230 mm · Gelenkleiter HB Typ 310 ·
             Ganzstahl-Zwingen Bessey GZ-2K 300/400/500 · Ratschenringschlüssel 17 + 19 ·
             Gliedermeter · Anreissnadeln · Schutzbrillen · Hebeleisen-Sets ·
-            Elektroden rutil Ø 2.5 + 3.2<br>
-            <i>dazu Offerte für einen Drehmomentschlüssel bis 1600 Nm</i></td>
+            Elektroden rutil Ø 2.5 + 3.2
+            <br><b>AB 260835008 (17.08.):</b> Winkelschleifer und Schraubzwingen kommen erst
+            <b>ca. 28.08.</b>, der Rest diese Woche.
+            <br>Dazu 25 Permanentmarker, AB 260831507 – <b>Abholung Schattdorf</b>.
+            <br><i>Offen: Offerte Drehmomentschlüssel Stahlwille 730DR bis 1600 Nm – keine Antwort.</i></td>
         <td class="mng">2<br>2<br>je 2<br>je 3<br>20<br>5<br>5<br>2 Sets<br>2 Pkg</td>
-        <td><span class="st raus">gesendet</span><br><span class="sub">17:34</span></td>
+        <td><span class="st ok">bestätigt</span><br><span class="q">14.08. 17:34<br>AB 17.08. 10:35</span></td>
+      </tr>
+      <tr>
+        <td><b>Hebetech</b><br><span class="sub">Christian Igrek</span></td>
+        <td>Rundschlinge 6 t, 3 m · Kettenzug 3 t, Hubhöhe 3 m
+            <br>Igrek hat rückgefragt, ob normale Handflaschenzüge gemeint sind
+            (RED 3000, 3.0 t, 3 m) – am 17.08. 09:10 bestätigt und ausgelöst.
+            <b>AB 420-76888 vom 17.08.</b></td>
+        <td class="mng">4<br>2</td>
+        <td><span class="st ok">bestätigt</span><br><span class="q">14.08. 17:33<br>AB 17.08. 12:06</span></td>
+      </tr>
+      <tr>
+        <td><b>Barit</b><br><span class="sub">Bene Albin, Disentis</span></td>
+        <td><b>Müllsäcke:</b> 30 Rollen – nur 110 l lieferbar,
+            <b>liegen seit Montag zur Abholung bereit</b>.
+            <br><b>SBB-Palettenkisten</b> 16 mit Deckel / 20 ohne: nicht an Lager, Beschaffung
+            ca. 1 Woche – am 17.08. 09:07 freigegeben, also <b>Lieferung ca. KW 35</b>.</td>
+        <td class="mng">30 Rollen<br>16 + 20</td>
+        <td><span class="st stop">abholen</span><br><span class="st warten">Kisten unterwegs</span></td>
+      </tr>
+      <tr>
+        <td><b>Anker Swiss</b><br><span class="sub">Markus Piskin</span></td>
+        <td>Ausrüstung für Kamil und Kasper am Berg: hohe Arbeitsschuhe, Hosen mit
+            Leuchtstreifen, Regensachen – <b>der Verleiher stellt alles</b>, «so rasch als möglich».</td>
+        <td class="mng">–</td>
+        <td><span class="st ok">zugesagt</span><br><span class="q">16.08. 18:24</span></td>
       </tr>
       <tr>
         <td><b>Berner</b><br><span class="sub">Reinach BL</span></td>
         <td>Schweisserhandschuhe Art. 23814 Gr. 8/9/10 · Baueimer Premium · Toolbox leer ·
-            Transport-Stapelbox · Mörtelkübel gross · Tasche für die Nüsse</td>
-        <td class="mng">75 Paar<br>16<br>3<br>8<br>2<br>1</td>
-        <td><span class="st raus">gesendet</span><br><span class="sub">17:33</span></td>
+            Transport-Stapelbox · Mörtelkübel gross · Tasche für die Nüsse
+            <br>dazu 17.08.: Augenspülstation Premium iBOX gross, Art. 58591864
+            <br><i>Keine Auftragsbestätigung, kein Liefertermin – nachhaken.</i></td>
+        <td class="mng">75 Paar<br>16<br>3<br>8<br>2<br>1<br>1</td>
+        <td><span class="st warten">wartet</span><br><span class="q">14.08. 17:33<br>17.08. 11:17</span></td>
       </tr>
       <tr>
-        <td><b>Hebetech</b><br><span class="sub">Christian Igrek</span></td>
-        <td>Rundschlinge 6 t, 3 m · Kettenzug 3 t, Hubhöhe 3 m<br>
-            <i>mit Rückfrage: «orange» wäre nach Farbcode 10 t, 6 t ist braun</i></td>
-        <td class="mng">4<br>2</td>
-        <td><span class="st raus">gesendet</span><br><span class="sub">17:33</span></td>
-      </tr>
-      <tr>
-        <td><b>Barit</b><br><span class="sub">Bene Albin</span></td>
-        <td>SBB-Palettenkisten mit Deckel · ohne Deckel – Anfrage, ob sie die haben und
-            ob kaufen oder mieten günstiger ist</td>
-        <td class="mng">16<br>20</td>
-        <td><span class="st warten">wartet</span><br><span class="sub">17:32</span></td>
-      </tr>
-      <tr>
-        <td><b>BMTI Erstfeld</b><br><span class="sub">Corsin Giger / Wisi</span></td>
-        <td>MAG-Schweissanlage 400 A für rund 3 Monate aus dem Pool ·
-            Funkgeräte · Bereich und Kalibrierung des 2025 übernommenen Drehmomentschlüssels</td>
-        <td class="mng">1<br>?<br>–</td>
-        <td><span class="st warten">wartet</span><br><span class="sub">16:34 / 17:32</span></td>
-      </tr>
-      <tr>
-        <td><b>Anker Swiss</b><br><span class="sub">Personalverleih</span></td>
-        <td>Regenkleider für Kasper – Anfrage, ob der Verleiher sie stellt</td>
-        <td class="mng">–</td>
-        <td><span class="st warten">wartet</span></td>
-      </tr>
-      <tr>
-        <td><b>Debrunner Acifer</b><br><span class="sub">Landquart</span></td>
+        <td><b>Debrunner Acifer</b><br><span class="sub">Landquart, sales_gr@d-a.ch</span></td>
         <td>Stahlprofile je 6 m: Winkel L 45×45×5 · Winkel L 100×100×10 ·
-            U-Profil 35/40/35 aus 5 mm gekantet<br>
-            <i>Anfrage: haben sie es an Lager, können sie das U-Profil kanten, Preis und Termin.
-            Wir sind dort Neukunde.</i></td>
+            U-Profil 35/40/35 aus 5 mm gekantet
+            <br><i>Anfrage: Lager, Kanten des U-Profils, Preis und Termin. Neukunde.
+            Seit Freitagabend keine Antwort.</i></td>
         <td class="mng">3<br>2<br>2</td>
-        <td><span class="st warten">wartet</span><br><span class="sub">18:30</span></td>
+        <td><span class="st warten">wartet</span><br><span class="q">14.08. 18:30</span></td>
+      </tr>
+      <tr>
+        <td><b>BMTI Erstfeld</b><br><span class="sub">Wisi Gasser</span></td>
+        <td>Funkgeräte aus dem Bestand Erstfeld · Bereich und Kalibrierung des 2025
+            übernommenen Drehmomentschlüssels
+            <br><i>Keine Antwort.</i></td>
+        <td class="mng">?</td>
+        <td><span class="st warten">wartet</span><br><span class="q">14.08. 17:32</span></td>
+      </tr>
+      <tr>
+        <td><b>BMTI Zentralbereich</b><br><span class="sub">Corsin Giger</span></td>
+        <td>MAG-Schweissanlage 400 A für rund 3 Monate aus dem Pool
+            <br><b>Antwort 17.08.: «Habe noch intern Rücksprache gehalten, leider haben wir das
+            nicht.»</b> → Miete organisieren.</td>
+        <td class="mng">1</td>
+        <td><span class="st stop">abgesagt</span><br><span class="q">17.08. 15:04</span></td>
+      </tr>
+      <tr>
+        <td><b>profiwerkzeug24.ch</b><br><span class="sub">Ramsen SH</span></td>
+        <td>Handwinde / Kurbelwinde 1,5 t, Art. 24446 (DEMA) – Kauf auf Rechnung,
+            CHF 209.00 + 2.90 = <b>CHF 211.90</b>, Bestellung c1028005.
+            Lieferzeit ca. 7 Werktage. Rechnung an Roland Ziegler weitergeleitet.</td>
+        <td class="mng">1</td>
+        <td><span class="st ok">bestätigt</span><br><span class="q">17.08. 13:33</span></td>
       </tr>
     </table>
     </div>
+  </div>
+
+  <!-- ── MAG-Anlage ──────────────────────────────────────────────────── -->
+  <div class="card gelb">
+    <h2>MAG-Anlage 400 A – jetzt Miete <span class="st stop">Victor</span></h2>
+    <div class="sub">Kauf liegt bei rund CHF 15'000 und ist damit vom Tisch, der BMTI-Pool hat
+      keine (Corsin, 17.08.). Bleibt die Miete für rund drei Monate. Gebraucht wird sie für den
+      Stahlbau am Berg.</div>
+    <div class="opt top">
+      <b>Orlando, «GS-Schweisstechnik»</b> &nbsp;<span class="st stop">Kontakt fehlt</span>
+      <div class="sub" style="margin:6px 0 0">Der Vertreter aus Victors Handnotiz vom 14.08. –
+        das ist der Weg, den wir zuerst gehen. <b>Die Firma liess sich weder im Projekt noch über
+        eine Web-Suche in der Schweiz finden</b> (Treffer nur GS-Schweisstechnik in Deutschland),
+        und die Kontaktdaten waren bei Mike oder Corsin zu holen. Mike hat das Team am 13.08.
+        verlassen. <b>Ohne Mailadresse oder Nummer geht die Anfrage nicht raus.</b></div>
+    </div>
+    <div class="opt">
+      <b>Belegte Vermieter in der Schweiz</b> <span class="q">(Web-Recherche 17.08.2026)</span>
+      <div class="sub" style="margin:6px 0 0">
+        <b>Fronius «Rent a System»</b> – Miete aller Schweissanlagen inkl. MIG/MAG, für einen
+        festen Zeitraum. &nbsp;·&nbsp;
+        <b>Linde Gas Schweiz</b> – Mietpark mit MIG/MAG von 180 bis 400 A, mit Puls. &nbsp;·&nbsp;
+        <b>Strahm Schweisstechnik</b> und <b>JS Schweisstechnik</b> – Mietservice mit
+        Tages-/Wochen-/Monatsansätzen.
+        <br>Diese vier sind der Ersatzweg, falls Orlando nicht auftaucht oder zu teuer ist.</div>
+    </div>
+    <div class="sub" style="margin-top:10px"><b>Vor der Anlieferung zwingend:</b> 400 A brauchen
+      Strom. Anschlussleistung und Generator am Berg prüfen – Samuel.</div>
   </div>
 
   <!-- ── offen ───────────────────────────────────────────────────────── -->
@@ -149,42 +231,31 @@
       <tr><th>Sache</th><th>Was fehlt</th><th>Wer</th><th>Status</th></tr>
       <tr>
         <td><b>Kernbohrer</b> für die Magnetbohrmaschine</td>
-        <td><b>Pfettenhöhe ist geklärt: 100 mm</b> (siehe unten). Offen bleibt nur noch der
+        <td>Pfettenhöhe ist geklärt: 100 mm (siehe unten). Offen bleibt nur noch der
             <b>Durchmesser</b> der Löcher, die gebohrt werden sollen.</td>
         <td><span class="wer">Przemek</span></td>
         <td><span class="st offen">offen</span></td>
       </tr>
       <tr>
-        <td><b>Rundschlingen</b> 6 t</td>
-        <td>Länge – und ob wirklich 6 t oder doch 10 t gemeint sind (orange = 10 t)</td>
-        <td><span class="wer">Przemek</span></td>
-        <td><span class="st offen">offen</span></td>
-      </tr>
-      <tr>
-        <td><b>Kettenzüge</b></td>
-        <td>Tragkraft und Hubhöhe – sollen es die gleichen sein wie die zwei vorhandenen?</td>
-        <td><span class="wer">Chris</span></td>
-        <td><span class="st offen">offen</span></td>
-      </tr>
-      <tr>
         <td><b>Lange Seile</b></td>
-        <td>Was genau: Führungsseile zum Steuern der Last oder etwas anderes? Länge und Durchmesser</td>
+        <td>Was genau: Führungsseile zum Steuern der Last oder etwas anderes? Länge und Durchmesser.
+            Die Rückfrage vom 14.08. ist unbeantwortet.</td>
         <td><span class="wer">Chris</span></td>
         <td><span class="st offen">offen</span></td>
       </tr>
       <tr>
         <td><b>Funkgeräte</b></td>
-        <td>Welches Modell ist im Einsatz, damit die neuen dazu passen</td>
+        <td>Welches Modell ist im Einsatz, damit die neuen dazu passen. Parallel läuft die
+            Anfrage bei Wisi, ob Erstfeld noch welche hat.</td>
         <td><span class="wer">Chris</span></td>
         <td><span class="st offen">offen</span></td>
       </tr>
       <tr>
-        <td><b>Stahlprofile</b><br>U 35/40/35×5 · L 45×45×5 · L 100×100</td>
-        <td>Händler ist gewählt: <b>Debrunner Acifer Landquart</b>, Anfrage läuft.
-            Offen bleibt nur noch, <b>ob die 35/40/35 beim U-Profil Innen- oder Aussenmasse sind</b>.
-            Beim 100er gibt es warmgewalzt nur 8/10/12 mm, bestellt ist 10 mm.</td>
+        <td><b>Stahlprofile</b><br>U 35/40/35×5</td>
+        <td>Sind die 35/40/35 <b>Innen- oder Aussenmasse</b>? Debrunner braucht das zum Kanten,
+            wir haben zugesagt, es nachzuliefern.</td>
         <td><span class="wer">Przemek</span></td>
-        <td><span class="st warten">wartet</span></td>
+        <td><span class="st stop">blockiert Offerte</span></td>
       </tr>
       <tr>
         <td><b>Schweisswinkel</b></td>
@@ -194,17 +265,30 @@
         <td><span class="st offen">offen</span></td>
       </tr>
       <tr>
-        <td><b>Elektroden</b></td>
-        <td>Der Typ muss zur Schweissanweisung passen (Vorbereitungsgrad mind. P2).
-            Offen ist, wer das nach dem Wegfall der Werksmeister-Stelle zeichnet.</td>
+        <td><b>Elektroden / Schweissaufsicht</b></td>
+        <td>Der Typ muss zur Schweissanweisung passen (Vorbereitungsgrad mind. P2). Mit dem
+            Austritt von Mike Berndt (IWS) am 13.08. ist offen, <b>wer das zeichnet</b>.</td>
         <td><span class="wer">François</span></td>
-        <td><span class="st offen">offen</span></td>
+        <td><span class="st stop">dringend</span></td>
       </tr>
       <tr>
         <td><b>MAG-Anlage am Berg</b></td>
-        <td>400 A brauchen Strom – Anschlussleistung und Generator prüfen, bevor die Anlage kommt</td>
+        <td>400 A brauchen Strom – Anschlussleistung und Generator prüfen, bevor die Anlage kommt.</td>
         <td><span class="wer">Samuel</span></td>
         <td><span class="st offen">offen</span></td>
+      </tr>
+      <tr>
+        <td><b>Rundschlingen</b> 6 t</td>
+        <td>Bestellt sind 4 Stück 6 t / 3 m. Zur Kontrolle: orange wäre nach Farbcode 10 t,
+            6 t ist braun – Etikett der vorhandenen Schlinge am Berg fotografieren.</td>
+        <td><span class="wer">Przemek</span></td>
+        <td><span class="st ok">bestellt</span></td>
+      </tr>
+      <tr>
+        <td><b>Kettenzüge</b></td>
+        <td>Erledigt: 2 Handflaschenzüge RED 3000, 3 t, 3 m Hub – am 17.08. bei Hebetech ausgelöst.</td>
+        <td><span class="wer">erledigt</span></td>
+        <td><span class="st ok">bestellt</span></td>
       </tr>
     </table>
     </div>
@@ -216,13 +300,14 @@
     <div class="sub"><b>Warum:</b> Am 11./12.08. mussten wir eine Magnetbohrmaschine (Ø 25 mm) bei
       Wisi in Erstfeld ausleihen und am nächsten Abend wieder zurückbringen. Der Stahlbau braucht sie
       laufend, um durch die Pfetten zu bohren. Eine eigene Maschine spart die Fahrten und die
-      Abhängigkeit vom Boxenbestand.</div>
+      Abhängigkeit vom Boxenbestand. <b>Stand 17.08.: noch kein Entscheid, es ist auch noch keine
+      Mail dazu draussen.</b></div>
     <div class="sub">Preise sind Listenpreise Arthur Weber; dort gibt es erfahrungsgemäss
       <b>20–33 % Rabatt</b>, der Endpreis liegt also deutlich tiefer.</div>
 
     <div class="opt top">
       <span class="pr">CHF 1'070.19</span>
-      <b>FEIN KBU 35 QW</b> · Art. 615575 · Aktion &nbsp;<span class="st raus">Vorschlag</span>
+      <b>FEIN KBU 35 QW</b> · Art. 615575 · Aktion &nbsp;<span class="st ok">Vorschlag</span>
       <div class="sub" style="margin:6px 0 0">1'100 W, Kernbohrer bis Ø 35 mm (Leihgerät konnte 25),
         Weldon 3/4″, <b>135 mm Hub</b> – damit reicht der Weg für die 100 mm hohe Pfette, wenn eine
         Weldon-Verlängerung dazukommt. Werkzeugloser Schnellwechsel. FEIN ist auf dem Bau die
@@ -281,7 +366,7 @@
       135 mm Hub hat.</div>
   </div>
 
-  <div class="foot"><a href="index.html">← zurück zum Portal</a> · Stand 14.08.2026 ·
+  <div class="foot"><a href="index.html">← zurück zum Portal</a> · Stand 17.08.2026 ·
     Fragen an Victor</div>
 </div>
 </body>
