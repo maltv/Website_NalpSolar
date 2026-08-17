@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Störungsjournal · Admin</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#ffffff">
+<!-- Stundenzusammenstellung aller Störungen/Änderungen seit Baubeginn 11.05.2026.
+     Grunddaten: uploads/stoerungen/stoerungen.json (erzeugt von
+     Tools\Stoerungen_Aufbereiten.py im KI-Projekt).
+     Zuordnung (Verantwortlicher + Nachtrag + Status + Bemerkung) liegt in der
+     Firebase RTDB unter erfassung/stoerungen_stunden/ - gleiche DB wie die
+     übrigen Erfassungs-Reiter. Die Grunddaten werden NIE überschrieben.
+     ACHTUNG: NICHT erfassung/stoerungen/ verwenden - dort liegt das
+     Bauablaufstörungs-Register des Admin-Reiters «Störungen». -->
+<script>
+  window.NALP_GATE_CODE  = '8813';
+  window.NALP_GATE_KEY   = 'nalp_admin_unlock_v1';
+  window.NALP_GATE_TITEL = 'Admin';
+  window.NALP_GATE_SUB   = 'Nur für Victor · Code = Losnummer';
+</script>
+<script src="assets/js/nalp-gate.js"></script>
+<style>
+  :root { color-scheme: light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d;
+          --line:#e3e5e8; --gruen:#2e9e46; --orange:#e08a00; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; }
+  body { font-family: Arial, "Helvetica Neue", sans-serif; color: var(--ink);
+         background: #f2f3f5; padding-bottom: env(safe-area-inset-bottom); }
+
+  .topbar { background:#fff; border-bottom:4px solid var(--rot); padding:12px 18px;
+            display:flex; align-items:center; gap:14px; position:sticky; top:0; z-index:50; }
+  .topbar img { height:26px; display:block; }
+  .topbar .t { font-weight:900; font-size:17px; }
+  .topbar .los { font-size:11.5px; color:var(--mut); font-weight:700;
+                 letter-spacing:.06em; margin-left:auto; }
+  .wrap { max-width:1180px; margin:0 auto; padding:16px 14px 60px; }
+
+  .card { background:#fff; border:1px solid var(--line); border-left:5px solid var(--rot);
+          border-radius:6px; padding:14px 16px; margin-bottom:14px;
+          box-shadow:0 1px 4px rgba(20,25,32,.07); }
+  .card h2 { margin:0 0 8px; font-size:16px; }
+  .sub { font-size:12px; color:var(--mut); line-height:1.55; }
+
+  /* KPI */
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(132px,1fr)); gap:10px;
+          margin-bottom:14px; }
+  .kpi { background:#fff; border:1px solid var(--line); border-radius:6px; padding:11px 13px;
+         box-shadow:0 1px 4px rgba(20,25,32,.07); }
+  .kpi b { display:block; font-size:24px; font-weight:900; line-height:1.1; }
+  .kpi small { display:block; font-size:11.5px; color:var(--mut); margin-top:3px; }
+  .kpi.rot b { color:var(--rot); } .kpi.or b { color:var(--orange); }
+  .kpi.gr b { color:var(--gruen); }
+
+  /* Balken je Kategorie / Nachtrag */
+  .aufst { display:grid; gap:7px; }
+  .zeileB { display:grid; grid-template-columns:minmax(120px,1.5fr) 1fr auto auto;
+            gap:9px; align-items:center; font-size:12.5px; }
+  .zeileB .nm { font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .bal { height:13px; background:#eef0f2; border-radius:3px; overflow:hidden; }
+  .bal i { display:block; height:100%; border-radius:3px; }
+  .zeileB .h { color:var(--mut); white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .zeileB .c { font-weight:700; white-space:nowrap; font-variant-numeric:tabular-nums;
+               min-width:76px; text-align:right; }
+
+  /* Filter */
+  .filter { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+  .filter select, .filter input[type=search] {
+      font:inherit; font-size:13px; padding:7px 9px; border:1px solid #c9ccd2;
+      border-radius:5px; background:#fff; max-width:100%; }
+  .filter input[type=search] { flex:1; min-width:150px; }
+  .chip { border:1px solid #c9ccd2; background:#fff; color:var(--ink); font:inherit;
+          font-size:12px; font-weight:700; padding:6px 11px; border-radius:999px;
+          cursor:pointer; }
+  .chip.an { background:var(--rot); color:#fff; border-color:var(--rot); }
+  .knopf { border:none; border-radius:5px; padding:8px 14px; font-size:13px; font-weight:700;
+           cursor:pointer; background:#eef0f2; color:var(--ink); }
+  .knopf.rot { background:var(--rot); color:#fff; }
+
+  /* Zeilen */
+  .liste { display:grid; gap:9px; }
+  .z { background:#fff; border:1px solid var(--line); border-left:5px solid #b8bcc3;
+       border-radius:6px; padding:10px 12px; box-shadow:0 1px 3px rgba(20,25,32,.06); }
+  .zkopf { display:flex; flex-wrap:wrap; gap:7px; align-items:baseline; font-size:11.5px;
+           color:var(--mut); }
+  .zkopf .kw { font-weight:900; color:var(--ink); font-size:12.5px; }
+  .pille { font-size:10.5px; font-weight:800; color:#fff; padding:2px 8px; border-radius:999px;
+           white-space:nowrap; }
+  .vorschlag { background:#fff4e0; color:#8a5a00; border:1px solid #e8c98a;
+               font-size:10.5px; font-weight:800; padding:1px 7px; border-radius:999px; }
+  .belegt { background:#e8f5ec; color:#1d6b32; border:1px solid #a9d8ba;
+            font-size:10.5px; font-weight:800; padding:1px 7px; border-radius:999px; }
+  .ztext { font-size:13.5px; line-height:1.45; margin:6px 0 7px; }
+  .zzahl { font-weight:900; white-space:nowrap; margin-left:auto; font-size:12.5px; }
+  .zzahl span { color:var(--mut); font-weight:400; }
+  .zform { display:grid; grid-template-columns:repeat(auto-fit,minmax(185px,1fr)); gap:7px; }
+  .zform label { display:block; font-size:10.5px; color:var(--mut); font-weight:700;
+                 text-transform:uppercase; letter-spacing:.04em; margin-bottom:2px; }
+  .zform select, .zform input { width:100%; font:inherit; font-size:13px; padding:6px 7px;
+        border:1px solid #c9ccd2; border-radius:5px; background:#fff; }
+  .zform select.gesetzt { border-color:var(--gruen); background:#f4fbf6; }
+  .zbeleg { font-size:10.5px; color:#8a8e94; margin-top:6px; line-height:1.45;
+            word-break:break-word; }
+  .leer { text-align:center; color:var(--mut); padding:26px; font-size:13.5px; }
+  .foot { text-align:center; font-size:11.5px; color:var(--mut); padding:8px 0 30px; }
+  .foot a { color:var(--rot); font-weight:700; }
+  #speicherhinweis { position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
+        background:var(--ink); color:#fff; font-size:12.5px; font-weight:700;
+        padding:8px 15px; border-radius:999px; opacity:0; transition:opacity .2s;
+        pointer-events:none; z-index:99; }
+  #speicherhinweis.an { opacity:.93; }
+  @media (max-width:520px){ .zeileB { grid-template-columns:1fr auto; }
+                            .zeileB .bal { grid-column:1/-1; } }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <img src="assets/img/strabag-logo.png" alt="STRABAG">
+  <div class="t">Störungsjournal</div>
+  <div class="los">NALPSOLAR · B8-13</div>
+</div>
+
+<div class="wrap">
+
+  <div class="card">
+    <h2>Stunden aus Änderungen und Störungen</h2>
+    <div class="sub" id="einleitung">lade …</div>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="card">
+    <h2>Nach Störungsart</h2>
+    <div class="aufst" id="proKat"></div>
+  </div>
+
+  <div class="card">
+    <h2>Nach Nachtrag <span style="font-weight:400;color:var(--mut);font-size:12px">– so wie unten zugeordnet</span></h2>
+    <div class="aufst" id="proNo"></div>
+  </div>
+
+  <div class="card">
+    <h2>Nach Person</h2>
+    <div class="aufst" id="proPers"></div>
+  </div>
+
+  <div class="card">
+    <h2>Einträge <span id="anzahl" style="font-weight:400;color:var(--mut);font-size:13px"></span></h2>
+    <div class="filter" style="margin-bottom:9px">
+      <select id="fKat"><option value="">alle Störungsarten</option></select>
+      <select id="fPers"><option value="">alle Personen</option></select>
+      <select id="fKw"><option value="">alle Wochen</option></select>
+      <select id="fNo"><option value="">alle Nachträge</option></select>
+      <select id="fStatus">
+        <option value="">jeder Status</option>
+        <option value="offen">offen</option>
+        <option value="geprüft">geprüft</option>
+        <option value="eingereicht">eingereicht</option>
+        <option value="anerkannt">anerkannt</option>
+        <option value="verworfen">verworfen</option>
+      </select>
+      <input type="search" id="fSuche" placeholder="in Tätigkeit suchen …">
+    </div>
+    <div class="filter" style="margin-bottom:11px">
+      <button class="chip an" data-b="alle">alle</button>
+      <button class="chip" data-b="vorschlag">nur Vorschläge</button>
+      <button class="chip" data-b="belegt">nur belegte</button>
+      <button class="chip" data-b="unzugeordnet">noch nicht zugeordnet</button>
+      <button class="knopf" id="csv" style="margin-left:auto">CSV herunterladen</button>
+    </div>
+    <div class="liste" id="liste"><div class="leer">lade …</div></div>
+  </div>
+
+  <div class="foot"><a href="admin.html">← zurück zum Admin</a> ·
+    Grunddaten aus <code>Tools\Stoerungen_Aufbereiten.py</code> ·
+    Zuordnung wird sofort gespeichert</div>
+</div>
+
+<div id="speicherhinweis"></div>
+
+<script>
+'use strict';
+var DB = 'https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app/erfassung/stoerungen_stunden';
+var STATUS_LISTE = ['offen','geprüft','eingereicht','anerkannt','verworfen'];
+
+var DATEN = null;       // stoerungen.json
+var ZUO   = {};         // RTDB-Overlay je Zeilen-ID
+var filterBtn = 'alle';
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function chf(n){ return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "'"); }
+function std(n){ return (Math.round(n*10)/10).toString().replace('.',','); }
+
+function katVon(id){
+  for (var i=0;i<DATEN.kategorien.length;i++) if (DATEN.kategorien[i].id===id) return DATEN.kategorien[i];
+  return { name:id, farbe:'#8a8e94' };
+}
+/* Effektive Werte = Zuordnung aus der RTDB, sonst der Vorschlag aus den Grunddaten */
+function eff(z){
+  var o = ZUO[z.id] || {};
+  return {
+    verantwortlich: o.verantwortlich || z.verursacher,
+    nachtrag:       o.nachtrag       || z.nachtrag,
+    status:         o.status         || 'offen',
+    bemerkung:      o.bemerkung      || '',
+    gesetzt:        !!(o.verantwortlich || o.nachtrag)
+  };
+}
+
+/* ── Auswertungen ─────────────────────────────────────────────── */
+function balken(ziel, gruppen, gesamt){
+  var h = '';
+  gruppen.forEach(function(g){
+    var b = gesamt ? Math.max(2, g.chf/gesamt*100) : 0;
+    h += '<div class="zeileB">'+
+         '<div class="nm" title="'+esc(g.name)+'">'+esc(g.name)+'</div>'+
+         '<div class="bal"><i style="width:'+b.toFixed(1)+'%;background:'+(g.farbe||'#8a8e94')+'"></i></div>'+
+         '<div class="h">'+std(g.h)+' h</div>'+
+         '<div class="c">'+chf(g.chf)+'</div></div>';
+  });
+  $(ziel).innerHTML = h || '<div class="sub">keine Daten</div>';
+}
+
+function auswerten(){
+  var z = DATEN.zeilen;
+  var totH = 0, totC = 0, belH = 0, belC = 0, offen = 0;
+  z.forEach(function(r){
+    totH += r.std; totC += r.betrag;
+    if (r.belegt) { belH += r.std; belC += r.betrag; }
+    if (!eff(r).gesetzt) offen++;
+  });
+  $('kpis').innerHTML =
+    kpi('rot', chf(totC), 'CHF total (exkl. MwSt)') +
+    kpi('', std(totH)+' h', 'Stunden total') +
+    kpi('gr', chf(belC), 'davon belegt ('+std(belH)+' h)') +
+    kpi('or', chf(totC-belC), 'Vorschlag ('+std(totH-belH)+' h)') +
+    kpi('', z.length, 'Einträge') +
+    kpi(offen? 'or':'gr', offen, 'ohne eigene Zuordnung');
+
+  /* je Kategorie */
+  var kk = [];
+  DATEN.kategorien.forEach(function(k){
+    var rows = z.filter(function(r){ return r.kat===k.id; });
+    if (rows.length) kk.push({ name:k.name, farbe:k.farbe,
+      h:sum(rows,'std'), chf:sum(rows,'betrag') });
+  });
+  kk.sort(function(a,b){ return b.chf-a.chf; });
+  balken('proKat', kk, kk.length?kk[0].chf:0);
+
+  /* je Nachtrag (effektiv) */
+  var m = {};
+  z.forEach(function(r){ var n = eff(r).nachtrag;
+    if(!m[n]) m[n] = {name:n, farbe:'#556270', h:0, chf:0};
+    m[n].h += r.std; m[n].chf += r.betrag; });
+  var nn = Object.keys(m).map(function(k){ return m[k]; });
+  nn.sort(function(a,b){ return b.chf-a.chf; });
+  balken('proNo', nn, nn.length?nn[0].chf:0);
+
+  /* je Person */
+  var p = {};
+  z.forEach(function(r){ if(!p[r.person]) p[r.person] = {name:r.person, farbe:'#1a5fb4', h:0, chf:0};
+    p[r.person].h += r.std; p[r.person].chf += r.betrag; });
+  var pp = Object.keys(p).map(function(k){ return p[k]; });
+  pp.sort(function(a,b){ return b.chf-a.chf; });
+  balken('proPers', pp, pp.length?pp[0].chf:0);
+}
+function kpi(kl,wert,txt){ return '<div class="kpi '+kl+'"><b>'+wert+'</b><small>'+txt+'</small></div>'; }
+function sum(rows,f){ var s=0; rows.forEach(function(r){ s+=r[f]; }); return s; }
+
+/* ── Liste ────────────────────────────────────────────────────── */
+function passt(r){
+  var e = eff(r);
+  if ($('fKat').value    && r.kat        !== $('fKat').value)    return false;
+  if ($('fPers').value   && r.person     !== $('fPers').value)   return false;
+  if ($('fKw').value     && String(r.kw) !== $('fKw').value)     return false;
+  if ($('fNo').value     && e.nachtrag   !== $('fNo').value)     return false;
+  if ($('fStatus').value && e.status     !== $('fStatus').value) return false;
+  var s = ($('fSuche').value||'').toLowerCase();
+  if (s && (r.taetigkeit+' '+r.person+' '+r.kategorie).toLowerCase().indexOf(s) < 0) return false;
+  if (filterBtn==='vorschlag'    && r.belegt)   return false;
+  if (filterBtn==='belegt'       && !r.belegt)  return false;
+  if (filterBtn==='unzugeordnet' && e.gesetzt)  return false;
+  return true;
+}
+
+function zeichnen(){
+  var rows = DATEN.zeilen.filter(passt);
+  $('anzahl').textContent = '· '+rows.length+' von '+DATEN.zeilen.length+
+      ' · '+std(sum(rows,'std'))+' h · CHF '+chf(sum(rows,'betrag'));
+  if (!rows.length){ $('liste').innerHTML = '<div class="leer">nichts gefunden</div>'; return; }
+
+  var h = '';
+  rows.forEach(function(r){
+    var k = katVon(r.kat), e = eff(r);
+    h += '<div class="z" style="border-left-color:'+k.farbe+'" data-id="'+esc(r.id)+'">'+
+      '<div class="zkopf">'+
+        '<span class="kw">KW'+r.kw+'</span>'+
+        '<span>'+esc(r.datum||r.zeitraum)+'</span>'+
+        '<span class="pille" style="background:'+k.farbe+'">'+esc(k.name)+'</span>'+
+        '<span>'+esc(r.person)+'</span>'+
+        (r.belegt ? '<span class="belegt">belegt</span>'
+                  : '<span class="vorschlag">Vorschlag</span>')+
+        '<span class="zzahl">'+std(r.std)+' h <span>×</span> '+
+          chf(r.ansatz)+' <span>=</span> CHF '+chf(r.betrag)+'</span>'+
+      '</div>'+
+      '<div class="ztext">'+esc(r.taetigkeit)+'</div>'+
+      '<div class="zform">'+
+        '<div><label>Verantwortlich / Verursacher</label>'+
+          sel('verantwortlich', DATEN.verursacher_liste, e.verantwortlich, ZUO[r.id]&&ZUO[r.id].verantwortlich)+'</div>'+
+        '<div><label>Nachtrag</label>'+
+          sel('nachtrag', DATEN.nachtrag_liste, e.nachtrag, ZUO[r.id]&&ZUO[r.id].nachtrag)+'</div>'+
+        '<div><label>Status</label>'+
+          sel('status', STATUS_LISTE, e.status, ZUO[r.id]&&ZUO[r.id].status)+'</div>'+
+        '<div><label>Bemerkung</label>'+
+          '<input data-f="bemerkung" value="'+esc(e.bemerkung)+'" placeholder="…"></div>'+
+      '</div>'+
+      '<div class="zbeleg">Beleg: '+esc(r.beleg)+' · Pos. '+esc(r.pos)+' · '+esc(r.id)+'</div>'+
+    '</div>';
+  });
+  $('liste').innerHTML = h;
+}
+
+function sel(feld, liste, wert, gesetzt){
+  var opts = liste.slice();
+  if (opts.indexOf(wert) < 0) opts.unshift(wert);
+  var h = '<select data-f="'+feld+'"'+(gesetzt?' class="gesetzt"':'')+'>';
+  opts.forEach(function(o){
+    h += '<option'+(o===wert?' selected':'')+'>'+esc(o)+'</option>';
+  });
+  return h+'</select>';
+}
+
+/* ── Speichern ────────────────────────────────────────────────── */
+var hinweisTimer = null;
+function hinweis(t, fehler){
+  var el = $('speicherhinweis');
+  el.textContent = t;
+  el.style.background = fehler ? '#D72622' : '#1a1a1a';
+  el.classList.add('an');
+  clearTimeout(hinweisTimer);
+  hinweisTimer = setTimeout(function(){ el.classList.remove('an'); }, 2200);
+}
+
+function speichern(id, feld, wert){
+  ZUO[id] = ZUO[id] || {};
+  ZUO[id][feld] = wert;
+  var jetzt = new Date();
+  var p = function(n){ return String(n).padStart(2,'0'); };
+  ZUO[id].geaendert = p(jetzt.getDate())+'.'+p(jetzt.getMonth()+1)+'.'+jetzt.getFullYear()+
+                      ' '+p(jetzt.getHours())+':'+p(jetzt.getMinutes());
+  var obj = {}; obj[feld] = wert; obj.geaendert = ZUO[id].geaendert;
+  fetch(DB+'/'+encodeURIComponent(id)+'.json', {method:'PATCH', body:JSON.stringify(obj)})
+    .then(function(r){ if(!r.ok) throw 0; hinweis('✓ gespeichert'); auswerten(); fuelleNoFilter(); })
+    .catch(function(){ hinweis('⚠ nicht gespeichert – Netz?', true); });
+}
+
+$('liste').addEventListener('change', function(ev){
+  var t = ev.target, f = t.getAttribute('data-f');
+  if (!f) return;
+  var z = t.closest('.z'); if (!z) return;
+  if (t.tagName === 'SELECT') t.classList.add('gesetzt');
+  speichern(z.getAttribute('data-id'), f, t.value);
+});
+
+/* ── Filter befüllen ──────────────────────────────────────────── */
+function opt(s, wert, txt){ var o=document.createElement('option'); o.value=wert;
+  o.textContent=txt; s.appendChild(o); }
+function fuelleNoFilter(){
+  var s = $('fNo'), alt = s.value;
+  s.innerHTML = '<option value="">alle Nachträge</option>';
+  var m = {};
+  DATEN.zeilen.forEach(function(r){ m[eff(r).nachtrag] = 1; });
+  Object.keys(m).sort().forEach(function(n){ opt(s, n, n); });
+  s.value = alt;
+}
+function fuelleFilter(){
+  DATEN.kategorien.forEach(function(k){
+    if (DATEN.zeilen.some(function(r){ return r.kat===k.id; })) opt($('fKat'), k.id, k.name);
+  });
+  var pers = {}, kws = {};
+  DATEN.zeilen.forEach(function(r){ pers[r.person]=1; kws[r.kw]=1; });
+  Object.keys(pers).sort().forEach(function(p){ opt($('fPers'), p, p); });
+  Object.keys(kws).sort(function(a,b){ return a-b; }).forEach(function(k){
+    opt($('fKw'), k, 'KW'+k); });
+  fuelleNoFilter();
+}
+
+['fKat','fPers','fKw','fNo','fStatus'].forEach(function(id){ $(id).onchange = zeichnen; });
+$('fSuche').oninput = zeichnen;
+Array.prototype.forEach.call(document.querySelectorAll('.chip'), function(b){
+  b.onclick = function(){
+    filterBtn = b.getAttribute('data-b');
+    Array.prototype.forEach.call(document.querySelectorAll('.chip'), function(o){
+      o.classList.toggle('an', o===b); });
+    zeichnen();
+  };
+});
+
+/* ── CSV ──────────────────────────────────────────────────────── */
+$('csv').onclick = function(){
+  var kopf = ['ID','KW','Zeitraum','Datum','Person','Funktion','Störungsart','Tätigkeit',
+              'Position','Std','Ansatz','Betrag CHF','Verantwortlich','Nachtrag','Status',
+              'Bemerkung','Nachweis','Beleg'];
+  var zeilen = [kopf.join(';')];
+  DATEN.zeilen.filter(passt).forEach(function(r){
+    var e = eff(r);
+    zeilen.push([r.id, r.kw, r.zeitraum, r.datum, r.person, r.funktion, r.kategorie,
+                 r.taetigkeit, r.pos, String(r.std).replace('.',','),
+                 String(r.ansatz).replace('.',','), String(r.betrag).replace('.',','),
+                 e.verantwortlich, e.nachtrag, e.status, e.bemerkung,
+                 r.belegt?'belegt':'Vorschlag', r.beleg]
+      .map(function(v){ return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'; }).join(';'));
+  });
+  var b = new Blob(['﻿'+zeilen.join('\r\n')], {type:'text/csv;charset=utf-8;'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(b);
+  a.download = 'Stoerungsjournal_NalpSolar.csv';
+  a.click();
+};
+
+/* ── Start ────────────────────────────────────────────────────── */
+Promise.all([
+  fetch('uploads/stoerungen/stoerungen.json?_='+Date.now(), {cache:'no-store'})
+    .then(function(r){ return r.json(); }),
+  fetch(DB+'.json?_='+Date.now(), {cache:'no-store'})
+    .then(function(r){ return r.json(); }).catch(function(){ return null; })
+]).then(function(res){
+  DATEN = res[0];
+  ZUO = res[1] || {};
+  $('einleitung').innerHTML =
+    esc(DATEN.zeitraum)+' · Stand '+esc(DATEN.stand)+'.<br>'+
+    esc(DATEN.hinweis)+'<br>'+
+    'Regieansätze: Führungspersonal CHF 140.00/h (NO022), Fachpersonal CHF 68.70/h '+
+    '(R 1.112.121). Beträge exkl. MwSt.';
+  fuelleFilter();
+  auswerten();
+  zeichnen();
+}).catch(function(e){
+  $('liste').innerHTML = '<div class="leer">⚠ Daten nicht ladbar ('+esc(e)+')</div>';
+});
+</script>
+</body>
+</html>

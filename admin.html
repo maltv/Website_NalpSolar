@@ -3,12 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Föhnwächter · Admin</title>
+<title>Admin · NalpSolar</title>
 <meta name="robots" content="noindex,nofollow">
-<!-- Admin-Reiter (nur Victor): Föhnwächter-Lage + Steuerung.
-     Live-Daten direkt von MeteoSchweiz (CORS offen), Steuerung/Status via
-     Firebase RTDB erfassung/foehn/ (gleiche DB wie Erfassungs-Reiter).
-     Gegenstück: Tools\Foehnwaechter.py im KI-Projekt (liest Steuerung je Lauf). -->
+<!-- Admin-Werkzeuge (nur Victor), vier Reiter:
+       Übersicht   – Aufgabenliste + Links auf die anderen Admin-Seiten
+       Störungen   – Bauablaufstörungs- und Mehrkostentracking (uploads/stoerungsregister.json
+                     + Statusänderungen/Neueinträge in RTDB erfassung/stoerungen);
+                     dazu die Stundenseite aus uploads/stoerungen/stoerungen.json
+       Regie       – Schnellerfassung Regieleistung mit eigener Kostenschätzung,
+                     Freigabe durch Victor, Mail an Ramon, Antwort JA/NEIN zurück
+                     (Gegenstück: Tools\Regie_Mailschleife.ps1)
+       Föhn        – Föhnwächter-Lage + Steuerung (Gegenstück: Tools\Foehnwaechter.py)
+     Live-Wetterdaten direkt von MeteoSchweiz (CORS offen), alles andere über
+     Firebase RTDB unter erfassung/ (einziger offen beschreibbarer Ast). -->
 <script>
   window.NALP_GATE_CODE  = '8813';
   window.NALP_GATE_KEY   = 'nalp_admin_unlock_v1';
@@ -20,7 +27,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   :root { color-scheme: light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
-          --gruen:#2e9e46; --orange:#e08a00; }
+          --gruen:#2e9e46; --orange:#e08a00; --blau:#1a5fb4; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; }
   body { font-family: Arial, "Helvetica Neue", sans-serif; color: var(--ink); background: #f2f3f5; }
@@ -29,7 +36,19 @@
   .topbar img { height:26px; display:block; }
   .topbar .t { font-weight:900; font-size:17px; }
   .topbar .los { font-size:11.5px; color:var(--mut); font-weight:700; letter-spacing:.06em; margin-left:auto; }
-  .wrap { max-width:860px; margin:0 auto; padding:16px 14px 40px; }
+
+  /* ── Reiter ─────────────────────────────────────────────── */
+  .reiter { background:#fff; border-bottom:1px solid var(--line); display:flex; overflow-x:auto;
+            position:sticky; top:0; z-index:500; box-shadow:0 1px 4px rgba(20,25,32,.06); }
+  .reiter button { flex:1 0 auto; min-width:88px; border:none; background:none; cursor:pointer;
+            font:700 13.5px Arial; color:var(--mut); padding:12px 14px 10px; border-bottom:3px solid transparent; }
+  .reiter button.an { color:var(--rot); border-bottom-color:var(--rot); }
+  .reiter button .zahl { display:inline-block; background:var(--rot); color:#fff; font-size:10.5px;
+            border-radius:9px; padding:0 6px; margin-left:5px; vertical-align:1px; }
+  .tab { display:none; }
+  .tab.an { display:block; }
+
+  .wrap { max-width:900px; margin:0 auto; padding:16px 14px 40px; }
   .card { background:#fff; border:1px solid var(--line); border-left:5px solid var(--rot);
           border-radius:6px; padding:14px 16px; margin-bottom:14px; box-shadow:0 1px 4px rgba(20,25,32,.07); }
   .card h2 { margin:0 0 8px; font-size:16px; }
@@ -47,7 +66,7 @@
   .stat td:first-child { color:var(--mut); white-space:nowrap; width:36%; }
   .badge { display:inline-block; padding:2px 9px; border-radius:11px; font-size:11.5px; font-weight:700; color:#fff; }
   .b0 { background:var(--gruen); } .b1 { background:var(--orange); } .b2 { background:var(--rot); }
-  .bgrau { background:#8a8e94; }
+  .bgrau { background:#8a8e94; } .bblau { background:var(--blau); }
   .form label { display:block; font-size:12.5px; color:var(--mut); margin:10px 0 3px; font-weight:700; }
   .form input[type=number] { width:90px; padding:7px 8px; font-size:15px; border:1px solid #c9ccd2; border-radius:5px; }
   .reihe { display:flex; gap:14px; flex-wrap:wrap; }
@@ -55,7 +74,9 @@
   .knopf { display:inline-block; border:none; border-radius:5px; padding:10px 16px; font-size:14px;
            font-weight:700; cursor:pointer; background:#eef0f2; color:var(--ink); margin:4px 6px 0 0; }
   .knopf.rot { background:var(--rot); color:#fff; }
+  .knopf.gruen { background:var(--gruen); color:#fff; }
   .knopf.aktivP { outline:3px solid var(--orange); }
+  .knopf[disabled] { opacity:.45; cursor:default; }
   .radio { font-size:14px; margin:6px 14px 0 0; display:inline-block; }
   #saveMsg { font-size:13px; font-weight:700; margin-left:10px; }
   .foot { text-align:center; font-size:11.5px; color:var(--mut); padding:10px 0 30px; }
@@ -83,18 +104,107 @@
   .aufneu { display:flex; gap:6px; margin-top:10px; }
   .aufneu input { flex:1; padding:8px 9px; font-size:14px; border:1px solid #c9ccd2; border-radius:5px; }
   .aufneu .knopf { margin:0; padding:8px 16px; font-size:17px; font-weight:900; }
+
+  /* ── Kennzahlen-Kacheln ─────────────────────────────────── */
+  .kacheln { display:grid; grid-template-columns:repeat(auto-fit,minmax(122px,1fr)); gap:9px; margin-bottom:12px; }
+  .kachel { background:#fff; border:1px solid var(--line); border-top:3px solid var(--rot);
+        border-radius:5px; padding:9px 11px; }
+  .kachel .z { font-size:23px; font-weight:900; line-height:1.15; }
+  .kachel .l { font-size:11px; color:var(--mut); font-weight:700; line-height:1.35; }
+
+  /* ── Störungsliste ──────────────────────────────────────── */
+  .stliste { list-style:none; margin:0; padding:0; }
+  .stliste li { background:#fff; border:1px solid var(--line); border-left:5px solid #8a8e94;
+        border-radius:5px; margin-bottom:8px; padding:10px 12px; font-size:13.5px; line-height:1.45; }
+  .stliste li.k-Planung, .stliste li.k-Daten { border-left-color:var(--rot); }
+  .stliste li.k-Material, .stliste li.k-Geraet { border-left-color:var(--orange); }
+  .stliste li.k-Witterung, .stliste li.k-Dritte, .stliste li.k-Zufahrt { border-left-color:var(--blau); }
+  .stliste .kopf { display:flex; gap:8px; align-items:baseline; flex-wrap:wrap; cursor:pointer; }
+  .stliste .dat { font-weight:700; color:var(--mut); font-size:12px; white-space:nowrap; }
+  .stliste .tit { font-weight:700; flex:1; min-width:150px; }
+  .stliste .chf { font-weight:900; white-space:nowrap; }
+  .stliste .detail { display:none; margin-top:8px; border-top:1px dashed var(--line); padding-top:8px;
+        font-size:12.5px; color:#333; }
+  .stliste li.offen_detail .detail { display:block; }
+  .stliste .detail b { color:var(--ink); }
+  .stliste .q { color:var(--mut); font-size:11.5px; margin-top:6px; line-height:1.5; }
+  .tag { display:inline-block; background:#eef0f2; color:var(--mut); font-size:10.5px; font-weight:700;
+        border-radius:9px; padding:1px 8px; margin-right:4px; white-space:nowrap; }
+  .tag.ki { background:#e7edf7; color:var(--blau); }
+  .tag.mail { background:#e9f3ea; color:var(--gruen); }
+
+  /* ── Mailregister ───────────────────────────────────────── */
+  .maillist { list-style:none; margin:0; padding:0; max-height:56vh; overflow-y:auto; border-top:1px solid var(--line); }
+  .maillist li { border-bottom:1px solid var(--line); padding:7px 2px; font-size:12.5px; line-height:1.45; }
+  .maillist .m1 { display:flex; gap:8px; align-items:baseline; }
+  .maillist .md { color:var(--mut); font-weight:700; white-space:nowrap; font-size:11.5px; }
+  .maillist .mb { flex:1; }
+  .maillist li.kern .mb { font-weight:700; }
+  .maillist .mv { color:var(--mut); font-size:11.5px; margin-top:2px; }
+
+  /* ── Formulare Erfassung ────────────────────────────────── */
+  .feld { margin-bottom:10px; }
+  .feld > label { display:block; font-size:12.5px; color:var(--mut); font-weight:700; margin-bottom:3px; }
+  .feld input[type=text], .feld input[type=date], .feld select, .feld textarea {
+        width:100%; padding:9px 10px; font-size:15px; border:1px solid #c9ccd2; border-radius:5px;
+        font-family:inherit; background:#fff; }
+  .feld textarea { min-height:92px; resize:vertical; line-height:1.45; }
+  .mikzeile { display:flex; gap:7px; align-items:center; margin-top:5px; }
+  .mik { border:none; border-radius:5px; padding:9px 14px; font-size:14px; font-weight:700;
+        cursor:pointer; background:#eef0f2; }
+  .mik.hoert { background:var(--rot); color:#fff; animation:puls 1.1s infinite; }
+  @keyframes puls { 50% { opacity:.55; } }
+  .mikinfo { font-size:11.5px; color:var(--mut); }
+  table.kalk { width:100%; border-collapse:collapse; font-size:12.5px; }
+  table.kalk th { text-align:left; color:var(--mut); font-size:11px; padding:3px 4px; border-bottom:1px solid var(--line); }
+  table.kalk td { padding:3px 4px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  table.kalk select { width:100%; padding:5px; font-size:12.5px; border:1px solid #c9ccd2; border-radius:4px; }
+  table.kalk input { width:100%; padding:5px; font-size:12.5px; border:1px solid #c9ccd2; border-radius:4px; text-align:right; }
+  table.kalk td.b { text-align:right; font-weight:700; white-space:nowrap; }
+  table.kalk td.x { width:26px; text-align:center; }
+  table.kalk .weg { border:none; background:none; color:var(--rot); font-size:17px; font-weight:900; cursor:pointer; padding:0; }
+  .total { text-align:right; font-size:20px; font-weight:900; margin-top:8px; }
+  .total small { font-size:12px; color:var(--mut); font-weight:700; }
+
+  /* ── Regieliste ─────────────────────────────────────────── */
+  .rgliste { list-style:none; margin:0; padding:0; }
+  .rgliste li { background:#fff; border:1px solid var(--line); border-left:5px solid #8a8e94;
+        border-radius:5px; margin-bottom:8px; padding:10px 12px; font-size:13.5px; }
+  .rgliste li.s-entwurf   { border-left-color:#8a8e94; }
+  .rgliste li.s-freigabe  { border-left-color:var(--orange); }
+  .rgliste li.s-gesendet  { border-left-color:var(--blau); }
+  .rgliste li.s-zugestimmt{ border-left-color:var(--gruen); }
+  .rgliste li.s-abgelehnt { border-left-color:var(--rot); }
+  .rgliste .kopf { display:flex; gap:8px; align-items:baseline; flex-wrap:wrap; cursor:pointer; }
+  .rgliste .nr { font-weight:900; font-size:12px; color:var(--mut); white-space:nowrap; }
+  .rgliste .tit { font-weight:700; flex:1; min-width:140px; }
+  .rgliste .detail { display:none; margin-top:8px; border-top:1px dashed var(--line); padding-top:8px; font-size:12.5px; }
+  .rgliste li.offen_detail .detail { display:block; }
+  .rgliste .antwort { background:#f6f7f8; border-radius:5px; padding:8px 10px; margin-top:7px;
+        font-size:12.5px; white-space:pre-wrap; }
+  .hinw { background:#fff8e6; border:1px solid #f0d79a; border-radius:5px; padding:9px 11px;
+        font-size:12px; color:#6b5300; line-height:1.5; margin-bottom:12px; }
 </style>
 </head>
 <body>
 <div class="topbar">
   <img src="assets/img/strabag-logo.png" alt="STRABAG">
-  <div class="t">Föhnwächter · Admin</div>
+  <div class="t">Admin</div>
   <div class="los">NALPSOLAR · B8-13</div>
 </div>
 
-<div class="wrap">
+<div class="reiter" id="reiter">
+  <button data-tab="uebersicht" class="an">Übersicht</button>
+  <button data-tab="stoerungen">Störungen<span class="zahl" id="zStoer">–</span></button>
+  <button data-tab="regie">Regie<span class="zahl" id="zRegie">–</span></button>
+  <button data-tab="foehn">Föhn</button>
+</div>
 
-  <!-- ── 0. Aufgabenliste ────────────────────────────────────────────── -->
+<!-- ══════════════════════════════════════════════════════════════
+     REITER 1 – ÜBERSICHT
+     ══════════════════════════════════════════════════════════════ -->
+<div class="tab an" id="tab-uebersicht"><div class="wrap">
+
   <div class="card auf">
     <h2>Aufgaben <span id="aufZahl" style="font-weight:400;color:var(--mut);font-size:13px"></span></h2>
     <div class="sub">Dieselbe Liste wie <b>Dashboard\aufgaben.md</b> im KI-Projekt. Hier abhaken,
@@ -116,7 +226,19 @@
     </div>
   </div>
 
-  <!-- ── 0b. Weitere Admin-Werkzeuge ─────────────────────────────────── -->
+  <div class="card">
+    <h2>Störungsjournal · Stunden aus Änderungen</h2>
+    <div class="sub">Alle Stunden seit Baubeginn 11.05.2026, die auf Änderungen und
+      Störungen zurückgehen und vertraglich nicht unsere Leistung sind – nach
+      Störungsart sortiert (Planänderungen, falsche Soll-Höhen, Baupiste B,
+      Passstücke, Pfahlköpfe/Gewinde, Baustopp, Datenfehler …).
+      Je Eintrag lässt sich hier auswählen, <b>wer verantwortlich</b> ist und in
+      <b>welchen Nachtrag</b> er läuft.</div>
+    <a href="stoerungen.html" style="display:inline-block;background:#D72622;color:#fff;
+       text-decoration:none;font-weight:700;font-size:14px;padding:9px 16px;border-radius:5px;">
+       Störungsjournal öffnen</a>
+  </div>
+
   <div class="card">
     <h2>Erdleiter · Dokumentation</h2>
     <div class="sub">Alle eingemessenen Verbindungsstellen 2025 und 2026 auf der Karte,
@@ -137,7 +259,170 @@
        Abrechnungskontrolle öffnen</a>
   </div>
 
-  <!-- ── 1. Druckdifferenz (Stil Rheintalmeteo-Föhndiagramm) ─────────── -->
+  <div class="foot"><a href="index.html">← zurück zum Portal</a></div>
+</div></div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     REITER 2 – BAUABLAUFSTÖRUNGEN & MEHRKOSTEN
+     ══════════════════════════════════════════════════════════════ -->
+<div class="tab" id="tab-stoerungen"><div class="wrap">
+
+  <div class="kacheln" id="stKacheln"></div>
+
+  <div class="card">
+    <h2>Bauablaufstörungen &amp; Mehrkostentracking</h2>
+    <div class="sub">Register aus <code>Bauablaufstoerungen\stoerungsregister.json</code>
+      (Neubau mit <code>Tools\Stoerungen_Bauen.py</code>). <b>Mail</b> = aus dem Mailverkehr
+      François&nbsp;/&nbsp;Victor belegt, <b>KI</b> = von Claude als mögliche Störung erkannt und
+      noch nicht angezeigt oder bewertet. Status und Notizen werden hier gespeichert
+      (Firebase), der Text selbst bleibt in der Datei.</div>
+
+    <div class="aufkopf">
+      <input type="search" id="stSuche" placeholder="suchen …">
+      <button class="knopf mini an" data-sf="alle">alle</button>
+      <button class="knopf mini" data-sf="offen">offen</button>
+      <button class="knopf mini" data-sf="mail">belegt</button>
+      <button class="knopf mini" data-sf="ki">KI-Fund</button>
+    </div>
+
+    <ul class="stliste" id="stListe"><li>lade …</li></ul>
+  </div>
+
+  <div class="card" id="sjCard" style="display:none">
+    <h2>Stundenjournal <span id="sjZahl" style="font-weight:400;color:var(--mut);font-size:13px"></span></h2>
+    <div class="sub">Die Stundenseite derselben Sache: was die Störungen an Aufwand gekostet haben,
+      je Kategorie. Quelle <code>Tools\Stoerungen_Aufbereiten.py</code> →
+      <code>Stoerungen_Stunden\Stoerungsjournal.xlsx</code>. <b>belegt</b> = aus der
+      NO024-Erfassungsdatei bzw. aus Tagesrapporten, <b>Vorschlag</b> = hergeleitet und noch
+      von dir zu bestätigen.</div>
+    <table class="kalk" id="sjTab"></table>
+    <a href="stoerungen.html" style="display:inline-block;margin-top:10px;background:#D72622;color:#fff;
+       text-decoration:none;font-weight:700;font-size:14px;padding:9px 16px;border-radius:5px;">
+       Stundenjournal Zeile für Zeile öffnen</a>
+  </div>
+
+  <div class="card">
+    <h2>Neue Störung erfassen</h2>
+    <div class="sub">Kommt sofort in die Liste (Kennzeichnung «Web»). Für die dauerhafte
+      Ablage mit Quellenangabe gehört sie danach ins Register im KI-Projekt.</div>
+    <div class="feld"><label>Datum</label><input type="date" id="snDatum"></div>
+    <div class="feld"><label>Kurztitel</label><input type="text" id="snTitel" placeholder="z.B. Kranstillstand wegen fehlender Passstücke"></div>
+    <div class="feld">
+      <label>Was ist passiert / was hat es blockiert?</label>
+      <textarea id="snText" placeholder="diktieren oder tippen …"></textarea>
+      <div class="mikzeile">
+        <button class="mik" data-mik="snText">🎤 Diktieren</button>
+        <span class="mikinfo" id="mikinfo-snText"></span>
+      </div>
+    </div>
+    <div class="reihe">
+      <div class="feld"><label>Art</label><select id="snKat">
+        <option>Planung</option><option>Material</option><option>Geraet</option><option>Termin</option>
+        <option>Dritte</option><option>Witterung</option><option>Zufahrt</option><option>Personal</option>
+        <option>Logistik</option><option>Daten</option><option>Behoerde</option><option>Ausfuehrung</option>
+      </select></div>
+      <div class="feld"><label>Verursacher</label><select id="snSphaere">
+        <option>Bauherr/Planer</option><option>Lieferant</option><option>Dritte</option>
+        <option>STRABAG</option><option>Natur</option><option>unklar</option>
+      </select></div>
+    </div>
+    <button class="knopf rot" id="snSpeichern">Störung eintragen</button>
+    <span id="snMsg" style="font-size:13px;font-weight:700;margin-left:10px"></span>
+  </div>
+
+  <div class="card">
+    <h2>Mailregister <span id="mlZahl" style="font-weight:400;color:var(--mut);font-size:13px"></span></h2>
+    <div class="sub">Alle Mails <b>von François Borner</b> und alle <b>von Victor gesendeten</b> Mails
+      zu Bauablaufstörung, Verzug, Mehrkosten, Nachtrag, Regie und Planänderung – automatisch aus
+      <code>Mails\MAIL_JOURNAL.md</code>. Fett = Störung oder Kostenfolge steht im Betreff.</div>
+    <div class="aufkopf">
+      <input type="search" id="mlSuche" placeholder="Betreff / Text durchsuchen …">
+      <button class="knopf mini an" data-mf="kern">Kernmails</button>
+      <button class="knopf mini" data-mf="alle">alle</button>
+    </div>
+    <ul class="maillist" id="mlListe"><li>lade …</li></ul>
+  </div>
+
+  <div class="foot"><a href="index.html">← zurück zum Portal</a></div>
+</div></div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     REITER 3 – REGIE
+     ══════════════════════════════════════════════════════════════ -->
+<div class="tab" id="tab-regie"><div class="wrap">
+
+  <div class="hinw">
+    <b>Ablauf:</b> erfassen → du prüfst und gibst frei → <code>Tools\Regie_Mailschleife.ps1</code>
+    schickt die Mail an Ramon (<i>r.bucheli@infranext.ch</i>, CC François) → Ramon antwortet
+    mit <b>JA</b> oder <b>NEIN + Grund</b> → dasselbe Skript liest die Antwort und setzt sie hier
+    ein. <b>Ohne deine Freigabe geht keine Mail raus.</b>
+  </div>
+
+  <div class="kacheln" id="rgKacheln"></div>
+
+  <div class="card">
+    <h2>Regieleistung erfassen</h2>
+    <div class="sub">Kurz und baustellentauglich. Die Kostenschätzung machen wir selbst –
+      Ansätze aus NO022/NO024 und den visierten Regierapporten.</div>
+
+    <div class="reihe">
+      <div class="feld"><label>Datum des Ereignisses</label><input type="date" id="rgDatum"></div>
+      <div class="feld"><label>Ort / Bereich / Tisch</label><input type="text" id="rgOrt" placeholder="z.B. Bereich 2.2, Tisch 370"></div>
+    </div>
+    <div class="feld"><label>Kurztitel</label><input type="text" id="rgTitel" placeholder="z.B. Kranumstellung wegen Älpler-Durchfahrt"></div>
+    <div class="feld">
+      <label>Sachverhalt – was, warum, wer hat es ausgelöst?</label>
+      <textarea id="rgText" placeholder="diktieren oder tippen …"></textarea>
+      <div class="mikzeile">
+        <button class="mik" data-mik="rgText">🎤 Diktieren</button>
+        <span class="mikinfo" id="mikinfo-rgText"></span>
+      </div>
+    </div>
+    <div class="feld"><label>Veranlasser / Sphäre</label><select id="rgVeranlasser">
+      <option>Bauherr / Bauleitung (Axpo, Infranext)</option>
+      <option>Planer (ILF, Amstein+Walthert)</option>
+      <option>Dritte (Älpler, Fremde)</option>
+      <option>Lieferant</option>
+      <option>intern STRABAG</option>
+    </select></div>
+
+    <h2 style="margin-top:16px">Kostenschätzung</h2>
+    <div class="sub">Unsere eigene Schätzung, keine Abrechnung. Faktor 0.7 gilt gemäss
+      Verhandlungsprotokoll 13.04.2026 für Material, Inventar und Fremdleistungen.</div>
+    <table class="kalk">
+      <thead><tr><th style="width:44%">Leistung</th><th style="width:17%">Menge</th>
+        <th style="width:17%">Ansatz</th><th style="width:22%">Betrag</th><th class="x"></th></tr></thead>
+      <tbody id="kalkBody"></tbody>
+    </table>
+    <button class="knopf mini" id="kalkPlus" style="margin-top:8px">+ Zeile</button>
+    <div class="feld" style="margin-top:10px"><label>Zuschlag / Sonstiges (CHF, optional)</label>
+      <input type="text" id="rgSonst" inputmode="decimal" placeholder="0.00" style="max-width:150px"></div>
+    <div class="total">Geschätzte Kosten: <span id="kalkTotal">CHF 0.00</span>
+      <br><small id="kalkHinweis">nur Schätzung – Abrechnung nach effektivem Aufwand</small></div>
+
+    <div style="margin-top:14px">
+      <button class="knopf rot" id="rgSpeichern">Als Entwurf speichern</button>
+      <span id="rgMsg" style="font-size:13px;font-weight:700;margin-left:10px"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Regierapporte <span id="rgZahl" style="font-weight:400;color:var(--mut);font-size:13px"></span></h2>
+    <div class="aufkopf">
+      <button class="knopf mini an" data-rf="aktiv">aktiv</button>
+      <button class="knopf mini" data-rf="alle">alle</button>
+    </div>
+    <ul class="rgliste" id="rgListe"><li>lade …</li></ul>
+  </div>
+
+  <div class="foot"><a href="index.html">← zurück zum Portal</a></div>
+</div></div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     REITER 4 – FÖHN
+     ══════════════════════════════════════════════════════════════ -->
+<div class="tab" id="tab-foehn"><div class="wrap">
+
   <div class="card">
     <h2>Druckdifferenz Süd&thinsp;–&thinsp;Nord (Föhn)</h2>
     <div class="dpzeile">
@@ -149,7 +434,6 @@
       Rote Linie = Föhn-Schwelle +2 hPa. Positiv = Südföhn-Gefälle Richtung Alpennordseite.</div>
   </div>
 
-  <!-- ── 2. Windkarte (Stil burnair) ─────────────────────────────────── -->
   <div class="card">
     <h2>Wind aktuell &ndash; Stationen um die Baustelle</h2>
     <div id="karte"></div>
@@ -162,7 +446,6 @@
     </div>
   </div>
 
-  <!-- ── 3. Wächter-Status ───────────────────────────────────────────── -->
   <div class="card stat">
     <h2>Wächter-Status</h2>
     <div class="sub">Was der Wächter (PC Büro, Aufgabenplanung) zuletzt gemeldet hat.
@@ -170,7 +453,6 @@
     <table id="statusTab"><tr><td>lade …</td><td></td></tr></table>
   </div>
 
-  <!-- ── 4. Steuerung ────────────────────────────────────────────────── -->
   <div class="card form">
     <h2>Steuerung</h2>
     <div class="sub">Wirkt beim <b>nächsten Wächter-Lauf</b> (nicht sofort).
@@ -202,206 +484,513 @@
 
   <div class="foot"><a href="index.html">← zurück zum Portal</a> · Föhnwächter NalpSolar ·
     Quellen: MeteoSchweiz Open Data, Open-Meteo</div>
-</div>
+</div></div>
 
 <script>
 'use strict';
-var DB='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app/erfassung/foehn';
+var RTDB='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app/erfassung';
+var DB=RTDB+'/foehn';
 var VQ='https://data.geo.admin.ch/ch.meteoschweiz.messwerte-aktuell/VQHA80.csv';
 function SMN(st){ return 'https://data.geo.admin.ch/ch.meteoschweiz.ogd-smn/'+st+'/ogd-smn_'+st+'_t_now.csv'; }
 
-/* Stationen um die Baustelle (WGS84 aus ogd-smn_meta_stations.csv, Stand 03.08.2026) */
-var STATIONEN=[
-  ['GUE','Gütsch ob Andermatt',2286,46.652475,8.615531],
-  ['DIS','Disentis',1197,46.706569,8.853478],
-  ['ANT','Andermatt',1435,46.630914,8.580553],
-  ['GOS','Göschenen',950,46.692678,8.595364],
-  ['PIO','Piotta',990,46.514811,8.688039],
-  ['COM','Acquarossa/Comprovasco',575,46.459517,8.935486],
-  ['MTR','Matro',2171,46.410103,8.924742],
-  ['ROE','Robièi',1898,46.443067,8.513389],
-  ['ULR','Ulrichen',1346,46.504881,8.308236],
-  ['GRH','Grimsel Hospiz',1980,46.571689,8.333256],
-  ['ENG','Engelberg',1036,46.821639,8.410514],
-  ['CHU','Chur',556,46.870572,9.530761]
-];
-var BAUSTELLE=[46.62,8.77];
-
 function $(id){ return document.getElementById(id); }
-function num(v){ var f=parseFloat(v); return isNaN(f)?null:f; }
-function farbe(b){ return b==null?'#8a8e94':(b>=50?'#D72622':(b>=30?'#e08a00':'#2e9e46')); }
-
-/* ── Karte ── */
-var karte=L.map('karte',{scrollWheelZoom:false}).setView([46.58,8.72],10);
-L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg',
-  {maxZoom:17,attribution:'© swisstopo'}).addTo(karte);
-L.marker(BAUSTELLE,{icon:L.divIcon({className:'',html:'<div style="font-size:22px;text-shadow:0 1px 4px #000">⭐</div>',iconSize:[24,24],iconAnchor:[12,12]})})
-  .addTo(karte).bindPopup('<b>Baustelle NalpSolar</b><br>PV-Anlage Nalps, ca. 2000 m');
-var marker={};
-
-function windMarker(s,d){
-  var abbr=s[0], b=d?d.boee:null, m=d?d.mittel:null, r=d?d.richtung:null;
-  var pfeil = (r==null)?'':'<div style="position:absolute;left:50%;top:50%;width:0;height:0;'+
-    'transform:translate(-50%,-50%) rotate('+((r+90)%360)+'deg) translateX(21px);'+
-    'border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:9px solid '+farbe(b)+';"></div>';
-  var html='<div style="position:relative;width:60px;height:60px">'+pfeil+
-    '<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);'+
-    'width:32px;height:32px;border-radius:50%;background:'+farbe(b)+';color:#fff;'+
-    'font:700 12.5px Arial;display:flex;align-items:center;justify-content:center;'+
-    'box-shadow:0 1px 5px rgba(0,0,0,.45)">'+(b==null?'–':Math.round(b))+'</div></div>';
-  var ic=L.divIcon({className:'',html:html,iconSize:[60,60],iconAnchor:[30,30]});
-  if(marker[abbr]){ marker[abbr].setIcon(ic); }
-  else { marker[abbr]=L.marker([s[3],s[4]],{icon:ic}).addTo(karte); }
-  marker[abbr].bindPopup('<b>'+s[1]+'</b> ('+s[2]+' m)<br>Böe <b>'+(b==null?'–':b+' km/h')+'</b>'+
-    ' · Mittel '+(m==null?'–':m+' km/h')+'<br>Richtung '+(r==null?'–':Math.round(r)+'°')+
-    (d&&d.zeit?(' · '+d.zeit+' Uhr'):''));
-}
-
-function ladeWind(){
-  fetch(VQ,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
-    var zeilen=t.split('\n'), kopf=zeilen[0].split(';');
-    var iB=kopf.indexOf('fu3010z1'), iM=kopf.indexOf('fu3010z0'), iR=kopf.indexOf('dkl010z0'), iD=kopf.indexOf('Date');
-    var daten={};
-    for(var i=1;i<zeilen.length;i++){
-      var c=zeilen[i].split(';');
-      daten[c[0]]={boee:num(c[iB]),mittel:num(c[iM]),richtung:num(c[iR]),
-        zeit:(c[iD]&&c[iD].length>=12)?(function(s){
-          var dt=new Date(Date.UTC(+s.slice(0,4),+s.slice(4,6)-1,+s.slice(6,8),+s.slice(8,10),+s.slice(10,12)));
-          return String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0');
-        })(c[iD]):''};
-    }
-    STATIONEN.forEach(function(s){ windMarker(s,daten[s[0]]); });
-    var g=daten['GUE'];
-    $('kZeit').textContent='Stand '+(g&&g.zeit?g.zeit+' Uhr':'–')+' · aktualisiert alle 5 Min';
-  }).catch(function(){ $('kZeit').textContent='⚠ Messwerte gerade nicht erreichbar'; });
-}
-
-/* ── Druckdifferenz heute (QFF LUG-KLO) ── */
-function ladeDp(){
-  Promise.all([fetch(SMN('lug'),{cache:'no-store'}),fetch(SMN('klo'),{cache:'no-store'})])
-  .then(function(rs){ return Promise.all([rs[0].text(),rs[1].text()]); })
-  .then(function(tt){
-    function reihe(t){
-      var z=t.split('\n'), k=z[0].split(';');
-      var iT=k.indexOf('reference_timestamp'), iP=k.indexOf('pp0qffs0'), m={};
-      for(var i=1;i<z.length;i++){ var c=z[i].split(';');
-        if(c.length>iP && c[iT]) m[c[iT]]=num(c[iP]); }
-      return m;
-    }
-    var lug=reihe(tt[0]), klo=reihe(tt[1]), ts=Object.keys(lug).sort(), pts=[];
-    ts.forEach(function(t){ if(lug[t]!=null&&klo[t]!=null) pts.push({t:t,d:lug[t]-klo[t]}); });
-    if(!pts.length){ $('dpInfo').textContent='keine Daten'; return; }
-    var akt=pts[pts.length-1], max=pts[0];
-    pts.forEach(function(p){ if(p.d>max.d) max=p; });
-    var f=akt.d>2?'#D72622':(akt.d>1?'#e08a00':'#2e9e46');
-    $('dpJetzt').innerHTML=(akt.d>0?'+':'')+akt.d.toFixed(1)+' <small>hPa</small>';
-    $('dpJetzt').style.color=f;
-    $('dpInfo').innerHTML='aktuell ('+akt.t.slice(11,16)+' Uhr) · Tagesmax <b>'+
-      (max.d>0?'+':'')+max.d.toFixed(1)+' hPa</b> um '+max.t.slice(11,16)+' Uhr'+
-      (akt.d>2?' · <b style="color:#D72622">FÖHNLAGE</b>':'');
-    /* Chart */
-    var cv=$('dpChart'), ctx=cv.getContext('2d'), W=cv.width, H=cv.height;
-    ctx.clearRect(0,0,W,H);
-    var lo=Math.min(-1,Math.floor(Math.min.apply(null,pts.map(function(p){return p.d;}))-0.5)),
-        hi=Math.max(3,Math.ceil(Math.max.apply(null,pts.map(function(p){return p.d;}))+0.5));
-    function Y(v){ return H-18-(v-lo)/(hi-lo)*(H-30); }
-    function X(i){ return 34+i/(Math.max(pts.length-1,1))*(W-46); }
-    ctx.font='11px Arial'; ctx.fillStyle='#8a8e94'; ctx.strokeStyle='#e3e5e8';
-    for(var v=lo;v<=hi;v++){ ctx.beginPath(); ctx.moveTo(34,Y(v)); ctx.lineTo(W-8,Y(v)); ctx.stroke();
-      ctx.fillText((v>0?'+':'')+v,4,Y(v)+4); }
-    ctx.strokeStyle='#9aa0a8'; ctx.beginPath(); ctx.moveTo(34,Y(0)); ctx.lineTo(W-8,Y(0)); ctx.stroke();
-    ctx.strokeStyle='#D72622'; ctx.setLineDash([6,4]); ctx.beginPath();
-    ctx.moveTo(34,Y(2)); ctx.lineTo(W-8,Y(2)); ctx.stroke(); ctx.setLineDash([]);
-    ctx.strokeStyle='#1a5fb4'; ctx.lineWidth=2; ctx.beginPath();
-    pts.forEach(function(p,i){ i?ctx.lineTo(X(i),Y(p.d)):ctx.moveTo(X(i),Y(p.d)); }); ctx.stroke();
-    ctx.lineWidth=1; ctx.fillStyle='#63676d';
-    for(var i=0;i<pts.length;i+=18){ ctx.fillText(pts[i].t.slice(11,16),X(i)-12,H-4); }
-  }).catch(function(){ $('dpInfo').textContent='⚠ Druckdaten gerade nicht erreichbar'; });
-}
-
-/* ── Waechter-Status aus RTDB ── */
-function ladeStatus(){
-  fetch(DB+'/status.json?_='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();})
-  .then(function(s){
-    s=s||{};
-    var m=s.messung||{}, p=s.prognose||{}, t='';
-    function z(a,b){ t+='<tr><td>'+a+'</td><td>'+b+'</td></tr>'; }
-    if(m.zeit){
-      var stufe=m.stufe||0;
-      z('Letzte Messung', m.zeit+' &nbsp;<span class="badge b'+stufe+'">Stufe '+stufe+'</span>'+
-        (m.pausiert?' <span class="badge bgrau">pausiert</span>':'')+
-        (m.testmodus===false?' <span class="badge b2">SCHARF</span>':' <span class="badge bgrau">Testmodus</span>'));
-      if(m.gue) z('Gütsch', '<b>'+(m.gue.boee==null?'–':Math.round(m.gue.boee))+' km/h</b> Böe · '+
-        (m.gue.mittel==null?'–':Math.round(m.gue.mittel))+' Mittel · '+(m.gue.richtung==null?'–':Math.round(m.gue.richtung))+'° ('+m.gue.zeit+')');
-      if(m.dis) z('Disentis', '<b>'+(m.dis.boee==null?'–':Math.round(m.dis.boee))+' km/h</b> Böe · '+
-        (m.dis.mittel==null?'–':Math.round(m.dis.mittel))+' Mittel · '+(m.dis.richtung==null?'–':Math.round(m.dis.richtung))+'° ('+m.dis.zeit+')');
-    } else { z('Letzte Messung','noch keine (Wächter noch nie gelaufen?)'); }
-    if(p.zeit){
-      z('Letzte Prognose', p.zeit+' für '+(p.morgen||'?')+': max Δp <b>'+(p.dp>0?'+':'')+p.dp+' hPa</b> ('+
-        (p.dp_zeit||'?')+') '+(p.vorwarnung?'<span class="badge b2">VORWARNUNG</span>':'<span class="badge b0">ok</span>'));
-    } else { z('Letzte Prognose','noch keine'); }
-    var al=s.alarme?Object.keys(s.alarme).sort().reverse().slice(0,6):[];
-    if(al.length){
-      var liste=al.map(function(k){ var a=s.alarme[k]; return a.zeit+' – '+a.betreff; }).join('<br>');
-      z('Letzte Alarm-Mails', liste);
-    } else { z('Letzte Alarm-Mails','keine'); }
-    $('statusTab').innerHTML=t;
-  }).catch(function(){ $('statusTab').innerHTML='<tr><td>⚠ Status nicht erreichbar</td><td></td></tr>'; });
-}
-
-/* ── Steuerung ── */
-var pauseBis='';
-function pauseAnzeigen(){
-  var heute=new Date().toISOString().slice(0,10);
-  var an=pauseBis&&pauseBis>=heute;
-  $('pStand').textContent=an?('→ pausiert bis '+pauseBis):'→ keine Pause aktiv';
-  $('pHeute').classList.toggle('aktivP',false); $('pDrei').classList.toggle('aktivP',false);
-  if(an) (pauseBis===heute?$('pHeute'):$('pDrei')).classList.add('aktivP');
-}
-function ladeSteuerung(){
-  fetch(DB+'/steuerung.json?_='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();})
-  .then(function(s){
-    s=s||{};
-    $('fDp').value=s.dp_schwelle!=null?s.dp_schwelle:2.0;
-    $('fS1g').value=s.s1_gue!=null?s.s1_gue:50; $('fS1d').value=s.s1_dis!=null?s.s1_dis:30;
-    $('fS2g').value=s.s2_gue!=null?s.s2_gue:65; $('fS2d').value=s.s2_dis!=null?s.s2_dis:45;
-    document.querySelector('input[name=modus][value='+(s.testmodus===false?'scharf':'test')+']').checked=true;
-    pauseBis=s.pause_bis||'';
-    pauseAnzeigen();
-    $('stStand').textContent=s.geaendert?('Zuletzt geändert: '+s.geaendert+' ('+(s.von||'?')+')'):'';
-  }).catch(function(){ $('stStand').textContent='⚠ Steuerung nicht ladbar'; });
-}
-function tagPlus(n){ var d=new Date(); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
-$('pHeute').onclick=function(){ pauseBis=tagPlus(0); pauseAnzeigen(); };
-$('pDrei').onclick=function(){ pauseBis=tagPlus(2); pauseAnzeigen(); };
-$('pWeg').onclick=function(){ pauseBis=''; pauseAnzeigen(); };
-$('speichern').onclick=function(){
-  var scharf=document.querySelector('input[name=modus][value=scharf]').checked;
-  if(scharf && !confirm('SCHARF schalten?\nAlarm-Mails gehen dann an Samuel, Lukas, François und Victor.')) return;
-  var jetzt=new Date(), pad=function(n){return String(n).padStart(2,'0');};
-  var obj={ testmodus:!scharf,
-    dp_schwelle:num($('fDp').value)||2.0,
-    s1_gue:num($('fS1g').value)||50, s1_dis:num($('fS1d').value)||30,
-    s2_gue:num($('fS2g').value)||65, s2_dis:num($('fS2d').value)||45,
-    pause_bis:pauseBis,
-    geaendert:pad(jetzt.getDate())+'.'+pad(jetzt.getMonth()+1)+'.'+jetzt.getFullYear()+' '+pad(jetzt.getHours())+':'+pad(jetzt.getMinutes()),
-    von:'Admin-Web' };
-  fetch(DB+'/steuerung.json',{method:'PUT',body:JSON.stringify(obj)})
-  .then(function(r){ if(!r.ok) throw 0;
-    $('saveMsg').textContent='✓ gespeichert – wirkt beim nächsten Wächter-Lauf';
-    $('saveMsg').style.color='#2e9e46'; ladeSteuerung();
-    setTimeout(function(){ $('saveMsg').textContent=''; },5000);
-  }).catch(function(){ $('saveMsg').textContent='⚠ Speichern fehlgeschlagen'; $('saveMsg').style.color='#D72622'; });
-};
-
-/* ── Aufgabenliste (Gegenstueck: Tools\Aufgaben_Sync.py) ── */
-var DBA='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app/erfassung/aufgaben';
-var aufDaten={}, aufFilter='offen';
-
-function heuteISO(){ var d=new Date(); return d.toISOString().slice(0,10); }
-function fristISO(f){ var t=/^(\d{2})\.(\d{2})\.(\d{4})$/.exec(f||''); return t?(t[3]+'-'+t[2]+'-'+t[1]):''; }
+function num(v){ var f=parseFloat(String(v).replace(/'/g,'').replace(',','.')); return isNaN(f)?null:f; }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function chf(n){
+  if(n==null||isNaN(n)) return '–';
+  var s=Math.abs(n).toFixed(2).split('.');
+  s[0]=s[0].replace(/\B(?=(\d{3})+(?!\d))/g,"'");
+  return (n<0?'-':'')+s[0]+'.'+s[1];
+}
+function heuteISO(){ var d=new Date(); return d.toISOString().slice(0,10); }
+function deDat(iso){ if(!iso||iso.length<10) return iso||''; return iso.slice(8,10)+'.'+iso.slice(5,7)+'.'+iso.slice(0,4); }
+
+/* ══ Reiter-Umschaltung ══════════════════════════════════════ */
+var foehnGestartet=false;
+Array.prototype.forEach.call(document.querySelectorAll('#reiter button'),function(b){
+  b.onclick=function(){
+    var ziel=b.getAttribute('data-tab');
+    Array.prototype.forEach.call(document.querySelectorAll('#reiter button'),function(o){
+      o.classList.toggle('an',o===b); });
+    Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(t){
+      t.classList.toggle('an',t.id==='tab-'+ziel); });
+    window.scrollTo(0,0);
+    try { location.hash=ziel; } catch(e){}
+    if(ziel==='foehn') foehnStarten();
+  };
+});
+function reiterOeffnen(name){
+  var b=document.querySelector('#reiter button[data-tab="'+name+'"]');
+  if(b) b.click();
+}
+if(location.hash){ reiterOeffnen(location.hash.replace('#','')); }
+
+/* ══ Spracheingabe (Chrome/Edge; auf dem Handy am besten Chrome) ══ */
+(function(){
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  Array.prototype.forEach.call(document.querySelectorAll('.mik'),function(b){
+    var ziel=b.getAttribute('data-mik');
+    var info=$('mikinfo-'+ziel);
+    if(!SR){
+      b.style.display='none';
+      if(info) info.textContent='Diktat braucht Chrome oder Edge – hier bitte tippen.';
+      return;
+    }
+    if(info) info.textContent='Antippen, sprechen, nochmal antippen zum Beenden.';
+    var erk=null, laeuft=false;
+    b.onclick=function(){
+      if(laeuft){ try{ erk.stop(); }catch(e){} return; }
+      erk=new SR();
+      erk.lang='de-CH'; erk.continuous=true; erk.interimResults=true;
+      var feld=$(ziel), start=feld.value, zwischen='';
+      erk.onstart=function(){ laeuft=true; b.classList.add('hoert'); b.textContent='⏹ Stopp';
+        if(info) info.textContent='hört zu …'; };
+      erk.onresult=function(ev){
+        var fest='', vorl='';
+        for(var i=ev.resultIndex;i<ev.results.length;i++){
+          if(ev.results[i].isFinal) fest+=ev.results[i][0].transcript;
+          else vorl+=ev.results[i][0].transcript;
+        }
+        if(fest) zwischen+=fest;
+        feld.value=(start?start+' ':'')+zwischen+vorl;
+      };
+      erk.onerror=function(ev){ if(info) info.textContent='Diktat-Fehler: '+ev.error; };
+      erk.onend=function(){ laeuft=false; b.classList.remove('hoert'); b.textContent='🎤 Diktieren';
+        if(info) info.textContent='fertig – Text prüfen und ergänzen.'; };
+      try { erk.start(); } catch(e){ if(info) info.textContent='Diktat konnte nicht starten.'; }
+    };
+  });
+})();
+
+/* ══════════════════════════════════════════════════════════════
+   REITER 2 – STÖRUNGEN
+   ══════════════════════════════════════════════════════════════ */
+var stDaten={ ereignisse:[], mails:[], regie_ansaetze:[] };
+var stUeber={};                       /* Statusänderungen + Web-Einträge aus RTDB */
+var stFilter='alle', mlFilter='kern';
+var STATUSLISTE=['offen','zu pruefen','in Pruefung','eingereicht','erledigt'];
+
+function stAlle(){
+  var liste=stDaten.ereignisse.map(function(e){
+    var u=stUeber[e.id]||{};
+    var k={}; for(var p in e) k[p]=e[p];
+    if(u.status) k.status=u.status;
+    if(u.notiz) k.notiz=u.notiz;
+    return k;
+  });
+  for(var id in stUeber){
+    if(stUeber[id] && stUeber[id].web && stUeber[id].titel) liste.push(stUeber[id]);
+  }
+  liste.sort(function(a,b){ return (b.datum||'').localeCompare(a.datum||''); });
+  return liste;
+}
+
+function stKacheln(){
+  var a=stAlle();
+  var offen=a.filter(function(e){ return e.status!=='erledigt'; }).length;
+  var ki=a.filter(function(e){ return e.herkunft==='KI-Erkennung'; }).length;
+  var summe=0, belegt=0;
+  a.forEach(function(e){
+    if(typeof e.betrag==='number'){ summe+=e.betrag; if(e.betrag_art==='belegt'||e.betrag_art==='offerte') belegt+=e.betrag; }
+  });
+  var tage=0; a.forEach(function(e){ if(typeof e.verzug_tage==='number') tage+=e.verzug_tage; });
+  var h='';
+  function kach(z,l,f){ h+='<div class="kachel"><div class="z"'+(f?' style="color:'+f+'"':'')+'>'+z+'</div><div class="l">'+l+'</div></div>'; }
+  kach(a.length,'Ereignisse erfasst');
+  kach(offen,'noch offen','#D72622');
+  kach(ki,'KI-Fund, zu prüfen','#1a5fb4');
+  kach(chf(summe),'CHF im Tracking');
+  kach(chf(belegt),'davon belegt/offeriert','#2e9e46');
+  kach(tage,'Tage Verzug erfasst');
+  $('stKacheln').innerHTML=h;
+  $('zStoer').textContent=offen;
+}
+
+function stZeichnen(){
+  var such=($('stSuche').value||'').toLowerCase();
+  var liste=stAlle().filter(function(e){
+    if(stFilter==='offen' && e.status==='erledigt') return false;
+    if(stFilter==='ki' && e.herkunft!=='KI-Erkennung') return false;
+    if(stFilter==='mail' && e.herkunft==='KI-Erkennung') return false;
+    if(such){
+      var t=((e.titel||'')+' '+(e.text||'')+' '+(e.folge||'')+' '+(e.no||'')+' '+(e.kat||'')).toLowerCase();
+      if(t.indexOf(such)<0) return false;
+    }
+    return true;
+  });
+  if(!liste.length){ $('stListe').innerHTML='<li>nichts gefunden</li>'; return; }
+  var h='';
+  liste.forEach(function(e){
+    var art={belegt:'belegt', offerte:'Offerte', angekuendigt:'angekündigt',
+             schaetzung:'Schätzung', offen:''}[e.betrag_art]||'';
+    h+='<li class="k-'+esc(e.kat||'')+'" data-id="'+esc(e.id)+'">'+
+       '<div class="kopf"><span class="dat">'+deDat(e.datum)+(e.bis?'–'+deDat(e.bis).slice(0,5):'')+'</span>'+
+       '<span class="tit">'+esc(e.titel)+'</span>'+
+       (typeof e.betrag==='number'?'<span class="chf">CHF '+chf(e.betrag)+'</span>':'')+
+       '</div>'+
+       '<div style="margin-top:5px">'+
+         '<span class="tag '+(e.herkunft==='KI-Erkennung'?'ki">KI-Fund':'mail">belegt')+'</span>'+
+         '<span class="tag">'+esc(e.kat||'')+'</span>'+
+         '<span class="tag">'+esc(e.sphaere||'')+'</span>'+
+         (e.no?'<span class="tag">'+esc(e.no)+'</span>':'')+
+         (art?'<span class="tag">'+art+'</span>':'')+
+         '<span class="badge '+(e.status==='erledigt'?'b0':(e.status==='offen'?'b2':'b1'))+'">'+esc(e.status||'offen')+'</span>'+
+       '</div>'+
+       '<div class="detail">'+
+         '<b>Sachverhalt:</b> '+esc(e.text||'')+'<br>'+
+         (e.folge?'<b>Folge:</b> '+esc(e.folge)+'<br>':'')+
+         (e.anzeige?'<b>Anzeige:</b> '+esc(e.anzeige)+'<br>':'')+
+         (typeof e.verzug_tage==='number'?'<b>Verzug:</b> '+e.verzug_tage+' Tage<br>':'')+
+         (e.notiz?'<b>Notiz:</b> '+esc(e.notiz)+'<br>':'')+
+         (e.quellen&&e.quellen.length?'<div class="q"><b>Quellen:</b><br>'+e.quellen.map(esc).join('<br>')+'</div>':'')+
+         '<div style="margin-top:8px">Status ändern: <select class="stStatus" data-id="'+esc(e.id)+'">'+
+           STATUSLISTE.map(function(s){ return '<option'+(s===(e.status||'offen')?' selected':'')+'>'+s+'</option>'; }).join('')+
+         '</select> <button class="knopf mini stNotiz" data-id="'+esc(e.id)+'">Notiz …</button></div>'+
+       '</div></li>';
+  });
+  $('stListe').innerHTML=h;
+}
+
+function stSpeichern(id,obj){
+  fetch(RTDB+'/stoerungen/'+encodeURIComponent(id)+'.json',{method:'PATCH',body:JSON.stringify(obj)})
+  .then(function(r){ if(!r.ok) throw 0;
+    stUeber[id]=stUeber[id]||{}; for(var k in obj) stUeber[id][k]=obj[k];
+    stZeichnen(); stKacheln();
+  }).catch(function(){ alert('Konnte nicht gespeichert werden.'); });
+}
+
+$('stListe').addEventListener('click',function(ev){
+  if(ev.target.classList.contains('stNotiz')){
+    var id=ev.target.getAttribute('data-id');
+    var alt=(stUeber[id]&&stUeber[id].notiz)||'';
+    var t=prompt('Notiz zu '+id+':',alt);
+    if(t!==null) stSpeichern(id,{notiz:t, geaendert:new Date().toLocaleString('de-CH')});
+    return;
+  }
+  if(ev.target.tagName==='SELECT'||ev.target.tagName==='OPTION') return;
+  var li=ev.target.closest('li[data-id]'); if(!li) return;
+  li.classList.toggle('offen_detail');
+});
+$('stListe').addEventListener('change',function(ev){
+  if(!ev.target.classList.contains('stStatus')) return;
+  stSpeichern(ev.target.getAttribute('data-id'),
+    {status:ev.target.value, geaendert:new Date().toLocaleString('de-CH')});
+});
+Array.prototype.forEach.call(document.querySelectorAll('[data-sf]'),function(b){
+  b.onclick=function(){ stFilter=b.getAttribute('data-sf');
+    Array.prototype.forEach.call(document.querySelectorAll('[data-sf]'),function(o){ o.classList.toggle('an',o===b); });
+    stZeichnen(); };
+});
+$('stSuche').oninput=stZeichnen;
+
+/* neue Störung von Hand */
+$('snDatum').value=heuteISO();
+$('snSpeichern').onclick=function(){
+  var titel=($('snTitel').value||'').trim();
+  if(!titel){ $('snMsg').textContent='Titel fehlt'; $('snMsg').style.color='#D72622'; return; }
+  var id='W'+Date.now();
+  var obj={ id:id, web:true, datum:$('snDatum').value||heuteISO(), titel:titel,
+    text:($('snText').value||'').trim(), folge:'', anzeige:'', kat:$('snKat').value,
+    sphaere:$('snSphaere').value, betrag:null, betrag_art:'offen', verzug_tage:null,
+    no:'', status:'offen', herkunft:'Web-Admin',
+    quellen:['Direkt im Admin-Web erfasst am '+new Date().toLocaleString('de-CH')] };
+  fetch(RTDB+'/stoerungen/'+id+'.json',{method:'PUT',body:JSON.stringify(obj)})
+  .then(function(r){ if(!r.ok) throw 0;
+    stUeber[id]=obj; $('snTitel').value=''; $('snText').value='';
+    $('snMsg').textContent='✓ eingetragen'; $('snMsg').style.color='#2e9e46';
+    setTimeout(function(){ $('snMsg').textContent=''; },4000);
+    stZeichnen(); stKacheln();
+  }).catch(function(){ $('snMsg').textContent='⚠ Speichern fehlgeschlagen'; $('snMsg').style.color='#D72622'; });
+};
+
+/* Mailregister */
+function mlZeichnen(){
+  var such=($('mlSuche').value||'').toLowerCase();
+  var liste=stDaten.mails.filter(function(m){
+    if(mlFilter==='kern' && !m.kern) return false;
+    if(such && ((m.betreff||'')+' '+(m.vorschau||'')+' '+(m.partner||'')).toLowerCase().indexOf(such)<0) return false;
+    return true;
+  });
+  liste=liste.slice().reverse();
+  $('mlZahl').textContent='· '+liste.length+' von '+stDaten.mails.length;
+  if(!liste.length){ $('mlListe').innerHTML='<li>nichts gefunden</li>'; return; }
+  $('mlListe').innerHTML=liste.slice(0,400).map(function(m){
+    return '<li'+(m.kern?' class="kern"':'')+'>'+
+      '<div class="m1"><span class="md">'+esc(m.datum)+'</span>'+
+      '<span class="mb">'+esc(m.betreff)+'</span></div>'+
+      '<div class="mv">'+(m.richtung==='G'?'▶ gesendet':'◀ Eingang')+' · '+esc(m.wer)+
+      ' · '+esc(m.partner).slice(0,70)+'</div></li>';
+  }).join('');
+}
+Array.prototype.forEach.call(document.querySelectorAll('[data-mf]'),function(b){
+  b.onclick=function(){ mlFilter=b.getAttribute('data-mf');
+    Array.prototype.forEach.call(document.querySelectorAll('[data-mf]'),function(o){ o.classList.toggle('an',o===b); });
+    mlZeichnen(); };
+});
+$('mlSuche').oninput=mlZeichnen;
+
+function ladeStoerungen(){
+  fetch('uploads/stoerungsregister.json?_='+Date.now(),{cache:'no-store'})
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    stDaten=d||stDaten;
+    stDaten.ereignisse=stDaten.ereignisse||[];
+    stDaten.mails=stDaten.mails||[];
+    kalkAufbauen();
+    return fetch(RTDB+'/stoerungen.json?_='+Date.now(),{cache:'no-store'});
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(u){ stUeber=u||{}; stZeichnen(); stKacheln(); mlZeichnen(); })
+  .catch(function(){ $('stListe').innerHTML='<li>⚠ Register nicht erreichbar</li>'; });
+}
+
+/* Stundenjournal (zweite Datei, aus Tools\Stoerungen_Aufbereiten.py).
+   Fehlt sie, bleibt die Karte einfach ausgeblendet. */
+function ladeStundenjournal(){
+  fetch('uploads/stoerungen/stoerungen.json?_='+Date.now(),{cache:'no-store'})
+  .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+  .then(function(d){
+    var zeilen=(d&&d.zeilen)||[], kats=(d&&d.kategorien)||[];
+    if(!zeilen.length) return;
+    var proKat={};
+    zeilen.forEach(function(z){
+      var k=z.kat||'?';
+      proKat[k]=proKat[k]||{std:0,betrag:0,stdV:0,betragV:0,n:0};
+      proKat[k].n++;
+      if(z.belegt){ proKat[k].std+=z.std||0; proKat[k].betrag+=z.betrag||0; }
+      else { proKat[k].stdV+=z.std||0; proKat[k].betragV+=z.betrag||0; }
+    });
+    var name={}; kats.forEach(function(k){ name[k.id]=k.name; });
+    var h='<thead><tr><th>Kategorie</th><th style="text-align:right">belegt</th>'+
+          '<th style="text-align:right">Vorschlag</th><th style="text-align:right">CHF total</th></tr></thead><tbody>';
+    var sS=0,sV=0,sB=0;
+    Object.keys(proKat).sort(function(a,b){
+      return (proKat[b].betrag+proKat[b].betragV)-(proKat[a].betrag+proKat[a].betragV); })
+    .forEach(function(k){
+      var p=proKat[k]; sS+=p.std; sV+=p.stdV; sB+=p.betrag+p.betragV;
+      h+='<tr><td>'+esc(name[k]||k)+'</td>'+
+         '<td style="text-align:right">'+(p.std?p.std.toFixed(1)+' h':'–')+'</td>'+
+         '<td style="text-align:right;color:#e08a00">'+(p.stdV?p.stdV.toFixed(1)+' h':'–')+'</td>'+
+         '<td style="text-align:right;font-weight:700">'+chf(p.betrag+p.betragV)+'</td></tr>';
+    });
+    h+='<tr style="border-top:2px solid #1a1a1a"><td><b>Total</b></td>'+
+       '<td style="text-align:right"><b>'+sS.toFixed(1)+' h</b></td>'+
+       '<td style="text-align:right;color:#e08a00"><b>'+sV.toFixed(1)+' h</b></td>'+
+       '<td style="text-align:right"><b>'+chf(sB)+'</b></td></tr></tbody>';
+    $('sjTab').innerHTML=h;
+    $('sjZahl').textContent='· '+zeilen.length+' Zeilen, Stand '+(d.stand||'');
+    $('sjCard').style.display='';
+  }).catch(function(){ /* Journal noch nicht gebaut - Karte bleibt weg */ });
+}
+
+/* ══════════════════════════════════════════════════════════════
+   REITER 3 – REGIE
+   ══════════════════════════════════════════════════════════════ */
+var rgDaten={}, rgFilter='aktiv';
+
+function kalkZeile(){
+  var opts=stDaten.regie_ansaetze.map(function(a,i){
+    return '<option value="'+i+'">'+esc(a.bez)+' ('+chf(a.ansatz)+'/'+a.einheit+
+           (a.faktor!==1?' ×'+a.faktor:'')+')</option>'; }).join('');
+  return '<tr><td><select class="kz">'+opts+'</select></td>'+
+         '<td><input class="km" inputmode="decimal" value="1"></td>'+
+         '<td><input class="ka" inputmode="decimal" value=""></td>'+
+         '<td class="b">0.00</td><td class="x"><button class="weg">×</button></td></tr>';
+}
+function kalkAufbauen(){
+  if(!stDaten.regie_ansaetze||!stDaten.regie_ansaetze.length) return;
+  if($('kalkBody').children.length) return;
+  $('kalkBody').innerHTML=kalkZeile();
+  kalkSync();
+}
+function kalkSync(){
+  var total=0;
+  Array.prototype.forEach.call($('kalkBody').rows,function(tr){
+    var i=parseInt(tr.querySelector('.kz').value,10);
+    var a=stDaten.regie_ansaetze[i]||{ansatz:0,faktor:1};
+    var af=tr.querySelector('.ka');
+    if(!af.value) af.value=a.ansatz.toFixed(2);
+    var menge=num(tr.querySelector('.km').value)||0;
+    var ansatz=num(af.value)||0;
+    var betrag=menge*ansatz*(a.faktor||1);
+    tr.cells[3].textContent=chf(betrag);
+    total+=betrag;
+  });
+  total+=num($('rgSonst').value)||0;
+  $('kalkTotal').textContent='CHF '+chf(total);
+  return total;
+}
+$('kalkBody').addEventListener('input',kalkSync);
+$('kalkBody').addEventListener('change',function(ev){
+  if(ev.target.classList.contains('kz')){
+    var tr=ev.target.closest('tr');
+    var a=stDaten.regie_ansaetze[parseInt(ev.target.value,10)];
+    if(a) tr.querySelector('.ka').value=a.ansatz.toFixed(2);
+  }
+  kalkSync();
+});
+$('kalkBody').addEventListener('click',function(ev){
+  if(!ev.target.classList.contains('weg')) return;
+  var tr=ev.target.closest('tr');
+  if($('kalkBody').rows.length>1) tr.remove();
+  kalkSync();
+});
+$('kalkPlus').onclick=function(){
+  $('kalkBody').insertAdjacentHTML('beforeend',kalkZeile()); kalkSync(); };
+$('rgSonst').oninput=kalkSync;
+$('rgDatum').value=heuteISO();
+
+function rgNummer(){
+  var jahr=new Date().getFullYear();
+  var n=0;
+  for(var k in rgDaten){
+    var m=/^R-(\d{4})-(\d{3})$/.exec((rgDaten[k]&&rgDaten[k].nr)||'');
+    if(m && +m[1]===jahr && +m[2]>n) n=+m[2];
+  }
+  return 'R-'+jahr+'-'+String(n+1).padStart(3,'0');
+}
+
+$('rgSpeichern').onclick=function(){
+  var titel=($('rgTitel').value||'').trim();
+  var text=($('rgText').value||'').trim();
+  if(!titel||!text){ $('rgMsg').textContent='Titel und Sachverhalt ausfüllen';
+    $('rgMsg').style.color='#D72622'; return; }
+  var posten=[];
+  Array.prototype.forEach.call($('kalkBody').rows,function(tr){
+    var a=stDaten.regie_ansaetze[parseInt(tr.querySelector('.kz').value,10)]||{};
+    var menge=num(tr.querySelector('.km').value)||0;
+    var ansatz=num(tr.querySelector('.ka').value)||0;
+    if(!menge||!ansatz) return;
+    posten.push({ bez:a.bez||'', pos:a.pos||'', einheit:a.einheit||'', menge:menge,
+                  ansatz:ansatz, faktor:a.faktor||1, betrag:menge*ansatz*(a.faktor||1) });
+  });
+  var sonst=num($('rgSonst').value)||0;
+  if(sonst) posten.push({bez:'Zuschlag / Sonstiges', pos:'', einheit:'pausch.', menge:1,
+                         ansatz:sonst, faktor:1, betrag:sonst});
+  var total=kalkSync();
+  var nr=rgNummer();
+  var id=nr.replace(/-/g,'_');
+  var obj={ nr:nr, erstellt:new Date().toLocaleString('de-CH'), datum:$('rgDatum').value||heuteISO(),
+    ort:($('rgOrt').value||'').trim(), titel:titel, sachverhalt:text,
+    veranlasser:$('rgVeranlasser').value, posten:posten, total:total,
+    status:'entwurf', gesendet_am:'', antwort_am:'', antwort_text:'', erfasser:'Admin-Web' };
+  fetch(RTDB+'/regie/'+id+'.json',{method:'PUT',body:JSON.stringify(obj)})
+  .then(function(r){ if(!r.ok) throw 0;
+    rgDaten[id]=obj;
+    $('rgTitel').value=''; $('rgText').value=''; $('rgOrt').value=''; $('rgSonst').value='';
+    $('kalkBody').innerHTML=kalkZeile(); kalkSync();
+    $('rgMsg').textContent='✓ '+nr+' gespeichert – unten prüfen und freigeben';
+    $('rgMsg').style.color='#2e9e46';
+    setTimeout(function(){ $('rgMsg').textContent=''; },6000);
+    rgZeichnen();
+  }).catch(function(){ $('rgMsg').textContent='⚠ Speichern fehlgeschlagen'; $('rgMsg').style.color='#D72622'; });
+};
+
+var RGTEXT={ entwurf:'Entwurf – noch nichts verschickt', freigabe:'freigegeben, Mail geht beim nächsten Lauf raus',
+  gesendet:'bei Ramon – Antwort ausstehend', zugestimmt:'ZUSTIMMUNG – ausführen',
+  abgelehnt:'ABGELEHNT – nicht ausführen', unklar:'Antwort da, aber unklar – bitte lesen',
+  storniert:'storniert' };
+
+function rgZeichnen(){
+  var keys=Object.keys(rgDaten).filter(function(k){ return rgDaten[k]&&rgDaten[k].nr; });
+  var aktiv=keys.filter(function(k){ return ['entwurf','freigabe','gesendet','unklar'].indexOf(rgDaten[k].status)>=0; });
+  $('zRegie').textContent=aktiv.length;
+  var liste=(rgFilter==='aktiv'?aktiv:keys);
+  liste.sort(function(a,b){ return (rgDaten[b].nr||'').localeCompare(rgDaten[a].nr||''); });
+  $('rgZahl').textContent='· '+liste.length+' angezeigt, '+keys.length+' gesamt';
+
+  var off=0, zu=0, ab=0;
+  keys.forEach(function(k){ var s=rgDaten[k].status;
+    if(s==='zugestimmt'){ zu+=rgDaten[k].total||0; }
+    else if(s==='abgelehnt'){ ab+=rgDaten[k].total||0; }
+    else { off+=rgDaten[k].total||0; } });
+  var h='';
+  function kach(z,l,f){ h+='<div class="kachel"><div class="z"'+(f?' style="color:'+f+'"':'')+'>'+z+'</div><div class="l">'+l+'</div></div>'; }
+  kach(aktiv.length,'in Arbeit');
+  kach(chf(off),'CHF offen');
+  kach(chf(zu),'CHF zugestimmt','#2e9e46');
+  kach(chf(ab),'CHF abgelehnt','#D72622');
+  $('rgKacheln').innerHTML=h;
+
+  if(!liste.length){ $('rgListe').innerHTML='<li>noch nichts erfasst</li>'; return; }
+  $('rgListe').innerHTML=liste.map(function(k){
+    var r=rgDaten[k], st=r.status||'entwurf';
+    var bcl=({entwurf:'bgrau',freigabe:'b1',gesendet:'bblau',zugestimmt:'b0',abgelehnt:'b2',unklar:'b1'})[st]||'bgrau';
+    var posten=(r.posten||[]).map(function(p){
+      return '<tr><td>'+esc(p.bez)+(p.pos?' <span style="color:#63676d">('+esc(p.pos)+')</span>':'')+'</td>'+
+             '<td style="text-align:right">'+p.menge+' '+esc(p.einheit||'')+'</td>'+
+             '<td style="text-align:right">'+chf(p.ansatz)+(p.faktor!==1?' ×'+p.faktor:'')+'</td>'+
+             '<td style="text-align:right;font-weight:700">'+chf(p.betrag)+'</td></tr>'; }).join('');
+    return '<li class="s-'+st+'" data-k="'+esc(k)+'">'+
+      '<div class="kopf"><span class="nr">'+esc(r.nr)+'</span>'+
+      '<span class="tit">'+esc(r.titel)+'</span>'+
+      '<span class="chf" style="font-weight:900">CHF '+chf(r.total)+'</span></div>'+
+      '<div style="margin-top:5px"><span class="badge '+bcl+'">'+(RGTEXT[st]||st)+'</span>'+
+      ' <span class="tag">'+deDat(r.datum)+'</span>'+(r.ort?'<span class="tag">'+esc(r.ort)+'</span>':'')+'</div>'+
+      '<div class="detail">'+
+        '<b>Sachverhalt:</b> '+esc(r.sachverhalt)+'<br>'+
+        '<b>Veranlasser:</b> '+esc(r.veranlasser)+'<br>'+
+        (posten?'<table class="kalk" style="margin-top:7px">'+posten+'</table>':'')+
+        (r.gesendet_am?'<div style="margin-top:6px;color:#63676d">Mail an Ramon: '+esc(r.gesendet_am)+'</div>':'')+
+        (r.antwort_text?'<div class="antwort"><b>Antwort '+esc(r.antwort_am||'')+':</b>\n'+esc(r.antwort_text)+'</div>':'')+
+        '<div style="margin-top:9px">'+
+          (st==='entwurf'?'<button class="knopf rot rgFrei" data-k="'+esc(k)+'">Freigeben → Mail an Ramon</button>':'')+
+          (st==='freigabe'?'<button class="knopf rgZurueck" data-k="'+esc(k)+'">Freigabe zurücknehmen</button>':'')+
+          (st==='unklar'?'<button class="knopf gruen rgJa" data-k="'+esc(k)+'">Als Zustimmung werten</button>'+
+                         '<button class="knopf rot rgNein" data-k="'+esc(k)+'">Als Ablehnung werten</button>':'')+
+          '<button class="knopf rgWeg" data-k="'+esc(k)+'">löschen</button>'+
+        '</div>'+
+      '</div></li>';
+  }).join('');
+}
+
+function rgPatch(k,obj){
+  fetch(RTDB+'/regie/'+encodeURIComponent(k)+'.json',{method:'PATCH',body:JSON.stringify(obj)})
+  .then(function(r){ if(!r.ok) throw 0;
+    for(var p in obj) rgDaten[k][p]=obj[p];
+    rgZeichnen();
+  }).catch(function(){ alert('Konnte nicht gespeichert werden.'); });
+}
+
+$('rgListe').addEventListener('click',function(ev){
+  var t=ev.target, k=t.getAttribute('data-k');
+  if(t.classList.contains('rgFrei')){
+    if(!confirm('Freigeben?\n\nBeim nächsten Lauf von Regie_Mailschleife.ps1 geht die Mail\nan Ramon Bucheli (CC François Borner) raus.')) return;
+    rgPatch(k,{status:'freigabe', freigabe_am:new Date().toLocaleString('de-CH')}); return;
+  }
+  if(t.classList.contains('rgZurueck')){ rgPatch(k,{status:'entwurf'}); return; }
+  if(t.classList.contains('rgJa')){ rgPatch(k,{status:'zugestimmt'}); return; }
+  if(t.classList.contains('rgNein')){ rgPatch(k,{status:'abgelehnt'}); return; }
+  if(t.classList.contains('rgWeg')){
+    if(!confirm('Rapport '+(rgDaten[k].nr||'')+' wirklich löschen?')) return;
+    fetch(RTDB+'/regie/'+encodeURIComponent(k)+'.json',{method:'DELETE'})
+    .then(function(){ delete rgDaten[k]; rgZeichnen(); });
+    return;
+  }
+  var li=t.closest('li[data-k]'); if(!li) return;
+  li.classList.toggle('offen_detail');
+});
+Array.prototype.forEach.call(document.querySelectorAll('[data-rf]'),function(b){
+  b.onclick=function(){ rgFilter=b.getAttribute('data-rf');
+    Array.prototype.forEach.call(document.querySelectorAll('[data-rf]'),function(o){ o.classList.toggle('an',o===b); });
+    rgZeichnen(); };
+});
+
+function ladeRegie(){
+  fetch(RTDB+'/regie.json?_='+Date.now(),{cache:'no-store'})
+  .then(function(r){ return r.json(); })
+  .then(function(d){ rgDaten=d||{}; delete rgDaten._test; rgZeichnen(); })
+  .catch(function(){ $('rgListe').innerHTML='<li>⚠ Regieliste nicht erreichbar</li>'; });
+}
+
+/* ══════════════════════════════════════════════════════════════
+   REITER 1 – Aufgabenliste (Gegenstueck: Tools\Aufgaben_Sync.py)
+   ══════════════════════════════════════════════════════════════ */
+var DBA=RTDB+'/aufgaben';
+var aufDaten={}, aufFilter='offen';
+
+function fristISO(f){ var t=/^(\d{2})\.(\d{2})\.(\d{4})$/.exec(f||''); return t?(t[3]+'-'+t[2]+'-'+t[1]):''; }
 
 function aufZeichnen(){
   var such=($('aufSuche').value||'').toLowerCase();
@@ -416,7 +1005,6 @@ function aufZeichnen(){
     if(such && ((a.titel||'')+' '+(a.text||'')).toLowerCase().indexOf(such)<0) return false;
     return true;
   });
-  /* mit Frist zuerst (die naechste oben), danach die Reihenfolge aus der md */
   keys.sort(function(x,y){
     var a=aufDaten[x], b=aufDaten[y];
     var fa=fristISO(a.frist), fb=fristISO(b.frist);
@@ -461,10 +1049,10 @@ $('aufListe').addEventListener('click',function(ev){
   }
 });
 
-Array.prototype.forEach.call(document.querySelectorAll('.aufkopf .knopf'),function(b){
+Array.prototype.forEach.call(document.querySelectorAll('.aufkopf .knopf[data-f]'),function(b){
   b.onclick=function(){
     aufFilter=b.getAttribute('data-f');
-    Array.prototype.forEach.call(document.querySelectorAll('.aufkopf .knopf'),function(o){
+    Array.prototype.forEach.call(document.querySelectorAll('.aufkopf .knopf[data-f]'),function(o){
       o.classList.toggle('an',o===b); });
     aufZeichnen();
   };
@@ -482,10 +1070,199 @@ $('aufNeu').onclick=function(){
   .catch(function(){ alert('Konnte nicht gespeichert werden.'); });
 };
 
-ladeAufgaben(); setInterval(ladeAufgaben,3*60*1000);
+/* ══════════════════════════════════════════════════════════════
+   REITER 4 – FÖHN (laedt erst beim ersten Oeffnen)
+   ══════════════════════════════════════════════════════════════ */
+var STATIONEN=[
+  ['GUE','Gütsch ob Andermatt',2286,46.652475,8.615531],
+  ['DIS','Disentis',1197,46.706569,8.853478],
+  ['ANT','Andermatt',1435,46.630914,8.580553],
+  ['GOS','Göschenen',950,46.692678,8.595364],
+  ['PIO','Piotta',990,46.514811,8.688039],
+  ['COM','Acquarossa/Comprovasco',575,46.459517,8.935486],
+  ['MTR','Matro',2171,46.410103,8.924742],
+  ['ROE','Robièi',1898,46.443067,8.513389],
+  ['ULR','Ulrichen',1346,46.504881,8.308236],
+  ['GRH','Grimsel Hospiz',1980,46.571689,8.333256],
+  ['ENG','Engelberg',1036,46.821639,8.410514],
+  ['CHU','Chur',556,46.870572,9.530761]
+];
+var BAUSTELLE=[46.62,8.77];
+var karte=null, marker={};
+function farbe(b){ return b==null?'#8a8e94':(b>=50?'#D72622':(b>=30?'#e08a00':'#2e9e46')); }
 
-ladeWind(); ladeDp(); ladeStatus(); ladeSteuerung();
-setInterval(ladeWind,5*60*1000); setInterval(ladeDp,5*60*1000); setInterval(ladeStatus,2*60*1000);
+function karteAufbauen(){
+  karte=L.map('karte',{scrollWheelZoom:false}).setView([46.58,8.72],10);
+  L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg',
+    {maxZoom:17,attribution:'© swisstopo'}).addTo(karte);
+  L.marker(BAUSTELLE,{icon:L.divIcon({className:'',html:'<div style="font-size:22px;text-shadow:0 1px 4px #000">⭐</div>',iconSize:[24,24],iconAnchor:[12,12]})})
+    .addTo(karte).bindPopup('<b>Baustelle NalpSolar</b><br>PV-Anlage Nalps, ca. 2000 m');
+}
+
+function windMarker(s,d){
+  var abbr=s[0], b=d?d.boee:null, m=d?d.mittel:null, r=d?d.richtung:null;
+  var pfeil = (r==null)?'':'<div style="position:absolute;left:50%;top:50%;width:0;height:0;'+
+    'transform:translate(-50%,-50%) rotate('+((r+90)%360)+'deg) translateX(21px);'+
+    'border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:9px solid '+farbe(b)+';"></div>';
+  var html='<div style="position:relative;width:60px;height:60px">'+pfeil+
+    '<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);'+
+    'width:32px;height:32px;border-radius:50%;background:'+farbe(b)+';color:#fff;'+
+    'font:700 12.5px Arial;display:flex;align-items:center;justify-content:center;'+
+    'box-shadow:0 1px 5px rgba(0,0,0,.45)">'+(b==null?'–':Math.round(b))+'</div></div>';
+  var ic=L.divIcon({className:'',html:html,iconSize:[60,60],iconAnchor:[30,30]});
+  if(marker[abbr]){ marker[abbr].setIcon(ic); }
+  else { marker[abbr]=L.marker([s[3],s[4]],{icon:ic}).addTo(karte); }
+  marker[abbr].bindPopup('<b>'+s[1]+'</b> ('+s[2]+' m)<br>Böe <b>'+(b==null?'–':b+' km/h')+'</b>'+
+    ' · Mittel '+(m==null?'–':m+' km/h')+'<br>Richtung '+(r==null?'–':Math.round(r)+'°')+
+    (d&&d.zeit?(' · '+d.zeit+' Uhr'):''));
+}
+
+function ladeWind(){
+  fetch(VQ,{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
+    var zeilen=t.split('\n'), kopf=zeilen[0].split(';');
+    var iB=kopf.indexOf('fu3010z1'), iM=kopf.indexOf('fu3010z0'), iR=kopf.indexOf('dkl010z0'), iD=kopf.indexOf('Date');
+    var daten={};
+    for(var i=1;i<zeilen.length;i++){
+      var c=zeilen[i].split(';');
+      daten[c[0]]={boee:num(c[iB]),mittel:num(c[iM]),richtung:num(c[iR]),
+        zeit:(c[iD]&&c[iD].length>=12)?(function(s){
+          var dt=new Date(Date.UTC(+s.slice(0,4),+s.slice(4,6)-1,+s.slice(6,8),+s.slice(8,10),+s.slice(10,12)));
+          return String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0');
+        })(c[iD]):''};
+    }
+    STATIONEN.forEach(function(s){ windMarker(s,daten[s[0]]); });
+    var g=daten['GUE'];
+    $('kZeit').textContent='Stand '+(g&&g.zeit?g.zeit+' Uhr':'–')+' · aktualisiert alle 5 Min';
+  }).catch(function(){ $('kZeit').textContent='⚠ Messwerte gerade nicht erreichbar'; });
+}
+
+function ladeDp(){
+  Promise.all([fetch(SMN('lug'),{cache:'no-store'}),fetch(SMN('klo'),{cache:'no-store'})])
+  .then(function(rs){ return Promise.all([rs[0].text(),rs[1].text()]); })
+  .then(function(tt){
+    function reihe(t){
+      var z=t.split('\n'), k=z[0].split(';');
+      var iT=k.indexOf('reference_timestamp'), iP=k.indexOf('pp0qffs0'), m={};
+      for(var i=1;i<z.length;i++){ var c=z[i].split(';');
+        if(c.length>iP && c[iT]) m[c[iT]]=num(c[iP]); }
+      return m;
+    }
+    var lug=reihe(tt[0]), klo=reihe(tt[1]), ts=Object.keys(lug).sort(), pts=[];
+    ts.forEach(function(t){ if(lug[t]!=null&&klo[t]!=null) pts.push({t:t,d:lug[t]-klo[t]}); });
+    if(!pts.length){ $('dpInfo').textContent='keine Daten'; return; }
+    var akt=pts[pts.length-1], max=pts[0];
+    pts.forEach(function(p){ if(p.d>max.d) max=p; });
+    var f=akt.d>2?'#D72622':(akt.d>1?'#e08a00':'#2e9e46');
+    $('dpJetzt').innerHTML=(akt.d>0?'+':'')+akt.d.toFixed(1)+' <small>hPa</small>';
+    $('dpJetzt').style.color=f;
+    $('dpInfo').innerHTML='aktuell ('+akt.t.slice(11,16)+' Uhr) · Tagesmax <b>'+
+      (max.d>0?'+':'')+max.d.toFixed(1)+' hPa</b> um '+max.t.slice(11,16)+' Uhr'+
+      (akt.d>2?' · <b style="color:#D72622">FÖHNLAGE</b>':'');
+    var cv=$('dpChart'), ctx=cv.getContext('2d'), W=cv.width, H=cv.height;
+    ctx.clearRect(0,0,W,H);
+    var lo=Math.min(-1,Math.floor(Math.min.apply(null,pts.map(function(p){return p.d;}))-0.5)),
+        hi=Math.max(3,Math.ceil(Math.max.apply(null,pts.map(function(p){return p.d;}))+0.5));
+    function Y(v){ return H-18-(v-lo)/(hi-lo)*(H-30); }
+    function X(i){ return 34+i/(Math.max(pts.length-1,1))*(W-46); }
+    ctx.font='11px Arial'; ctx.fillStyle='#8a8e94'; ctx.strokeStyle='#e3e5e8';
+    for(var v=lo;v<=hi;v++){ ctx.beginPath(); ctx.moveTo(34,Y(v)); ctx.lineTo(W-8,Y(v)); ctx.stroke();
+      ctx.fillText((v>0?'+':'')+v,4,Y(v)+4); }
+    ctx.strokeStyle='#9aa0a8'; ctx.beginPath(); ctx.moveTo(34,Y(0)); ctx.lineTo(W-8,Y(0)); ctx.stroke();
+    ctx.strokeStyle='#D72622'; ctx.setLineDash([6,4]); ctx.beginPath();
+    ctx.moveTo(34,Y(2)); ctx.lineTo(W-8,Y(2)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle='#1a5fb4'; ctx.lineWidth=2; ctx.beginPath();
+    pts.forEach(function(p,i){ i?ctx.lineTo(X(i),Y(p.d)):ctx.moveTo(X(i),Y(p.d)); }); ctx.stroke();
+    ctx.lineWidth=1; ctx.fillStyle='#63676d';
+    for(var i=0;i<pts.length;i+=18){ ctx.fillText(pts[i].t.slice(11,16),X(i)-12,H-4); }
+  }).catch(function(){ $('dpInfo').textContent='⚠ Druckdaten gerade nicht erreichbar'; });
+}
+
+function ladeStatus(){
+  fetch(DB+'/status.json?_='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();})
+  .then(function(s){
+    s=s||{};
+    var m=s.messung||{}, p=s.prognose||{}, t='';
+    function z(a,b){ t+='<tr><td>'+a+'</td><td>'+b+'</td></tr>'; }
+    if(m.zeit){
+      var stufe=m.stufe||0;
+      z('Letzte Messung', m.zeit+' &nbsp;<span class="badge b'+stufe+'">Stufe '+stufe+'</span>'+
+        (m.pausiert?' <span class="badge bgrau">pausiert</span>':'')+
+        (m.testmodus===false?' <span class="badge b2">SCHARF</span>':' <span class="badge bgrau">Testmodus</span>'));
+      if(m.gue) z('Gütsch', '<b>'+(m.gue.boee==null?'–':Math.round(m.gue.boee))+' km/h</b> Böe · '+
+        (m.gue.mittel==null?'–':Math.round(m.gue.mittel))+' Mittel · '+(m.gue.richtung==null?'–':Math.round(m.gue.richtung))+'° ('+m.gue.zeit+')');
+      if(m.dis) z('Disentis', '<b>'+(m.dis.boee==null?'–':Math.round(m.dis.boee))+' km/h</b> Böe · '+
+        (m.dis.mittel==null?'–':Math.round(m.dis.mittel))+' Mittel · '+(m.dis.richtung==null?'–':Math.round(m.dis.richtung))+'° ('+m.dis.zeit+')');
+    } else { z('Letzte Messung','noch keine (Wächter noch nie gelaufen?)'); }
+    if(p.zeit){
+      z('Letzte Prognose', p.zeit+' für '+(p.morgen||'?')+': max Δp <b>'+(p.dp>0?'+':'')+p.dp+' hPa</b> ('+
+        (p.dp_zeit||'?')+') '+(p.vorwarnung?'<span class="badge b2">VORWARNUNG</span>':'<span class="badge b0">ok</span>'));
+    } else { z('Letzte Prognose','noch keine'); }
+    var al=s.alarme?Object.keys(s.alarme).sort().reverse().slice(0,6):[];
+    if(al.length){
+      var liste=al.map(function(k){ var a=s.alarme[k]; return a.zeit+' – '+a.betreff; }).join('<br>');
+      z('Letzte Alarm-Mails', liste);
+    } else { z('Letzte Alarm-Mails','keine'); }
+    $('statusTab').innerHTML=t;
+  }).catch(function(){ $('statusTab').innerHTML='<tr><td>⚠ Status nicht erreichbar</td><td></td></tr>'; });
+}
+
+var pauseBis='';
+function pauseAnzeigen(){
+  var heute=heuteISO();
+  var an=pauseBis&&pauseBis>=heute;
+  $('pStand').textContent=an?('→ pausiert bis '+pauseBis):'→ keine Pause aktiv';
+  $('pHeute').classList.toggle('aktivP',false); $('pDrei').classList.toggle('aktivP',false);
+  if(an) (pauseBis===heute?$('pHeute'):$('pDrei')).classList.add('aktivP');
+}
+function ladeSteuerung(){
+  fetch(DB+'/steuerung.json?_='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();})
+  .then(function(s){
+    s=s||{};
+    $('fDp').value=s.dp_schwelle!=null?s.dp_schwelle:2.0;
+    $('fS1g').value=s.s1_gue!=null?s.s1_gue:50; $('fS1d').value=s.s1_dis!=null?s.s1_dis:30;
+    $('fS2g').value=s.s2_gue!=null?s.s2_gue:65; $('fS2d').value=s.s2_dis!=null?s.s2_dis:45;
+    document.querySelector('input[name=modus][value='+(s.testmodus===false?'scharf':'test')+']').checked=true;
+    pauseBis=s.pause_bis||'';
+    pauseAnzeigen();
+    $('stStand').textContent=s.geaendert?('Zuletzt geändert: '+s.geaendert+' ('+(s.von||'?')+')'):'';
+  }).catch(function(){ $('stStand').textContent='⚠ Steuerung nicht ladbar'; });
+}
+function tagPlus(n){ var d=new Date(); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+$('pHeute').onclick=function(){ pauseBis=tagPlus(0); pauseAnzeigen(); };
+$('pDrei').onclick=function(){ pauseBis=tagPlus(2); pauseAnzeigen(); };
+$('pWeg').onclick=function(){ pauseBis=''; pauseAnzeigen(); };
+$('speichern').onclick=function(){
+  var scharf=document.querySelector('input[name=modus][value=scharf]').checked;
+  if(scharf && !confirm('SCHARF schalten?\nAlarm-Mails gehen dann an Samuel, Lukas, François und Victor.')) return;
+  var jetzt=new Date(), pad=function(n){return String(n).padStart(2,'0');};
+  var obj={ testmodus:!scharf,
+    dp_schwelle:num($('fDp').value)||2.0,
+    s1_gue:num($('fS1g').value)||50, s1_dis:num($('fS1d').value)||30,
+    s2_gue:num($('fS2g').value)||65, s2_dis:num($('fS2d').value)||45,
+    pause_bis:pauseBis,
+    geaendert:pad(jetzt.getDate())+'.'+pad(jetzt.getMonth()+1)+'.'+jetzt.getFullYear()+' '+pad(jetzt.getHours())+':'+pad(jetzt.getMinutes()),
+    von:'Admin-Web' };
+  fetch(DB+'/steuerung.json',{method:'PUT',body:JSON.stringify(obj)})
+  .then(function(r){ if(!r.ok) throw 0;
+    $('saveMsg').textContent='✓ gespeichert – wirkt beim nächsten Wächter-Lauf';
+    $('saveMsg').style.color='#2e9e46'; ladeSteuerung();
+    setTimeout(function(){ $('saveMsg').textContent=''; },5000);
+  }).catch(function(){ $('saveMsg').textContent='⚠ Speichern fehlgeschlagen'; $('saveMsg').style.color='#D72622'; });
+};
+
+function foehnStarten(){
+  if(foehnGestartet) { if(karte) karte.invalidateSize(); return; }
+  foehnGestartet=true;
+  karteAufbauen();
+  ladeWind(); ladeDp(); ladeStatus(); ladeSteuerung();
+  setInterval(ladeWind,5*60*1000); setInterval(ladeDp,5*60*1000); setInterval(ladeStatus,2*60*1000);
+  setTimeout(function(){ if(karte) karte.invalidateSize(); },250);
+}
+
+/* ══ Start ══════════════════════════════════════════════════ */
+ladeAufgaben();   setInterval(ladeAufgaben,3*60*1000);
+ladeStoerungen(); ladeStundenjournal();
+ladeRegie();      setInterval(ladeRegie,2*60*1000);
 </script>
 </body>
 </html>

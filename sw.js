@@ -1,5 +1,5 @@
 ﻿'use strict';
-var CACHE = 'nalpsolar-v120';
+var CACHE = 'nalpsolar-v122';
 var PRECACHE = [
   './index.html',
   './protokoll.html',
@@ -86,7 +86,11 @@ var PRECACHE = [
   './betonspur.html',
   // Pizza-Truck 21.08.2026: Speisekarte auch am Berg ohne Empfang lesbar
   // (zum Abschicken braucht es dann trotzdem Netz). Nach dem Termin raus.
-  './pizza.html'
+  './pizza.html',
+  // Stoerungsjournal (Admin): Zahlen auch ohne Empfang lesbar; das Zuordnen
+  // (Verantwortlicher/Nachtrag) braucht dann trotzdem Netz.
+  './stoerungen.html',
+  './uploads/stoerungen/stoerungen.json'
 ];
 
 self.addEventListener('install', function(e) {
