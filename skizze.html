@@ -415,6 +415,34 @@ var FOTOS = [
   ['GrafBau_06_Fertige_Flaeche_Holzschalung.jpeg','Holzschalung'],
   ['GrafBau_07_Fertige_Flaeche_Anschluss.jpeg','Anschluss']
 ];
+/* Planblätter aus dem Werkstattplan – zum Drüberzeichnen im Entwurfsmodus */
+var BLAETTER = [
+  ['blatt1_uebersicht.png',  'Blatt 1 · Übersicht'],
+  ['blatt2_hauptmasse.png',  'Blatt 2 · Hauptmasse'],
+  ['blatt3a_bleche.png',     'Blatt 3a · Bleche'],
+  ['blatt3b_profile.png',    'Blatt 3b · Profile + Stückliste'],
+  ['blatt4_montage.png',     'Blatt 4 · Montagefolge'],
+  ['blatt5_herkunft.png',    'Blatt 5 · Herkunft']
+];
+(function(){
+  var g = document.getElementById('galPlan'), h = '';
+  BLAETTER.forEach(function(f){
+    h += '<figure style="margin:0"><img src="Betonspur/blaetter/'+f[0]+'" alt="'+f[1]+'" '+
+         'style="object-fit:contain;background:#fff" onclick="planBlatt(\'Betonspur/blaetter/'+f[0]+'\')">'+
+         '<div style="color:#cfd6dd;font-size:11px;margin-top:2px">'+f[1]+'</div></figure>';
+  });
+  g.innerHTML = h;
+})();
+/* Planblatt laden = Korrekturmodus: rote Farbe, mittlere Strichstaerke */
+function planBlatt(pfad){
+  setzeFoto(pfad);
+  var r = document.querySelector('.farbe[data-farbe="#d40000"]');
+  if(r){ document.querySelectorAll('.farbe').forEach(function(x){ x.classList.remove('an'); });
+         r.classList.add('an'); farbe = '#d40000'; }
+  raster = false;
+  document.getElementById('status').textContent = 'Korrekturmodus – rot eingestellt';
+}
+
 (function(){
   var g = document.getElementById('gal'), h = '';
   FOTOS.forEach(function(f){

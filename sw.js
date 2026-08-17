@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v124';
+var CACHE = 'nalpsolar-v125';
 var PRECACHE = [
   './index.html',
   './protokoll.html',
@@ -159,3 +159,4 @@ self.addEventListener('fetch', function(e) {
     })
   );
 });
+
