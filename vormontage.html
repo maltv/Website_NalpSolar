@@ -164,14 +164,18 @@
      wie das Nalpi-Kartenschema "Tischtyp", nur eine Spur heller - die Schrift
      sitzt hier auf dunklem Schattenrand. Rosa = Typ unbekannt (nie ein zweites
      Grau, das waere mit Typ C verwechselbar). */
-  .kTyp.A{ color:#3b82f6; } .kTyp.B{ color:#ef4444; } .kTyp.C{ color:#a8b3c1; }
-  .kTyp.D{ color:#22c55e; } .kTyp.E{ color:#eab308; } .kTyp.X{ color:#f472b6; }
-  .kLeg .tk{ display:inline-block; min-width:17px; height:16px; padding:0 3px; border-radius:3px;
-        margin-right:4px; vertical-align:-3px; text-align:center; line-height:16px;
-        font:800 11px Arial; color:#fff; }
-  .kLeg .tk.A{ background:#3b82f6; } .kLeg .tk.B{ background:#ef4444; }
-  .kLeg .tk.C{ background:#8e9aa8; } .kLeg .tk.D{ background:#22c55e; }
-  .kLeg .tk.E{ background:#eab308; color:#3a2f00; }
+  /* Ein Stil fuer alle drei Orte (Karte, Tabellen, Legende): kleines farbiges
+     Feld mit dem Buchstaben - auf dem Luftbild wie auf weissem Grund lesbar,
+     eine reine Textfarbe waere je nach Untergrund mal zu hell, mal zu dunkel. */
+  .tk{ display:inline-block; min-width:14px; height:14px; padding:0 2px; border-radius:3px;
+        vertical-align:-2px; text-align:center; line-height:14px;
+        font:800 10px Arial; color:#fff; text-shadow:none; }
+  .tk.A{ background:#2563eb; } .tk.B{ background:#dc2626; } .tk.C{ background:#64748b; }
+  .tk.D{ background:#16a34a; } .tk.E{ background:#eab308; color:#3a2f00; }
+  .tk.X{ background:#ec4899; }                    /* Typ unbekannt - nie ein zweites Grau */
+  .kLeg .tk{ min-width:17px; height:16px; padding:0 3px; line-height:16px; font-size:11px;
+        margin-right:4px; vertical-align:-3px; }
+  .tkZ i{ font-style:normal; font-size:10.5px; color:var(--mut); margin-left:3px; }
   .kLblAus .kLbl{ display:none; }
   #toast{ position:fixed; left:50%; bottom:20px; transform:translateX(-50%) translateY(90px);
           background:#0f5c33; color:#fff; font-weight:700; padding:12px 18px; border-radius:8px;
@@ -433,6 +437,7 @@ var I18N={
   leg_ps:'Passstück erfasst', leg_ps_offen:'Passstück fehlt',
   leg_offen:'offen', leg_vormontiert:'vormontiert', leg_berg:'auf dem Berg',
   leg_typ:'Typ hinter der ID – Farbe wie die Normteile:',
+  typ_abw:'Auf dem Etikett steht Typ {e} – laut Planung ist es ein anderer Typ. Prüfen.',
   karte_stand:'{e}/{g} Passstücke · {v} vormontiert · {b} auf dem Berg',
   karte_ohne:'ohne Koordinaten:',
   btn_aktualisieren:'↻ Aktualisieren', ok_aktualisiert:'Aktualisiert ✔',
@@ -515,6 +520,7 @@ var I18N={
   leg_ps:'fitting piece saved', leg_ps_offen:'fitting piece missing',
   leg_offen:'open', leg_vormontiert:'pre-assembled', leg_berg:'sent up the mountain',
   leg_typ:'Type after the ID – same colours as the standard parts:',
+  typ_abw:'The label says type {e} – the plan says a different type. Please check.',
   karte_stand:'{e}/{g} fitting pieces · {v} pre-assembled · {b} on the mountain',
   karte_ohne:'no coordinates:',
   btn_aktualisieren:'↻ Refresh', ok_aktualisiert:'Updated ✔',
@@ -597,6 +603,7 @@ var I18N={
   leg_ps:'podpora zapisana', leg_ps_offen:'brak podpory',
   leg_offen:'otwarte', leg_vormontiert:'wstępnie zmontowane', leg_berg:'wysłane w góry',
   leg_typ:'Typ za numerem ID – kolory jak na elementach standardowych:',
+  typ_abw:'Na etykiecie jest typ {e} – według planu to inny typ. Sprawdź.',
   karte_stand:'Podpory: {e}/{g} · zmontowane: {v} · na górze: {b}',
   karte_ohne:'bez współrzędnych:',
   btn_aktualisieren:'↻ Odśwież', ok_aktualisiert:'Zaktualizowano ✔',
@@ -1291,7 +1298,8 @@ function renderTab(){
   var q=($('q1').value||'').toLowerCase();
   var st=alleStuetzen().filter(function(r){
     if(!q) return true;
-    return ((r.tischId||'')+' '+(r.stuetze||'')+' '+(r.laenge||'')+' '+(r.von||'')+' '+(r.bem||'')).toLowerCase().indexOf(q)>=0;
+    return ((r.tischId||'')+' '+(r.stuetze||'')+' '+(r.laenge||'')+' '+(r.von||'')+' '+(r.bem||'')
+            +' '+typVoll(r.tischId)).toLowerCase().indexOf(q)>=0;   // Suche auch nach Typ (z.B. "d_2026")
   });
   var h='<tr><th>'+T('th_id')+'</th><th>'+T('th_st')+'</th><th>'+T('th_laenge')+'</th><th>'+T('th_bp')
         +'</th><th>'+T('th_typ')
@@ -1299,7 +1307,8 @@ function renderTab(){
   st.slice(0,300).forEach(function(r){
     h+='<tr'+(r._pend?' class="pend"':'')+'><td><b>'+esc(r.tischId)+'</b>'
       +(r._pend?' <span class="badge p">'+T('badge_wartet')+'</span>':'')+'</td>'
-      +'<td>'+esc(r.stuetze||'')+'</td><td>'+esc(r.laenge||'')+'</td><td>'+esc(r.bp||'')+'</td><td>'+esc(r.typ||'')+'</td>'
+      +'<td>'+esc(r.stuetze||'')+'</td><td>'+esc(r.laenge||'')+'</td><td>'+esc(r.bp||'')+'</td>'
+      +'<td style="white-space:nowrap">'+typZelle(r.tischId, r.typ)+'</td>'
       +'<td>'+esc(r.von||'')+'</td><td>'+esc(fmtD(r.datum))+' '+fmtZ(r.ts)+'</td>'
       +'<td>'+(r._k&&!r._pend?'<button class="stiftE" data-e="st" data-k="'+esc(r._k)+'" title="'+T('edit_titel')+'">✎</button>':'')+'</td></tr>';
   });
@@ -1331,7 +1340,7 @@ function renderTab(){
       ? '<span class="badge b">'+T('badge_berg')+'</span>'
       : '<span class="badge v">'+T('badge_vormontiert')+'</span>';
     h2+='<tr'+(r._pend?' class="pend"':'')+(ueberholt?' style="opacity:.6"':'')+'>'
-       +'<td><b'+(ueberholt?' style="text-decoration:line-through"':'')+'>'+esc(r.tischId)+'</b>'
+       +'<td style="white-space:nowrap"><b'+(ueberholt?' style="text-decoration:line-through"':'')+'>'+esc(r.tischId)+'</b> '+typChip(r.tischId)
        +(r._pend?' <span class="badge p">'+T('badge_wartet')+'</span>':'')+'</td>'
        +'<td>'+stat+'</td>'
        +'<td>'+esc(r.von||'')+'</td><td'+(ueberholt?' style="text-decoration:line-through"':'')+'>'
@@ -1346,6 +1355,53 @@ function renderTab(){
   renderBatches();
   renderDash();
   kartenMalen();
+}
+
+/* ══════════ Tischtyp aus der Planung ══════════
+   Der Typ (A-E) wird NIE getippt - er steht in den ILF-Belegungslisten und
+   kommt hier automatisch dazu: in der Tabelle "Erfasste Stuetzen", bei den
+   Fortschritt-Meldungen und als Buchstabe hinter der ID auf den Karten.
+   Quelle: uploads/tables/typen.json ("<ID>":"B_2026", 16 KB, im SW-Precache,
+   also auch offline da). Rueckfall ist die 5. Spalte von pfaehle.json, die
+   die Karte ohnehin laedt - beide Quellen sind deckungsgleich (Abgleich
+   17.08.2026: 1048 Tische, 0 Abweichungen).
+   Angezeigt wird der Basisbuchstabe im physischen Normteile-Farbcode
+   (A blau · B rot · C grau · D gruen · E gelb); in der Tabelle steht die
+   Serie klein daneben, auf der Karte nicht - dort waere kein Platz. */
+var TYPEN=null;
+function typenLaden(){
+  if(TYPEN) return;
+  fetch('uploads/tables/typen.json').then(function(r){ return r.ok?r.json():null; })
+    .then(function(j){ if(j&&j.typen){ TYPEN=j.typen; renderTab(); } })
+    .catch(function(){});                  // ohne Typenliste laeuft alles weiter
+}
+var TYP_PF=null;                           // Rueckfall-Index aus pfaehle.json
+function typVoll(tid){                     // 'B_2026' oder ''
+  var k=normId(tid);
+  if(TYPEN && TYPEN[k]) return String(TYPEN[k]);
+  if(kPfaehle){                            // Index einmal bauen, nicht je Zeile suchen
+    if(!TYP_PF){ TYP_PF={}; kPfaehle.forEach(function(q){ TYP_PF[normId(q[0])]=String(q[4]||''); }); }
+    if(TYP_PF[k]) return TYP_PF[k];
+  }
+  return '';
+}
+function typBase(tid){                     // 'B' oder ''
+  var t=typVoll(tid).trim().toUpperCase().charAt(0);
+  return (t>='A' && t<='E') ? t : '';
+}
+function typChip(tid){                     // Buchstabe im Normteile-Farbcode
+  var t=typBase(tid);
+  return '<span class="tk '+(t||'X')+'">'+(t||'?')+'</span>';
+}
+function typZelle(tid, erfasst){           // Tabellenzelle: Chip + Serie
+  var t=typBase(tid), voll=typVoll(tid), e=String(erfasst||'').trim().toUpperCase();
+  if(!t) return '<span style="color:var(--mut)">'+(e?esc(e):'–')+'</span>';
+  var ser=/_(\d{4})/.exec(voll);
+  // Etikett-Typ weicht von der Planung ab -> anzeigen, nicht stillschweigend
+  // ueberschreiben: das ist entweder ein OCR-Fehler oder ein falsches Teil.
+  var warn = e && e.charAt(0)!==t
+    ? ' <span style="color:var(--rot);font-weight:800" title="'+T('typ_abw',{e:esc(e)})+'">⚠ '+esc(e)+'</span>' : '';
+  return '<span class="tkZ">'+typChip(tid)+(ser?'<i>'+ser[1]+'</i>':'')+'</span>'+warn;
 }
 
 /* ---------- Bestellbatches: komplett geliefert? ----------
@@ -1491,13 +1547,14 @@ function csvDl(name, kopf, zeilen){
 }
 function csv1(){
   csvDl('Vormontage_Stuetzen_'+heute()+'.csv',
-    ['ID','Stuetze','Laenge_mm','Bohrpunkt','MauchleID','Typ','Serie','Profil','Bemerkung','Erfasst_von','Datum','Zeit','Quelle'],
-    alleStuetzen().map(function(r){ return [r.tischId,r.stuetze,r.laenge,r.bp||'',r.mid||'',r.typ,r.serie,r.profil,r.bem,r.von,fmtD(r.datum),fmtZ(r.ts),r.quelle||'']; }));
+    // Typ = wie erfasst (Etikett/OCR), Typ_Plan = aus den ILF-Belegungslisten
+    ['ID','Stuetze','Laenge_mm','Bohrpunkt','MauchleID','Typ','Typ_Plan','Serie','Profil','Bemerkung','Erfasst_von','Datum','Zeit','Quelle'],
+    alleStuetzen().map(function(r){ return [r.tischId,r.stuetze,r.laenge,r.bp||'',r.mid||'',r.typ,typVoll(r.tischId),r.serie,r.profil,r.bem,r.von,fmtD(r.datum),fmtZ(r.ts),r.quelle||'']; }));
 }
 function csv2(){
   csvDl('Vormontage_Fortschritt_'+heute()+'.csv',
-    ['ID','Status','Bemerkung','Erfasst_von','Datum','Zeit'],
-    alleFortschritt().map(function(r){ return [r.tischId, r.art==='berg'?'auf den Berg':'vormontiert', r.bem, r.von, fmtD(r.datum), fmtZ(r.ts)]; }));
+    ['ID','Typ_Plan','Status','Bemerkung','Erfasst_von','Datum','Zeit'],
+    alleFortschritt().map(function(r){ return [r.tischId, typVoll(r.tischId), r.art==='berg'?'auf den Berg':'vormontiert', r.bem, r.von, fmtD(r.datum), fmtZ(r.ts)]; }));
 }
 
 /* ══════════ Leistung ══════════
@@ -1672,28 +1729,6 @@ function kDaten(cb){                     // Bohrpunkte + Kartenhintergruende ein
     kOrtho!==null?Promise.resolve(kOrtho):fetch('uploads/ortho/index.json').then(function(r){ return r.ok?r.json():[]; }).catch(function(){ return []; })
   ]).then(function(r){ kPfaehle=r[0]; kGeoPer=r[1]; kOrtho=r[2]; cb(); }).catch(function(){});
 }
-/* Tischtyp fuer die Kartenbeschriftung. Quelle ist die 5. Spalte von
-   pfaehle.json (z.B. "B_2026") - dieselben Daten, die die Karte ohnehin laedt,
-   und deckungsgleich mit uploads/tables/typen.json (Abgleich 17.08.2026:
-   1048 Tische, 0 Abweichungen). Angezeigt wird nur der Basisbuchstabe A-E;
-   die Serie (2025/2026/2027) steht bewusst nicht im Label - sie wuerde die
-   Beschriftung auf dem Handy sprengen. Unbekannt = "?" in Rosa. */
-var kTypIdx=null;
-function kTyp(tid){
-  if(!kTypIdx){
-    if(!kPfaehle) return '';             // noch nicht geladen - nicht leer merken
-    kTypIdx={};
-    (kPfaehle||[]).forEach(function(q){
-      var t=String(q[4]||'').trim().toUpperCase().charAt(0);
-      if(t>='A' && t<='E') kTypIdx[normId(q[0])]=t;
-    });
-  }
-  return kTypIdx[normId(tid)]||'';
-}
-function kTypHtml(tid){                  // Buchstabe im Normteile-Farbcode
-  var t=kTyp(tid);
-  return '<span class="kTyp '+(t||'X')+'">'+(t||'?')+'</span>';
-}
 function akLv95(lat,lon){                // WGS84 -> LV95 (Naeherung swisstopo)
   var p=(lat*3600-169028.66)/10000, l=(lon*3600-26782.5)/10000;
   return { E:2600072.37+211455.93*l-10938.51*l*p-0.36*l*p*p-44.54*l*l*l,
@@ -1805,7 +1840,7 @@ function kMapBauen(wrap,lbl){
     // "622-B": Typ immer dran, unabhaengig davon, ob die Passstuecke schon
     // erfasst sind - der Typ hilft beim Suchen, der Stand steht in der Farbe.
     L.tooltip({permanent:true, direction:'center', className:'kLbl', opacity:1})
-      .setLatLng([mN,mE]).setContent(String(tid)+'-'+kTypHtml(tid)+(mrk?' ⏳':'')).addTo(m);
+      .setLatLng([mN,mE]).setContent(String(tid)+'-'+typChip(tid)+(mrk?' ⏳':'')).addTo(m);
     pk.forEach(function(p){
       punkte[p.key]=L.circleMarker([p.N,p.E],
         { radius:3.2, weight:1.1, color:'#fff', opacity:.95, fillColor:'#e4e7eb', fillOpacity:1 }).addTo(m);
@@ -1843,7 +1878,7 @@ function kStatusMalen(){
 /* ---------- Start ---------- */
 setLang(lang);
 $('f_von').value=getVon(); $('p_von').value=getVon();
-netzMalen(); pendSenden(); laden(false);
+netzMalen(); pendSenden(); typenLaden(); laden(false);
 setInterval(function(){ if(netzAn()) laden(false); }, 90000);
 window.addEventListener('resize', function(){
   Object.keys(kMaps).forEach(function(l){ kMaps[l].map.invalidateSize(); });
