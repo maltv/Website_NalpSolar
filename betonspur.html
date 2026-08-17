@@ -117,14 +117,14 @@
 
       <div class="bcard">
         <div class="nr">1</div>
-        <div class="t">Die Zugkraft reisst den Querträger auf</div>
-        <div class="s">Kette mittig angeschlagen – so wie beim Vorbild – macht aus dem Querträger einen
-          Einfeldträger über 3.3 m mit Einzellast in der Mitte. Lösung: <b>A-Deichsel</b>, Zugauge 1 m vor
-          dem Rahmen, zwei Streben in die Seitenwangen. Gleiche Kraft, elffach kleineres Moment.</div>
-        <div class="rechnung">Kette mittig:  M = 90 kN · 3.30 m / 4 = 74 kNm
-  RHS 200×100×8 → <span class="schlecht">η = 1.20  bricht</span>
-A-Deichsel:    N = 90 / (2 · cos 41°) = 59.6 kN
-  RHS 100×60×5  → <span class="gut">η = 0.19  hält</span></div>
+        <div class="t">Die Zugkraft beansprucht den Schürfbalken</div>
+        <div class="s">Die Kette hängt mittig – wie beim Vorbild. Der Balken ist damit ein Einfeldträger
+          über 3.2 m mit Einzellast in der Mitte. Deshalb ist er ein <b>aus 10-mm-Blech geschweisster
+          Kasten mit Schotten alle 500 mm</b> – genau die «Kammern», die man auf den Fotos sieht.
+          Ein dünnwandiges Kaufrohr hält das nicht.</div>
+        <div class="rechnung">M = 90 kN · 3.30 m / 4 = 74 kNm
+Kasten 250×120×10 → <span class="gut">η = 0.63  hält</span>
+RHS 200×100×8     → <span class="schlecht">η = 1.20  zu klein</span></div>
       </div>
 
       <div class="bcard">
@@ -140,12 +140,12 @@ schert ab bei ≈ 55 kN · Betriebszugkraft 42 kN
 
       <div class="bcard">
         <div class="nr">3</div>
-        <div class="t">Die Vibronadeln zerstören die Schweissnähte</div>
-        <div class="s">200 Hz heisst <b>5.8 Millionen Lastwechsel pro Schicht</b>. Starr angeschweisste
-          Rüttlerhalterungen reissen innerhalb weniger Tage. Rüttler auf
-          <b>Gummi-Metall-Puffer</b> lagern und die Nähte nach der ersten Woche kontrollieren.</div>
-        <div class="rechnung">starr:      Δσ = 64 N/mm²  gegen 45 zulässig → <span class="schlecht">η = 1.41</span>
-mit Puffern: Δσ = 9.6 N/mm²                → <span class="gut">η = 0.21</span></div>
+        <div class="t">Rüttler nicht an den Rahmen schweissen</div>
+        <div class="s">Verdichtet wird <b>von Hand</b> mit der Vibronadel ab dem Aggregat – wie beim Vorbild.
+          Das ist kein Kompromiss: 200 Hz heissen <b>5.8 Millionen Lastwechsel pro Schicht</b>, ein fest
+          angeschweisster Rüttler reisst die Nähte innerhalb weniger Tage auf.</div>
+        <div class="rechnung">starr:       Δσ = 64 N/mm² gegen 45 zulässig → <span class="schlecht">η = 1.41</span>
+mit Puffern: Δσ = 9.6 N/mm²                 → <span class="gut">η = 0.21</span></div>
       </div>
 
     </div>
@@ -156,86 +156,90 @@ mit Puffern: Δσ = 9.6 N/mm²                → <span class="gut">η = 0.21</s
     <p class="lead">Seitlich wischen zum Schauen · vollständige Blätter im PDF (3 × A3, Massstab 1:25).</p>
 
     <div class="zeichnung">
-      <svg viewBox="-2050 -900 7000 5000" role="img" aria-label="Draufsicht Betonspurfertiger">
+      <svg viewBox="-1300 -1250 5300 3900" role="img" aria-label="Draufsicht Betonspurfertiger">
         <defs>
           <marker id="p1" markerWidth="60" markerHeight="60" refX="30" refY="6" orient="auto">
             <path d="M0,0 L36,6 L0,12 z" fill="#a00000"/>
           </marker>
         </defs>
-        <g stroke="#111" stroke-width="14" fill="none">
-          <rect x="0" y="0" width="2600" height="150" fill="#cfd8e3"/>
-          <rect x="0" y="3150" width="2600" height="150" fill="#cfd8e3"/>
-          <rect x="0" y="150" width="140" height="3000" fill="#9fb3c8"/>
-          <rect x="330" y="150" width="120" height="3000" fill="#e2e8f0"/>
-          <rect x="140" y="150" width="1860" height="3000" fill="#f7f7f5" stroke="#888" stroke-width="7" stroke-dasharray="40 30"/>
-          <rect x="600" y="850" width="1150" height="1600" fill="none" stroke="#c08000" stroke-width="12" stroke-dasharray="70 45"/>
-          <rect x="1620" y="600" width="230" height="230" fill="#ffd9a0" stroke="#a05a00" stroke-width="11"/>
-          <rect x="1620" y="2470" width="230" height="230" fill="#ffd9a0" stroke="#a05a00" stroke-width="11"/>
-          <rect x="2000" y="150" width="600" height="3000" fill="#dde5ee"/>
-          <rect x="2180" y="150" width="160" height="3000" fill="#b9c6d6"/>
-          <rect x="2680" y="600" width="400" height="2100" fill="none" stroke="#555" stroke-width="11" stroke-dasharray="70 45"/>
-          <line x1="-1000" y1="1650" x2="900" y2="0" stroke="#0b5394" stroke-width="30"/>
-          <line x1="-1000" y1="1650" x2="900" y2="3300" stroke="#0b5394" stroke-width="30"/>
-          <circle cx="-1000" cy="1650" r="150" fill="#fff" stroke="#0b5394" stroke-width="30"/>
-          <circle cx="-1000" cy="1650" r="55" fill="#0b5394" stroke="none"/>
-          <g stroke="#a00000" stroke-width="9">
-            <line x1="4150" y1="150" x2="4150" y2="3150" marker-start="url(#p1)" marker-end="url(#p1)"/>
-            <line x1="0" y1="3560" x2="2600" y2="3560" marker-start="url(#p1)" marker-end="url(#p1)"/>
+        <g stroke="#111" stroke-width="13" fill="none">
+          <rect x="0" y="0" width="120" height="2000" fill="#cfd8e3"/>
+          <rect x="3120" y="0" width="120" height="2000" fill="#cfd8e3"/>
+          <rect x="0" y="0" width="3240" height="120" fill="#9fb3c8"/>
+          <g stroke="#4a5c70" stroke-width="9">
+            <line x1="500" y1="0" x2="500" y2="120"/><line x1="1000" y1="0" x2="1000" y2="120"/>
+            <line x1="1500" y1="0" x2="1500" y2="120"/><line x1="1740" y1="0" x2="1740" y2="120"/>
+            <line x1="2240" y1="0" x2="2240" y2="120"/><line x1="2740" y1="0" x2="2740" y2="120"/>
+          </g>
+          <rect x="120" y="120" width="3000" height="1180" fill="#f7f7f5" stroke="#999" stroke-width="7" stroke-dasharray="38 26"/>
+          <rect x="0" y="1300" width="3240" height="700" fill="#dde5ee"/>
+          <rect x="0" y="1830" width="3240" height="120" fill="#b9c6d6"/>
+          <g stroke="#4a5c70" stroke-width="9">
+            <line x1="500" y1="1830" x2="500" y2="1950"/><line x1="1000" y1="1830" x2="1000" y2="1950"/>
+            <line x1="1500" y1="1830" x2="1500" y2="1950"/><line x1="2240" y1="1830" x2="2240" y2="1950"/>
+            <line x1="2740" y1="1830" x2="2740" y2="1950"/>
+          </g>
+          <rect x="700" y="230" width="1840" height="1020" fill="none" stroke="#c08000" stroke-width="12" stroke-dasharray="65 40"/>
+          <rect x="700" y="1520" width="1840" height="210" fill="none" stroke="#666" stroke-width="11" stroke-dasharray="60 38"/>
+          <rect x="2660" y="1480" width="440" height="380" fill="#f0e6d2" stroke="#8a6a00" stroke-width="10"/>
+          <rect x="1555" y="-300" width="30" height="420" fill="#0b5394" stroke="none"/>
+          <rect x="1655" y="-300" width="30" height="420" fill="#0b5394" stroke="none"/>
+          <circle cx="1620" cy="-215" r="95" fill="#fff" stroke="#0b5394" stroke-width="24"/>
+          <line x1="1620" y1="-310" x2="1620" y2="-800" stroke="#0b5394" stroke-width="22" stroke-dasharray="90 52"/>
+          <g stroke="#a00000" stroke-width="10">
+            <line x1="120" y1="2280" x2="3120" y2="2280" marker-start="url(#p1)" marker-end="url(#p1)"/>
+            <line x1="3480" y1="0" x2="3480" y2="2000" marker-start="url(#p1)" marker-end="url(#p1)"/>
           </g>
         </g>
         <g stroke="none" font-family="Arial">
-          <text x="1070" y="1620" font-size="130" fill="#555" text-anchor="middle">BETONKAMMER</text>
-          <text x="1070" y="1780" font-size="110" fill="#555" text-anchor="middle">Füllmarke 300 mm</text>
-          <text x="1175" y="790" font-size="110" fill="#a06a00" text-anchor="middle">Vorratsmulde 0.4 m³</text>
-          <text x="1735" y="480" font-size="105" fill="#a05a00" text-anchor="middle">Vibronadeln auf Puffern</text>
-          <text x="2300" y="1650" font-size="115" fill="#333" text-anchor="middle" transform="rotate(-90 2300 1650)">ABZIEHBOHLE</text>
-          <text x="3280" y="1700" font-size="105" fill="#555" text-anchor="middle">Ballast</text>
-          <text x="-1000" y="1000" font-size="115" fill="#0b5394" text-anchor="middle">Zugauge mit</text>
-          <text x="-1000" y="1140" font-size="115" fill="#0b5394" text-anchor="middle">Scherbolzen Ø18</text>
-          <text x="-60" y="2620" font-size="110" fill="#0b5394" transform="rotate(41 -60 2620)">A-Deichsel · 59.6 kN</text>
-          <text x="4090" y="1650" font-size="120" fill="#a00000" text-anchor="middle" transform="rotate(-90 4090 1650)">3000 = SPURBREITE</text>
-          <text x="1300" y="3710" font-size="120" fill="#a00000" text-anchor="middle">2600</text>
-          <text x="1300" y="-350" font-size="130" fill="#111" text-anchor="middle" font-weight="bold">DRAUFSICHT · Zug nach links</text>
+          <text x="1620" y="700" font-size="125" fill="#555" text-anchor="middle">BETONKAMMER</text>
+          <text x="1620" y="850" font-size="105" fill="#555" text-anchor="middle">Füllmarke 300 mm</text>
+          <text x="1620" y="1150" font-size="105" fill="#a06a00" text-anchor="middle">Kippmulde 0.4 m³</text>
+          <text x="1620" y="1650" font-size="105" fill="#555" text-anchor="middle">Ballastriegel</text>
+          <text x="700" y="1780" font-size="110" fill="#333" text-anchor="middle">GLÄTTPLATTE</text>
+          <text x="2880" y="1700" font-size="95" fill="#8a6a00" text-anchor="middle">Aggregat</text>
+          <text x="1620" y="-880" font-size="115" fill="#0b5394" text-anchor="middle">Kette · Scherbolzen Ø18</text>
+          <text x="620" y="-120" font-size="105" fill="#4a5c70" text-anchor="middle">Schotten alle 500</text>
+          <text x="1620" y="2440" font-size="125" fill="#a00000" text-anchor="middle">3000 = SPURBREITE</text>
+          <text x="3600" y="1000" font-size="120" fill="#a00000" text-anchor="middle" transform="rotate(-90 3600 1000)">2000</text>
+          <text x="1620" y="-1050" font-size="130" fill="#111" text-anchor="middle" font-weight="bold">DRAUFSICHT · Zug nach oben</text>
         </g>
       </svg>
     </div>
-    <p class="zcap">Draufsicht: Die Zugkraft geht über die A-Deichsel in die beiden Seitenwangen –
-       nicht mittig in den Querträger.</p>
+    <p class="zcap">Draufsicht: Kette mittig am Schürfbalken wie beim Vorbild – der Balken ist dafür ein
+       geschweisster Kasten mit Schotten alle 500 mm.</p>
 
     <div class="zeichnung">
-      <svg viewBox="-2000 -1500 6900 2500" role="img" aria-label="Längsschnitt Betonspurfertiger">
-        <g stroke="#111" stroke-width="14" fill="none">
-          <line x1="-1950" y1="0" x2="4600" y2="0" stroke="#111" stroke-width="16"/>
-          <rect x="2600" y="-160" width="1900" height="160" fill="#d9d9d9" stroke="#555" stroke-width="10"/>
-          <path d="M 140,0 L 140,-300 L 1700,-300 L 2000,-160 L 2000,0 Z" fill="#c9c9c4" stroke="#555" stroke-width="10"/>
-          <line x1="140" y1="-300" x2="2000" y2="-300" stroke="#a00000" stroke-width="12" stroke-dasharray="80 50"/>
-          <rect x="0" y="-500" width="140" height="500" fill="#9fb3c8"/>
-          <rect x="0" y="-400" width="2600" height="400" fill="none" stroke="#888" stroke-width="9" stroke-dasharray="70 45"/>
-          <path d="M 2000,-160 L 2180,-340 L 2600,-340 L 2600,-160 Z" fill="#dde5ee"/>
-          <rect x="2180" y="-500" width="160" height="160" fill="#b9c6d6"/>
-          <line x1="2520" y1="-340" x2="2520" y2="-820" stroke="#0b5394" stroke-width="20"/>
-          <circle cx="2520" cy="-860" r="80" fill="#fff" stroke="#0b5394" stroke-width="20"/>
-          <path d="M 750,-560 L 620,-1180 L 1780,-1180 L 1650,-560 Z" fill="#ffe9c0" stroke="#c08000" stroke-width="14"/>
-          <rect x="2680" y="-600" width="400" height="240" fill="#e8e8e8" stroke="#555" stroke-width="11"/>
-          <line x1="1620" y1="-430" x2="1620" y2="-120" stroke="#a05a00" stroke-width="24"/>
-          <line x1="-1000" y1="-250" x2="900" y2="-250" stroke="#0b5394" stroke-width="30"/>
-          <circle cx="-1000" cy="-250" r="120" fill="#fff" stroke="#0b5394" stroke-width="24"/>
-          <line x1="-1900" y1="-250" x2="-1150" y2="-250" stroke="#0b5394" stroke-width="16" stroke-dasharray="90 50"/>
+      <svg viewBox="-1700 -1450 5700 2300" role="img" aria-label="Längsschnitt Betonspurfertiger">
+        <g stroke="#111" stroke-width="13" fill="none">
+          <line x1="-1600" y1="0" x2="3600" y2="0" stroke="#111" stroke-width="15"/>
+          <rect x="2000" y="-160" width="1600" height="160" fill="#d9d9d9" stroke="#555" stroke-width="10"/>
+          <path d="M 120,0 L 120,-300 L 1180,-300 L 1450,-160 L 1450,0 Z" fill="#c9c9c4" stroke="#555" stroke-width="10"/>
+          <line x1="120" y1="-300" x2="1300" y2="-300" stroke="#a00000" stroke-width="12" stroke-dasharray="75 48"/>
+          <path d="M 0,-250 L 120,-250 L 120,0 L 40,0 L 0,-60 Z" fill="#9fb3c8"/>
+          <path d="M 1300,-300 L 1450,-172 L 2000,-172 L 2000,-160 L 1450,-160 L 1300,-288 Z" fill="#dde5ee" stroke="#111" stroke-width="10"/>
+          <rect x="1830" y="-372" width="120" height="200" fill="#b9c6d6"/>
+          <rect x="0" y="-400" width="2000" height="400" fill="none" stroke="#888" stroke-width="9" stroke-dasharray="62 38"/>
+          <path d="M 430,-560 L 300,-1180 L 1350,-1180 L 1220,-560 Z" fill="#ffe9c0" stroke="#c08000" stroke-width="13"/>
+          <rect x="1500" y="-620" width="250" height="220" fill="#e8e8e8" stroke="#555" stroke-width="10"/>
+          <rect x="-300" y="-215" width="420" height="45" fill="#0b5394" stroke="none"/>
+          <circle cx="-215" cy="-193" r="85" fill="#fff" stroke="#0b5394" stroke-width="22"/>
+          <line x1="-310" y1="-193" x2="-1350" y2="-193" stroke="#0b5394" stroke-width="20" stroke-dasharray="88 50"/>
         </g>
         <g stroke="none" font-family="Arial">
-          <text x="-1900" y="-360" font-size="125" fill="#0b5394">← Zug bergwärts</text>
-          <text x="230" y="-480" font-size="115" fill="#a00000">Füllmarke 300 mm</text>
-          <text x="1000" y="-80" font-size="115" fill="#333" text-anchor="middle">Beton erdfeucht C0/C1</text>
-          <text x="1200" y="-860" font-size="120" fill="#a06a00" text-anchor="middle">Mulde 0.4 m³</text>
-          <text x="2620" y="-920" font-size="110" fill="#0b5394">Spindel: Dicke 140–200 mm</text>
-          <text x="3550" y="-280" font-size="120" fill="#333" text-anchor="middle">fertige Spur 16 cm</text>
-          <text x="4500" y="330" font-size="110" fill="#666" text-anchor="end">Planum</text>
-          <text x="1300" y="-1330" font-size="130" fill="#111" text-anchor="middle" font-weight="bold">LÄNGSSCHNITT</text>
+          <text x="-1600" y="-330" font-size="120" fill="#0b5394">← Zug bergwärts</text>
+          <text x="180" y="-420" font-size="112" fill="#a00000">Füllmarke 300</text>
+          <text x="700" y="-90" font-size="110" fill="#333" text-anchor="middle">Beton erdfeucht C0/C1</text>
+          <text x="825" y="-880" font-size="115" fill="#a06a00" text-anchor="middle">Kippmulde</text>
+          <text x="1625" y="-720" font-size="105" fill="#555" text-anchor="middle">Ballast</text>
+          <text x="2800" y="-280" font-size="115" fill="#333" text-anchor="middle">fertige Spur 16 cm</text>
+          <text x="3400" y="320" font-size="105" fill="#666" text-anchor="end">Planum</text>
+          <text x="1300" y="-1280" font-size="130" fill="#111" text-anchor="middle" font-weight="bold">LÄNGSSCHNITT</text>
         </g>
       </svg>
     </div>
-    <p class="zcap">Längsschnitt: Die Kufen laufen auf dem Planum, die Bohle ist 160 mm darüber fix
-       eingestellt – so hängt die Dicke nicht vom Betondruck ab.</p>
+    <p class="zcap">Längsschnitt: Die Kufen laufen auf dem Planum, die Glättplatte sitzt 160 mm darüber
+       und ist fest verschweisst – so hängt die Dicke nicht vom Betondruck ab.</p>
 
     <div class="dl">
       <a class="btn" href="Betonspur/Werkstattzeichnung_Betonspurfertiger.pdf" target="_blank">Zeichnung 3 × A3 (PDF)</a>
@@ -246,12 +250,12 @@ mit Puffern: Δσ = 9.6 N/mm²                → <span class="gut">η = 0.21</s
   <div class="karte tipp">
     <h2>Regeln im Einsatz</h2>
     <ul>
-      <li><b>Füllmarke 300 mm</b> nie überschreiten – bei 500 mm schwimmt die Bohle auf und die Spur wird zu dick.</li>
-      <li><b>Beton erdfeucht (C0/C1)</b> bestellen – weicher Beton läuft bei 20 % Neigung unter der Bohle weg.</li>
+      <li><b>Füllmarke 300 mm</b> nie überschreiten – bei 500 mm hebt der Betondruck die Glättplatte und die Spur wird zu dick.</li>
+      <li><b>Beton erdfeucht (C0/C1)</b> bestellen – weicher Beton läuft bei 20 % Neigung unter der Platte weg.</li>
       <li><b>Bergwärts betonieren</b> – dann drückt der Hangabtrieb den Beton in die Kammer statt heraus.</li>
       <li><b>Ruckfrei anfahren</b> – ruckartiges Anreissen kostet den Scherbolzen und damit die Fuhre.</li>
-      <li><b>Vor jeder Etappe:</b> beide Spindeln gleich einstellen, Bohlenunterkante plan, Kufen auf Verschleiss prüfen.</li>
-      <li><b>Nach der ersten Woche:</b> Nähte an Deichsel, Zugauge und Rüttlerkonsole sichtprüfen.</li>
+      <li><b>Vor jeder Etappe:</b> Unterkante Glättplatte plan und sauber, Verschleissleisten der Kufen prüfen (sie bestimmen die Dicke), Scherbolzen kontrollieren.</li>
+      <li><b>Nach der ersten Woche:</b> Nähte am Schürfbalken und an den Zuglaschen sichtprüfen.</li>
       <li><b>Kranen</b> nur am 4-Strang-Gehänge an den vier Anschlagpunkten (WLL 2.0 t), nicht am 1-t-Hebeband.</li>
     </ul>
   </div>
@@ -295,7 +299,7 @@ mit Puffern: Δσ = 9.6 N/mm²                → <span class="gut">η = 0.21</s
     <h2>Was noch entschieden werden muss</h2>
     <ul>
       <li><b>Zugmaschine</b> festlegen (Bagger, Raupe oder Seilwinde) – davon hängen Anhängehöhe und Zugpunkt ab.</li>
-      <li><b>Fliehkraft der Vibronadeln</b> beim Hersteller abfragen (8 kN angenommen), Standorte mit Martin Schmid.</li>
+      <li><b>Vibronadel und Aggregat</b> festlegen (Verdichtung von Hand, wie beim Vorbild).</li>
       <li><b>Quergefälle</b>: eben oder mit Querabschlag für die Entwässerung.</li>
       <li><b>Bewehrung und Fugen</b> der Spur: Vorgabe bei ILF einholen – nicht Teil dieser Bemessung.</li>
       <li><b>Statik gegenzeichnen</b> lassen und Suva-Themen prüfen (Anschlagpunkte, Quetschstellen, Abstellen am Hang).</li>
