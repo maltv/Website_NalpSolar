@@ -1,0 +1,847 @@
+{
+ "stand": "2026-08-17",
+ "quelle": "Primärkonstruktions-Pläne Mauchle, Text maschinell ausgelesen (PyMuPDF)",
+ "hinweis": "anz/fund = wie im Plan angeschrieben bzw. Anzahl Fundstellen. ort: berg=gelb, tal=rot. proKT = Stück je Knieträger; Primärkonstruktion = 2 Knieträger.",
+ "typen": {
+  "A_2025": {
+   "plan": "24027-S-0-M-002 Rev B",
+   "pdf": "stahlbau/Primaerkonstruktion_TypA.pdf",
+   "pos": [
+    {
+     "anz": 4,
+     "was": "HV M20×75 10.9",
+     "km": false,
+     "fund": 12,
+     "fuss": true,
+     "md": "450 Nm (Tab. 2)",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 1,
+     "was": "M20×70 8.8",
+     "km": false,
+     "fund": 6,
+     "fuss": true,
+     "md": "415 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 1
+    },
+    {
+     "anz": 4,
+     "was": "HV M20×75 8.8",
+     "km": false,
+     "fund": 1,
+     "fuss": false,
+     "md": "450 Nm (Tab. 2)",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 4,
+     "was": "M10×35 8.8",
+     "km": true,
+     "fund": 4,
+     "fuss": false,
+     "md": "mit Kontermutter, kein Drehmoment",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 2,
+     "was": "M12×45 8.8",
+     "km": true,
+     "fund": 5,
+     "fuss": false,
+     "md": "mit Kontermutter, kein Drehmoment",
+     "ort": "",
+     "proKT": 2
+    },
+    {
+     "anz": 2,
+     "was": "M12×45 8.8",
+     "km": false,
+     "fund": 1,
+     "fuss": false,
+     "md": "84 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 2
+    },
+    {
+     "anz": 4,
+     "was": "M20×70 8.8",
+     "km": false,
+     "fund": 14,
+     "fuss": false,
+     "md": "415 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 1,
+     "was": "M20×90 8.8",
+     "km": true,
+     "fund": 3,
+     "fuss": false,
+     "md": "mit Kontermutter, kein Drehmoment",
+     "ort": "",
+     "proKT": 1
+    }
+   ]
+  },
+  "A_2026": {
+   "plan": "24027-S-0-M-008 Rev B",
+   "pdf": "stahlbau/Primaerkonstruktion_TypA_2026.pdf",
+   "pos": [
+    {
+     "anz": 4,
+     "was": "HV M20×75 10.9",
+     "km": false,
+     "fund": 11,
+     "fuss": true,
+     "md": "450 Nm (Tab. 2)",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 1,
+     "was": "M24×100 8.8",
+     "km": false,
+     "fund": 2,
+     "fuss": true,
+     "md": "714 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 1
+    },
+    {
+     "anz": 1,
+     "was": "M24×75 8.8",
+     "km": false,
+     "fund": 5,
+     "fuss": true,
+     "md": "714 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 1
+    },
+    {
+     "anz": 4,
+     "was": "M12×50 8.8",
+     "km": true,
+     "fund": 13,
+     "fuss": false,
+     "md": "mit Kontermutter, kein Drehmoment",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 4,
+     "was": "M20×70 8.8",
+     "km": false,
+     "fund": 15,
+     "fuss": false,
+     "md": "415 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 1,
+     "was": "M24×100 8.8",
+     "km": true,
+     "fund": 3,
+     "fuss": false,
+     "md": "mit Kontermutter, kein Drehmoment",
+     "ort": "",
+     "proKT": 1
+    }
+   ]
+  },
+  "B_2025": {
+   "plan": "24027-S-0-M-001 Rev G",
+   "pdf": "stahlbau/Primaerkonstruktion_TypB.pdf",
+   "pos": [
+    {
+     "anz": 4,
+     "was": "HV M20×90 10.9",
+     "km": false,
+     "fund": 7,
+     "fuss": true,
+     "md": "450 Nm (Tab. 2)",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 2,
+     "was": "HV M20×90 10.9",
+     "km": false,
+     "fund": 1,
+     "fuss": true,
+     "md": "450 Nm (Tab. 2)",
+     "ort": "",
+     "proKT": 2
+    },
+    {
+     "anz": 1,
+     "was": "M24×75 8.8",
+     "km": false,
+     "fund": 2,
+     "fuss": true,
+     "md": "714 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 1
+    },
+    {
+     "anz": 1,
+     "was": "M24×80 8.8",
+     "km": false,
+     "fund": 3,
+     "fuss": true,
+     "md": "714 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 1
+    },
+    {
+     "anz": 4,
+     "was": "M16×55 8.8",
+     "km": false,
+     "fund": 3,
+     "fuss": false,
+     "md": "206 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 6,
+     "was": "M16×65 8.8",
+     "km": false,
+     "fund": 3,
+     "fuss": false,
+     "md": "206 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 6
+    },
+    {
+     "anz": 1,
+     "was": "M24×100 10.9",
+     "km": false,
+     "fund": 1,
+     "fuss": false,
+     "md": "714 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 1
+    },
+    {
+     "anz": 1,
+     "was": "M24×100 8.8",
+     "km": true,
+     "fund": 3,
+     "fuss": false,
+     "md": "mit Kontermutter, kein Drehmoment",
+     "ort": "",
+     "proKT": 1
+    },
+    {
+     "anz": 6,
+     "was": "M24×90 8.8",
+     "km": false,
+     "fund": 5,
+     "fuss": false,
+     "md": "714 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 6
+    }
+   ]
+  },
+  "B_2026": {
+   "plan": "24027-S-0-M-009 Rev B",
+   "pdf": "stahlbau/Primaerkonstruktion_TypB_2026.pdf",
+   "pos": [
+    {
+     "anz": 4,
+     "was": "HV M20×75 10.9",
+     "km": false,
+     "fund": 11,
+     "fuss": true,
+     "md": "450 Nm (Tab. 2)",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 2,
+     "was": "HV M20×75 10.9",
+     "km": false,
+     "fund": 1,
+     "fuss": true,
+     "md": "450 Nm (Tab. 2)",
+     "ort": "",
+     "proKT": 2
+    },
+    {
+     "anz": 4,
+     "was": "M12×50 8.8",
+     "km": true,
+     "fund": 14,
+     "fuss": true,
+     "md": "mit Kontermutter, kein Drehmoment",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 1,
+     "was": "M24×100 8.8",
+     "km": true,
+     "fund": 4,
+     "fuss": true,
+     "md": "mit Kontermutter, kein Drehmoment",
+     "ort": "",
+     "proKT": 1
+    },
+    {
+     "anz": 1,
+     "was": "M24×100 8.8",
+     "km": false,
+     "fund": 4,
+     "fuss": true,
+     "md": "714 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 1
+    },
+    {
+     "anz": 6,
+     "was": "M16×65 8.8",
+     "km": false,
+     "fund": 5,
+     "fuss": false,
+     "md": "206 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 6
+    },
+    {
+     "anz": 4,
+     "was": "M16×65 8.8",
+     "km": false,
+     "fund": 5,
+     "fuss": false,
+     "md": "206 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 1,
+     "was": "M24×100 10.9",
+     "km": true,
+     "fund": 1,
+     "fuss": false,
+     "md": "mit Kontermutter, kein Drehmoment",
+     "ort": "",
+     "proKT": 1
+    },
+    {
+     "anz": 6,
+     "was": "M24×100 8.8",
+     "km": false,
+     "fund": 6,
+     "fuss": false,
+     "md": "714 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 6
+    }
+   ]
+  },
+  "B_8er": {
+   "plan": "24027-S-0-P-005",
+   "pdf": "stahlbau/Primaerkonstruktion_TypB_8er.pdf",
+   "pos": [
+    {
+     "anz": 1,
+     "was": "M24×75 8.8",
+     "km": false,
+     "fund": 2,
+     "fuss": true,
+     "md": "714 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 1
+    },
+    {
+     "anz": 1,
+     "was": "M24×80 8.8",
+     "km": false,
+     "fund": 5,
+     "fuss": true,
+     "md": "714 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 1
+    },
+    {
+     "anz": 4,
+     "was": "M10×40 8.8",
+     "km": true,
+     "fund": 4,
+     "fuss": false,
+     "md": "mit Kontermutter, kein Drehmoment",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 2,
+     "was": "M12×45 8.8",
+     "km": true,
+     "fund": 5,
+     "fuss": false,
+     "md": "mit Kontermutter, kein Drehmoment",
+     "ort": "",
+     "proKT": 2
+    },
+    {
+     "anz": 4,
+     "was": "M16×55 8.8",
+     "km": false,
+     "fund": 3,
+     "fuss": false,
+     "md": "206 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 4,
+     "was": "M16×55 8.8",
+     "km": true,
+     "fund": 1,
+     "fuss": false,
+     "md": "mit Kontermutter, kein Drehmoment",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 6,
+     "was": "M16×65 8.8",
+     "km": false,
+     "fund": 5,
+     "fuss": false,
+     "md": "206 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 6
+    },
+    {
+     "anz": 1,
+     "was": "M24×100 8.8",
+     "km": true,
+     "fund": 4,
+     "fuss": false,
+     "md": "mit Kontermutter, kein Drehmoment",
+     "ort": "",
+     "proKT": 1
+    },
+    {
+     "anz": 6,
+     "was": "M24×90 8.8",
+     "km": false,
+     "fund": 6,
+     "fuss": false,
+     "md": "714 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 6
+    }
+   ]
+  },
+  "C_2026": {
+   "plan": "24027-S-0-M-010 Rev B",
+   "pdf": "stahlbau/Primaerkonstruktion_TypC_2026.pdf",
+   "pos": [
+    {
+     "anz": 4,
+     "was": "HV M24×85 10.9",
+     "km": false,
+     "fund": 15,
+     "fuss": true,
+     "md": "800 Nm (Tab. 2)",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 1,
+     "was": "M30×120 8.8",
+     "km": true,
+     "fund": 8,
+     "fuss": true,
+     "md": "mit Kontermutter, kein Drehmoment",
+     "ort": "",
+     "proKT": 1
+    },
+    {
+     "anz": 4,
+     "was": "M12×50 8.8",
+     "km": true,
+     "fund": 14,
+     "fuss": false,
+     "md": "mit Kontermutter, kein Drehmoment",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 6,
+     "was": "M20×80 8.8",
+     "km": false,
+     "fund": 4,
+     "fuss": false,
+     "md": "415 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 6
+    },
+    {
+     "anz": 4,
+     "was": "M20×80 8.8",
+     "km": false,
+     "fund": 5,
+     "fuss": false,
+     "md": "415 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 1,
+     "was": "M24×110 8.8",
+     "km": true,
+     "fund": 3,
+     "fuss": false,
+     "md": "mit Kontermutter, kein Drehmoment",
+     "ort": "",
+     "proKT": 1
+    },
+    {
+     "anz": 6,
+     "was": "M24×75 8.8",
+     "km": false,
+     "fund": 5,
+     "fuss": false,
+     "md": "714 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 6
+    }
+   ]
+  },
+  "D_2025": {
+   "plan": "Plan Typ D",
+   "pdf": "stahlbau/Primaerkonstruktion_TypD.pdf",
+   "pos": [
+    {
+     "anz": 4,
+     "was": "HV M24×90 10.9",
+     "km": false,
+     "fund": 13,
+     "fuss": true,
+     "md": "800 Nm (Tab. 2)",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 4,
+     "was": "HV M24×90 8.8",
+     "km": false,
+     "fund": 1,
+     "fuss": true,
+     "md": "800 Nm (Tab. 2)",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 4,
+     "was": "M24×90 8.8",
+     "km": false,
+     "fund": 2,
+     "fuss": true,
+     "md": "714 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 1,
+     "was": "M30×120 8.8",
+     "km": false,
+     "fund": 2,
+     "fuss": true,
+     "md": "1420 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 1
+    },
+    {
+     "anz": 1,
+     "was": "M30×130 8.8",
+     "km": false,
+     "fund": 5,
+     "fuss": true,
+     "md": "1420 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 1
+    },
+    {
+     "anz": 4,
+     "was": "M10×40 8.8",
+     "km": true,
+     "fund": 3,
+     "fuss": false,
+     "md": "mit Kontermutter, kein Drehmoment",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 2,
+     "was": "M12×45 8.8",
+     "km": true,
+     "fund": 6,
+     "fuss": false,
+     "md": "mit Kontermutter, kein Drehmoment",
+     "ort": "",
+     "proKT": 2
+    },
+    {
+     "anz": 6,
+     "was": "M24×90 8.8",
+     "km": false,
+     "fund": 10,
+     "fuss": false,
+     "md": "714 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 6
+    },
+    {
+     "anz": 1,
+     "was": "M30×120 8.8",
+     "km": true,
+     "fund": 3,
+     "fuss": false,
+     "md": "mit Kontermutter, kein Drehmoment",
+     "ort": "",
+     "proKT": 1
+    }
+   ]
+  },
+  "D_2026": {
+   "plan": "Plan Typ D 2026",
+   "pdf": "stahlbau/Primaerkonstruktion_TypD_2026.pdf",
+   "pos": [
+    {
+     "anz": 4,
+     "was": "HV M24×85 10.9",
+     "km": false,
+     "fund": 11,
+     "fuss": true,
+     "md": "800 Nm (Tab. 2)",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 1,
+     "was": "M30×130 8.8",
+     "km": true,
+     "fund": 12,
+     "fuss": true,
+     "md": "mit Kontermutter, kein Drehmoment",
+     "ort": "",
+     "proKT": 1
+    },
+    {
+     "anz": 4,
+     "was": "M12×50 8.8",
+     "km": true,
+     "fund": 11,
+     "fuss": false,
+     "md": "mit Kontermutter, kein Drehmoment",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 6,
+     "was": "M24×90 8.8",
+     "km": false,
+     "fund": 9,
+     "fuss": false,
+     "md": "714 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 6
+    },
+    {
+     "anz": 4,
+     "was": "M24×90 8.8",
+     "km": false,
+     "fund": 4,
+     "fuss": false,
+     "md": "714 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 4
+    }
+   ]
+  },
+  "E_2025": {
+   "plan": "Plan Typ E",
+   "pdf": "stahlbau/Primaerkonstruktion_TypE.pdf",
+   "pos": [
+    {
+     "anz": 4,
+     "was": "HV M30×105 10.9",
+     "km": false,
+     "fund": 9,
+     "fuss": true,
+     "md": "1600 Nm (Tab. 2)",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 4,
+     "was": "HV M30×105 8.8",
+     "km": false,
+     "fund": 2,
+     "fuss": true,
+     "md": "1600 Nm (Tab. 2)",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 1,
+     "was": "M27×100 8.8",
+     "km": false,
+     "fund": 2,
+     "fuss": true,
+     "md": "1050 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 1
+    },
+    {
+     "anz": 1,
+     "was": "M36×150 8.8",
+     "km": true,
+     "fund": 5,
+     "fuss": true,
+     "md": "mit Kontermutter, kein Drehmoment",
+     "ort": "",
+     "proKT": 1
+    },
+    {
+     "anz": 4,
+     "was": "M10×40 8.8",
+     "km": true,
+     "fund": 3,
+     "fuss": false,
+     "md": "mit Kontermutter, kein Drehmoment",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 2,
+     "was": "M12×45 8.8",
+     "km": true,
+     "fund": 6,
+     "fuss": false,
+     "md": "mit Kontermutter, kein Drehmoment",
+     "ort": "",
+     "proKT": 2
+    },
+    {
+     "anz": 4,
+     "was": "M27×100 8.8",
+     "km": false,
+     "fund": 3,
+     "fuss": false,
+     "md": "1050 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 6,
+     "was": "M27×100 8.8",
+     "km": false,
+     "fund": 10,
+     "fuss": false,
+     "md": "1050 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 6
+    },
+    {
+     "anz": 1,
+     "was": "M27×120 8.8",
+     "km": true,
+     "fund": 3,
+     "fuss": false,
+     "md": "mit Kontermutter, kein Drehmoment",
+     "ort": "",
+     "proKT": 1
+    }
+   ]
+  },
+  "E_2026": {
+   "plan": "Plan Typ E 2026",
+   "pdf": "stahlbau/Primaerkonstruktion_TypE_2026.pdf",
+   "pos": [
+    {
+     "anz": 4,
+     "was": "HV M27×100 10.9",
+     "km": false,
+     "fund": 13,
+     "fuss": true,
+     "md": "1250 Nm (Tab. 2)",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 1,
+     "was": "M30×130 8.8",
+     "km": true,
+     "fund": 2,
+     "fuss": true,
+     "md": "mit Kontermutter, kein Drehmoment",
+     "ort": "",
+     "proKT": 1
+    },
+    {
+     "anz": 1,
+     "was": "M36×150 8.8",
+     "km": true,
+     "fund": 4,
+     "fuss": true,
+     "md": "mit Kontermutter, kein Drehmoment",
+     "ort": "",
+     "proKT": 1
+    },
+    {
+     "anz": 4,
+     "was": "M12×55 8.8",
+     "km": true,
+     "fund": 14,
+     "fuss": false,
+     "md": "mit Kontermutter, kein Drehmoment",
+     "ort": "",
+     "proKT": 4
+    },
+    {
+     "anz": 1,
+     "was": "M27×120 8.8",
+     "km": true,
+     "fund": 3,
+     "fuss": false,
+     "md": "mit Kontermutter, kein Drehmoment",
+     "ort": "",
+     "proKT": 1
+    },
+    {
+     "anz": 6,
+     "was": "M27×120 8.8",
+     "km": false,
+     "fund": 11,
+     "fuss": false,
+     "md": "1050 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 6
+    },
+    {
+     "anz": 4,
+     "was": "M27×120 8.8",
+     "km": false,
+     "fund": 5,
+     "fuss": false,
+     "md": "1050 Nm (Tab. 1)",
+     "ort": "",
+     "proKT": 4
+    }
+   ]
+  }
+ }
+}

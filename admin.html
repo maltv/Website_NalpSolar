@@ -184,6 +184,34 @@
         font-size:12.5px; white-space:pre-wrap; }
   .hinw { background:#fff8e6; border:1px solid #f0d79a; border-radius:5px; padding:9px 11px;
         font-size:12px; color:#6b5300; line-height:1.5; margin-bottom:12px; }
+
+  /* ── Schrauben-Erfassung (Handy: gross antippbar) ─────────── */
+  .typwahl { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+  .typwahl button { padding:9px 12px; border:1px solid #c9ccd2; background:#fff; border-radius:6px;
+        font-size:13.5px; font-weight:700; cursor:pointer; }
+  .typwahl button.an { background:var(--rot); border-color:var(--rot); color:#fff; }
+  .typwahl button .n { font-weight:400; font-size:11px; opacity:.75; margin-left:4px; }
+  .typwahl button.fertig::after { content:' ✓'; color:var(--gruen); font-weight:900; }
+  .typwahl button.an.fertig::after { color:#fff; }
+  .schrPos { border:1px solid var(--line); border-radius:6px; margin-bottom:7px; padding:9px 10px;
+        background:#fff; display:flex; gap:9px; align-items:center; flex-wrap:wrap; }
+  .schrPos.o-berg { background:#fffbe6; border-color:#e8cf72; }
+  .schrPos.o-tal  { background:#fdeeee; border-color:#e0a3a1; }
+  .schrPos .anz { width:56px; padding:8px; font-size:16px; font-weight:800; text-align:center;
+        border:1px solid #c9ccd2; border-radius:5px; }
+  .schrPos .was { flex:1; min-width:130px; font-size:14px; font-weight:700; line-height:1.35; }
+  .schrPos .was small { display:block; font-weight:400; font-size:11px; color:var(--mut); }
+  .ortBtns { display:flex; gap:5px; }
+  .ortBtns button { width:46px; height:40px; border-radius:6px; border:1px solid #c9ccd2;
+        background:#fff; font-size:17px; cursor:pointer; line-height:1; }
+  .ortBtns button.an[data-ort="berg"] { background:#f6d64a; border-color:#c9a800; }
+  .ortBtns button.an[data-ort="tal"]  { background:#e88a86; border-color:var(--rot); }
+  .ortBtns button.an[data-ort="weg"]  { background:#dfe2e6; border-color:#9aa0a6; }
+  .schrSum { background:#1a1a1a; color:#fff; border-radius:6px; padding:11px 13px; margin-top:11px; }
+  .schrSum h4 { margin:0 0 7px; font-size:12px; text-transform:uppercase; letter-spacing:.5px; opacity:.7; }
+  .schrSum table { width:100%; border-collapse:collapse; font-size:14px; }
+  .schrSum td { padding:3px 0; }
+  .schrSum td.n { text-align:right; font-weight:900; font-variant-numeric:tabular-nums; }
 </style>
 </head>
 <body>
@@ -197,6 +225,7 @@
   <button data-tab="uebersicht" class="an">Übersicht</button>
   <button data-tab="stoerungen">Störungen<span class="zahl" id="zStoer">–</span></button>
   <button data-tab="regie">Regie<span class="zahl" id="zRegie">–</span></button>
+  <button data-tab="schrauben">Schrauben<span class="zahl" id="zSchr">–</span></button>
   <button data-tab="foehn">Föhn</button>
 </div>
 
@@ -419,7 +448,42 @@
 </div></div>
 
 <!-- ══════════════════════════════════════════════════════════════
-     REITER 4 – FÖHN
+     REITER 4 – SCHRAUBEN (Bergmontage je Typ erfassen)
+     ══════════════════════════════════════════════════════════════ -->
+<div class="tab" id="tab-schrauben"><div class="wrap">
+
+  <div class="card">
+    <h2>Schrauben je Konstruktion</h2>
+    <div class="sub">Alles was im Plan angeschrieben ist, steht schon da – <b>Anzahl je Knieträger</b>.
+      Antippen: 🟡&nbsp;Berg · 🔴&nbsp;Tal · ⚪&nbsp;zählt nicht. Die Bergsumme rechnet
+      automatisch <b>× 2 Knieträger</b>. Sie speist danach den Schraubenrechner auf
+      <a href="stahlbau.html" target="_blank">stahlbau.html</a>.</div>
+
+    <div class="hinw">Fundstellen aus den Mauchle-Plänen maschinell ausgelesen – die gleiche
+      Verbindung ist im Plan oft mehrfach angeschrieben (Ansicht + Detail), deshalb steht hier
+      jede Kombination nur <b>einmal</b>. Fehlt etwas im Plan (z.&nbsp;B. die HV bergseitig
+      bei Typ&nbsp;A&nbsp;2025), unten <b>+ Position</b> antippen.</div>
+
+    <div class="typwahl" id="schrTypen"></div>
+
+    <div id="schrPlan" style="margin-bottom:10px;font-size:12.5px"></div>
+    <div id="schrListe"></div>
+
+    <button class="btn ghost" style="margin-top:8px" onclick="schrNeu()">+ Position</button>
+
+    <div class="schrSum" id="schrSumme"></div>
+
+    <div style="display:flex;gap:8px;margin-top:11px;flex-wrap:wrap">
+      <button class="btn" onclick="schrSpeichern()">Für diesen Typ speichern</button>
+      <span id="schrMeld" style="align-self:center;font-size:12.5px;color:var(--mut)"></span>
+    </div>
+  </div>
+
+  <div class="foot"><a href="index.html">← zurück zum Portal</a></div>
+</div></div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     REITER 5 – FÖHN
      ══════════════════════════════════════════════════════════════ -->
 <div class="tab" id="tab-foehn"><div class="wrap">
 
@@ -518,6 +582,7 @@ Array.prototype.forEach.call(document.querySelectorAll('#reiter button'),functio
     window.scrollTo(0,0);
     try { location.hash=ziel; } catch(e){}
     if(ziel==='foehn') foehnStarten();
+    if(ziel==='schrauben') schrStarten();
   };
 });
 function reiterOeffnen(name){
@@ -1257,6 +1322,143 @@ function foehnStarten(){
   ladeWind(); ladeDp(); ladeStatus(); ladeSteuerung();
   setInterval(ladeWind,5*60*1000); setInterval(ladeDp,5*60*1000); setInterval(ladeStatus,2*60*1000);
   setTimeout(function(){ if(karte) karte.invalidateSize(); },250);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SCHRAUBEN – Bergmontage je Konstruktionstyp erfassen
+   Vorlage: uploads/schrauben_plan.json (aus den Mauchle-Plänen ausgelesen).
+   Erfasst wird die Anzahl JE KNIETRÄGER; eine Primärkonstruktion hat zwei.
+   Gespeichert nach RTDB erfassung/schrauben/<TYP>; stahlbau.html liest das.
+   ══════════════════════════════════════════════════════════════ */
+var SCHR_VORLAGE=null, SCHR_STAND={}, SCHR_ZAHL={}, SCHR_TYP=null, SCHR_POS=[], schrGestartet=false;
+var SCHR_NAMEN={ 'A_2025':'A 2025','A_2026':'A 2026','B_2025':'B 2025','B_2026':'B 2026',
+  'B_8er':'B 8er','C_2026':'C 2026','D_2025':'D 2025','D_2026':'D 2026',
+  'E_2025':'E 2025','E_2026':'E 2026' };
+
+function schrStarten(){
+  if(schrGestartet) return;
+  schrGestartet=true;
+  Promise.all([
+    fetch('uploads/schrauben_plan.json').then(function(r){ return r.json(); }),
+    fetch('uploads/tables/typen.json').then(function(r){ return r.json(); }).catch(function(){ return {typen:{}}; }),
+    fetch(RTDB+'/schrauben.json?_='+Date.now(),{cache:'no-store'}).then(function(r){ return r.json(); }).catch(function(){ return null; })
+  ]).then(function(a){
+    SCHR_VORLAGE=a[0];
+    var t=(a[1]&&a[1].typen)||{};
+    SCHR_ZAHL={};
+    Object.keys(t).forEach(function(id){ SCHR_ZAHL[t[id]]=(SCHR_ZAHL[t[id]]||0)+1; });
+    SCHR_STAND=a[2]||{};
+    schrTypenZeichnen();
+    schrTypWaehlen(Object.keys(SCHR_VORLAGE.typen)[0]);
+  }).catch(function(){
+    $('schrListe').innerHTML='<div class="hinw">Vorlage konnte nicht geladen werden. '+
+      'Einmal mit Internet öffnen.</div>';
+  });
+}
+
+function schrTypenZeichnen(){
+  var h='';
+  Object.keys(SCHR_VORLAGE.typen).forEach(function(k){
+    var n=SCHR_ZAHL[k], fertig=SCHR_STAND[k]&&SCHR_STAND[k].pos;
+    h+='<button data-typ="'+k+'" class="'+(fertig?'fertig':'')+'" onclick="schrTypWaehlen(\''+k+'\')">'
+      +esc(SCHR_NAMEN[k]||k)+(n?'<span class="n">'+n+'</span>':'')+'</button>';
+  });
+  $('schrTypen').innerHTML=h;
+  var offen=Object.keys(SCHR_VORLAGE.typen).filter(function(k){ return !(SCHR_STAND[k]&&SCHR_STAND[k].pos); }).length;
+  $('zSchr').textContent=offen?offen:'✓';
+}
+
+function schrTypWaehlen(k){
+  SCHR_TYP=k;
+  Array.prototype.forEach.call(document.querySelectorAll('#schrTypen button'),function(b){
+    b.classList.toggle('an', b.getAttribute('data-typ')===k); });
+  var v=SCHR_VORLAGE.typen[k];
+  // gespeicherter Stand hat Vorrang vor der Planvorlage
+  var g=SCHR_STAND[k];
+  SCHR_POS=(g&&g.pos?g.pos:v.pos).map(function(p){
+    return { anz:(p.proKT!=null?p.proKT:p.anz), was:p.was, km:!!p.km, md:p.md||'',
+             ort:p.ort||'', fuss:!!p.fuss, eigen:!!p.eigen };
+  });
+  $('schrPlan').innerHTML='Plan <b>'+esc(v.plan)+'</b> · '
+    +'<a href="'+esc(v.pdf)+'" target="_blank" rel="noopener">Plan öffnen (PDF)</a>'
+    +(g&&g.stand?' · zuletzt gespeichert '+esc(deDat(g.stand)):'');
+  $('schrMeld').textContent='';
+  schrZeichnen();
+}
+
+function schrZeichnen(){
+  var h='';
+  SCHR_POS.forEach(function(p,i){
+    h+='<div class="schrPos'+(p.ort?' o-'+p.ort:'')+'">'
+      +'<input class="anz" type="number" min="0" inputmode="numeric" value="'+p.anz+'" '
+        +'onchange="schrFeld('+i+',\'anz\',this.value)">'
+      +'<div class="was">'+esc(p.was)+(p.km?' <span style="color:#c25708">+ Kontermutter</span>':'')
+        +'<small>'+esc(p.fuss?'am Stützenfuss / Mikropfahl':'')+(p.fuss&&p.md?' · ':'')+esc(p.md)+'</small></div>'
+      +'<div class="ortBtns">'
+        +'<button data-ort="berg" class="'+(p.ort==='berg'?'an':'')+'" title="Berg" onclick="schrOrt('+i+',\'berg\')">🟡</button>'
+        +'<button data-ort="tal"  class="'+(p.ort==='tal' ?'an':'')+'" title="Tal"  onclick="schrOrt('+i+',\'tal\')">🔴</button>'
+        +'<button data-ort="weg"  class="'+(p.ort==='weg' ?'an':'')+'" title="zählt nicht" onclick="schrOrt('+i+',\'weg\')">⚪</button>'
+      +'</div>'
+      +(p.eigen?'<button class="weg" title="Zeile löschen" onclick="schrLoeschen('+i+')" '
+        +'style="border:none;background:none;color:var(--rot);font-size:19px;font-weight:900;cursor:pointer">×</button>':'')
+      +'</div>';
+  });
+  $('schrListe').innerHTML=h;
+  schrSummeZeichnen();
+}
+
+function schrFeld(i,f,v){ SCHR_POS[i][f]=(f==='anz'?(parseInt(v,10)||0):v); schrSummeZeichnen(); }
+function schrOrt(i,o){ SCHR_POS[i].ort=(SCHR_POS[i].ort===o?'':o); schrZeichnen(); }
+function schrLoeschen(i){ SCHR_POS.splice(i,1); schrZeichnen(); }
+
+function schrNeu(){
+  var was=prompt('Schraube (z.B. "HV M20×75 10.9" oder "M20×70 8.8"):','');
+  if(!was) return;
+  SCHR_POS.push({ anz:4, was:was.trim(), km:/konter/i.test(was), md:'', ort:'berg', fuss:false, eigen:true });
+  schrZeichnen();
+}
+
+function schrSummeZeichnen(){
+  var summe={}, n=0;
+  SCHR_POS.forEach(function(p){
+    if(p.ort!=='berg'||!p.anz) return;
+    summe[p.was]=(summe[p.was]||0)+p.anz*2;
+    if(p.km) summe['Kontermutter '+(String(p.was).match(/M\d+/)||[''])[0]]=
+      (summe['Kontermutter '+(String(p.was).match(/M\d+/)||[''])[0]]||0)+p.anz*2;
+    n++;
+  });
+  var k=Object.keys(summe).sort();
+  var h='<h4>Am Berg je Primärkonstruktion (2 Knieträger)</h4>';
+  if(!k.length){ h+='<div style="font-size:13px;opacity:.75">Noch nichts als 🟡 Berg markiert.</div>'; }
+  else {
+    h+='<table>';
+    k.forEach(function(x){ h+='<tr><td>'+esc(x)+'</td><td class="n">'+summe[x]+'</td></tr>'; });
+    h+='</table>';
+  }
+  $('schrSumme').innerHTML=h;
+}
+
+function schrSpeichern(){
+  if(!SCHR_TYP) return;
+  var offen=SCHR_POS.filter(function(p){ return !p.ort; }).length;
+  if(offen && !confirm(offen+' Position'+(offen>1?'en sind':' ist')+' noch nicht zugeordnet. Trotzdem speichern?')) return;
+  var obj={ stand:heuteISO(), plan:SCHR_VORLAGE.typen[SCHR_TYP].plan,
+    pos:SCHR_POS.map(function(p){
+      return { proKT:p.anz, was:p.was, km:p.km, md:p.md, ort:p.ort, fuss:p.fuss, eigen:p.eigen };
+    }) };
+  $('schrMeld').textContent='speichert …';
+  fetch(RTDB+'/schrauben/'+SCHR_TYP+'.json',{method:'PUT',body:JSON.stringify(obj)})
+    .then(function(r){ if(!r.ok) throw 0;
+      SCHR_STAND[SCHR_TYP]=obj;
+      schrTypenZeichnen();
+      Array.prototype.forEach.call(document.querySelectorAll('#schrTypen button'),function(b){
+        b.classList.toggle('an', b.getAttribute('data-typ')===SCHR_TYP); });
+      $('schrMeld').style.color='var(--gruen)';
+      $('schrMeld').textContent='✓ '+(SCHR_NAMEN[SCHR_TYP]||SCHR_TYP)+' gespeichert';
+      setTimeout(function(){ $('schrMeld').textContent=''; },4000);
+    })
+    .catch(function(){ $('schrMeld').style.color='var(--rot)';
+      $('schrMeld').textContent='⚠ Speichern fehlgeschlagen'; });
 }
 
 /* ══ Start ══════════════════════════════════════════════════ */

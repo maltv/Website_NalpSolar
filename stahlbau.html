@@ -459,11 +459,47 @@ if('serviceWorker' in navigator){ window.addEventListener('load',function(){ nav
    Mengen Typ E 2026: Angabe V. Malt 05.08.2026; die Dimensionen decken sich mit
    dem Plan Primaerkonstruktion_TypE_2026 (M36×150 / M30×130 / M27×120 8.8,
    HV M27×100 10.9 an der Fussplatte).
+   Mengen Typ B/C/D 2026: Angabe V. Malt 17.08.2026, am selben Tag gegen die Pläne
+   M-009 Rev B / M-010 Rev B / Typ D_2026 geprüft (Anzahl je Anschluss und der
+   Kontermutter-Vermerk stehen so in den Plänen).
+   ACHTUNG: Die Listen zeigen NUR die Bergmontage. Verbindungen, die im Tal
+   vormontiert werden, sind bewusst nicht enthalten.
    Für die übrigen Typen sind die Stückzahlen noch nicht bestätigt – das Werkzeug
    sagt das offen, statt zu schätzen. */
 var SR_TYPEN = null;
 
 var SR_REGELN = {
+  'B_2026': {
+    bestaetigt: true,
+    quelle: 'Angabe V. Malt 17.08.2026 · Plan 24027-S-0-M-009 Rev B',
+    pos: [
+      { anz:16, was:'HV M20×75 10.9',   wo:'4 Fussplatten × 4 Schrauben',        md:'450 Nm (Tab. 2)' },
+      { anz:2,  was:'M24×100 8.8',      wo:'Fussplatte ↔ Stütze S1 + S4 (Tal)',  md:'714 Nm (Tab. 1)' },
+      { anz:2,  was:'M24×100 8.8',      wo:'Fussplatte ↔ Stütze S2 + S3',        md:'mit Kontermutter, kein Drehmoment' },
+      { anz:2,  was:'Kontermutter M24', wo:'zu S2 + S3',                         md:'nicht vergessen' },
+      { anz:12, was:'M16×65 8.8',       wo:'Querträger, 2 Anschlüsse × 6',       md:'206 Nm (Tab. 1)' }
+    ]
+  },
+  'C_2026': {
+    bestaetigt: true,
+    quelle: 'Angabe V. Malt 17.08.2026 · Plan 24027-S-0-M-010 Rev B',
+    pos: [
+      { anz:16, was:'HV M24×85 10.9',   wo:'4 Fussplatten × 4 Schrauben',        md:'800 Nm (Tab. 2)' },
+      { anz:4,  was:'M30×120 8.8',      wo:'Fussplatte ↔ Stütze, alle 4',        md:'mit Kontermutter, kein Drehmoment' },
+      { anz:4,  was:'Kontermutter M30', wo:'zu allen 4 Stützen',                 md:'nicht vergessen' },
+      { anz:12, was:'M20×80 8.8',       wo:'Querträger, 2 Anschlüsse × 6',       md:'415 Nm (Tab. 1)' }
+    ]
+  },
+  'D_2026': {
+    bestaetigt: true,
+    quelle: 'Angabe V. Malt 17.08.2026 · Plan Primärkonstruktion Typ D 2026',
+    pos: [
+      { anz:16, was:'HV M24×85 10.9',   wo:'4 Fussplatten × 4 Schrauben',        md:'800 Nm (Tab. 2)' },
+      { anz:4,  was:'M30×130 8.8',      wo:'Fussplatte ↔ Stütze, alle 4',        md:'mit Kontermutter, kein Drehmoment' },
+      { anz:4,  was:'Kontermutter M30', wo:'zu allen 4 Stützen',                 md:'nicht vergessen' },
+      { anz:12, was:'M24×90 8.8',       wo:'Querträger, 2 Anschlüsse × 6',       md:'714 Nm (Tab. 1)' }
+    ]
+  },
   'E_2026': {
     bestaetigt: true,
     quelle: 'Angabe V. Malt 05.08.2026 · Plan Primärkonstruktion Typ E 2026',
@@ -492,10 +528,38 @@ var SR_DIM = {
   'E_2025':'M36×150, M27×120/100, M12×45, M10×40 · HV M30×105'
 };
 
+/* Im Admin (Reiter «Schrauben») erfasste Listen haben Vorrang vor den fest
+   hinterlegten Regeln – dort wird je Knieträger erfasst, hier × 2 gerechnet. */
+var SR_RTDB='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app/erfassung/schrauben';
+function srErfasstLaden(){
+  return fetch(SR_RTDB+'.json?_='+Date.now(),{cache:'no-store'})
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if(!j) return;
+      Object.keys(j).forEach(function(t){
+        var e=j[t]; if(!e||!e.pos) return;
+        var pos=[], km={};
+        e.pos.forEach(function(p){
+          if(p.ort!=='berg'||!p.proKT) return;
+          pos.push({ anz:p.proKT*2, was:p.was, wo:p.fuss?'am Stützenfuss / Mikropfahl':'', md:p.md||'' });
+          if(p.km){ var g=(String(p.was).match(/M\d+/)||[''])[0];
+            km[g]=(km[g]||0)+p.proKT*2; }
+        });
+        Object.keys(km).forEach(function(g){
+          pos.push({ anz:km[g], was:'Kontermutter '+g, wo:'zu den Verbindungen oben', md:'nicht vergessen' });
+        });
+        if(pos.length) SR_REGELN[t]={ bestaetigt:true, quelle:'im Admin erfasst, Stand '+(e.stand||'–')
+          +(e.plan?' · Plan '+e.plan:''), pos:pos };
+      });
+    }).catch(function(){});
+}
+
 function srTypenLaden(){
   if(SR_TYPEN) return Promise.resolve(SR_TYPEN);
-  return fetch('uploads/tables/typen.json').then(function(r){ return r.json(); })
-    .then(function(j){ SR_TYPEN=j.typen||{}; return SR_TYPEN; });
+  return Promise.all([
+    fetch('uploads/tables/typen.json').then(function(r){ return r.json(); }),
+    srErfasstLaden()
+  ]).then(function(a){ SR_TYPEN=a[0].typen||{}; return SR_TYPEN; });
 }
 
 function srLeeren(){
@@ -579,7 +643,8 @@ function srRechnen(){
     if(doppelt.length) h+='<div class="srWarn">Doppelt eingegeben (nur einmal gezählt): '
       +doppelt.join(', ')+'</div>';
 
-    h+='<div class="srFuss">Anziehen: 8.8 innerhalb der Konstruktion nach Tabelle 1, '
+    h+='<div class="srFuss"><b>Nur Bergmontage</b> – was im Tal vormontiert wird, steht nicht in der Liste.<br>'
+      +'Anziehen: 8.8 innerhalb der Konstruktion nach Tabelle 1, '
       +'HV 10.9 an Fuss-/Kopfplatte nach Tabelle 2 (siehe unten). '
       +'Verbindungen mit Kontermutter werden <b>nicht</b> auf Drehmoment angezogen.<br>'
       +'Typ aus den ILF-Belegungslisten (Stand 10.07.2026). In Nalpi steht bei manchen '

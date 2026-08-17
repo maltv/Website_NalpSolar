@@ -72,6 +72,12 @@
   .doc .go{font-size:13px;font-weight:900;color:var(--rot);}
   .doc:active{transform:scale(.99);}
 
+  .kette{display:flex;flex-wrap:wrap;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line);
+    border-radius:12px;padding:10px 12px;margin:0 0 10px;box-shadow:0 4px 12px rgba(10,22,38,.05);}
+  .kette b{font-size:13px;font-weight:900;} .kette i{font-style:normal;color:var(--rot);font-weight:900;}
+  .kette .n{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;
+    background:var(--rot-d);color:#fff;font-size:11px;font-weight:900;margin-right:5px;}
+
   .src{font-size:11px;color:var(--muted);margin-top:22px;line-height:1.6;border-top:1px solid var(--line);padding-top:12px;}
   .lb{display:none;} .lb.on{display:block;}
   @media(max-width:560px){ .docs{grid-template-columns:1fr;} .callgrid{grid-template-columns:1fr 1fr;} }
@@ -137,10 +143,20 @@
 <h2>📄 Sicherheits- &amp; Rettungskonzepte</h2>
 <p class="lead">Die gültigen Konzepte als PDF – zum Nachlesen und Vorzeigen (Suva, UBB, Bauherr).</p>
 <div class="docs">
+  <a class="doc neu" href="Sicherheit/merkblatt-psaga-aluleiter-de-pl-20260817.pdf" target="_blank">
+    <div class="dt">Merkblatt PSAgA – Aluleiter (DE/PL)</div>
+    <div class="ds">Zweisprachiges Merkblatt zur Unterweisung: Modul fixieren ab Aluleiter (Kurzeinsatz), Sicherung mit PETZL Grillon, Rettung, Verbote. Wird jedem Unterwiesenen abgegeben.</div>
+    <div class="dm"><span class="rev">17.08.2026 · DE/PL</span><span class="go">PDF öffnen →</span></div>
+  </a>
+  <a class="doc neu" href="Sicherheit/unterweisung-psaga-aluleiter-formular-20260817.pdf" target="_blank">
+    <div class="dt">Formular: Unterweisung PSAgA/Aluleiter</div>
+    <div class="ds">FO 2.1-32 «Erfolgte Unterweisung», Inhalt zweisprachig DE/PL. Ausdrucken, unterschreiben lassen. <b>Keine PSAgA-Schulung</b> – gilt nur für die beschriebenen Arbeiten.</div>
+    <div class="dm"><span class="rev">17.08.2026 · FO 2.1-32</span><span class="go">PDF öffnen →</span></div>
+  </a>
   <a class="doc neu" href="Sicherheit/psaga-siko-v1-20260701.pdf" target="_blank">
     <div class="dt">SiKo PSAgA – Montage Modultische</div>
-    <div class="ds">Sicherheitskonzept Arbeiten mit Absturzgefahr (Hebebühne, Branach-Leiter, Auffanggurt). Ersteller: S. Gäumann. Steilhang-Ergänzung ist beim SIBE in Erarbeitung (Stand 24.07.2026).</div>
-    <div class="dm"><span class="rev">V1.0 · 01.07.2026</span><span class="go">PDF öffnen →</span></div>
+    <div class="ds">Sicherheitskonzept Arbeiten mit Absturzgefahr: Hebebühne, Branach-Leiter und – neu seit Rev. C (15.06.2026) – Aluleiter mit Positionierungsgerät PETZL Grillon (Ziff. 1.5, S. 8). Ersteller: S. Gäumann. Steilhang-Ergänzung ist beim SIBE in Erarbeitung.</div>
+    <div class="dm"><span class="rev">V1.0 · 01.07.2026 (Rev. C)</span><span class="go">PDF öffnen →</span></div>
   </a>
   <a class="doc" href="Sicherheit/uebergeordnetes-siko-be6010-a4.pdf" target="_blank">
     <div class="dt">Übergeordnetes Sicherheitskonzept</div>
@@ -204,12 +220,54 @@
     <li><b>Baumaschinen haben immer Vortritt</b> – Blickkontakt mit dem Maschinisten, toter Winkel!</li>
     <li><b>Kein Alkohol. Rauchen strikt verboten.</b></li>
     <li>Mängel und Beinaheunfälle <b>sofort melden</b>. Baustellensprache ist Deutsch.</li>
-    <li>Hebebühne, Branach-Leiter, Stapler, Baumaschinen: <b>nur mit Ausbildung / separater Unterweisung</b>.</li>
+    <li>Hebebühne, Branach-Leiter, Aluleiter, Stapler, Baumaschinen: <b>nur mit Ausbildung / separater Unterweisung</b>.</li>
   </ul>
 </div>
+<h2>🪜 PSAgA – Arbeiten mit Absturzgefahr</h2>
+<p class="lead">Stand: SiKo PSAgA V1.0 vom 01.07.2026 (letzte Revision Rev. C, 15.06.2026) – neu mit der <b>Aluleiter mit Positionierungsgerät</b>.</p>
+<div class="kette">
+  <b><span class="n">1</span>Hubarbeitsbühne</b> <i>→</i>
+  <b><span class="n">2</span>Branach-Leiter</b> <i>→</i>
+  <b><span class="n">3</span>Aluleiter mit Positionierungsgerät</b>
+</div>
 <div class="warn blue">
-  <div class="wt">PSAgA – Arbeiten mit Absturzgefahr (Kurzfassung)</div>
-  <div class="wb">Montagepunkte auf 4.1–6.0 m → ab 2 m gilt Absturzgefahr. <b>Kollektivschutz zuerst: Hebebühne</b> (Ausbildung Kat. 3b, im Korb Auffanggurt + am Korb fixiert). <b>Branach-Leiter</b> nur nach separater Unterweisung, nur mit Gurt und am Seil; andere Leitern an der Primärkonstruktion sind <b>verboten</b>. Details im SiKo PSAgA V1.0 (oben).</div>
+  <div class="wt">Grundsatz</div>
+  <div class="wb">Montagepunkte liegen auf <b>4.1 / 4.9 / 6.0 m</b> → ab 2 m Absturzhöhe ist PSAgA zwingend.
+  <b>Kollektivschutz zuerst:</b> die Hubarbeitsbühne (Ausbildung Kat. 3b, im Korb Auffanggurt <b>am Korb fixiert</b> – Katapulteffekt)
+  deckt rund <b>95 %</b> der Anlage ab. Nur wo sie nicht hinkommt, kommt eine Leiter zum Einsatz.</div>
+</div>
+<div class="warn amber">
+  <div class="wt">Aluleiter mit Positionierungsgerät – nur für den Kurzeinsatz</div>
+  <div class="wb">Zugelassen <b>ausschliesslich</b> für einen Arbeitsschritt: das frisch mit dem Kran versetzte Modul mit
+  <b>2 Schrauben</b> fixieren (ca. 1 Minute pro Schraube). Alle übrigen Verschraubungen und Befestigungen macht danach
+  die Equipe ab Hubarbeitsbühne.
+  <ul>
+    <li>Leiter gegen <b>Kippen, Verdrehen und Wegrutschen</b> sichern; Anlegewinkel 65–75°; nur <b>eine Person</b> auf der Leiter; Werkzeug gesichert.</li>
+    <li>Auf der Arbeitsposition mit <b>PETZL Grillon Hook 6 m</b> (integrierter Kantenschutz) sichern – <b>erst sichern, dann arbeiten</b>.</li>
+    <li>Seil <b>immer straff halten</b>: Halte-/Positionierungssystem, <b>kein</b> Auffangsystem – ein freier Fall darf gar nicht möglich sein. Nie ausbinden.</li>
+    <li>Kein Leitereinsatz bei starkem Wind/Föhn, Gewitter, Nässe oder Vereisung.</li>
+    <li><b>Jede andere Arbeit ab der Leiter ist verboten</b> – ebenso andere Leitern an der Primärkonstruktion.</li>
+  </ul></div>
+</div>
+<div class="warn green">
+  <div class="wt">Rettung – innerhalb von 20 Minuten</div>
+  <div class="wb"><b>Aluleiter:</b> die zweite Person steigt hoch, öffnet das Grillon und lässt den Verunfallten kontrolliert zu Boden ab.
+  <b>Branach-Leiter:</b> Ablassen vom Boden über das integrierte Rettungssystem. Danach Erste Hilfe, Alarm <b>144</b> / <b>1414</b>,
+  Bauführung informieren, Hängetrauma beachten. <b>Keine Alleinarbeit</b> – immer zwei ausgebildete Personen, die zweite ist die
+  Rettungsperson. Die Rettung wird vor Ort unterwiesen und geübt.</div>
+</div>
+<div class="warn">
+  <div class="wt">Das ersetzt keine Ausbildung</div>
+  <div class="wb">Für PSAgA-Arbeiten braucht es den <b>Grundkurs PSAgA</b>, für die Hubarbeitsbühne die <b>Ausbildung Kat. 3b</b>.
+  Die Baustellenunterweisung (Formular unten) ist eine tätigkeitsbezogene Instruktion und <b>keine PSAgA-Schulung</b>.
+  Die Ausrüstung kommt vom SIBE und wird jährlich geprüft – vor jedem Einsatz sichtkontrollieren, beschädigtes oder
+  sturzbelastetes Material sofort aussondern und melden.</div>
+</div>
+<div class="warn amber">
+  <div class="wt">Steilhang – noch nicht freigegeben</div>
+  <div class="wb">Für die steilsten Hangbereiche ist ein <b>separates PSAgA-/Rettungskonzept</b> in Erarbeitung (Betonblöcke für die
+  Anschlagpunkte ab der 2. Septemberwoche). Bis zur Freigabe <b>keine PSAgA-Arbeiten im Steilhang ohne ausdrückliche Anweisung
+  der Bauführung</b>.</div>
 </div>
 </div>
 
@@ -257,10 +315,20 @@
 <h2>📄 Safety &amp; rescue concepts</h2>
 <p class="lead">The valid concepts as PDF (in German) – for reference and inspections (Suva, environmental supervision, client).</p>
 <div class="docs">
+  <a class="doc neu" href="Sicherheit/merkblatt-psaga-aluleiter-de-pl-20260817.pdf" target="_blank">
+    <div class="dt">Leaflet PSAgA – aluminium ladder (DE/PL)</div>
+    <div class="ds">Bilingual German/Polish leaflet for the instruction: fixing a module from the aluminium ladder (short intervention), securing with the PETZL Grillon, rescue, prohibitions. Handed to every person instructed.</div>
+    <div class="dm"><span class="rev">17.08.2026 · DE/PL</span><span class="go">Open PDF →</span></div>
+  </a>
+  <a class="doc neu" href="Sicherheit/unterweisung-psaga-aluleiter-formular-20260817.pdf" target="_blank">
+    <div class="dt">Form: instruction PSAgA / aluminium ladder</div>
+    <div class="ds">FO 2.1-32 «Instruction carried out», content bilingual DE/PL. Print and collect signatures. <b>Not a PSAgA training course</b> – valid only for the described work.</div>
+    <div class="dm"><span class="rev">17.08.2026 · FO 2.1-32</span><span class="go">Open PDF →</span></div>
+  </a>
   <a class="doc neu" href="Sicherheit/psaga-siko-v1-20260701.pdf" target="_blank">
     <div class="dt">Safety concept PSAgA – module table assembly</div>
-    <div class="ds">Work with fall hazard (MEWP, Branach ladder, harness). Author: S. Gäumann. Steep-slope supplement in preparation (SIBE, as of 24.07.2026).</div>
-    <div class="dm"><span class="rev">V1.0 · 01.07.2026</span><span class="go">Open PDF →</span></div>
+    <div class="ds">Work with fall hazard: MEWP, Branach ladder and – new since Rev. C (15.06.2026) – aluminium ladder with the PETZL Grillon positioning device (sect. 1.5, p. 8). Author: S. Gäumann. Steep-slope supplement in preparation.</div>
+    <div class="dm"><span class="rev">V1.0 · 01.07.2026 (Rev. C)</span><span class="go">Open PDF →</span></div>
   </a>
   <a class="doc" href="Sicherheit/uebergeordnetes-siko-be6010-a4.pdf" target="_blank">
     <div class="dt">Overarching safety concept</div>
@@ -324,12 +392,54 @@
     <li><b>Construction machines always have priority</b> – eye contact with the operator, blind spot!</li>
     <li><b>No alcohol. Smoking strictly forbidden.</b></li>
     <li>Report defects and near misses <b>immediately</b>. The site language is German.</li>
-    <li>MEWP, Branach ladder, forklift, machines: <b>only with training / separate instruction</b>.</li>
+    <li>MEWP, Branach ladder, aluminium ladder, forklift, machines: <b>only with training / separate instruction</b>.</li>
   </ul>
 </div>
+
+<h2>🪜 PSAgA – work with fall hazard</h2>
+<p class="lead">As of: PSAgA safety concept V1.0 of 01.07.2026 (latest revision Rev. C, 15.06.2026) – now including the <b>aluminium ladder with work positioning device</b>.</p>
+<div class="kette">
+  <b><span class="n">1</span>MEWP</b> <i>→</i>
+  <b><span class="n">2</span>Branach ladder</b> <i>→</i>
+  <b><span class="n">3</span>Aluminium ladder with positioning device</b>
+</div>
 <div class="warn blue">
-  <div class="wt">PSAgA – work with fall hazard (summary)</div>
-  <div class="wb">Assembly points at 4.1–6.0 m → fall hazard applies from 2 m. <b>Collective protection first: MEWP</b> (licence cat. 3b; in the basket wear a harness fixed to the basket). <b>Branach ladder</b> only after separate instruction, only with harness and on the rope; other ladders on the primary structure are <b>forbidden</b>. Details in the PSAgA safety concept V1.0 (above).</div>
+  <div class="wt">Basic rule</div>
+  <div class="wb">Assembly points are at <b>4.1 / 4.9 / 6.0 m</b> → from 2 m fall height PSAgA is mandatory.
+  <b>Collective protection first:</b> the MEWP (licence cat. 3b; in the basket wear a harness <b>fixed to the basket</b> – catapult effect)
+  covers about <b>95 %</b> of the plant. A ladder is used only where the MEWP cannot reach.</div>
+</div>
+<div class="warn amber">
+  <div class="wt">Aluminium ladder with positioning device – short interventions only</div>
+  <div class="wb">Approved <b>exclusively</b> for one work step: fixing the freshly craned-in module with <b>2 bolts</b>
+  (approx. 1 minute per bolt). All remaining bolting and fastening is then done by the crew from the MEWP.
+  <ul>
+    <li>Secure the ladder against <b>tipping, twisting and slipping</b>; leaning angle 65–75°; only <b>one person</b> on the ladder; tools secured.</li>
+    <li>At the working position attach to the <b>PETZL Grillon Hook 6 m</b> (integrated edge protection) – <b>secure first, then work</b>.</li>
+    <li>Keep the rope <b>taut at all times</b>: this is a work positioning system, <b>not</b> a fall arrest system – a free fall must not be possible at all. Never unclip.</li>
+    <li>No ladder work in strong wind/foehn, thunderstorms, wet or icy conditions.</li>
+    <li><b>Any other work from the ladder is forbidden</b> – as are other ladders on the primary structure.</li>
+  </ul></div>
+</div>
+<div class="warn green">
+  <div class="wt">Rescue – within 20 minutes</div>
+  <div class="wb"><b>Aluminium ladder:</b> the second person climbs up, opens the Grillon and lowers the casualty to the ground in a controlled way.
+  <b>Branach ladder:</b> lowering from the ground via the ladder's integrated rescue system. Then first aid, alarm <b>144</b> / <b>1414</b>,
+  inform site management, watch for suspension trauma. <b>No lone working</b> – always two trained persons, the second one is the
+  rescuer. The rescue is instructed and practised on site.</div>
+</div>
+<div class="warn">
+  <div class="wt">This does not replace training</div>
+  <div class="wb">PSAgA work requires the <b>basic PSAgA course</b>, the MEWP requires <b>licence cat. 3b</b>.
+  The site instruction (form above) is a task-related instruction and <b>not a PSAgA training course</b>.
+  Equipment is issued by the safety officer and inspected annually – check visually before every use; discard and report
+  damaged equipment or equipment that has arrested a fall.</div>
+</div>
+<div class="warn amber">
+  <div class="wt">Steep slope – not yet released</div>
+  <div class="wb">A <b>separate PSAgA/rescue concept</b> is being prepared for the steepest slope sections (concrete blocks for the
+  anchor points from the 2nd week of September). Until it is released, <b>no PSAgA work on the steep slope without explicit
+  instruction from site management</b>.</div>
 </div>
 </div>
 
@@ -377,10 +487,20 @@
 <h2>📄 Concetti di sicurezza e salvataggio</h2>
 <p class="lead">I concetti in vigore come PDF (in tedesco) – per consultazione e controlli (Suva, supervisione ambientale, committente).</p>
 <div class="docs">
+  <a class="doc neu" href="Sicherheit/merkblatt-psaga-aluleiter-de-pl-20260817.pdf" target="_blank">
+    <div class="dt">Promemoria PSAgA – scala in alluminio (DE/PL)</div>
+    <div class="ds">Promemoria bilingue tedesco/polacco per l'istruzione: fissare il modulo dalla scala in alluminio (intervento breve), assicurazione con il PETZL Grillon, salvataggio, divieti. Consegnato a ogni persona istruita.</div>
+    <div class="dm"><span class="rev">17.08.2026 · DE/PL</span><span class="go">Apri PDF →</span></div>
+  </a>
+  <a class="doc neu" href="Sicherheit/unterweisung-psaga-aluleiter-formular-20260817.pdf" target="_blank">
+    <div class="dt">Modulo: istruzione PSAgA / scala in alluminio</div>
+    <div class="ds">FO 2.1-32 «Istruzione effettuata», contenuto bilingue DE/PL. Stampare e far firmare. <b>Non è un corso PSAgA</b> – vale solo per i lavori descritti.</div>
+    <div class="dm"><span class="rev">17.08.2026 · FO 2.1-32</span><span class="go">Apri PDF →</span></div>
+  </a>
   <a class="doc neu" href="Sicherheit/psaga-siko-v1-20260701.pdf" target="_blank">
     <div class="dt">Concetto di sicurezza PSAgA – montaggio tavoli moduli</div>
-    <div class="ds">Lavori con pericolo di caduta (piattaforma, scala Branach, imbracatura). Autore: S. Gäumann. Integrazione per pendii ripidi in preparazione (SIBE, stato 24.07.2026).</div>
-    <div class="dm"><span class="rev">V1.0 · 01.07.2026</span><span class="go">Apri PDF →</span></div>
+    <div class="ds">Lavori con pericolo di caduta: piattaforma, scala Branach e – novità dalla Rev. C (15.06.2026) – scala in alluminio con dispositivo di posizionamento PETZL Grillon (cifra 1.5, p. 8). Autore: S. Gäumann. Integrazione per pendii ripidi in preparazione.</div>
+    <div class="dm"><span class="rev">V1.0 · 01.07.2026 (Rev. C)</span><span class="go">Apri PDF →</span></div>
   </a>
   <a class="doc" href="Sicherheit/uebergeordnetes-siko-be6010-a4.pdf" target="_blank">
     <div class="dt">Concetto di sicurezza generale</div>
@@ -444,12 +564,54 @@
     <li><b>Le macchine di cantiere hanno sempre la precedenza</b> – contatto visivo con il macchinista, angolo morto!</li>
     <li><b>Niente alcol. Vietato severamente fumare.</b></li>
     <li>Segnalare <b>subito</b> difetti e quasi-incidenti. La lingua di cantiere è il tedesco.</li>
-    <li>Piattaforma, scala Branach, muletto, macchine: <b>solo con formazione / istruzione separata</b>.</li>
+    <li>Piattaforma, scala Branach, scala in alluminio, muletto, macchine: <b>solo con formazione / istruzione separata</b>.</li>
   </ul>
 </div>
+
+<h2>🪜 PSAgA – lavori con pericolo di caduta</h2>
+<p class="lead">Stato: concetto di sicurezza PSAgA V1.0 del 01.07.2026 (ultima revisione Rev. C, 15.06.2026) – novità: la <b>scala in alluminio con dispositivo di posizionamento</b>.</p>
+<div class="kette">
+  <b><span class="n">1</span>Piattaforma di lavoro</b> <i>→</i>
+  <b><span class="n">2</span>Scala Branach</b> <i>→</i>
+  <b><span class="n">3</span>Scala in alluminio con dispositivo di posizionamento</b>
+</div>
 <div class="warn blue">
-  <div class="wt">PSAgA – lavori con pericolo di caduta (in breve)</div>
-  <div class="wb">Punti di montaggio a 4.1–6.0 m → il pericolo di caduta vale da 2 m. <b>Prima la protezione collettiva: piattaforma</b> (formazione cat. 3b; nel cestello imbracatura fissata al cestello). <b>Scala Branach</b> solo dopo istruzione separata, solo con imbracatura e assicurati alla fune; altre scale sulla struttura primaria sono <b>vietate</b>. Dettagli nel concetto PSAgA V1.0 (sopra).</div>
+  <div class="wt">Principio</div>
+  <div class="wb">I punti di montaggio si trovano a <b>4.1 / 4.9 / 6.0 m</b> → da 2 m di altezza di caduta la PSAgA è obbligatoria.
+  <b>Prima la protezione collettiva:</b> la piattaforma (formazione cat. 3b; nel cestello imbracatura <b>fissata al cestello</b> – effetto catapulta)
+  copre circa il <b>95 %</b> dell'impianto. La scala si usa solo dove la piattaforma non arriva.</div>
+</div>
+<div class="warn amber">
+  <div class="wt">Scala in alluminio con dispositivo di posizionamento – solo interventi brevi</div>
+  <div class="wb">Ammessa <b>esclusivamente</b> per una operazione: fissare con <b>2 viti</b> il modulo appena posato con la gru
+  (ca. 1 minuto per vite). Tutti gli altri serraggi e fissaggi vengono eseguiti in seguito dalla squadra dalla piattaforma.
+  <ul>
+    <li>Assicurare la scala contro <b>ribaltamento, torsione e scivolamento</b>; angolo d'appoggio 65–75°; <b>una sola persona</b> sulla scala; attrezzi assicurati.</li>
+    <li>In posizione di lavoro assicurarsi con il <b>PETZL Grillon Hook 6 m</b> (protezione spigoli integrata) – <b>prima assicurarsi, poi lavorare</b>.</li>
+    <li>Tenere la fune <b>sempre tesa</b>: è un sistema di posizionamento, <b>non</b> un sistema anticaduta – una caduta libera non deve essere possibile. Non sganciarsi mai.</li>
+    <li>Nessun impiego della scala con vento forte/föhn, temporali, bagnato o gelo.</li>
+    <li><b>Qualsiasi altro lavoro dalla scala è vietato</b> – così come altre scale sulla struttura primaria.</li>
+  </ul></div>
+</div>
+<div class="warn green">
+  <div class="wt">Salvataggio – entro 20 minuti</div>
+  <div class="wb"><b>Scala in alluminio:</b> la seconda persona sale, apre il Grillon e cala l'infortunato a terra in modo controllato.
+  <b>Scala Branach:</b> calata da terra tramite il sistema di salvataggio integrato. Poi primo soccorso, allarme <b>144</b> / <b>1414</b>,
+  informare la direzione di cantiere, attenzione al trauma da sospensione. <b>Nessun lavoro da soli</b> – sempre due persone formate,
+  la seconda è la persona addetta al salvataggio. Il salvataggio viene istruito ed esercitato in cantiere.</div>
+</div>
+<div class="warn">
+  <div class="wt">Non sostituisce la formazione</div>
+  <div class="wb">Per i lavori con PSAgA serve il <b>corso base PSAgA</b>, per la piattaforma la <b>formazione cat. 3b</b>.
+  L'istruzione di cantiere (modulo sopra) è un'istruzione legata all'attività e <b>non è un corso PSAgA</b>.
+  L'equipaggiamento è fornito dal responsabile sicurezza e verificato annualmente – controllo visivo prima di ogni impiego,
+  materiale danneggiato o sollecitato da una caduta va subito scartato e segnalato.</div>
+</div>
+<div class="warn amber">
+  <div class="wt">Pendio ripido – non ancora approvato</div>
+  <div class="wb">Per i tratti più ripidi è in preparazione un <b>concetto PSAgA/salvataggio separato</b> (blocchi di calcestruzzo per i
+  punti di ancoraggio dalla 2ª settimana di settembre). Fino all'approvazione <b>nessun lavoro con PSAgA sul pendio ripido senza
+  istruzione esplicita della direzione di cantiere</b>.</div>
 </div>
 </div>
 
@@ -497,10 +659,20 @@
 <h2>📄 Koncepcje bezpieczeństwa i ratownictwa</h2>
 <p class="lead">Obowiązujące koncepcje jako PDF (po niemiecku) – do wglądu i na kontrole (Suva, nadzór środowiskowy, inwestor).</p>
 <div class="docs">
+  <a class="doc neu" href="Sicherheit/merkblatt-psaga-aluleiter-de-pl-20260817.pdf" target="_blank">
+    <div class="dt">Instrukcja PSAgA – drabina aluminiowa (DE/PL)</div>
+    <div class="ds">Dwujęzyczna instrukcja do szkolenia: mocowanie modułu z drabiny aluminiowej (praca krótkotrwała), zabezpieczenie przyrządem PETZL Grillon, ratowanie, zakazy. Wydawana każdemu przeszkolonemu.</div>
+    <div class="dm"><span class="rev">17.08.2026 · DE/PL</span><span class="go">Otwórz PDF →</span></div>
+  </a>
+  <a class="doc neu" href="Sicherheit/unterweisung-psaga-aluleiter-formular-20260817.pdf" target="_blank">
+    <div class="dt">Formularz: instruktaż PSAgA / drabina aluminiowa</div>
+    <div class="ds">FO 2.1-32 «Przeprowadzony instruktaż», treść dwujęzyczna DE/PL. Wydrukować i zebrać podpisy. <b>To nie jest szkolenie PSAgA</b> – obowiązuje tylko dla opisanych prac.</div>
+    <div class="dm"><span class="rev">17.08.2026 · FO 2.1-32</span><span class="go">Otwórz PDF →</span></div>
+  </a>
   <a class="doc neu" href="Sicherheit/psaga-siko-v1-20260701.pdf" target="_blank">
     <div class="dt">Koncepcja bezpieczeństwa PSAgA – montaż stołów modułowych</div>
-    <div class="ds">Prace z ryzykiem upadku z wysokości (podnośnik, drabina Branach, szelki). Autor: S. Gäumann. Uzupełnienie dla stromych zboczy w opracowaniu (SIBE, stan 24.07.2026).</div>
-    <div class="dm"><span class="rev">V1.0 · 01.07.2026</span><span class="go">Otwórz PDF →</span></div>
+    <div class="ds">Prace z ryzykiem upadku z wysokości: podnośnik, drabina Branach oraz – nowość od Rev. C (15.06.2026) – drabina aluminiowa z przyrządem do pozycjonowania PETZL Grillon (pkt 1.5, s. 8). Autor: S. Gäumann. Uzupełnienie dla stromych zboczy w opracowaniu.</div>
+    <div class="dm"><span class="rev">V1.0 · 01.07.2026 (Rev. C)</span><span class="go">Otwórz PDF →</span></div>
   </a>
   <a class="doc" href="Sicherheit/uebergeordnetes-siko-be6010-a4.pdf" target="_blank">
     <div class="dt">Nadrzędna koncepcja bezpieczeństwa</div>
@@ -564,18 +736,63 @@
     <li><b>Maszyny budowlane mają zawsze pierwszeństwo</b> – kontakt wzrokowy z operatorem, martwe pole!</li>
     <li><b>Zakaz alkoholu. Palenie surowo zabronione.</b></li>
     <li>Usterki i zdarzenia potencjalnie wypadkowe zgłaszać <b>natychmiast</b>. Językiem budowy jest niemiecki.</li>
-    <li>Podnośnik, drabina Branach, wózek widłowy, maszyny: <b>tylko po przeszkoleniu / osobnym instruktażu</b>.</li>
+    <li>Podnośnik, drabina Branach, drabina aluminiowa, wózek widłowy, maszyny: <b>tylko po przeszkoleniu / osobnym instruktażu</b>.</li>
   </ul>
 </div>
+
+<h2>🪜 PSAgA – prace z ryzykiem upadku z wysokości</h2>
+<p class="lead">Stan: koncepcja bezpieczeństwa PSAgA V1.0 z 01.07.2026 (ostatnia rewizja Rev. C, 15.06.2026) – nowość: <b>drabina aluminiowa z przyrządem do pozycjonowania</b>.</p>
+<div class="kette">
+  <b><span class="n">1</span>Podnośnik koszowy</b> <i>→</i>
+  <b><span class="n">2</span>Drabina Branach</b> <i>→</i>
+  <b><span class="n">3</span>Drabina aluminiowa z przyrządem do pozycjonowania</b>
+</div>
 <div class="warn blue">
-  <div class="wt">PSAgA – prace z ryzykiem upadku (w skrócie)</div>
-  <div class="wb">Punkty montażowe na 4.1–6.0 m → ryzyko upadku obowiązuje od 2 m. <b>Najpierw ochrona zbiorowa: podnośnik</b> (uprawnienia kat. 3b; w koszu szelki przypięte do kosza). <b>Drabina Branach</b> tylko po osobnym instruktażu, tylko w szelkach i na linie; inne drabiny na konstrukcji pierwotnej są <b>zabronione</b>. Szczegóły w koncepcji PSAgA V1.0 (powyżej).</div>
+  <div class="wt">Zasada podstawowa</div>
+  <div class="wb">Punkty montażowe znajdują się na wysokości <b>4,1 / 4,9 / 6,0 m</b> → od 2 m wysokości upadku PSAgA jest obowiązkowe.
+  <b>Najpierw ochrona zbiorowa:</b> podnośnik koszowy (uprawnienia kat. 3b, w koszu szelki <b>wpięte do kosza</b> – efekt katapulty)
+  pokrywa około <b>95 %</b> instalacji. Drabina wchodzi w grę tylko tam, gdzie podnośnik nie dojedzie.</div>
+</div>
+<div class="warn amber">
+  <div class="wt">Drabina aluminiowa z przyrządem do pozycjonowania – tylko praca krótkotrwała</div>
+  <div class="wb">Dopuszczona <b>wyłącznie</b> do jednego kroku roboczego: zamocowanie <b>2 śrubami</b> modułu dopiero co ustawionego
+  dźwigiem (ok. 1 minuta na śrubę). Wszystkie pozostałe skręcenia i mocowania wykonuje potem ekipa z podnośnika koszowego.
+  <ul>
+    <li>Zabezpieczyć drabinę przed <b>przewróceniem, obróceniem i poślizgiem</b>; kąt ustawienia 65–75°; na drabinie tylko <b>jedna osoba</b>; narzędzia zabezpieczone.</li>
+    <li>Na stanowisku pracy wpiąć się przyrządem <b>PETZL Grillon Hook 6 m</b> (wbudowana ochrona krawędzi) – <b>najpierw się zabezpieczyć, potem pracować</b>.</li>
+    <li>Linę trzymać <b>zawsze naprężoną</b>: to system podtrzymujący/pozycjonujący, a <b>nie</b> system powstrzymujący spadanie – swobodny upadek nie może być w ogóle możliwy. Nigdy się nie wypinać.</li>
+    <li>Zakaz pracy z drabiny przy silnym wietrze/fenie, burzy, deszczu lub oblodzeniu.</li>
+    <li><b>Każda inna praca z drabiny jest zabroniona</b> – tak samo inne drabiny przy konstrukcji nośnej.</li>
+  </ul></div>
+</div>
+<div class="warn green">
+  <div class="wt">Ratowanie – w ciągu 20 minut</div>
+  <div class="wb"><b>Drabina aluminiowa:</b> druga osoba wchodzi, otwiera Grillon i kontrolowanie opuszcza poszkodowanego na ziemię.
+  <b>Drabina Branach:</b> opuszczanie z poziomu ziemi przez wbudowany system ratowniczy. Potem pierwsza pomoc, alarm <b>144</b> / <b>1414</b>,
+  powiadomić kierownictwo budowy, pamiętać o urazie podwieszenia. <b>Zakaz pracy w pojedynkę</b> – zawsze dwie przeszkolone osoby,
+  druga jest osobą ratującą. Ratowanie jest instruowane i ćwiczone na miejscu.</div>
+</div>
+<div class="warn">
+  <div class="wt">To nie zastępuje szkolenia</div>
+  <div class="wb">Do prac z PSAgA wymagany jest <b>kurs podstawowy PSAgA</b>, do podnośnika koszowego <b>uprawnienia kat. 3b</b>.
+  Instruktaż na budowie (formularz powyżej) jest instruktażem stanowiskowym i <b>nie jest szkoleniem PSAgA</b>.
+  Sprzęt wydaje SIBE i jest kontrolowany co roku – przed każdym użyciem kontrola wzrokowa, sprzęt uszkodzony lub obciążony
+  upadkiem natychmiast wycofać i zgłosić.</div>
+</div>
+<div class="warn amber">
+  <div class="wt">Strome zbocze – jeszcze niezatwierdzone</div>
+  <div class="wb">Dla najbardziej stromych odcinków powstaje <b>osobna koncepcja PSAgA/ratownictwa</b> (bloki betonowe na punkty
+  kotwiczące od 2. tygodnia września). Do jej zatwierdzenia <b>żadnych prac z PSAgA na stromym zboczu bez wyraźnego polecenia
+  kierownictwa budowy</b>.</div>
 </div>
 </div>
 
 <p class="src">
   Quellen / Sources / Fonti / Źródła: Notfallkonzept Berg + Notfallkonzept IP Tal (FO 2.4-07, Stand 06.05.2026) – Nummern 29.07.2026 koordinatengenau verifiziert ·
-  SiKo PSAgA NalpSolar V1.0 (01.07.2026, S. Gäumann) · Übergeordnetes SiKo BE_6010 Rev. A4 ·
+  SiKo PSAgA NalpSolar V1.0 (01.07.2026, letzte Revision Rev. C 15.06.2026, S. Gäumann) – Ziff. 1.5 «Variante Leiter» S. 8 (Aluleiter mit
+  Positionierungsgerät PETZL Grillon 6.0 m), Ziff. 1.6/1.7, 2.2, 4.1/4.2, 5.1 · Merkblatt PSAgA-Aluleiter DE/PL + Unterweisungsformular
+  FO 2.1-32 (beide 17.08.2026) · Suva 84044.d «Acht lebenswichtige Regeln für das Arbeiten mit Anseilschutz» ·
+  Übergeordnetes SiKo BE_6010 Rev. A4 ·
   Gefahrenbeurteilung/Massnahmenplanung Berg / Montage Berg / Tal (07.05.2026) · Sicherheitstag 27.05.2026 ·
   FO 2.1-22 · Baustellendossier NalpSolar Ausgabe 30.07.2026 (Register 2).
   Ablage Originale: Dropbox …\04 Projekt-Q-mangement\06 SGU\. Massgebend ist die deutsche Fassung.
