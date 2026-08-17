@@ -88,47 +88,57 @@
 
   <div class="karte tipp">
     <h2>Eigenbau – Stand 14.08.2026</h2>
-    <p>Zeichnung und Statik sind fertig: <b>≈ 790 kg Stahlbau, 14 Positionen</b>, keine Sonderwerkstoffe.
+    <p>Zeichnung und Statik sind fertig: <b>≈ 870 kg Stahlbau</b>, keine Sonderwerkstoffe. Form nach den Handskizzen vom 17.08., Masse nach Normalprofil 23.070-104 (Betonspur je 80 cm, Mitte 80 cm frei, Platte 16 cm).
        Gebraucht wird das Gerät im <b>September</b>. Material für den Prototyp ist seit Juni bestellt
        (Protokoll Abstimmungssitzung 43, 22.06.2026).</p>
   </div>
 
   <div class="karte">
     <h2>Worum es geht</h2>
-    <p>Ein gezogener Schlitten, der die Betonspur der Baupiste in einem Zug einbaut: Beton aus der Mulde
-       läuft in eine Kammer, wird verdichtet und hinter der Abziehbohle als fertige Spur abgelegt.
+    <p>Ein gezogener Schlitten, der <b>zwei Betonspuren gleichzeitig</b> einbaut: Der Beton fällt aus dem
+       Trichter, wird vom Teilerkeil in der Mitte auf beide Seiten verteilt, mit je einer Vibronadel
+       verdichtet und hinter den Glättplatten als fertige Spur abgelegt.
        Vorbild ist der Schlitten, mit dem die <b>E. Gloggner AG</b> 2022 in Rehetobel zwei Fahrspuren
        eingebaut hat.</p>
     <div class="kennwerte">
-      <div class="kw"><div class="z">3.00 m</div><div class="b">Spurbreite (Vorgabe)</div></div>
+      <div class="kw"><div class="z">2 × 80 cm</div><div class="b">Betonspuren, Mitte 80 cm ohne Beton</div></div>
       <div class="kw"><div class="z">16 cm</div><div class="b">Betondicke, durchgängig</div></div>
       <div class="kw"><div class="z">20 %</div><div class="b">max. Längsneigung (Alphüttenstrasse)</div></div>
-      <div class="kw"><div class="z">2.4 t</div><div class="b">Betriebsgewicht mit Mulde + Ballast</div></div>
-      <div class="kw"><div class="z">41 kN</div><div class="b">Zugkraft im Betrieb</div></div>
-      <div class="kw"><div class="z">0.85 m</div><div class="b">Spur je Muldenfüllung (0.4 m³)</div></div>
+      <div class="kw"><div class="z">2.4 t</div><div class="b">Betriebsgewicht mit Beton + Ballast</div></div>
+      <div class="kw"><div class="z">28 kN</div><div class="b">Zugkraft im Betrieb</div></div>
+      <div class="kw"><div class="z">614 kg</div><div class="b">Beton je Laufmeter Doppelspur</div></div>
     </div>
   </div>
 
   <div class="karte">
     <h2>Die drei Stellen, an denen so ein Schlitten bricht</h2>
-    <p class="lead">Der Frischbetondruck ist <b>nicht</b> das Problem: 6.3 kN/m² bei der Füllmarke, die Bleche sind zu
-       8 % ausgelastet. Gefährlich ist anderes.</p>
+    <p class="lead">Mit dem 90 cm hohen Trichter steht jetzt tatsächlich Betondruck auf der Konstruktion:
+       22.5 kN/m² wenn er voll ist – zehnmal mehr als beim flachen Kasten.</p>
     <div class="bruch">
 
       <div class="bcard">
         <div class="nr">1</div>
-        <div class="t">Die Zugkraft beansprucht den Schürfbalken</div>
-        <div class="s">Die Kette hängt mittig – wie beim Vorbild. Der Balken ist damit ein Einfeldträger
-          über 3.2 m mit Einzellast in der Mitte. Deshalb ist er ein <b>aus 10-mm-Blech geschweisster
-          Kasten mit Schotten alle 500 mm</b> – genau die «Kammern», die man auf den Fotos sieht.
-          Ein dünnwandiges Kaufrohr hält das nicht.</div>
-        <div class="rechnung">M = 90 kN · 3.24 m / 4 = 73 kNm
-Kasten 250×120×10 → <span class="gut">η = 0.62  hält</span>
-RHS 200×100×8     → <span class="schlecht">η = 1.20  zu klein</span></div>
+        <div class="t">Der Trichter – hier drückt der Beton wirklich</div>
+        <div class="s">90 cm Füllhöhe ergeben 22.5 kN/m² auf die Trichterwände. Die naheliegende Rippe
+          Flach 60×8 wäre um 78 % überlastet. Deshalb <b>Wände Blech 6 mm mit Rippen Flach 100×10
+          alle 400 mm</b>.</div>
+        <div class="rechnung">σ = 25 kN/m³ · 0.90 m = 22.5 kN/m²
+Rippe 60×8   → <span class="schlecht">η = 1.78  versagt</span>
+Rippe 100×10 → <span class="gut">η = 0.51  hält</span></div>
       </div>
 
       <div class="bcard">
         <div class="nr">2</div>
+        <div class="t">Der Teilerkeil bei einseitiger Füllung</div>
+        <div class="s">Der Bagger kippt immer auf eine Seite – dann drücken <b>12.2 kN</b> seitlich gegen
+          den Keil. Als glattes Blech versagt er doppelt. Mit <b>Schotten alle 400 mm</b> und beidseitigem
+          Anschluss an den Rahmen ist er weit auf der sicheren Seite.</div>
+        <div class="rechnung">ohne Schotten → <span class="schlecht">η = 2.00  versagt</span>
+mit Schotten  → <span class="gut">η = 0.24  hält</span></div>
+      </div>
+
+      <div class="bcard">
+        <div class="nr">3</div>
         <div class="t">Der Bagger ist stärker als jede sinnvolle Konstruktion</div>
         <div class="s">Ein 20-Tönner zieht am Haken rund 120 kN – das Dreifache der Betriebszugkraft.
           Bleibt der Schlitten an einem Stein hängen, reisst der Rahmen. Deshalb gehört eine
@@ -155,91 +165,21 @@ mit Puffern: Δσ = 9.6 N/mm²                 → <span class="gut">η = 0.21</
     <h2>Zeichnung</h2>
     <p class="lead">Seitlich wischen zum Schauen · vollständige Blätter im PDF (3 × A3, Massstab 1:25).</p>
 
-    <div class="zeichnung">
-      <svg viewBox="-1300 -1250 5300 3900" role="img" aria-label="Draufsicht Betonspurfertiger">
-        <defs>
-          <marker id="p1" markerWidth="60" markerHeight="60" refX="30" refY="6" orient="auto">
-            <path d="M0,0 L36,6 L0,12 z" fill="#a00000"/>
-          </marker>
-        </defs>
-        <g stroke="#111" stroke-width="13" fill="none">
-          <rect x="0" y="0" width="120" height="2000" fill="#cfd8e3"/>
-          <rect x="3120" y="0" width="120" height="2000" fill="#cfd8e3"/>
-          <rect x="0" y="0" width="3240" height="120" fill="#9fb3c8"/>
-          <g stroke="#4a5c70" stroke-width="9">
-            <line x1="500" y1="0" x2="500" y2="120"/><line x1="1000" y1="0" x2="1000" y2="120"/>
-            <line x1="1500" y1="0" x2="1500" y2="120"/><line x1="1740" y1="0" x2="1740" y2="120"/>
-            <line x1="2240" y1="0" x2="2240" y2="120"/><line x1="2740" y1="0" x2="2740" y2="120"/>
-          </g>
-          <rect x="120" y="120" width="3000" height="1180" fill="#f7f7f5" stroke="#999" stroke-width="7" stroke-dasharray="38 26"/>
-          <rect x="0" y="1300" width="3240" height="700" fill="#dde5ee"/>
-          <rect x="0" y="1830" width="3240" height="120" fill="#b9c6d6"/>
-          <g stroke="#4a5c70" stroke-width="9">
-            <line x1="500" y1="1830" x2="500" y2="1950"/><line x1="1000" y1="1830" x2="1000" y2="1950"/>
-            <line x1="1500" y1="1830" x2="1500" y2="1950"/><line x1="2240" y1="1830" x2="2240" y2="1950"/>
-            <line x1="2740" y1="1830" x2="2740" y2="1950"/>
-          </g>
-          <rect x="700" y="230" width="1840" height="1020" fill="none" stroke="#c08000" stroke-width="12" stroke-dasharray="65 40"/>
-          <rect x="700" y="1520" width="1840" height="210" fill="none" stroke="#666" stroke-width="11" stroke-dasharray="60 38"/>
-          <rect x="2660" y="1480" width="440" height="380" fill="#f0e6d2" stroke="#8a6a00" stroke-width="10"/>
-          <rect x="1555" y="-300" width="30" height="420" fill="#0b5394" stroke="none"/>
-          <rect x="1655" y="-300" width="30" height="420" fill="#0b5394" stroke="none"/>
-          <circle cx="1620" cy="-215" r="95" fill="#fff" stroke="#0b5394" stroke-width="24"/>
-          <line x1="1620" y1="-310" x2="1620" y2="-800" stroke="#0b5394" stroke-width="22" stroke-dasharray="90 52"/>
-          <g stroke="#a00000" stroke-width="10">
-            <line x1="120" y1="2280" x2="3120" y2="2280" marker-start="url(#p1)" marker-end="url(#p1)"/>
-            <line x1="3480" y1="0" x2="3480" y2="2000" marker-start="url(#p1)" marker-end="url(#p1)"/>
-          </g>
-        </g>
-        <g stroke="none" font-family="Arial">
-          <text x="1620" y="700" font-size="125" fill="#555" text-anchor="middle">BETONKAMMER</text>
-          <text x="1620" y="850" font-size="105" fill="#555" text-anchor="middle">Füllmarke 250 mm</text>
-          <text x="1620" y="1150" font-size="105" fill="#a06a00" text-anchor="middle">Kippmulde 0.4 m³</text>
-          <text x="1620" y="1650" font-size="105" fill="#555" text-anchor="middle">Ballastriegel</text>
-          <text x="700" y="1780" font-size="110" fill="#333" text-anchor="middle">GLÄTTPLATTE</text>
-          <text x="2880" y="1700" font-size="95" fill="#8a6a00" text-anchor="middle">Aggregat</text>
-          <text x="1620" y="-880" font-size="115" fill="#0b5394" text-anchor="middle">Kette · Scherbolzen Ø18</text>
-          <text x="620" y="-120" font-size="105" fill="#4a5c70" text-anchor="middle">Schotten alle 500</text>
-          <text x="1620" y="2440" font-size="125" fill="#a00000" text-anchor="middle">3000 = SPURBREITE</text>
-          <text x="3600" y="1000" font-size="120" fill="#a00000" text-anchor="middle" transform="rotate(-90 3600 1000)">2000</text>
-          <text x="1620" y="-1050" font-size="130" fill="#111" text-anchor="middle" font-weight="bold">DRAUFSICHT · Zug nach oben</text>
-        </g>
-      </svg>
+    <div class="galerie" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">
+      <figure>
+        <img src="Betonspur/skizzen/260817_Victor_Laengsschnitt.png" alt="Handskizze Laengsschnitt" style="aspect-ratio:22/15;object-fit:contain;background:#fff">
+        <figcaption><b>Handskizze Längsschnitt</b> (17.08.): Zugnase, Einfülltrichter mit Vibronadel, Aggregat, Gewicht, Einstellwinkel für die Spurhöhe.</figcaption>
+      </figure>
+      <figure>
+        <img src="Betonspur/skizzen/260817_Victor_Schnitt_Betontrichter_vorne.png" alt="Handskizze Trichterschnitt" style="aspect-ratio:22/15;object-fit:contain;background:#fff">
+        <figcaption><b>Handskizze Trichter von vorne</b>: Teilerkeil in der Mitte, Beton fällt links und rechts in die zwei Spuren, dazwischen bleibt es frei.</figcaption>
+      </figure>
+      <figure>
+        <img src="Betonspur/skizzen/Normalprofil_Betonspuren_23070-104.png" alt="Normalprofil Betonspuren" style="aspect-ratio:22/15;object-fit:contain;background:#fff">
+        <figcaption><b>Normalprofil 23.070-104</b> (energia alpina, 08.08.2024): 30 | 80 | 40 | 40 | 80 | 30 cm = 3.00 m, Betonplatte 16 cm. Daher stammen die Masse.</figcaption>
+      </figure>
     </div>
-    <p class="zcap">Draufsicht: Kette mittig am Schürfbalken wie beim Vorbild – der Balken ist dafür ein
-       geschweisster Kasten mit Schotten alle 500 mm.</p>
-
-    <div class="zeichnung">
-      <svg viewBox="-1700 -1450 5700 2300" role="img" aria-label="Längsschnitt Betonspurfertiger">
-        <g stroke="#111" stroke-width="13" fill="none">
-          <line x1="-1600" y1="0" x2="3600" y2="0" stroke="#111" stroke-width="15"/>
-          <rect x="2000" y="-160" width="1600" height="160" fill="#d9d9d9" stroke="#555" stroke-width="10"/>
-          <path d="M 120,0 L 120,-300 L 1180,-300 L 1450,-160 L 1450,0 Z" fill="#c9c9c4" stroke="#555" stroke-width="10"/>
-          <line x1="120" y1="-300" x2="1300" y2="-300" stroke="#a00000" stroke-width="12" stroke-dasharray="75 48"/>
-          <path d="M 0,-250 L 120,-250 L 120,0 L 40,0 L 0,-60 Z" fill="#9fb3c8"/>
-          <path d="M 1300,-300 L 1450,-172 L 2000,-172 L 2000,-160 L 1450,-160 L 1300,-288 Z" fill="#dde5ee" stroke="#111" stroke-width="10"/>
-          <rect x="1830" y="-372" width="120" height="200" fill="#b9c6d6"/>
-          <rect x="0" y="-400" width="2000" height="400" fill="none" stroke="#888" stroke-width="9" stroke-dasharray="62 38"/>
-          <path d="M 430,-560 L 300,-1180 L 1350,-1180 L 1220,-560 Z" fill="#ffe9c0" stroke="#c08000" stroke-width="13"/>
-          <rect x="1500" y="-620" width="250" height="220" fill="#e8e8e8" stroke="#555" stroke-width="10"/>
-          <rect x="-300" y="-215" width="420" height="45" fill="#0b5394" stroke="none"/>
-          <circle cx="-215" cy="-193" r="85" fill="#fff" stroke="#0b5394" stroke-width="22"/>
-          <line x1="-310" y1="-193" x2="-1350" y2="-193" stroke="#0b5394" stroke-width="20" stroke-dasharray="88 50"/>
-        </g>
-        <g stroke="none" font-family="Arial">
-          <text x="-1600" y="-330" font-size="120" fill="#0b5394">← Zug bergwärts</text>
-          <text x="180" y="-420" font-size="112" fill="#a00000">Füllmarke 250</text>
-          <text x="700" y="-90" font-size="110" fill="#333" text-anchor="middle">Beton erdfeucht C0/C1</text>
-          <text x="825" y="-880" font-size="115" fill="#a06a00" text-anchor="middle">Kippmulde</text>
-          <text x="1625" y="-720" font-size="105" fill="#555" text-anchor="middle">Ballast</text>
-          <text x="2800" y="-280" font-size="115" fill="#333" text-anchor="middle">fertige Spur 16 cm</text>
-          <text x="3400" y="320" font-size="105" fill="#666" text-anchor="end">Planum</text>
-          <text x="1300" y="-1280" font-size="130" fill="#111" text-anchor="middle" font-weight="bold">LÄNGSSCHNITT</text>
-        </g>
-      </svg>
-    </div>
-    <p class="zcap">Längsschnitt: Die Kufen laufen auf dem Planum, die Glättplatte sitzt 160 mm darüber
-       und ist fest verschweisst – so hängt die Dicke nicht vom Betondruck ab.</p>
+    <p class="zcap">Aus diesen drei Blättern ist der Werkstattplan gebaut: Blatt 1 Längsschnitt und Draufsicht, Blatt 2 Schnitt durch den Trichter mit Details, Blatt 3 die Herkunft der Masse.</p>
 
     <div class="dl">
       <a class="btn" href="Betonspur/Werkstattzeichnung_Betonspurfertiger.pdf" target="_blank">Zeichnung 3 × A3 (PDF)</a>
@@ -253,12 +193,12 @@ mit Puffern: Δσ = 9.6 N/mm²                 → <span class="gut">η = 0.21</
   <div class="karte tipp">
     <h2>Regeln im Einsatz</h2>
     <ul>
-      <li><b>Füllmarke 250 mm</b> nie überschreiten – bei 500 mm hebt der Betondruck die Glättplatte und die Spur wird zu dick.</li>
-      <li><b>Beton erdfeucht (C0/C1)</b> bestellen – weicher Beton läuft bei 20 % Neigung unter der Platte weg.</li>
+      <li><b>Füllmarke 600 mm</b> im Trichter nie überschreiten – randvoll (900) heben die Glättplatten ab und die Spur wird zu dick.</li>
+      <li><b>Beton erdfeucht (C0/C1)</b> bestellen – weicher Beton läuft bei 20 % Neigung unter den Platten weg.</li><li><b>Möglichst gleichmässig füllen</b> – kippt der Bagger nur auf eine Seite, drückt der Beton einseitig gegen den Teilerkeil.</li>
       <li><b>Bergwärts betonieren</b> – dann drückt der Hangabtrieb den Beton in die Kammer statt heraus.</li>
       <li><b>Ruckfrei anfahren</b> – ruckartiges Anreissen kostet den Scherbolzen und damit die Fuhre.</li>
-      <li><b>Vor jeder Etappe:</b> Unterkante Glättplatte plan und sauber, Verschleissleisten der Kufen prüfen (sie bestimmen die Dicke), Scherbolzen kontrollieren.</li>
-      <li><b>Nach der ersten Woche:</b> Nähte am Schürfbalken und an den Zuglaschen sichtprüfen.</li>
+      <li><b>Alle drei Kufen auf dieselbe Stufe</b> stellen (Lochraster 140/160/180/200), sonst wird eine Spur dicker als die andere. Scherbolzen kontrollieren.</li>
+      <li><b>Beide Vibronadeln laufen lassen</b> – je eine pro Spur. Nach der ersten Woche Nähte an Trichterrippen, Keilanschluss und Zugnase sichtprüfen.</li>
       <li><b>Kranen</b> nur am 4-Strang-Gehänge an den vier Anschlagpunkten (WLL 2.0 t), nicht am 1-t-Hebeband.</li>
     </ul>
   </div>
@@ -302,7 +242,7 @@ mit Puffern: Δσ = 9.6 N/mm²                 → <span class="gut">η = 0.21</
     <h2>Was noch entschieden werden muss</h2>
     <ul>
       <li><b>Zugmaschine</b> festlegen (Bagger, Raupe oder Seilwinde) – davon hängen Anhängehöhe und Zugpunkt ab.</li>
-      <li><b>Vibronadel und Aggregat</b> festlegen (Verdichtung von Hand, wie beim Vorbild).</li>
+      <li><b>Normalprofil bestätigen lassen:</b> die 80/80/80 stammen aus dem Referenzplan des Nachbarprojekts (23.070-104) – für NalpSolar mit BL/ILF bestätigen.</li><li><b>Zwei Vibronadeln und Aggregat</b> festlegen (Typ, Fliehkraft, Leistung für zwei Nadeln).</li>
       <li><b>Quergefälle</b>: eben oder mit Querabschlag für die Entwässerung.</li>
       <li><b>Bewehrung und Fugen</b> der Spur: Vorgabe bei ILF einholen – nicht Teil dieser Bemessung.</li>
       <li><b>Statik gegenzeichnen</b> lassen und Suva-Themen prüfen (Anschlagpunkte, Quetschstellen, Abstellen am Hang).</li>
