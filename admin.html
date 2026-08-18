@@ -5,12 +5,19 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Admin · NalpSolar</title>
 <meta name="robots" content="noindex,nofollow">
-<!-- Admin-Werkzeuge (nur Victor), fünf Reiter:
+<!-- Admin-Werkzeuge (nur Victor), Reiter:
        Übersicht   – Aufgabenliste + Links auf die anderen Admin-Seiten
                      (darunter seit 18.08.2026 Bestellungen & offene Punkte)
        Störungen   – Bauablaufstörungs- und Mehrkostentracking (uploads/stoerungsregister.json
                      + Statusänderungen/Neueinträge in RTDB erfassung/stoerungen);
                      dazu die Stundenseite aus uploads/stoerungen/stoerungen.json
+       Material    – Inventur- und Engpassbilanz über Pfähle, Pfahlköpfe, Plika, Schrauben
+                     und Normteile: verbaut (aus dem Nalpi-Stand gerechnet) gegen geliefert
+                     (Lieferscheine) gegen bestellt, dazu die Zeitachse, welcher Bereich das
+                     Lager leerräumt, und die Liste der fehlenden Lieferscheine.
+                     Reine Anzeige von uploads/material.json; gepflegt wird das Register in
+                     Bestellungen\materialregister.json, gerechnet mit
+                     Tools\Material_Bilanz_Bauen.py (MATERIAL_BILANZ.bat)
        Regie       – Schnellerfassung Regieleistung mit eigener Kostenschätzung,
                      Freigabe durch Victor, Mail an Ramon, Antwort JA/NEIN zurück
                      (Gegenstück: Tools\Regie_Mailschleife.ps1)
@@ -213,6 +220,38 @@
   .schrSum table { width:100%; border-collapse:collapse; font-size:14px; }
   .schrSum td { padding:3px 0; }
   .schrSum td.n { text-align:right; font-weight:900; font-variant-numeric:tabular-nums; }
+
+  /* ── Material-Bilanz ────────────────────────────────────── */
+  .matKacheln { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:4px; }
+  .matKachel { flex:1 1 78px; border-radius:6px; padding:9px 10px; color:#fff; }
+  .matKachel .n { font-size:26px; font-weight:900; line-height:1.05; }
+  .matKachel .t { font-size:11px; font-weight:700; opacity:.9; }
+  .a-rot { background:var(--rot); } .a-orange { background:var(--orange); }
+  .a-gruen { background:var(--gruen); } .a-grau { background:#8a8e94; }
+  .matEng { border-left:4px solid var(--rot); background:#fdf3f2; border-radius:0 5px 5px 0;
+        padding:8px 11px; margin-bottom:6px; font-size:13px; line-height:1.5; }
+  .matEng.o { border-left-color:var(--orange); background:#fff9ec; }
+  .matEng b { font-variant-numeric:tabular-nums; }
+  .matEng .wann { font-weight:900; }
+  .matEng .zus { display:block; font-size:11.5px; color:var(--mut); }
+  table.mat { width:100%; border-collapse:collapse; font-size:12.5px; }
+  table.mat th { text-align:right; color:var(--mut); font-size:10.5px; font-weight:700; padding:3px 4px;
+        border-bottom:1px solid var(--line); white-space:nowrap; }
+  table.mat th:first-child { text-align:left; }
+  table.mat td { padding:5px 4px; border-bottom:1px solid var(--line); text-align:right;
+        font-variant-numeric:tabular-nums; white-space:nowrap; }
+  table.mat td:first-child { text-align:left; white-space:normal; cursor:pointer; }
+  table.mat td.bil { font-weight:900; }
+  table.mat tr.gr td { background:#f6f7f9; font-weight:800; color:var(--mut); font-size:11px;
+        text-transform:uppercase; letter-spacing:.04em; }
+  .ap { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; vertical-align:0; }
+  .matDet { background:#fbfcfd; font-size:11.5px; color:var(--mut); line-height:1.6; }
+  .matDet td { text-align:left !important; white-space:normal !important; padding:9px 10px !important; }
+  .matDet b { color:var(--ink); }
+  .matLuecke { font-size:12.5px; line-height:1.55; padding:6px 0; border-bottom:1px solid var(--line); }
+  .matLuecke .w { display:inline-block; font-size:10.5px; font-weight:800; color:#fff; background:#8a8e94;
+        border-radius:10px; padding:1px 7px; margin-right:6px; }
+  .matLuecke .w.f { background:var(--rot); } .matLuecke .w.u { background:var(--orange); }
 </style>
 </head>
 <body>
@@ -226,7 +265,9 @@
   <button data-tab="uebersicht" class="an">Übersicht</button>
   <button data-tab="stoerungen">Störungen<span class="zahl" id="zStoer">–</span></button>
   <button data-tab="regie">Regie<span class="zahl" id="zRegie">–</span></button>
+  <button data-tab="material">Material<span class="zahl" id="zMat">–</span></button>
   <button data-tab="schrauben">Schrauben<span class="zahl" id="zSchr">–</span></button>
+  <button data-tab="anweisungen">Anweisungen<span class="zahl" id="zAnw">–</span></button>
   <button data-tab="foehn">Föhn</button>
 </div>
 
@@ -494,7 +535,112 @@
 </div></div>
 
 <!-- ══════════════════════════════════════════════════════════════
-     REITER 5 – FÖHN
+     REITER 5 – ARBEITSANWEISUNGEN (Team Verschrauben)
+     ══════════════════════════════════════════════════════════════ -->
+<div class="tab" id="tab-anweisungen"><div class="wrap">
+
+  <div class="card">
+    <h2>Arbeitsanweisungen je Konstruktion</h2>
+    <div class="sub">Was auf <a href="verschrauben.html" target="_blank">Team&nbsp;Verschrauben</a>
+      beim Antippen des Tisches erscheint – z. B. «Stützen anpassen». Mehrere Tisch-Nummern
+      auf einmal gehen mit Komma: <code>2157, 2161</code>. Erledigt = verschwindet auf der
+      Baustellenseite, bleibt hier als Verlauf stehen.</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div>
+        <label style="font-size:11.5px;font-weight:700;color:var(--mut)">Tisch-Nr.</label>
+        <input type="text" id="anwId" placeholder="2157, 2161" inputmode="numeric"
+               style="width:100%;padding:9px;border:1px solid var(--line);border-radius:5px;font-size:15px">
+      </div>
+      <div>
+        <label style="font-size:11.5px;font-weight:700;color:var(--mut)">Bis (optional)</label>
+        <input type="date" id="anwBis"
+               style="width:100%;padding:9px;border:1px solid var(--line);border-radius:5px;font-size:15px">
+      </div>
+    </div>
+    <label style="font-size:11.5px;font-weight:700;color:var(--mut);display:block;margin-top:8px">Anweisung</label>
+    <textarea id="anwText" rows="3" placeholder="Stützen anpassen, vorher Rücksprache Polier."
+              style="width:100%;padding:9px;border:1px solid var(--line);border-radius:5px;font-size:15px"></textarea>
+    <div style="display:flex;gap:8px;margin-top:9px;flex-wrap:wrap">
+      <button class="btn" onclick="anwSpeichern()">Speichern</button>
+      <button class="btn ghost" onclick="anwLaden()">↻ Neu laden</button>
+      <span id="anwMeld" style="align-self:center;font-size:12.5px;color:var(--mut)"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Aktive Anweisungen</h2>
+    <div id="anwListe"></div>
+  </div>
+
+  <div class="card">
+    <h2>Verschraubt-Stand</h2>
+    <div class="sub">Was das Team gemeldet hat. Der Übertrag nach Nalpi läuft am PC
+      über <code>VERSCHRAUBEN_EXPORT.bat</code>.</div>
+    <div id="anwVer"></div>
+  </div>
+
+  <div class="foot"><a href="index.html">← zurück zum Portal</a></div>
+</div></div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     REITER – MATERIAL (Inventur + Engpassbilanz)
+     Daten: uploads/material.json, gebaut von Tools\Material_Bilanz_Bauen.py
+     aus Bestellungen\materialregister.json + Nalpi-Stand + Bauprogramm.
+     Reine Anzeige – gepflegt wird das Register in der Datei, nicht hier.
+     ══════════════════════════════════════════════════════════════ -->
+<div class="tab" id="tab-material"><div class="wrap">
+
+  <div class="card">
+    <h2>Materialbilanz &ndash; wo läuft uns was aus?</h2>
+    <div class="sub" id="matStand">lade …</div>
+    <div class="matKacheln" id="matKacheln"></div>
+    <div class="legende">
+      <b>Verbaut</b> = aus dem Nalpi-Stand gerechnet (Pfähle im Boden bzw. Tische mit montierter
+      Primärkonstruktion), nicht gezählt. <b>Lager</b> = Zählung wenn vorhanden, sonst
+      geliefert&nbsp;&minus;&nbsp;verbaut. <b>Bedarf</b> = alles, was das Bauprogramm vom 03.08.2026
+      noch für 2026 vorsieht.
+      <span class="ap a-rot"></span>reicht auch mit den offenen Bestellungen nicht
+      <span class="ap a-orange"></span>Lager reicht nicht, offene Bestellung würde decken
+      <span class="ap a-gruen"></span>gedeckt
+      <span class="ap a-grau"></span>Bestand nicht erhoben
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Zeitachse &ndash; was zuerst weh tut</h2>
+    <div class="sub">Bereiche in der Reihenfolge des Bauprogramms, kumulierter Bedarf gegen das
+      Lager gerechnet. Genannt ist der <b>erste Bereich, bei dem der Bestand nicht mehr reicht</b>.</div>
+    <div id="matEngpass">lade …</div>
+  </div>
+
+  <div class="card">
+    <h2>Bilanz je Artikel</h2>
+    <div class="sub">Zeile antippen &rarr; Bestellungen, Lieferscheine und Quellen.</div>
+    <div class="chips" id="matFilter" style="margin-bottom:10px"></div>
+    <table class="mat" id="matTab"></table>
+  </div>
+
+  <div class="card">
+    <h2>Lieferscheine, die fehlen</h2>
+    <div class="sub">Alles, was als geliefert verbucht ist, aber keinen sauberen Beleg hat &ndash;
+      plus was angekündigt, aber noch nicht eingetroffen ist.</div>
+    <div id="matLuecken">lade …</div>
+  </div>
+
+  <div class="card">
+    <h2>Fehlmengen aus Teillieferungen</h2>
+    <div class="sub">Geliefert wurde weniger als bestellt, ohne dass es je nachkam.</div>
+    <div id="matFehl">lade …</div>
+  </div>
+
+  <div class="foot"><a href="index.html">← zurück zum Portal</a> ·
+    Register: <code>Bestellungen\materialregister.json</code> ·
+    Neubau: <code>MATERIAL_BILANZ.bat</code></div>
+</div></div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     REITER 6 – FÖHN
      ══════════════════════════════════════════════════════════════ -->
 <div class="tab" id="tab-foehn"><div class="wrap">
 
@@ -594,6 +740,8 @@ Array.prototype.forEach.call(document.querySelectorAll('#reiter button'),functio
     try { location.hash=ziel; } catch(e){}
     if(ziel==='foehn') foehnStarten();
     if(ziel==='schrauben') schrStarten();
+    if(ziel==='anweisungen') anwStarten();
+    if(ziel==='material') matStarten();
   };
 });
 function reiterOeffnen(name){
@@ -1472,7 +1620,292 @@ function schrSpeichern(){
       $('schrMeld').textContent='⚠ Speichern fehlgeschlagen'; });
 }
 
+/* ══ REITER: ARBEITSANWEISUNGEN (Team Verschrauben) ══════════
+   RTDB erfassung/verschrauben_anweisungen/<TischId> = {text, von, ts, bis, erledigt}
+   RTDB erfassung/verschrauben/<TischId>             = {am, von, ts}
+   Gelesen wird beides von verschrauben.html; hier wird es gepflegt.
+   ═══════════════════════════════════════════════════════════ */
+var ANW = {}, ANW_VER = {}, ANW_GELADEN = false;
+
+function anwStarten(){ if(!ANW_GELADEN){ ANW_GELADEN = true; anwLaden(); } }
+
+function anwLaden(){
+  $('anwMeld').style.color = 'var(--mut)';
+  $('anwMeld').textContent = 'lädt …';
+  Promise.all([
+    fetch(RTDB+'/verschrauben_anweisungen.json?_='+Date.now(),{cache:'no-store'})
+      .then(function(r){ return r.ok?r.json():null; }).catch(function(){ return null; }),
+    fetch(RTDB+'/verschrauben.json?_='+Date.now(),{cache:'no-store'})
+      .then(function(r){ return r.ok?r.json():null; }).catch(function(){ return null; })
+  ]).then(function(a){
+    ANW = a[0] || {}; ANW_VER = a[1] || {};
+    $('anwMeld').textContent = '';
+    anwZeichnen(); anwVerZeichnen();
+  });
+}
+
+function anwZahl(){
+  var n = Object.keys(ANW).filter(function(k){ return !ANW[k].erledigt; }).length;
+  var e = $('zAnw'); if(e) e.textContent = n ? String(n) : '–';
+}
+
+function anwEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+function anwZeichnen(){
+  anwZahl();
+  var ids = Object.keys(ANW).sort(function(a,b){ return (parseInt(a,10)||0)-(parseInt(b,10)||0); });
+  var offen = ids.filter(function(k){ return !ANW[k].erledigt; });
+  var fertig = ids.filter(function(k){ return ANW[k].erledigt; });
+  if(!ids.length){ $('anwListe').innerHTML = '<div class="sub">Noch nichts erfasst.</div>'; return; }
+  var zeile = function(id, erl){
+    var a = ANW[id], v = ANW_VER[id];
+    return '<div style="border:1px solid var(--line);border-left:4px solid '
+      + (erl?'var(--line)':'#1565c0') + ';border-radius:5px;padding:9px 11px;margin-bottom:7px;'
+      + (erl?'opacity:.55;':'') + '">'
+      + '<div style="font-weight:900;font-size:15px">Tisch ' + anwEsc(id)
+      +   (v?' <span style="color:var(--gruen);font-size:11.5px;font-weight:700">✓ verschraubt '
+             + anwEsc(v.am) + '</span>':'') + '</div>'
+      + '<div style="font-size:13.5px;line-height:1.5;margin:3px 0">' + anwEsc(a.text) + '</div>'
+      + '<div style="font-size:11px;color:var(--mut)">' + anwEsc(a.von)
+      +   (a.bis?(' · bis ' + anwEsc(a.bis)):'') + '</div>'
+      + '<div style="display:flex;gap:6px;margin-top:7px;flex-wrap:wrap">'
+      +   (erl
+            ? '<button class="btn ghost" onclick="anwWiederOeffnen(\'' + anwEsc(id) + '\')">wieder aktiv</button>'
+            : '<button class="btn ghost" onclick="anwErledigt(\'' + anwEsc(id) + '\')">erledigt</button>'
+              + '<button class="btn ghost" onclick="anwBearbeiten(\'' + anwEsc(id) + '\')">bearbeiten</button>')
+      +   '<button class="btn ghost" onclick="anwLoeschen(\'' + anwEsc(id) + '\')">löschen</button>'
+      + '</div></div>';
+  };
+  var h = '';
+  offen.forEach(function(id){ h += zeile(id, false); });
+  if(fertig.length){
+    h += '<div class="sub" style="margin-top:12px"><b>Erledigt</b> – auf der Baustellenseite ausgeblendet</div>';
+    fertig.forEach(function(id){ h += zeile(id, true); });
+  }
+  $('anwListe').innerHTML = h;
+}
+
+function anwVerZeichnen(){
+  var ids = Object.keys(ANW_VER).sort(function(a,b){ return (parseInt(a,10)||0)-(parseInt(b,10)||0); });
+  if(!ids.length){ $('anwVer').innerHTML = '<div class="sub">Noch keine Meldung.</div>'; return; }
+  var proTag = {};
+  ids.forEach(function(id){ var t = ANW_VER[id].am || '?'; (proTag[t] = proTag[t]||[]).push(id); });
+  var h = '<div style="font-size:14px;font-weight:900;margin-bottom:6px">' + ids.length
+        + ' Konstruktionen verschraubt</div>';
+  Object.keys(proTag).sort().reverse().forEach(function(t){
+    h += '<div style="font-size:12.5px;margin-bottom:5px"><b>' + anwEsc(t) + '</b> · '
+       + proTag[t].length + ' Stk: <span style="color:var(--mut)">' + proTag[t].join(', ') + '</span></div>';
+  });
+  $('anwVer').innerHTML = h;
+}
+
+function anwSpeichern(){
+  var roh = String($('anwId').value||'').split(/[^0-9]+/).filter(Boolean);
+  var text = String($('anwText').value||'').trim();
+  var bis = String($('anwBis').value||'');
+  if(!roh.length){ $('anwMeld').style.color='var(--rot)'; $('anwMeld').textContent='⚠ Tisch-Nr. fehlt'; return; }
+  if(!text){ $('anwMeld').style.color='var(--rot)'; $('anwMeld').textContent='⚠ Text fehlt'; return; }
+  var rec = { text:text, von:'Victor Malt', ts:Date.now(), bis:bis||null, erledigt:false };
+  $('anwMeld').style.color='var(--mut)'; $('anwMeld').textContent='speichert …';
+  Promise.all(roh.map(function(id){
+    return fetch(RTDB+'/verschrauben_anweisungen/'+encodeURIComponent(id)+'.json',
+      {method:'PUT', body:JSON.stringify(rec)}).then(function(r){ if(r.ok) ANW[id] = rec; return r.ok; });
+  })).then(function(res){
+    var ok = res.filter(Boolean).length;
+    $('anwMeld').style.color = ok===roh.length ? 'var(--gruen)' : 'var(--rot)';
+    $('anwMeld').textContent = ok===roh.length
+      ? ('✓ ' + ok + ' Anweisung' + (ok>1?'en':'') + ' gespeichert')
+      : ('⚠ nur ' + ok + ' von ' + roh.length + ' gespeichert');
+    $('anwId').value=''; $('anwText').value=''; $('anwBis').value='';
+    anwZeichnen();
+    setTimeout(function(){ $('anwMeld').textContent=''; }, 4000);
+  });
+}
+
+function anwBearbeiten(id){
+  var a = ANW[id]; if(!a) return;
+  $('anwId').value = id; $('anwText').value = a.text||''; $('anwBis').value = a.bis||'';
+  window.scrollTo(0,0);
+}
+function anwPatch(id, obj){
+  return fetch(RTDB+'/verschrauben_anweisungen/'+encodeURIComponent(id)+'.json',
+    {method:'PATCH', body:JSON.stringify(obj)}).then(function(r){
+      if(r.ok){ Object.keys(obj).forEach(function(k){ ANW[id][k] = obj[k]; }); anwZeichnen(); } });
+}
+function anwErledigt(id){ anwPatch(id, {erledigt:true, erledigtTs:Date.now()}); }
+function anwWiederOeffnen(id){ anwPatch(id, {erledigt:false}); }
+function anwLoeschen(id){
+  if(!confirm('Anweisung für Tisch '+id+' löschen?')) return;
+  fetch(RTDB+'/verschrauben_anweisungen/'+encodeURIComponent(id)+'.json',{method:'DELETE'})
+    .then(function(r){ if(r.ok){ delete ANW[id]; anwZeichnen(); } });
+}
+
+/* ══════════════════════════════════════════════════════════════
+   REITER – MATERIAL (Inventur + Engpassbilanz)
+   Reine Anzeige von uploads/material.json. Gepflegt wird das
+   Register in Bestellungen\materialregister.json, neu gerechnet
+   mit Tools\Material_Bilanz_Bauen.py (MATERIAL_BILANZ.bat).
+   ══════════════════════════════════════════════════════════════ */
+var MAT=null, matGeladen=false, matGr='alle', matOffen={}, matEngAlle=false;
+var MATSTUFE={ rot:'Kritisch – auch die offenen Bestellungen decken das nicht',
+  orange:'Knapp – Lager reicht nicht, offene Bestellung würde decken',
+  grau:'Bestand nicht erhoben', gruen:'Gedeckt' };
+
+var MATBELEG={ fehlt:['f','kein Lieferschein'], unsigniert:['u','LS nicht unterschrieben'],
+  pruefen:['','Beleg da, Mengen nicht ausgewertet'], sammel:['','Sammelposten ohne LS-Aufteilung'],
+  avisiert:['','angekündigt, noch nicht da'] };
+
+function matZahl(n,eh){ if(n===null||n===undefined) return '–';
+  var s=(n<0?'−':'')+Math.abs(n).toLocaleString('de-CH'); return eh?s+' '+eh:s; }
+
+function matStarten(){
+  if(matGeladen) return; matGeladen=true;
+  fetch('uploads/material.json',{cache:'no-store'}).then(function(r){ return r.json(); })
+    .then(function(j){ MAT=j; matZeichnen(); })
+    .catch(function(){ $('matStand').textContent='material.json konnte nicht geladen werden – '
+      +'einmal MATERIAL_BILANZ.bat laufen lassen.'; });
+}
+
+function matZeichnen(){
+  if(!MAT) return;
+  var s=MAT.stand;
+  $('matStand').innerHTML='Bohrstand '+deDat(s.bohr)+' · Baustand '+deDat(s.bau)
+    +' · Typen '+deDat(s.typen)+' · Bauprogramm '+esc(s.bauprogramm)
+    +' · Register '+deDat(s.register);
+
+  /* Kacheln */
+  var z={rot:0,orange:0,gruen:0,grau:0};
+  MAT.artikel.forEach(function(a){ z[a.ampel]++; });
+  $('zMat').textContent=z.rot;
+  $('matKacheln').innerHTML=
+    ['rot','orange','grau','gruen'].map(function(k){
+      var t={rot:'kritisch',orange:'knapp',grau:'unbekannt',gruen:'gedeckt'}[k];
+      return '<div class="matKachel a-'+k+'"><div class="n">'+z[k]+'</div><div class="t">'+t+'</div></div>';
+    }).join('');
+
+  /* Zeitachse – die ersten 12 offen, der Rest auf Knopfdruck */
+  var e=MAT.engpaesse;
+  function engBlock(x){
+    return '<div class="matEng'+(x.ampel==='orange'?' o':'')+'">'
+      +'<span class="wann">'+(x.vergangen?'JETZT':deDat(x.datum))+'</span> · '+esc(x.bereich)
+      +' &ndash; <b>'+esc(x.name)+'</b>: es fehlen <b>'+matZahl(x.fehlt,x.einheit)+'</b>'
+      +'<span class="zus">'+(x.vergangen
+          ? 'Der Termin liegt bereits hinter uns – das Material fehlt heute.'
+          : 'Bereichsbeginn laut Bauprogramm 03.08.2026.')
+      +(x.gedeckt?' Offene Bestellung würde reichen – Lieferung einfordern.'
+                 :' Auch die offenen Bestellungen decken das nicht.')+'</span></div>';
+  }
+  if(!e.length){ $('matEngpass').innerHTML='<div class="sub">Kein Bereich räumt das Lager leer.</div>'; }
+  else {
+    var m=matEngAlle?e.length:Math.min(12,e.length);
+    $('matEngpass').innerHTML=e.slice(0,m).map(engBlock).join('')
+      +(e.length>12?'<button class="btn ghost" id="matMehr" style="margin-top:6px">'
+         +(matEngAlle?'weniger zeigen':'+ '+(e.length-12)+' weitere bis Ende 2026')+'</button>':'');
+    if($('matMehr')) $('matMehr').onclick=function(){ matEngAlle=!matEngAlle; matZeichnen(); };
+  }
+
+  /* Filter-Chips */
+  var gr=[{id:'alle',name:'Alle'}].concat(MAT.gruppen);
+  $('matFilter').innerHTML=gr.map(function(g){
+    var n=g.id==='alle'?MAT.artikel.length:MAT.artikel.filter(function(a){ return a.gruppe===g.id; }).length;
+    var r=MAT.artikel.filter(function(a){ return (g.id==='alle'||a.gruppe===g.id) && a.ampel==='rot'; }).length;
+    return '<button data-mg="'+g.id+'"'+(matGr===g.id?' class="on"':'')+'>'+esc(g.name)
+      +' <small>'+n+(r?' · '+r+' rot':'')+'</small></button>';
+  }).join('');
+  Array.prototype.forEach.call($('matFilter').querySelectorAll('button'),function(b){
+    b.onclick=function(){ matGr=b.getAttribute('data-mg'); matZeichnen(); };
+  });
+
+  matTabelle();
+
+  /* Beleglücken */
+  $('matLuecken').innerHTML = MAT.belegluecken.length ? MAT.belegluecken.map(function(l){
+    var w=MATBELEG[l.art]||['',l.art];
+    return '<div class="matLuecke"><span class="w '+w[0]+'">'+esc(w[1])+'</span>'
+      +deDat(l.datum)+' · <b>'+esc(l.name)+'</b> · '+matZahl(l.menge)
+      +' · '+esc(l.ls)+'<br><span style="color:var(--mut)">'+esc(l.quelle)+'</span></div>';
+  }).join('') : '<div class="sub">Keine.</div>';
+
+  /* Fehlmengen */
+  $('matFehl').innerHTML = MAT.fehlmengen.length ? MAT.fehlmengen.map(function(f){
+    return '<div class="matLuecke"><span class="w f">'+matZahl(-f.menge)+'</span>'
+      +'<b>'+esc(f.bezeichnung)+'</b> · Stand '+deDat(f.stand)
+      +'<br><span style="color:var(--mut)">'+esc(f.quelle)+'</span></div>';
+  }).join('') : '<div class="sub">Keine.</div>';
+}
+
+function matTabelle(){
+  var liste=MAT.artikel.filter(function(a){ return matGr==='alle'||a.gruppe===matGr; });
+  var namen={}; MAT.gruppen.forEach(function(g){ namen[g.id]=g.name+' · '+g.lieferant; });
+  var h='<tr><th>Artikel</th><th>verbaut</th><th>gelief.</th><th>Lager</th>'
+       +'<th>best. offen</th><th>Bedarf 26</th><th>Bilanz</th></tr>', letzte='';
+  liste.forEach(function(a){
+    if(a.ampel!==letzte){
+      letzte=a.ampel;
+      h+='<tr class="gr"><td colspan="7"><span class="ap a-'+a.ampel+'"></span>'
+        +esc(MATSTUFE[a.ampel])+'</td></tr>';
+    }
+    var bil=a.bilanz_mit_bestellung;
+    h+='<tr data-ma="'+esc(a.id)+'">'
+      +'<td>'+esc(a.name)+'<br><small style="color:var(--mut);font-weight:400">'
+      +esc(namen[a.gruppe]||a.gruppe)+'</small></td>'
+      +'<td>'+matZahl(a.verbaut)+(a.verbaut_max&&a.verbaut_max!==a.verbaut
+            ?'<span style="color:var(--mut)">…'+matZahl(a.verbaut_max)+'</span>':'')+'</td>'
+      /* keine Liefer-Zeile im Register = nichts erfasst, nicht "null geliefert" */
+      +'<td>'+(a.lieferungen.length?matZahl(a.geliefert):'–')
+            +(a.unterwegs?'<span style="color:var(--blau)"> +'+matZahl(a.unterwegs)+'</span>':'')+'</td>'
+      +'<td><b>'+matZahl(a.lager)+'</b></td>'
+      +'<td>'+(a.bestellt_offen?matZahl(a.bestellt_offen):'–')+'</td>'
+      +'<td>'+matZahl(a.bedarf_2026)+'</td>'
+      +'<td class="bil" style="color:'+(bil===null?'var(--mut)':bil<0?'var(--rot)':'var(--gruen)')+'">'
+      +matZahl(bil)+'</td></tr>';
+    if(matOffen[a.id]) h+='<tr class="matDet"><td colspan="7">'+matDetail(a)+'</td></tr>';
+  });
+  $('matTab').innerHTML=h;
+  Array.prototype.forEach.call($('matTab').querySelectorAll('tr[data-ma]'),function(tr){
+    tr.querySelector('td').onclick=function(){
+      var id=tr.getAttribute('data-ma'); matOffen[id]=!matOffen[id]; matTabelle();
+    };
+  });
+}
+
+function matDetail(a){
+  var h='';
+  if(a.hinweis) h+='<b>'+esc(a.hinweis)+'</b><br>';
+  h+='Einheit '+esc(a.einheit)+' · Lieferant '+esc(a.lieferant)
+    +' · Lager '+esc(a.lager_art)+' ('+esc(a.lager_quelle)+')'
+    +' · Bedarf gesamt inkl. 2027: '+matZahl(a.bedarf_gesamt)+'<br>';
+  if(a.bestellungen.length){
+    h+='<br><b>Bestellungen</b><br>'+a.bestellungen.map(function(b){
+      var off=Math.max(0,b.menge-b.geliefert);
+      return '· '+deDat(b.datum)+' – '+matZahl(b.menge)+', geliefert '+matZahl(b.geliefert)
+        +(off?', <b style="color:var(--rot)">offen '+matZahl(off)+'</b>':'')
+        +(b.termin?' · Termin '+deDat(b.termin):'')+' · '+esc(b.status)
+        +'<br>&nbsp;&nbsp;'+esc(b.referenz)+'<br>&nbsp;&nbsp;<i>'+esc(b.quelle)+'</i>';
+    }).join('<br>')+'<br>';
+  }
+  if(a.lieferungen.length){
+    h+='<br><b>Lieferungen</b><br>'+a.lieferungen.map(function(l){
+      var w=MATBELEG[l.beleg];
+      return '· '+deDat(l.datum)+' – '+matZahl(l.menge)+' · '+esc(l.ls)
+        +(w?' <b style="color:var(--rot)">('+esc(w[1])+')</b>':'')
+        +(l.pfad?'<br>&nbsp;&nbsp;'+esc(l.pfad):'')
+        +'<br>&nbsp;&nbsp;<i>'+esc(l.quelle)+'</i>';
+    }).join('<br>')+'<br>';
+  }
+  if(a.zaehlungen && a.zaehlungen.length){
+    h+='<br><b>Lagerzählungen</b><br>'+a.zaehlungen.map(function(z){
+      return '· '+deDat(z.datum)+' – '+(z.menge<0?'nicht erhoben':matZahl(z.menge))
+        +'<br>&nbsp;&nbsp;<i>'+esc(z.quelle)+'</i>';
+    }).join('<br>')+'<br>';
+  }
+  h+='<br><b>Verbrauchsregel/Quelle:</b> '+esc(a.quelle);
+  return h;
+}
+
 /* ══ Start ══════════════════════════════════════════════════ */
+matStarten();
 ladeAufgaben();   setInterval(ladeAufgaben,3*60*1000);
 ladeStoerungen(); ladeStundenjournal();
 ladeRegie();      setInterval(ladeRegie,2*60*1000);
