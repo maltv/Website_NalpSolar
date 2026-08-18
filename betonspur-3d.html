@@ -64,10 +64,10 @@
     <button class="btn" id="bReset">Ansicht zurück</button>
   </div>
   <div class="info">
-    <b>Gerät 273 × 521 × 141 cm</b> · beide Spuren 80, Mitte 45 frei ·
-    vier Kufen à 17 breit, 17 hoch<br>
-    <span class="keil">Der orange Keil</span> im Trichter teilt den Beton auf die zwei Spuren
-    (79 breit, First auf 90, Flanke 62°).<br>
+    <b>Gerät 334 × 524 × 140 cm</b> · <b>Betonbreite 300 cm durchgehend</b>, 16 cm dick ·
+    zwei Kufen à 17 breit, 16 hoch<br>
+    <span class="keil">Die orangen Querträger</span> liegen oben auf den beiden Kufen auf – darunter
+    bleibt die volle Breite frei. Keine Kufe in der Mitte, kein Teilerkeil.<br>
     Ziehen = drehen · zwei Finger / Rad = zoomen · rechte Maustaste = verschieben
   </div>
 </div>
@@ -77,8 +77,10 @@
 <script src="assets/js/three/CSS2DRenderer.js"></script>
 <script>
 'use strict';
-/* Betonspurfertiger als 3D-Modell. Quelle ist die STL aus Victors Tinkercad-Entwurf,
-   ergaenzt um den Aufspaltkeil (die letzten 8 Dreiecke der Datei).
+/* Betonspurfertiger als 3D-Modell, Fassung VOLLFLAECHIG (18.08.2026).
+   Form nach Victors Tinkercad-Entwurf, aber: keine inneren Kufen und kein Teilerkeil mehr -
+   stattdessen Quertraeger, die oben auf den beiden aeusseren Kufen aufliegen. Lichte Weite
+   300 cm = Betonbreite nach Ausfuehrungsplan ILF NalpSolar_51_PL_0419 A1 vom 30.07.2026.
    Der STL-Parser steht hier direkt drin - so braucht es keinen zusaetzlichen Loader. */
 
 var STL = 'Betonspur/modell/betonspurfertiger.stl';
@@ -146,50 +148,54 @@ function mass(a, b, text, quer) {
   return G;
 }
 
+/* CSS2DRenderer wertet nur object.visible des Schildes selbst aus - die Sichtbarkeit
+   der Elterngruppe wird ignoriert. Darum rekursiv setzen. */
+function zeigen(gruppe, an) {
+  if (!gruppe) return;
+  gruppe.traverse(function (o) { o.visible = an; });
+}
+
 function bemassungBauen() {
   var G = new THREE.Group();
-  var yv = -118, yv2 = -150;          // Massketten vor dem Geraet
-  // Breitenkette
-  [[-210,-193,'17'], [-193,-113,'80 Spur'], [-113,-96,'17'], [-96,-51,'45 frei'],
-   [-51,-34,'17'], [-34,46,'80 Spur'], [46,63,'17']].forEach(function (m) {
+  var yv = -105, yv2 = -135;          // Massketten vor dem Geraet
+  // Breitenkette: 17 | 300 Beton | 17
+  [[-167,-150,'17'], [-150,150,'300 BETON'], [150,167,'17']].forEach(function (m) {
     G.add(mass([m[0], yv, 0], [m[1], yv, 0], m[2], [0, 5, 0]));
   });
-  G.add(mass([-210, yv2, 0], [63, yv2, 0], '273 gesamt', [0, 6, 0]));
-  // Laenge und Hoehe seitlich
-  G.add(mass([95, -75, 0], [95, 446, 0], '521 ueber die Kufen', [6, 0, 0]));
-  G.add(mass([95, 60, 0], [95, 60, 140.6], '141 Bauhoehe', [6, 0, 0]));
-  G.add(mass([80, 60, 17], [80, 60, 140.6], '124 Trichter', [5, 0, 0]));
-  G.add(mass([-215, 200, 0], [-215, 200, 17], '17 Kufe', [0, 5, 0]));
-  // Keil an der hinteren Trichterkante
-  G.add(mass([-113, 118, 17], [-34, 118, 17], '79 Keil', [0, 4, 0]));
-  G.add(mass([-73.5, 118, 17], [-73.5, 118, 90], '73 hoch', [4, 0, 0]));
+  G.add(mass([-167, yv2, 0], [167, yv2, 0], '334 gesamt', [0, 6, 0]));
+  // Laenge und Hoehen seitlich
+  G.add(mass([200, -75, 0], [200, 445, 0], '520 ueber die Kufen', [6, 0, 0]));
+  G.add(mass([200, 60, 0], [200, 60, 140], '140 Bauhoehe', [6, 0, 0]));
+  G.add(mass([185, 60, 16], [185, 60, 140], '124 Trichter', [5, 0, 0]));
+  // Hoehenstaffel am vorderen Quertraeger
+  G.add(mass([-172, -66, 0], [-172, -66, 16], '16 Kufe = Plattendicke', [0, 5, 0]));
+  G.add(mass([-172, -66, 16], [-172, -66, 28], '12 Laengstraeger', [0, 5, 0]));
+  G.add(mass([-172, -66, 28], [-172, -66, 40], '12 Quertraeger', [0, 5, 0]));
   // Bauteilbereiche in Laengsrichtung
-  [[-60, 113, 'Trichter 173'], [154, 266, 'Platte 112'], [266, 399, '133 Arbeitsraum'],
+  [[-60, 113, 'Trichter 173'], [154, 266, 'Abziehplatte 112'], [266, 399, '133 Arbeitsraum'],
    [399, 446, 'Ballast 47']].forEach(function (m) {
-    G.add(mass([-215, m[0], 30], [-215, m[1], 30], m[2], [5, 0, 0]));
+    G.add(mass([-172, m[0], 44], [-172, m[1], 44], m[2], [5, 0, 0]));
   });
-  G.visible = false;
+  zeigen(G, false);
   return G;
 }
 
 function beschriftungBauen() {
   var G = new THREE.Group();
-  [['A  Kufe aussen links', 'pos', -201, 150, 17],
-   ['B  Kufe innen links', 'pos', -104, 250, 17],
-   ['C  Kufe innen rechts', 'pos', -42, 330, 17],
-   ['D  Kufe aussen rechts', 'pos', 54, 420, 17],
-   ['E  Betontrichter', 'pos', -73.5, 20, 148],
-   ['F  Aufspaltkeil', 'keil', -73.5, 60, 95],
-   ['G  Platte zieht die Spur ab', 'pos', -73.5, 210, 30],
-   ['H  Ballast', 'pos', -73.5, 422, 55],
-   ['J  Anhaengung', 'pos', -73.5, -80, 30],
-   ['Spur links 80', '', -153, 480, 2],
-   ['Mitte 45 frei', '', -73.5, 480, 2],
-   ['Spur rechts 80', '', 6, 480, 2],
-   ['ZUGSEITE', 'keil', -73.5, -120, 60]].forEach(function (l) {
+  [['A  Kufe links', 'pos', -158, 200, 16],
+   ['B  Kufe rechts', 'pos', 158, 330, 16],
+   ['C  Laengstraeger auf der Kufe', 'pos', -158, 60, 28],
+   ['D  QUERTRAEGER liegt oben auf', 'keil', 0, 124, 44],
+   ['E  Betontrichter', 'pos', 0, 20, 148],
+   ['F  Abziehplatte, zieht auf 16 cm ab', 'pos', 0, 210, 26],
+   ['G  Ballast', 'pos', 0, 422, 54],
+   ['H  Anhaengung', 'pos', 0, -80, 46],
+   ['BETON 300 BREIT - DURCHGEHEND', '', 0, 480, 2],
+   ['hier laeuft nichts mehr', '', 0, 330, 2],
+   ['ZUGSEITE', 'keil', 0, -125, 60]].forEach(function (l) {
     G.add(schild(l[0], l[1], l[2], l[3], l[4]));
   });
-  G.visible = false;
+  zeigen(G, false);
   return G;
 }
 
@@ -197,7 +203,7 @@ function aufbauen(daten, gr) {
   // gr = Dreiecksbereiche je Baugruppe aus gruppen.json
   var gGeraet   = geometrie(daten.pos, daten.nor, gr.rahmen[0], gr.rahmen[1]);
   var gTrichter = geometrie(daten.pos, daten.nor, gr.trichter[0], gr.trichter[1]);
-  var gKeil     = geometrie(daten.pos, daten.nor, gr.keil[0], gr.keil[1]);
+  var gKeil     = geometrie(daten.pos, daten.nor, gr.traeger[0], gr.traeger[1]);
   gGeraet.computeBoundingBox();
 
   // Modell so verschieben, dass es mittig und mit der Unterkante auf 0 steht
@@ -304,12 +310,12 @@ function start() {
   });
   document.getElementById('bMasse').addEventListener('click', function () {
     if (!gMasse) return;
-    gMasse.visible = !gMasse.visible;
+    zeigen(gMasse, !gMasse.visible);
     this.classList.toggle('an', gMasse.visible);
   });
   document.getElementById('bText').addEventListener('click', function () {
     if (!gText) return;
-    gText.visible = !gText.visible;
+    zeigen(gText, !gText.visible);
     this.classList.toggle('an', gText.visible);
   });
   document.getElementById('bReset').addEventListener('click', ansichtZurueck);

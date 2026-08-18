@@ -1,16 +1,16 @@
 {
  "rahmen": [
   0,
-  2596
+  96
  ],
  "trichter": [
-  2596,
-  2676
+  96,
+  144
  ],
- "keil": [
-  2676,
-  2684
+ "traeger": [
+  144,
+  192
  ],
  "einheit": "cm",
- "quelle": "260818_Victor_Original.stl + Aufspaltkeil"
+ "quelle": "Neuaufbau 18.08.2026, vollflaechig 300 cm (Plan ILF A1)"
 }
