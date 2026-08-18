@@ -174,15 +174,22 @@
 <div class="card">
   <h2>Was diese Seite zeigt</h2>
   <div class="sub">
-    Jeder Standortwechsel der beiden Bohrbagger seit Baubeginn, gerechnet aus dem Bohrdatum
-    je Stütze. Neu ist die <b>Höhe</b>: jeder Bohrpunkt bekommt seine Geländehöhe aus
-    swissALTI3D, daraus der Höhenunterschied je Verschiebung.<br><br>
+    Jeder Standortwechsel der beiden Bohrbagger, gerechnet aus dem Bohrdatum je Stütze –
+    <b>über beide Bauzeiten</b>, 2025 und 2026. Neu ist die <b>Höhe</b>: jeder Bohrpunkt bekommt
+    seine Geländehöhe aus swissALTI3D, daraus der Höhenunterschied je Verschiebung.
+    Über den Winter bricht die Kette: das Wiederanfahren im Frühling ist keine Verschiebung,
+    sondern fällt unter LV 153.4 (Ab- und Antransport, Wiedereinrichten).<br><br>
     Das LV kennt zwei Welten. <b>171.100.154</b> – «Verschieben von Gerätegruppen von Pfahl zu
     Pfahl, mit geräteeigenen Möglichkeiten, <b>auf gleicher Planumshöhe</b>» – gilt bis 50 m
     bzw. 51–200 m. <b>171.100.155</b> – «<b>Umstellen</b> von Gerätegruppen, inkl. Auflad,
     Transport und Ablad», Distanz bis 500 m, Höhenunterschied bis 100 m. <span id="epSatz"></span>
-    Ab welchem Höhenunterschied der Bagger nicht mehr selbst fahren kann, sondern verladen
-    werden muss, ist eine Beurteilung – darum ist die Schwelle hier einstellbar.
+    Wichtig für jedes Gespräch darüber: <b>Das LV unterscheidet nach dem Mittel, nicht nach
+    der Höhe.</b> «Mit geräteeigenen Möglichkeiten» gegen «inkl. Auflad, Transport und Ablad».
+    Der Höhenunterschied steht in der 155 nur als Obergrenze (bis 100 m), nicht als Bedingung.
+    Der Grenzwert unten ist deshalb <b>unsere Auslegung</b>, kein Zitat aus dem Vertrag: er
+    schätzt, ab wann das Gerät nicht mehr selbst hinkommt. Wo ein Transport wirklich stattfand,
+    steht in den Geowork-Tagesrapporten (Zeile «VIAGGIO / TRASFERIMENTO») – das ist der
+    stärkere Nachweis und gehört bei einer Forderung dazu.
   </div>
 </div>
 
@@ -208,7 +215,8 @@
         <button data-w="lu">Luftlinie</button>
       </div>
       <div class="sub" style="margin-top:5px;font-size:11.5px">
-        Fahrweg = tatsächlich gefahrene Strecke über das Baupistennetz.
+        Fahrweg = Strecke über das Baupistennetz. Gilt nur für 2026 – für 2025 ist keine
+        Pistenachse belegt, dort ist der Fahrweg immer die Luftlinie.
       </div>
     </div>
     <div>
@@ -219,6 +227,15 @@
   </div>
 
   <div class="kpis" id="kpis"></div>
+</div>
+
+<div class="card" id="saisonKarte" style="display:none">
+  <h2>Die beiden Bauzeiten nebeneinander</h2>
+  <div class="sub" style="margin-bottom:10px">
+    Immer über die ganze Bauzeit gerechnet, unabhängig vom oben gewählten Zeitraum –
+    mit dem eingestellten Grenzwert.
+  </div>
+  <div class="tScroll"><table class="t" id="saisonTab"></table></div>
 </div>
 
 <div class="card">
@@ -250,12 +267,18 @@
   <h2>Einstufung nach LV</h2>
   <div class="sub" style="margin-bottom:10px">
     Alle Verschiebungen des gewählten Zeitraums, eingestuft nach Distanz und Höhenunterschied.
-    Spalte «LV-Menge» ist die ausgeschriebene Menge des ganzen Auftrags, «bis Mai 26» das,
-    was bis zur 10. Teilzahlung tatsächlich abgerechnet wurde (Quelle: Mengenliste RE/LV
-    vom 29.06.2026).
+    «LV-Menge» ist die ausgeschriebene Menge des ganzen Auftrags. «Bauzeit 2025» ist, was für
+    2025 abgerechnet wurde (Mengenliste Oktober 2025 vom 14.11.2025, kumuliert März–Oktober),
+    «kumuliert Mai 26» der Stand nach der 10. Teilzahlung inklusive 2026
+    (Mengenliste RE/LV vom 29.06.2026).
   </div>
   <div class="tScroll"><table class="t" id="lvTab"></table></div>
   <div class="sub" style="margin-top:10px" id="lvFuss"></div>
+</div>
+
+<div class="card">
+  <h2>Was davon hält einer Diskussion stand</h2>
+  <div class="sub" id="robust"></div>
 </div>
 
 <div class="card">
@@ -274,13 +297,7 @@
     <span class="marke" id="tagZahl"></span>
     <span class="marke" id="tagWe" style="display:none">Wochenende</span>
   </div>
-  <div class="legende">
-    <span><i class="pkt" style="background:var(--b1)"></i>Bagger 1 · Typ C/D/E</span>
-    <span><i class="pkt" style="background:var(--b2)"></i>Bagger 2 · Typ A/B</span>
-    <span><i class="pkt" style="background:var(--lv155)"></i>Umstellen (über Grenzwert)</span>
-    <span style="gap:4px"><svg width="26" height="8"><line x1="0" y1="4" x2="26" y2="4"
-      stroke="var(--achse)" stroke-width="2"/></svg>Baupiste</span>
-  </div>
+  <div class="legende" id="kartenLegende"></div>
   <div class="kartenbox"><canvas id="karte"></canvas></div>
 
   <h3>Höhenprofil des Tages</h3>
@@ -348,6 +365,14 @@ function stufe(b) {
   return d <= 500 ? 'u' : 'x';
 }
 function lvTyp(t) { return (t === 'C' || t === 'D' || t === 'E') ? 'CDE' : t; }
+// Geraetegruppen kommen aus den Daten: 2025 eine, ab 2026 zwei.
+function rigsVon(t) { return Object.keys(t.rigs); }
+function rigFarbe(r) { return (D.rigs[r] || {}).f || 'var(--b1)'; }
+function rigName(r) { return (D.rigs[r] || {}).n || r; }
+function rigKurz(r) {
+  var n = rigName(r), m = /Bagger (\d)/.exec(n);
+  return m ? m[1] : '●';
+}
 function gleicherTisch(b) {
   return b.von.split('_')[0] === b.nach.split('_')[0];
 }
@@ -526,6 +551,84 @@ function zeichneKurve(liste) {
 }
 
 // ── LV-Tabelle ─────────────────────────────────────────────────────────────
+function zeichneSaisons() {
+  var jahre = D.saisonen || [];
+  if (jahre.length < 2) { $('saisonKarte').style.display = 'none'; return; }
+  $('saisonKarte').style.display = '';
+  var h = '<thead><tr><th>Bauzeit</th><th>Bohrtage</th><th>Stützen</th><th>Verschiebungen</th>' +
+    '<th>154 bis 50 m</th><th>154 51–200 m</th><th>155 Umstellen</th><th>ohne Position</th>' +
+    '<th>CHF nach LV</th><th>CHF nur Distanz</th><th>Unterschied</th></tr></thead><tbody>';
+  var sum = { n:0, k:0, m:0, u:0, x:0, w:0, o:0, st:0, tg:0 };
+  jahre.forEach(function (jr) {
+    var mvj = mv.filter(function (b) { return b.sa === jr; });
+    var tgj = tage.filter(function (t) { return t.sa === jr; });
+    var z = { k:0, m:0, u:0, x:0 }, wert = 0, ohne = 0;
+    mvj.forEach(function (b) {
+      var st = stufe(b); z[st]++;
+      wert += st === 'k' ? EP.k : st === 'm' ? EP.m : st === 'u' ? EP.u : 0;
+      var d = basis === 'fw' ? b.fw : b.lu;
+      ohne += d <= 50 ? EP.k : d <= 200 ? EP.m : d <= 500 ? EP.u : 0;
+    });
+    var stz = 0, btg = 0;
+    tgj.forEach(function (t) {
+      var n = 0;
+      rigsVon(t).forEach(function (r) { n += t.rigs[r].pts.length; });
+      stz += n; if (n) btg++;
+    });
+    sum.n += mvj.length; sum.k += z.k; sum.m += z.m; sum.u += z.u; sum.x += z.x;
+    sum.w += wert; sum.o += ohne; sum.st += stz; sum.tg += btg;
+    h += '<tr><td><b>' + jr + '</b></td><td>' + nf(btg) + '</td><td>' + nf(stz) + '</td>' +
+      '<td>' + nf(mvj.length) + '</td><td>' + nf(z.k) + '</td><td>' + nf(z.m) + '</td>' +
+      '<td style="font-weight:900;color:var(--lv155)">' + nf(z.u) + '</td>' +
+      '<td' + (z.x ? ' style="color:var(--rot);font-weight:700"' : ' class="n0"') + '>' + nf(z.x) + '</td>' +
+      '<td>' + chf(wert) + '</td><td>' + chf(ohne) + '</td>' +
+      '<td style="font-weight:900;color:var(--rot)">+' + chf(wert - ohne) + '</td></tr>';
+  });
+  h += '<tr class="sum"><td>zusammen</td><td>' + nf(sum.tg) + '</td><td>' + nf(sum.st) + '</td>' +
+    '<td>' + nf(sum.n) + '</td><td>' + nf(sum.k) + '</td><td>' + nf(sum.m) + '</td>' +
+    '<td>' + nf(sum.u) + '</td><td>' + nf(sum.x) + '</td><td>' + chf(sum.w) + '</td>' +
+    '<td>' + chf(sum.o) + '</td><td>+' + chf(sum.w - sum.o) + '</td></tr></tbody>';
+  $('saisonTab').innerHTML = h;
+}
+
+function zeichneRobust(liste) {
+  var u = liste.filter(function (b) { return stufe(b) === 'u'; });
+  if (!u.length) { $('robust').innerHTML = ''; return; }
+  var d = function (b) { return basis === 'fw' ? b.fw : b.lu; };
+  var kern = u.filter(function (b) { return d(b) > 50; });
+  var kurz = u.filter(function (b) { return d(b) <= 10; });
+  var nacht = u.filter(function (b) { return b.ue; });
+  var alleNacht = liste.filter(function (b) { return b.ue; }).length;
+  // Mehrbetrag je Bewegung = EP der 155 minus dem, was ohne Hoehenbetrachtung
+  // nach reiner Distanz gezahlt wuerde (EP.k bis 50 m, EP.m bis 200 m; darueber
+  // kennt die 154 keine Position mehr, dort ist der Zuschlag null).
+  // Die Preise selbst stehen bewusst nicht im Quelltext - siehe Kopfkommentar.
+  var mehr = function (arr) {
+    return arr.reduce(function (a, b) {
+      var x = d(b);
+      return a + EP.u - (x <= 50 ? EP.k : x <= 200 ? EP.m : EP.u);
+    }, 0);
+  };
+  $('robust').innerHTML =
+    '<b>Belastbarer Kern: ' + nf(kern.length) + ' Umstellungen</b> – die über dem Grenzwert ' +
+    'liegen <b>und</b> über 50 m weit sind. Gegenüber der Einstufung nach reiner Distanz ' +
+    '(dort wären sie 154 mit 51–200 m zu CHF ' + nf(EP.m, 2) + ') macht das <b>CHF ' +
+    chf(mehr(kern)) + '</b> aus. Damit würde ich in ein Gespräch gehen, nicht mit der ' +
+    'Gesamtzahl – der Rest ist erst mit Belegen aus dem Tagesrapport durchsetzbar.<br><br>' +
+    'Die übrigen ' + nf(u.length - kern.length) + ' liegen unter 50 m, ' + nf(kurz.length) +
+    ' davon unter 10 m. Für zehn Meter einen Tieflader abzurechnen glaubt niemand – diese ' +
+    'Fälle brauchen einen Beleg aus dem Tagesrapport, sonst ziehen sie die guten mit runter.' +
+    '<br><br>' +
+    '<b>' + nf(nacht.length) + ' der ' + nf(u.length) + ' Umstellungen sind Tagesübergänge</b> ' +
+    '– der Sprung vom letzten Pfahl am Abend zum ersten am nächsten Morgen. Wo das Gerät über ' +
+    'Nacht stand, ist nicht erfasst. Von allen ' + nf(alleNacht) + ' Tagesübergängen landen ' +
+    nf(Math.round(100 * nacht.length / alleNacht)) + ' % in der teuren Position, von den ' +
+    'Bewegungen innerhalb eines Tages nur ' +
+    nf(Math.round(100 * (u.length - nacht.length) / (liste.length - alleNacht))) + ' %. ' +
+    'Bei einem Bereichswechsel über Nacht ist das gut vertretbar, beim Weiterbohren im ' +
+    'selben Feld nicht.';
+}
+
 function zeichneKalib(liste) {
   var innen = liste.filter(gleicherTisch)
     .map(function (b) { return b.dh === null ? 0 : Math.abs(b.dh); }).sort(function (a, b) { return a - b; });
@@ -562,12 +665,13 @@ function zeichneLv(liste) {
     if (k in z) z[k]++; else z[k] = 1;
   });
   var h = '<thead><tr><th>Position</th><th>Typ</th><th>EP CHF</th>' +
-    '<th>Anzahl<br>11.05.–heute</th><th>Betrag CHF</th>' +
-    '<th>LV-Menge<br>ganzer Auftrag</th><th>abgerechnet<br>bis Mai 26</th></tr></thead><tbody>';
+    '<th>Anzahl<br>gewählter Zeitraum</th><th>Betrag CHF</th>' +
+    '<th>LV-Menge<br>ganzer Auftrag</th><th>abgerechnet<br>Bauzeit 2025</th>' +
+    '<th>abgerechnet<br>kumuliert Mai 26</th></tr></thead><tbody>';
   var gesA = 0, gesB = 0;
   ['k', 'm', 'u'].forEach(function (g) {
     var G = GRUPPE[g], sa = 0, sb = 0;
-    h += '<tr class="gr"><td colspan="7"><i class="pkt" style="background:' + G.farbe +
+    h += '<tr class="gr"><td colspan="8"><i class="pkt" style="background:' + G.farbe +
          '"></i>' + G.t + '</td></tr>';
     LV.filter(function (p) { return p.g === g; }).forEach(function (p) {
       var n = z[p.g + '_' + p.typ] || 0, betrag = n * G.ep;
@@ -576,20 +680,36 @@ function zeichneLv(liste) {
         (p.typ === 'CDE' ? 'C–E' : p.typ) + '</td><td>' + nf(G.ep, 2) + '</td>' +
         '<td' + (n ? '' : ' class="n0"') + '>' + nf(n) + '</td>' +
         '<td' + (n ? '' : ' class="n0"') + '>' + chf(betrag) + '</td>' +
-        '<td>' + nf(p.lvm) + '</td><td>' + nf(p.re) + '</td></tr>';
+        '<td>' + nf(p.lvm) + '</td>' +
+        '<td' + (p.re25 ? '' : ' class="n0"') + '>' + nf(p.re25 || 0) + '</td>' +
+        '<td' + (p.re ? '' : ' class="n0"') + '>' + nf(p.re) + '</td></tr>';
     });
     gesA += sa; gesB += sb;
     h += '<tr class="sum"><td colspan="3">Zwischentotal</td><td>' + nf(sa) + '</td><td>' +
-         chf(sb) + '</td><td></td><td></td></tr>';
+         chf(sb) + '</td><td></td><td>' + nf(LV.filter(function (x) { return x.g === g; })
+           .reduce(function (a, x) { return a + (x.re25 || 0); }, 0)) + '</td><td>' +
+         nf(LV.filter(function (x) { return x.g === g; })
+           .reduce(function (a, x) { return a + (x.re || 0); }, 0)) + '</td></tr>';
   });
   h += '<tr class="sum"><td colspan="3">Total Verschiebungen im Zeitraum</td><td>' + nf(gesA) +
-       '</td><td>' + chf(gesB) + '</td><td></td><td></td></tr></tbody>';
+       '</td><td>' + chf(gesB) + '</td><td></td><td>' +
+       nf(LV.reduce(function (a, x) { return a + (x.re25 || 0); }, 0)) + '</td><td>' +
+       nf(LV.reduce(function (a, x) { return a + (x.re || 0); }, 0)) + '</td></tr></tbody>';
   $('lvTab').innerHTML = h;
   var uAnz = ['A', 'B', 'CDE'].reduce(function (a, t) { return a + (z['u_' + t] || 0); }, 0);
   var f = [];
+  f.push('<b>Das ist eine Umbuchung, keine Neuberechnung.</b> Die Anzahl der Bewegungen ist ' +
+    'abgerechnet – strittig ist nur, in welche Position sie gehören. Jede Bewegung, die statt ' +
+    'unter 154 bis 50 m unter 154 51–200 m läuft, bringt CHF ' + nf(EP.m - EP.k, 2) + ', jede, ' +
+    'die unter 155 gehört, CHF ' + nf(EP.u - EP.k, 2) + '. So gerechnet spielt es keine Rolle, ' +
+    'dass diese Auswertung ein paar Bewegungen weniger findet als seinerzeit abgerechnet wurden.');
+  f.push('<b>2025 wurden Typ A und Typ B zusammen abgerechnet</b> – die Ausmasszeilen lauten ' +
+    'wörtlich «Anzahl Pfaehle A&amp;B» und liefen über 171.100.154.132 (Typ B). Position ' +
+    '154.131 steht deshalb auf 0. Für den Abgleich mit dem Ausmass die Zeilen A und B addieren; ' +
+    'am Geld ändert das nichts, die Einheitspreise sind je Distanzklasse für alle Typen gleich.');
   f.push('<b>Die LV-Menge für das Umstellen ist 30 Stück</b> (10 je Position 155.101/102/103) ' +
-    'für den ganzen Auftrag über drei Baujahre. Diese Auswertung kommt allein für 2026 auf ' +
-    nf(uAnz) + '. Eine Mehrmenge in dieser Grössenordnung ist keine reine Ausmassfrage mehr – ' +
+    'für den ganzen Auftrag über drei Baujahre. Diese Auswertung kommt im gewählten Zeitraum ' +
+    'auf ' + nf(uAnz) + '. Eine Mehrmenge in dieser Grössenordnung ist keine reine Ausmassfrage mehr – ' +
     'sie gehört mit der Bauleitung besprochen, bevor sie ins Ausmass geht (Preisanpassung bei ' +
     'wesentlicher Mengenänderung, SIA 118).');
   if (luecke) f.push('<b>' + nf(luecke) + (luecke === 1 ? ' Verschiebung' : ' Verschiebungen') +
@@ -628,18 +748,20 @@ function malen() {
     l.forEach(function (p, i) { i ? ctx.lineTo(px(p), py(p)) : ctx.moveTo(px(p), py(p)); });
     ctx.stroke();
   });
-  var farbe = { cde:'#2a78d6', ab:'#eb6834' };
-  ['cde', 'ab'].forEach(function (rig) {
-    ctx.fillStyle = farbe[rig]; ctx.globalAlpha = 0.42;
-    for (var i = 0; i < tag; i++)
-      tage[i].rigs[rig].pts.forEach(function (p) {
+  rigsVon(tage[tag]).forEach(function (rig) {
+    ctx.fillStyle = rigFarbe(rig); ctx.globalAlpha = 0.42;
+    for (var i = 0; i < tag; i++) {
+      var Ri = tage[i].rigs[rig];
+      if (!Ri) continue;
+      Ri.pts.forEach(function (p) {
         ctx.beginPath(); ctx.arc(px(p), py(p), 2, 0, 7); ctx.fill();
       });
+    }
     ctx.globalAlpha = 1;
     var R = tage[tag].rigs[rig];
     R.mv.forEach(function (idx) {
       var b = mv[idx], u = stufe(b) === 'u' || stufe(b) === 'x';
-      ctx.strokeStyle = u ? '#104281' : farbe[rig];
+      ctx.strokeStyle = u ? '#104281' : rigFarbe(rig);
       ctx.lineWidth = u ? 3.4 : 2;
       if (b.ue) ctx.setLineDash([3, 4]);
       ctx.beginPath();
@@ -648,7 +770,7 @@ function malen() {
       ctx.stroke(); ctx.setLineDash([]);
     });
     R.pts.forEach(function (p) {
-      ctx.fillStyle = farbe[rig]; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+      ctx.fillStyle = rigFarbe(rig); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(px(p), py(p), 4, 0, 7); ctx.fill(); ctx.stroke();
     });
   });
@@ -659,9 +781,9 @@ function zeichneProfil() {
   var s = $('profil'); s.innerHTML = '';
   var W2 = 940, H2 = 198, L = 56, R = 12, T = 26, B = 34;
   var reihen = [];
-  ['cde', 'ab'].forEach(function (rig) {
+  rigsVon(tage[tag]).forEach(function (rig) {
     var pts = tage[tag].rigs[rig].pts.filter(function (p) { return p[4] !== null; });
-    if (pts.length > 1) reihen.push({ rig:rig, pts:pts, f: rig === 'cde' ? 'var(--b1)' : 'var(--b2)' });
+    if (pts.length > 1) reihen.push({ rig:rig, pts:pts, f: rigFarbe(rig) });
   });
   if (!reihen.length) {
     var t0 = svgEl('text', { x:L, y:H2 / 2, class:'ax' });
@@ -700,7 +822,7 @@ function zeichneProfil() {
         r: maxN > 60 ? 2.6 : 4, fill:r.f, stroke:'#fff', 'stroke-width':2 });
       c.addEventListener('mousemove', function (e) {
         tipAn(e, '<b>' + p[2] + '</b> · Typ ' + p[3] + '<br>' + nf(p[4], 1) + ' m ü. M.<br>' +
-          D.rigNamen[r.rig]);
+          rigName(r.rig));
       });
       c.addEventListener('mouseleave', tipAus);
       s.appendChild(c);
@@ -708,7 +830,7 @@ function zeichneProfil() {
   });
   if (reihen.length > 1 || maxN) {
     var lg = svgEl('text', { x:W2 - R, y:12, 'text-anchor':'end', class:'ax' });
-    lg.textContent = reihen.map(function (r) { return D.rigNamen[r.rig]; }).join('  ·  ');
+    lg.textContent = reihen.map(function (r) { return rigName(r.rig); }).join('  ·  ');
     s.appendChild(lg);
   }
 }
@@ -722,10 +844,10 @@ function zeichneTag() {
   $('tagRegler').value = tag;
 
   var zeilen = [];
-  ['cde', 'ab'].forEach(function (rig) {
+  rigsVon(T).forEach(function (rig) {
     T.rigs[rig].mv.forEach(function (i) { zeilen.push(mv[i]); });
   });
-  var h = '<thead><tr><th>Bagger</th><th>von</th><th>nach</th><th>Fahrweg m</th>' +
+  var h = '<thead><tr><th>Gerät</th><th>von</th><th>nach</th><th>Fahrweg m</th>' +
     '<th>Luftlinie m</th><th>Höhe von</th><th>Höhe nach</th><th>Δh m</th>' +
     '<th>LV</th></tr></thead><tbody>';
   if (!zeilen.length) {
@@ -734,9 +856,8 @@ function zeichneTag() {
   }
   zeilen.forEach(function (b) {
     var s = stufe(b);
-    h += '<tr><td><i class="pkt" style="background:' +
-      (b.rig === 'cde' ? 'var(--b1)' : 'var(--b2)') + '"></i>' +
-      (b.rig === 'cde' ? '1' : '2') + '</td>' +
+    h += '<tr><td title="' + rigName(b.rig) + '"><i class="pkt" style="background:' +
+      rigFarbe(b.rig) + '"></i>' + rigKurz(b.rig) + '</td>' +
       '<td style="text-align:left">' + b.von + (b.ue ? ' <span style="color:var(--mut)">(Vortag)</span>' : '') + '</td>' +
       '<td style="text-align:left">' + b.nach + '</td>' +
       '<td>' + nf(b.fw, 1) + '</td><td>' + nf(b.lu, 1) + '</td>' +
@@ -750,6 +871,14 @@ function zeichneTag() {
       '</td></tr>';
   });
   $('tagTab').innerHTML = h + '</tbody>';
+  $('kartenLegende').innerHTML =
+    rigsVon(T).map(function (r) {
+      return '<span><i class="pkt" style="background:' + rigFarbe(r) + '"></i>' +
+        rigName(r) + '</span>';
+    }).join('') +
+    '<span><i class="pkt" style="background:var(--lv155)"></i>Umstellen (über Grenzwert)</span>' +
+    (D.saisonInfo && D.saisonInfo[T.sa]
+      ? '<span style="color:var(--mut)">' + D.saisonInfo[T.sa] + '</span>' : '');
   malen();
   zeichneProfil();
 }
@@ -766,15 +895,15 @@ function zeichneUms(liste) {
       'Höhenunterschied gehen und in keine LV-Position mehr passen' : '') +
     '. Sortiert nach Höhenunterschied. Bis zur 10. Teilzahlung (Mai 2026) waren über den ganzen ' +
     'Auftrag <b>12 Umstellungen</b> abgerechnet.';
-  var h = '<thead><tr><th>Datum</th><th>Bagger</th><th>Typ</th><th>von</th><th>nach</th>' +
+  var h = '<thead><tr><th>Datum</th><th>Gerät</th><th>Typ</th><th>von</th><th>nach</th>' +
     '<th>Fahrweg m</th><th>Δh m</th><th>Höhe von</th><th>Höhe nach</th><th>Position</th></tr></thead><tbody>';
   umsListe.slice(0, 400).forEach(function (b) {
     var s = stufe(b);
     var oz = s === 'x' ? 'keine' :
       (lvTyp(b.typ) === 'CDE' ? '155.103' : lvTyp(b.typ) === 'A' ? '155.101' : '155.102');
     h += '<tr><td style="text-align:left">' + b.tag.split('-').reverse().join('.') + '</td>' +
-      '<td><i class="pkt" style="background:' + (b.rig === 'cde' ? 'var(--b1)' : 'var(--b2)') +
-      '"></i>' + (b.rig === 'cde' ? '1' : '2') + '</td><td>' + b.typ + '</td>' +
+      '<td title="' + rigName(b.rig) + '"><i class="pkt" style="background:' +
+      rigFarbe(b.rig) + '"></i>' + rigKurz(b.rig) + '</td><td>' + b.typ + '</td>' +
       '<td style="text-align:left">' + b.von + '</td><td style="text-align:left">' + b.nach + '</td>' +
       '<td>' + nf(b.fw, 1) + '</td>' +
       '<td style="font-weight:700">' + (b.dh === null ? '–' : (b.dh > 0 ? '+' : '') + nf(b.dh, 1)) + '</td>' +
@@ -793,7 +922,8 @@ function zeichneUms(liste) {
 function neu() {
   var liste = auswahl();
   zeichneKpi(liste); zeichneHisto(liste); zeichneKurve(liste);
-  zeichneLv(liste); zeichneKalib(liste); zeichneUms(liste); zeichneTag();
+  zeichneLv(liste); zeichneKalib(liste); zeichneRobust(liste); zeichneSaisons();
+  zeichneUms(liste); zeichneTag();
   $('zeitInfo').textContent = tage[vonIdx].d + ' bis ' + tage[bisIdx].d +
     ' · ' + nf(liste.length) + ' Verschiebungen';
 }
@@ -836,14 +966,14 @@ $('tempo').addEventListener('change', function () {
   if (timer) { $('play').click(); $('play').click(); }
 });
 $('csv').addEventListener('click', function () {
-  var kopf = ['Datum', 'Bagger', 'Tischtyp', 'von', 'nach', 'Fahrweg_m', 'Luftlinie_m',
+  var kopf = ['Datum', 'Geraetegruppe', 'Tischtyp', 'von', 'nach', 'Fahrweg_m', 'Luftlinie_m',
     'Hoehe_von_mueM', 'Hoehe_nach_mueM', 'dh_m', 'LV_Position', 'EP_CHF'];
   var z = umsListe.map(function (b) {
     var s = stufe(b);
     var oz = s === 'x' ? 'keine' :
       (lvTyp(b.typ) === 'CDE' ? '171.100.155.103' : lvTyp(b.typ) === 'A' ?
         '171.100.155.101' : '171.100.155.102');
-    return [b.tag, b.rig === 'cde' ? 'Bagger 1' : 'Bagger 2', b.typ, b.von, b.nach,
+    return [b.tag, rigName(b.rig), b.typ, b.von, b.nach,
       b.fw, b.lu, b.hv, b.hn, b.dh, oz, s === 'x' ? '' : EP.u].join(';');
   });
   var txt = '﻿' + kopf.join(';') + '\n' + z.join('\n');
@@ -916,25 +1046,37 @@ function starten(j) {
     nf(EP.m, 2) + '</b> · <b>CHF ' + nf(EP.u, 2) + '</b> je Verschiebung.';
   bisIdx = tage.length - 1; tag = bisIdx;
 
-  // Zeitraum-Auswahl: alles + je Monat
-  var opt = ['<option value="0|' + bisIdx + '">ganze Bauzeit 2026 (' + j.von + ' – ' + j.bis + ')</option>'];
-  var mon = {};
-  tage.forEach(function (t, i) {
-    var m = t.iso.slice(0, 7);
-    if (!mon[m]) mon[m] = [i, i]; else mon[m][1] = i;
-  });
+  // Zeitraum-Auswahl: beide Bauzeiten, je Bauzeit, dann die Monate darin
   var MN = ['Januar','Februar','März','April','Mai','Juni','Juli','August',
             'September','Oktober','November','Dezember'];
-  Object.keys(mon).sort().forEach(function (m) {
-    opt.push('<option value="' + mon[m][0] + '|' + mon[m][1] + '">' +
-      MN[+m.slice(5) - 1] + ' ' + m.slice(0, 4) + '</option>');
+  var sai = {}, mon = {};
+  tage.forEach(function (t, i) {
+    var jahr = t.iso.slice(0, 4), m = t.iso.slice(0, 7);
+    if (!sai[jahr]) sai[jahr] = [i, i]; else sai[jahr][1] = i;
+    if (!mon[m]) mon[m] = [i, i]; else mon[m][1] = i;
+  });
+  var jahre = Object.keys(sai).sort();
+  var opt = [];
+  if (jahre.length > 1) {
+    opt.push('<option value="0|' + bisIdx + '">alle Bauzeiten (' + tage[0].d + ' – ' +
+      tage[bisIdx].d + ')</option>');
+  }
+  jahre.forEach(function (jr) {
+    opt.push('<option value="' + sai[jr][0] + '|' + sai[jr][1] + '">Bauzeit ' + jr +
+      ' (' + tage[sai[jr][0]].d + ' – ' + tage[sai[jr][1]].d + ')</option>');
+    Object.keys(mon).sort().forEach(function (m) {
+      if (m.slice(0, 4) !== jr) return;
+      opt.push('<option value="' + mon[m][0] + '|' + mon[m][1] + '">&nbsp;&nbsp;&nbsp;' +
+        MN[+m.slice(5) - 1] + ' ' + jr + '</option>');
+    });
   });
   // Zeitraum des Berichts an Borner vom 04.08.2026
-  var bis31 = -1;
+  var von26 = sai['2026'] ? sai['2026'][0] : 0, bis31 = -1;
   tage.forEach(function (t, i) { if (t.iso <= '2026-07-31') bis31 = i; });
-  if (bis31 > 0) opt.splice(1, 0, '<option value="0|' + bis31 +
+  if (bis31 > von26) opt.push('<option value="' + von26 + '|' + bis31 +
     '">11.05. – 31.07.2026 (Stand Meldung an die BL vom 04.08.)</option>');
   $('zeitWahl').innerHTML = opt.join('');
+  vonIdx = 0; bisIdx = tage.length - 1;
 
   $('tagRegler').max = bisIdx; $('tagRegler').value = tag;
   $('quellen').innerHTML =
@@ -952,13 +1094,26 @@ function starten(j) {
     'über den jeweils nächstgelegenen Punkt rekonstruiert – das ergibt den kürzest möglichen ' +
     'Weg und unterschätzt die Verschiebungen eher, als dass es sie übertreibt.<br>' +
     'Die <b>Höhen sind Geländehöhen</b> aus swissALTI3D (Aufnahme 2023), nicht die heutige ' +
-    'Planumshöhe nach Aushub. Für den Vergleich zweier Standorte ist das brauchbar, für eine ' +
-    'einzelne absolute Höhe nicht.<br>' +
+    'Planumshöhe nach Aushub. Gegenprobe vom 18.08.2026: rechnet man dieselbe Auswertung mit ' +
+    'den 2\'531 <b>vermessenen</b> Pfahlkopfhöhen aus Nalpi statt mit dem Geländemodell, ändert ' +
+    'sich das Ergebnis um CHF 644 (251 statt 252 Umstellungen). Am Bohrpunkt gibt es gegenüber ' +
+    '2023 faktisch keinen Aushub – Median der Abweichung 0,19 m.<br>' +
     'Das <b>Baupistennetz</b> ist der Stand vom 04.08.2026. Wo seither in Bereiche gebohrt wurde, ' +
     'die noch nicht im Netz sind, wird auf die Luftlinie zurückgefallen – auch das rechnet zu ' +
     'unseren Ungunsten.<br>' +
     'Der <b>Tischtyp</b> kommt aus Nalpi und ändert sich dort gelegentlich rückwirkend. Er ' +
-    'bestimmt sowohl den Bagger als auch die LV-Position.';
+    'bestimmt sowohl den Bagger als auch die LV-Position.<br>' +
+    'Die <b>Reihenfolge-Annahme rechnet zu unseren Ungunsten</b>, nicht zu unseren Gunsten: ' +
+    'mit der optimalen Tagesroute kämen 207 Umstellungen heraus, mit dem hier verwendeten ' +
+    'nächsten Nachbarn 252, bei zufälliger Reihenfolge rund 1\'000. Die Zahl liegt also nahe ' +
+    'am vorsichtigen Rand.<br>' +
+    'Die <b>965 Punkte mit Nachbohrungen</b> (1\'717 Redrills) zählen je einmal – Nalpi führt ' +
+    'dazu kein eigenes Datum. Jede Nachbohrung an einem anderen Tag wäre eine zusätzliche, ' +
+    'hier nicht gezählte Bewegung.<br>' +
+    'Zwischen zwei Bohrtagen mit mehr als ' + nf(j.saisonPause) + ' Tagen Abstand wird <b>keine ' +
+    'Verschiebung</b> gerechnet – das trifft nur den Winterunterbruch (' +
+    (j.brueche || []).map(function (b) { return nf(b.tage) + ' Tage'; }).join(' und ') +
+    '); die längste Pause innerhalb einer Bauzeit war 23 Tage und zählt normal.';
   messen(); neu();
 }
 })();
