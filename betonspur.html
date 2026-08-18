@@ -34,6 +34,7 @@
   .alarm{ border-left:6px solid var(--rot); background:#fff5f5; }
   .alarm h2{ color:#a00000; }
   .tipp{ border-left:6px solid var(--blau); background:#f3f7fc; }
+  .warn{ border-left:6px solid #c0392b; background:#fdf3f2; }
 
   .kennwerte{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-top:6px; }
   .kw{ background:#f7f8fa; border:1px solid var(--line); border-radius:8px; padding:10px 12px; }
@@ -88,9 +89,25 @@
 
   <div class="karte tipp">
     <h2>Eigenbau – Stand 18.08.2026</h2>
-    <p>Zeichnung und Statik sind fertig: <b>≈ 870 kg Stahlbau</b>, keine Sonderwerkstoffe. Form nach den Handskizzen vom 17.08., Masse nach Normalprofil 23.070-104 (Betonspur je 80 cm, Mitte 80 cm frei, Platte 16 cm).
+    <p>Grundlage ist seit dem 18.08. allein das <b>3D-Modell</b> – die Handskizzen und der alte Werkstattplan
+       sind gelöscht. Stahlbau <b>1735 kg</b> aus der Zuschnittliste, keine Sonderwerkstoffe.
        Gebraucht wird das Gerät im <b>September</b>. Material für den Prototyp ist seit Juni bestellt
        (Protokoll Abstimmungssitzung 43, 22.06.2026).</p>
+  </div>
+
+  <div class="karte warn">
+    <h2>Die Ausführungsvorgabe ist vollflächig – nicht zwei Spuren</h2>
+    <p>Der <b>Ausführungsplan ILF NalpSolar_51_PL_0419, Index A1 vom 30.07.2026</b> («Strasse zur Alphütte,
+       Situation und Querschnitte») zeigt in allen drei Querschnitten eine <b>durchgehende Betonplatte
+       3.00 m breit und 16 cm dick</b>, stahlfaserbewehrt. Das deckt sich mit dem <b>Konzept Betonfahrbahn
+       vom 20.07.2026</b> (François Borner / Victor Malt): «eine 3,0 m breite, <b>vollflächige</b>
+       Betonfahrbahn».</p>
+    <p>Das hier gezeigte Gerät baut <b>zwei Spuren zu je 80 cm mit 45 cm frei dazwischen</b>. Damit lässt
+       sich die Alphüttenstrasse <b>nicht</b> nach Plan erstellen. Entweder wird das Gerät auf volle Breite
+       umgebaut, oder es kommt nur dort zum Einsatz, wo Spuren zulässig sind – das ist zu entscheiden.</p>
+    <p>Weitere Vorgaben aus Plan A1, die das Gerät betreffen: <b>Querneigung 5 % mit wechselnder Richtung</b>
+       (die Abziehplatte müsste quer neigbar sein) und <b>Querrillen mindestens 1.0 cm tief über die ganze
+       Breite, 30° zur Längsachse</b> – ausdrücklich mehr als ein Besenstrich.</p>
   </div>
 
   <div class="karte">
@@ -101,10 +118,10 @@
        Vorbild ist der Schlitten, mit dem die <b>E. Gloggner AG</b> 2022 in Rehetobel zwei Fahrspuren
        eingebaut hat.</p>
     <div class="kennwerte">
-      <div class="kw"><div class="z">81 + 80 cm</div><div class="b">Betonspuren, Mitte 45 cm frei</div></div>
+      <div class="kw"><div class="z">80 + 80 cm</div><div class="b">Betonspuren, Mitte 45 cm frei</div></div>
       <div class="kw"><div class="z">16 cm</div><div class="b">Betondicke, durchgängig</div></div>
       <div class="kw"><div class="z">20 %</div><div class="b">max. Längsneigung (Alphüttenstrasse)</div></div>
-      <div class="kw"><div class="z">274 cm</div><div class="b">Rahmen aussen (4 Kufen à 17)</div></div>
+      <div class="kw"><div class="z">273 cm</div><div class="b">Rahmen aussen (4 Kufen à 17)</div></div>
       <div class="kw"><div class="z">521 cm</div><div class="b">Gesamtlänge über die Kufen</div></div>
       <div class="kw"><div class="z">141 cm</div><div class="b">Bauhöhe mit Trichter</div></div>
     </div>
@@ -233,16 +250,25 @@ mit Puffern: Δσ = 9.6 N/mm²                 → <span class="gut">η = 0.21</
     <h2>Was noch entschieden werden muss</h2>
     <ul>
       <li><b>Zugmaschine</b> festlegen (Bagger, Raupe oder Seilwinde) – davon hängen Anhängehöhe und Zugpunkt ab.</li>
-      <li><b>Normalprofil bestätigen lassen:</b> die 80/80/80 stammen aus dem Referenzplan des Nachbarprojekts (23.070-104) – für NalpSolar mit BL/ILF bestätigen.</li><li><b>Zwei Vibronadeln und Aggregat</b> festlegen (Typ, Fliehkraft, Leistung für zwei Nadeln).</li>
-      <li><b>Quergefälle</b>: eben oder mit Querabschlag für die Entwässerung.</li>
-      <li><b>Bewehrung und Fugen</b> der Spur: Vorgabe bei ILF einholen – nicht Teil dieser Bemessung.</li>
+      <li><b>Grundsatzentscheid vollflächig oder zwei Spuren</b> – der Ausführungsplan A1 verlangt vollflächig 3.00 m. Davon hängt die ganze Gerätebreite ab. <i>(Das Normalprofil 23.070-104 des Nachbarprojekts ist damit erledigt – es galt nie für NalpSolar.)</i></li>
+      <li><b>Querneigung 5 % wechselnd</b> – wie wird sie am Gerät eingestellt?</li>
+      <li><b>Rillenzieher</b> für die geforderten Querrillen (1 cm tief, 30°) im Arbeitsraum vorsehen.</li>
+      <li><b>Zwei Vibronadeln und Aggregat</b> festlegen (Typ, Fliehkraft, Leistung für zwei Nadeln).</li>
+      <li><b>Querentwässerung</b>: je 2 verschweisste SBB1-Schienen pro Rinne, alle ca. 15 m (Plan A1).</li>
+      <li><b>Fugen</b>: Plattenlänge 4.0 m (max. 5.0), Dübel DN16 alle 50 cm, bei über 8 % Längsgefälle zusätzlich Sporen. Bewehrung ist geklärt: Stahlfasern 40 kg/m³, NPK D C25/30 (Plan A1).</li>
       <li><b>Statik gegenzeichnen</b> lassen und Suva-Themen prüfen (Anschlagpunkte, Quetschstellen, Abstellen am Hang).</li>
     </ul>
   </div>
 
   <div class="karte quellen">
-    <b>Grundlagen:</b> Vorgabe Bauführung vom 21.04.2026 («Betonspurfertiger/Betonschlitten»):
+    <b>Grundlagen:</b> <b>Ausführungsplan ILF NalpSolar_51_PL_0419 Index A1 vom 30.07.2026</b>
+    «Strasse zur Alphütte – Situation und Querschnitte» (1:200/1:20): Betonplatte 3.00 m × 16 cm
+    vollflächig, Querneigung 5 %, Querrillen 1 cm / 30° ·
+    <b>Konzept Betonfahrbahn vom 20.07.2026</b> (Borner/Malt, geprüft ILF 27.07., Antwort 31.07.):
+    150 m ab Schacht C1, NPK D, Stahlfasern 40 kg/m³, Plattenlänge 4–5 m ·
+    Vorgabe Bauführung vom 21.04.2026 («Betonspurfertiger/Betonschlitten»):
     Spurbreite 3.00 m, Dicke 16 cm, durchgängig in der Breite ·
+    Mail S. Kathriner (Axpo) vom 19.03.2026: Breite 3 m, Traktion auch für Traktoren ·
     Mail U. Decurtins an ILF vom 05.09.2025: Längsneigung bis 20 %, sonst spült die Strasse aus ·
     Protokoll Abstimmungssitzung 43 vom 22.06.2026: Prototyp-Material bestellt, Bedarf September ·
     Fotos graf-bau.ch, Projekt «Sanierung Nordstrasse, Rehetobel» 11/2022, Einbau E. Gloggner AG.<br><br>
