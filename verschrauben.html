@@ -1,0 +1,1001 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>NalpSolar · Team Verschrauben</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#ffffff">
+<script>
+  window.NALP_GATE_CODE  = '6460';
+  window.NALP_GATE_KEY   = 'nalp_portal_unlock_v1';
+  window.NALP_GATE_TITEL = 'Team Verschrauben';
+</script>
+<script src="assets/js/nalp-gate.js"></script>
+<link rel="stylesheet" href="assets/js/leaflet/leaflet.css">
+<script src="assets/js/leaflet/leaflet.js"></script>
+<style>
+  :root { color-scheme: light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
+          --gruen:#1e9e5a; --gelb:#e0a800; --grau:#8a8e94; --blau:#1565c0; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin:0; height:100%; }
+  body { font-family: Arial,"Helvetica Neue",sans-serif; color:var(--ink); background:#f2f3f5;
+         display:flex; flex-direction:column; overflow:hidden; }
+
+  .topbar { background:#fff; border-bottom:4px solid var(--rot); padding:8px 12px;
+            display:flex; align-items:center; gap:10px; flex:0 0 auto; }
+  .topbar img { height:22px; display:block; }
+  .topbar .ttl { font-size:15px; font-weight:900; }
+  .topbar .netz { margin-left:auto; font-size:11px; font-weight:700; color:var(--gruen); }
+  .topbar .netz.off { color:var(--rot); }
+  .topbar a.zur { color:var(--mut); text-decoration:none; font-size:18px; }
+
+  .reiter { background:#fff; border-bottom:1px solid var(--line); display:flex; flex:0 0 auto; }
+  .reiter button { flex:1; border:none; background:none; cursor:pointer; padding:9px 4px 7px;
+                   font:700 12.5px Arial,sans-serif; color:var(--mut);
+                   border-bottom:3px solid transparent; }
+  .reiter button.an { color:var(--rot); border-bottom-color:var(--rot); }
+
+  main { flex:1; position:relative; overflow:hidden; }
+  section { position:absolute; inset:0; display:none; overflow:auto;
+            -webkit-overflow-scrolling:touch; }
+  section.an { display:block; }
+  #s_karte.an { display:flex; flex-direction:column; overflow:hidden; }
+
+  /* ── Karte ───────────────────────────── */
+  .filter { background:#fff; border-bottom:1px solid var(--line); padding:6px 8px;
+            display:flex; gap:6px; overflow-x:auto; flex:0 0 auto; }
+  .filter button { flex:0 0 auto; border:1px solid var(--line); background:#fff; border-radius:14px;
+                   padding:5px 11px; font:700 11.5px Arial,sans-serif; color:var(--mut); cursor:pointer; }
+  .filter button.an { background:var(--rot); border-color:var(--rot); color:#fff; }
+  #karte { flex:1; }
+  .legende { background:#fff; border-top:1px solid var(--line); padding:5px 8px;
+             font-size:10.5px; color:var(--mut); display:flex; gap:9px; flex-wrap:wrap; flex:0 0 auto; }
+  .legende i { display:inline-block; width:10px; height:10px; border-radius:2px;
+               margin-right:3px; vertical-align:-1px; }
+  .suche { position:absolute; z-index:600; top:8px; left:50px; right:8px; display:flex; gap:6px; }
+  .suche input { flex:1; min-width:0; border:1px solid var(--line); border-radius:5px; padding:7px 9px;
+                 font-size:15px; box-shadow:0 2px 8px rgba(20,25,32,.18); }
+  .suche button { border:none; background:#fff; border-radius:5px; padding:7px 10px; font-size:15px;
+                  cursor:pointer; box-shadow:0 2px 8px rgba(20,25,32,.18); }
+
+  /* ── Detail-Blatt ────────────────────── */
+  #blatt { position:fixed; left:0; right:0; bottom:0; z-index:1200; background:#fff;
+           border-top:4px solid var(--rot); border-radius:12px 12px 0 0; max-height:82vh;
+           overflow:auto; padding:12px 14px calc(16px + env(safe-area-inset-bottom));
+           box-shadow:0 -8px 30px rgba(15,20,28,.3); transform:translateY(105%);
+           transition:transform .18s ease; }
+  #blatt.auf { transform:none; }
+  #hint { position:fixed; inset:0; background:rgba(12,16,22,.35); z-index:1100; display:none; }
+  #hint.auf { display:block; }
+  .bkopf { display:flex; align-items:baseline; gap:9px; margin-bottom:2px; }
+  .bkopf h2 { margin:0; font-size:23px; font-weight:900; }
+  .bkopf .typ { font-size:13px; font-weight:700; color:#fff; background:var(--grau);
+                border-radius:4px; padding:2px 7px; }
+  .bkopf .zu { margin-left:auto; font-size:24px; color:var(--mut); cursor:pointer; line-height:1; }
+  .bmeta { font-size:12px; color:var(--mut); margin-bottom:9px; }
+  .kasten { border-radius:6px; padding:9px 11px; margin:8px 0; font-size:13.5px; line-height:1.5; }
+  .kasten.anw { background:#e8f0fb; border-left:4px solid var(--blau); }
+  .kasten.mangel { background:#fdeceb; border-left:4px solid var(--rot); }
+  .kasten.ok { background:#e9f6ee; border-left:4px solid var(--gruen); }
+  .kasten.warn { background:#fdf6e3; border-left:4px solid var(--gelb); }
+  .kasten b { display:block; margin-bottom:2px; }
+  .kasten .q { font-size:11px; color:var(--mut); margin-top:4px; }
+
+  .knopf { display:block; width:100%; border:none; border-radius:6px; padding:14px;
+           font:900 16px Arial,sans-serif; cursor:pointer; margin-top:8px; color:#fff; }
+  .k-fertig { background:var(--gruen); }
+  .k-zurueck { background:#fff; color:var(--mut); border:1px solid var(--line); font-weight:700; font-size:13px; padding:10px; }
+  .k-problem { background:var(--rot); }
+  .k-plan { background:#fff; color:var(--ink); border:1px solid var(--line); font-size:14px; }
+  .knopf:disabled { background:#d7dade; color:#8b9096; cursor:not-allowed; }
+
+  /* ── Formular Problem ────────────────── */
+  label { display:block; font-size:11.5px; font-weight:700; color:var(--mut);
+          margin:9px 0 3px; text-transform:uppercase; letter-spacing:.03em; }
+  input[type=text], textarea, select {
+    width:100%; border:1px solid var(--line); border-radius:5px; padding:9px;
+    font:15px Arial,sans-serif; background:#fff; }
+  textarea { min-height:74px; resize:vertical; }
+  .schwere { display:flex; gap:6px; }
+  .schwere button { flex:1; border:1px solid var(--line); background:#fff; border-radius:5px;
+                    padding:9px 4px; font:700 12.5px Arial,sans-serif; color:var(--mut); cursor:pointer; }
+  .schwere button.an { color:#fff; border-color:transparent; }
+  .schwere button.an[data-s=KRITISCH] { background:var(--rot); }
+  .schwere button.an[data-s=MITTEL]   { background:var(--gelb); }
+  .schwere button.an[data-s=GERING]   { background:var(--grau); }
+  .fotos { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+  .fotos .f { position:relative; width:64px; height:64px; border-radius:5px; overflow:hidden;
+              border:1px solid var(--line); }
+  .fotos .f img { width:100%; height:100%; object-fit:cover; display:block; }
+  .fotos .f span { position:absolute; top:0; right:0; background:rgba(0,0,0,.6); color:#fff;
+                   font-size:12px; line-height:1; padding:3px 5px; cursor:pointer; }
+
+  /* ── Listen ──────────────────────────── */
+  .inhalt { padding:12px 14px 40px; max-width:760px; margin:0 auto; }
+  .inhalt h2 { font-size:15px; margin:16px 0 6px; }
+  .zeile { display:flex; align-items:center; gap:10px; background:#fff; border:1px solid var(--line);
+           border-radius:6px; padding:10px 11px; margin-bottom:6px; }
+  .zeile .nr { font-size:17px; font-weight:900; min-width:52px; }
+  .zeile .txt { flex:1; min-width:0; font-size:12px; color:var(--mut); line-height:1.4; }
+  .zeile .hk { width:34px; height:34px; border-radius:5px; border:2px solid var(--line);
+               background:#fff; font-size:18px; cursor:pointer; flex:0 0 auto; }
+  .zeile .hk.an { background:var(--gruen); border-color:var(--gruen); color:#fff; }
+  .zeile.gesperrt { opacity:.55; }
+  .pill { display:inline-block; font-size:10.5px; font-weight:700; border-radius:3px;
+          padding:1px 5px; color:#fff; margin-right:4px; }
+  .lead { font-size:13px; color:var(--mut); line-height:1.55; margin:4px 0 12px; }
+  .quelle { font-size:11px; color:var(--mut); line-height:1.5; margin-top:16px;
+            border-top:1px solid var(--line); padding-top:8px; }
+
+  #toast { position:fixed; left:50%; bottom:22px; transform:translate(-50%,80px); z-index:2000;
+           background:#1a1a1a; color:#fff; font-size:13.5px; font-weight:700; padding:11px 16px;
+           border-radius:6px; opacity:0; transition:transform .2s, opacity .2s; pointer-events:none;
+           max-width:88vw; text-align:center; }
+  #toast.on { transform:translate(-50%,0); opacity:1; }
+  #toast.err { background:var(--rot); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="zur" href="index.html" title="Zurück zum Portal">‹</a>
+  <img src="assets/img/strabag-logo.png" alt="STRABAG">
+  <div class="ttl">Team Verschrauben</div>
+  <div class="netz" id="netz">online</div>
+</div>
+
+<div class="reiter" id="reiter">
+  <button data-tab="karte" class="an">🗺 Karte</button>
+  <button data-tab="liste">✔ Liste</button>
+  <button data-tab="anweisung">📋 Anweisungen</button>
+  <button data-tab="export">⤓ Export</button>
+</div>
+
+<main>
+  <!-- ══ Karte ══ -->
+  <section id="s_karte" class="an">
+    <div class="filter" id="filter"></div>
+    <div style="position:relative;flex:1">
+      <div class="suche">
+        <input id="q" type="text" inputmode="numeric" placeholder="Tisch-Nr. suchen …">
+        <button onclick="suchen()">🔍</button>
+        <button onclick="zuMir()" title="Mein Standort">📍</button>
+      </div>
+      <div id="karte" style="position:absolute;inset:0"></div>
+    </div>
+    <div class="legende">
+      <span><i style="background:#1e9e5a"></i>verschraubt</span>
+      <span><i style="background:#e0a800"></i>offen (MT montiert)</span>
+      <span><i style="background:#8a8e94"></i>noch nicht montiert</span>
+      <span><i style="background:#1565c0"></i>Arbeitsanweisung</span>
+      <span><i style="background:#D72622"></i>offener Mangel</span>
+    </div>
+  </section>
+
+  <!-- ══ Liste ══ -->
+  <section id="s_liste">
+    <div class="inhalt">
+      <div class="lead">Zum schnellen Abhaken ohne Karte. Es erscheinen nur Konstruktionen,
+        bei denen in Nalpi der <b>Modulträger montiert</b> ist – vorher kann nicht verschraubt werden.</div>
+      <div class="filter" id="filter2" style="border:0;padding:0 0 10px;background:none"></div>
+      <div id="liste"></div>
+    </div>
+  </section>
+
+  <!-- ══ Anweisungen ══ -->
+  <section id="s_anweisung">
+    <div class="inhalt">
+      <h2 style="margin-top:0">Arbeitsanweisungen</h2>
+      <div class="lead">Was an einzelnen Konstruktionen zusätzlich zu tun ist. Erfasst wird das
+        im Admin (Reiter «Anweisungen») – hier steht immer der aktuelle Stand.</div>
+      <div id="anwListe"></div>
+    </div>
+  </section>
+
+  <!-- ══ Export ══ -->
+  <section id="s_export">
+    <div class="inhalt">
+      <h2 style="margin-top:0">Export nach Nalpi</h2>
+      <div class="lead">Für den täglichen Übertrag: eine Zeile je verschraubter Konstruktion.
+        Die CSV passt in <b>TABLE_DATA.MODULETABLE_SCREWED_DATE</b> (Nalpi-Stufe
+        «Modultisch verschraubt»). Am PC macht das sonst
+        <b>VERSCHRAUBEN_EXPORT.bat</b> automatisch.</div>
+      <div id="expZahlen"></div>
+      <button class="knopf k-plan" onclick="csvLaden(false)">⤓ CSV – alles Verschraubte</button>
+      <button class="knopf k-plan" onclick="csvLaden(true)">⤓ CSV – nur heute</button>
+      <button class="knopf k-plan" onclick="neuLaden()">↻ Daten neu laden</button>
+      <div class="quelle" id="quelle"></div>
+    </div>
+  </section>
+</main>
+
+<div id="hint" onclick="blattZu()"></div>
+<div id="blatt"></div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* ══════════════════════════════════════════════════════════════════════════
+   Team Verschrauben  –  Website_NalpSolar/verschrauben.html
+   ---------------------------------------------------------------------------
+   Karte    : uploads/pfaehle.json          (4 Pfahlpunkte je Tisch = echter Umriss)
+   Typ      : uploads/tables/typen.json     (ILF-Belegungslisten)
+   Bereich  : uploads/tables/bereiche.json  (Nalpi, Bauphasen_STRABAG_260410)
+   Montage  : uploads/tables/baustand.json  (Nalpi TABLE_DATA, Task 06:30)
+   Mängel   : api.buildtrack.ch  (live)  ·  uploads/maengel.json (Offline-Stand)
+
+   Erfassung: Firebase RTDB
+     erfassung/verschrauben/<TischId>          = {am, von, ts}   (fehlt = offen)
+     erfassung/verschrauben_anweisungen/<Id>   = {text, von, ts, bis, erledigt}
+
+   Problem melden geht NICHT in die RTDB, sondern direkt als Mangel ins
+   Nalpi-Mängelmanagement (Buildtrack-Op `create_mangel`). Reihenfolge ist
+   Pflicht: erst die Fotos hochladen, dann die Op senden – eine Op, die eine
+   dem Server unbekannte assetId nennt, wird DAUERHAFT abgewiesen.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+var RTDB = 'https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app/erfassung';
+var P_VER = RTDB + '/verschrauben';
+var P_ANW = RTDB + '/verschrauben_anweisungen';
+var BT    = 'https://api.buildtrack.ch';
+
+var LS_VON = 'nalp_erfasser_v1';
+var LS_PEND_V = 'nalp_verschraubt_pending_v1';   /* Verschraubt-Meldungen, offline */
+var LS_PEND_M = 'nalp_mangel_pending_v1';        /* Mangel-Ops ohne Fotos, offline */
+
+var TYPFARBE = { A:'#1565c0', B:'#D72622', C:'#8a8e94', D:'#1e9e5a', E:'#e0a800' };
+
+/* Stahlbaupläne je Grundtyp und Baujahr – Dateien liegen in stahlbau/ */
+var PLAN = {
+  'A_2025':['Primaerkonstruktion_TypA.pdf','24027-S-0-M-002 · Rev B'],
+  'A_2026':['Primaerkonstruktion_TypA_2026.pdf','24027-S-0-M-008 · Rev B'],
+  'B_2025':['Primaerkonstruktion_TypB.pdf','24027-S-0-M-001 · Rev G'],
+  'B_2026':['Primaerkonstruktion_TypB_2026.pdf','24027-S-0-M-009 · Rev B'],
+  'C_2026':['Primaerkonstruktion_TypC_2026.pdf','24027-S-0-M-010 · Rev B'],
+  'D_2025':['Primaerkonstruktion_TypD.pdf','Plan Typ D'],
+  'D_2026':['Primaerkonstruktion_TypD_2026.pdf','Plan Typ D · 2026'],
+  'E_2025':['Primaerkonstruktion_TypE.pdf','Plan Typ E'],
+  'E_2026':['Primaerkonstruktion_TypE_2026.pdf','Plan Typ E · 2026']
+};
+
+var TISCHE = {};        /* id -> {id, typ, grund, jahr, ber, mt, mtDat, pkDat, pts:[[lat,lon]…]} */
+var VERSCHRAUBT = {};   /* id -> {am, von, ts} */
+var ANWEISUNG = {};     /* id -> {text, von, ts, bis, erledigt} */
+var MAENGEL = {};       /* id -> [ {nr,titel,schwere,status,von,erfasst} … ] */
+var MSTAND = '';        /* Herkunft der Mängel: 'live' oder Datum des Offline-Stands */
+var STAND = {};         /* Datenstände zum Belegen */
+
+var karte = null, ebene = null, polys = {}, AKT = null, FILTER = 'alle';
+var gpsMark = null, gps = null;
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function heute(){ var d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function dm(s){ var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(s||'')); return m?(m[3]+'.'+m[2]+'.'+m[1]):''; }
+function toast(t,err){ var e=$('toast'); e.textContent=t; e.className='on'+(err?' err':'');
+  setTimeout(function(){ e.className=err?'err':''; }, err?4200:2600); }
+function uuid(){
+  if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  var b=new Uint8Array(16); crypto.getRandomValues(b);
+  b[6]=(b[6]&0x0f)|0x40; b[8]=(b[8]&0x3f)|0x80;
+  var h=[].map.call(b,function(x){ return ('0'+x.toString(16)).slice(-2); }).join('');
+  return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20);
+}
+function getVon(){ try{ return localStorage.getItem(LS_VON)||''; }catch(e){ return ''; } }
+function setVon(v){ try{ localStorage.setItem(LS_VON, v||''); }catch(e){} }
+function netzAn(){ return navigator.onLine !== false; }
+
+/* ─────────── Reiter ─────────── */
+Array.prototype.forEach.call(document.querySelectorAll('#reiter button'), function(b){
+  b.onclick = function(){ reiter(b.getAttribute('data-tab')); };
+});
+function reiter(name){
+  Array.prototype.forEach.call(document.querySelectorAll('#reiter button'), function(o){
+    o.classList.toggle('an', o.getAttribute('data-tab')===name); });
+  ['karte','liste','anweisung','export'].forEach(function(n){
+    $('s_'+n).classList.toggle('an', n===name); });
+  if(name==='karte' && karte) setTimeout(function(){ karte.invalidateSize(); },60);
+  if(name==='liste') listeMalen();
+  if(name==='anweisung') anwMalen();
+  if(name==='export') exportMalen();
+  try{ history.replaceState(null,'','#'+name); }catch(e){}
+}
+
+/* ─────────── Offline-Warteschlangen ─────────── */
+function pendLesen(k){ try{ return JSON.parse(localStorage.getItem(k)||'[]'); }catch(e){ return []; } }
+function pendSchreiben(k,a){ try{ localStorage.setItem(k, JSON.stringify(a.slice(-400))); }catch(e){} netzMalen(); }
+function netzMalen(){
+  var n = pendLesen(LS_PEND_V).length + pendLesen(LS_PEND_M).length, e=$('netz');
+  e.className = netzAn()? '' : 'off';
+  e.textContent = netzAn() ? (n ? ('sende '+n+' …') : 'online')
+                           : (n ? ('offline · '+n+' wartet') : 'offline');
+}
+function pendSenden(){
+  if(!netzAn()) return;
+  var v = pendLesen(LS_PEND_V);
+  if(v.length){
+    v.reduce(function(kette,item){
+      return kette.then(function(rest){
+        return verSchreiben(item.id, item.rec).then(function(ok){ return ok?rest:rest.concat([item]); })
+               .catch(function(){ return rest.concat([item]); });
+      });
+    }, Promise.resolve([])).then(function(rest){
+      pendSchreiben(LS_PEND_V, rest);
+      if(rest.length < v.length) toast('✔ '+(v.length-rest.length)+' Meldung(en) nachgesendet');
+    });
+  }
+  var m = pendLesen(LS_PEND_M);
+  if(m.length){
+    /* Erst die geparkten Fotos hoch – eine Op, die eine dem Server unbekannte
+       assetId nennt, wird dauerhaft abgewiesen. */
+    fotosOffenSenden().then(function(){
+      return opsSenden(m.map(function(x){ return x.op; }));
+    }).then(function(res){
+      var rest = [], durch = 0, weg = 0;
+      m.forEach(function(item, i){
+        var r = res[i];
+        if(!r){ rest.push(item); return; }          /* keine Antwort → nochmal versuchen */
+        if(r.status === 'rejected') weg++; else durch++;
+        (item.op.assetIds||[]).forEach(fotoLoeschen);
+      });
+      pendSchreiben(LS_PEND_M, rest);
+      if(durch){ toast('✔ '+durch+' Meldung(en) an Nalpi gesendet'); maengelLaden(); }
+      if(weg) toast('⚠ '+weg+' Meldung(en) hat Nalpi abgewiesen – bitte Victor sagen.', true);
+    }).catch(function(){ /* kein Netz – bleibt in der Warteschlange */ });
+  }
+}
+window.addEventListener('online', function(){ netzMalen(); pendSenden(); });
+window.addEventListener('offline', netzMalen);
+
+/* ─────────── Fotospeicher (IndexedDB) ───────────
+   localStorage wäre nach 2–3 Baustellenfotos voll. Die Bilder liegen darum als
+   Blob in IndexedDB und werden beim nächsten Empfang hochgeladen. */
+var IDB = null;
+function idb(){
+  if(IDB) return IDB;
+  IDB = new Promise(function(ok,fail){
+    var r = indexedDB.open('nalp_fotos', 1);
+    r.onupgradeneeded = function(){ r.result.createObjectStore('fotos'); };
+    r.onsuccess = function(){ ok(r.result); };
+    r.onerror   = function(){ fail(r.error); };
+  }).catch(function(){ return null; });
+  return IDB;
+}
+function fotoAblegen(id, blob){
+  return idb().then(function(db){
+    if(!db) return false;
+    return new Promise(function(ok){
+      var t = db.transaction('fotos','readwrite');
+      t.objectStore('fotos').put(blob, id);
+      t.oncomplete = function(){ ok(true); }; t.onerror = function(){ ok(false); };
+    });
+  });
+}
+function fotoHolenAlle(){
+  return idb().then(function(db){
+    if(!db) return [];
+    return new Promise(function(ok){
+      var t = db.transaction('fotos','readonly'), st = t.objectStore('fotos'),
+          kr = st.getAllKeys(), vr = st.getAll();
+      t.oncomplete = function(){
+        ok((kr.result||[]).map(function(k,i){ return {id:k, blob:(vr.result||[])[i]}; })); };
+      t.onerror = function(){ ok([]); };
+    });
+  });
+}
+function fotoLoeschen(id){
+  return idb().then(function(db){
+    if(!db) return;
+    var t = db.transaction('fotos','readwrite');
+    t.objectStore('fotos').delete(id);
+  });
+}
+
+/* ─────────── Buildtrack: Mangel anlegen ─────────── */
+function fotoHochladen(id, blob){
+  return fetch(BT+'/api/v1/assets/'+id+'?feature=maengel', {
+    method:'POST', headers:{'content-type': blob.type||'image/jpeg'}, body: blob
+  }).then(function(r){ return r.ok; });
+}
+/* Alle noch nicht hochgeladenen Fotos nachreichen. Erst wenn ein Foto oben ist,
+   darf die zugehörige Op raus – sonst wird sie unwiderruflich abgewiesen. */
+function fotosOffenSenden(){
+  return fotoHolenAlle().then(function(alle){
+    return alle.reduce(function(k,f){
+      return k.then(function(){
+        return fotoHochladen(f.id, f.blob).then(function(ok){ if(ok) return fotoLoeschen(f.id); });
+      }).catch(function(){});
+    }, Promise.resolve());
+  });
+}
+function opsSenden(ops){
+  return fetch(BT+'/api/v1/maengel/ops', {
+    method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ops:ops})
+  }).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(j){
+    /* Ergebnisse kommen in der Reihenfolge der Ops zurueck, je Op ein status:
+         'applied'   – neu angekommen
+         'duplicate' – war schon da (Wiederholung nach wackligem Empfang) → auch gut
+         'rejected'  – ENDGUELTIG abgewiesen und beim Server vermerkt; ein erneutes
+                       Senden bringt nie ein anderes Ergebnis.
+       Geworfen wird nur, wenn die Anfrage selbst nicht durchkam – dann darf und
+       muss wiederholt werden. */
+    return (j && j.results) || [];
+  });
+}
+
+/* ─────────── Daten laden ─────────── */
+function jget(u){ return fetch(u, {cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }); }
+
+/* Umriss einer Konstruktion aus ihren Pfahlpunkten.
+   Die 2026er stehen auf vier Pfaehlen (S1–S4) – die Punkte sind in dieser
+   Reihenfolge schon der fertige Ring.
+   Die 2025er (224 Stueck, davon fast alle bereits montiert) stehen auf ZWEI
+   Pfaehlen; in uploads/pfaehle.json liegen darum nur S1 und S4 – das ist die
+   Traglinie, nicht die Flaeche. Daraus wird ein 4 m breites Band gebaut
+   (Breite gemessen an den 824 4-Pfahl-Tischen: kurze Seite Median 3.15 m), symmetrisch
+   um die Achse, weil aus den Daten nicht hervorgeht, auf welcher Seite die
+   Konstruktion liegt. Der Umriss ist also eine LAGEHILFE, kein Aufmass. */
+var BAND_M = 3.15;
+function umriss(roh){
+  if(!roh || !roh.length) return [];
+  var rang = { S1:1, S2:2, S3:3, S4:4 };
+  var p = roh.slice().sort(function(a,b){ return (rang[a.s]||9)-(rang[b.s]||9); });
+  if(p.length >= 3) return p.map(function(x){ return x.ll; });
+  if(p.length === 2){
+    var a = p[0].ll, b = p[1].ll;
+    var mlat = (a[0]+b[0])/2;
+    var kx = 111320*Math.cos(mlat*Math.PI/180), ky = 111320;   /* Grad -> m */
+    var dx = (b[1]-a[1])*kx, dy = (b[0]-a[0])*ky;
+    var l = Math.sqrt(dx*dx + dy*dy) || 1;
+    /* Normale zur Achse, halbe Bandbreite */
+    var nx = (-dy/l)*(BAND_M/2), ny = (dx/l)*(BAND_M/2);
+    var dlon = nx/kx, dlat = ny/ky;
+    return [[a[0]+dlat, a[1]+dlon], [b[0]+dlat, b[1]+dlon],
+            [b[0]-dlat, b[1]-dlon], [a[0]-dlat, a[1]-dlon]];
+  }
+  return [];    /* ein einzelner Punkt ergibt keine Flaeche */
+}
+
+Promise.all([
+  jget('uploads/pfaehle.json'),
+  jget('uploads/tables/typen.json'),
+  jget('uploads/tables/bereiche.json'),
+  jget('uploads/tables/baustand.json'),
+  netzAn() ? jget(P_VER+'.json?_='+Date.now()).catch(function(){ return null; }) : Promise.resolve(null),
+  netzAn() ? jget(P_ANW+'.json?_='+Date.now()).catch(function(){ return null; }) : Promise.resolve(null)
+]).then(function(a){
+  var pf = a[0]||[], typen = (a[1]&&a[1].typen)||{}, ber = (a[2]&&a[2].bereiche)||{},
+      bau = (a[3]&&a[3].tische)||{};
+  STAND = { typen:(a[1]&&a[1].stand)||'?', bereiche:(a[2]&&a[2].stand)||'?',
+            bau:(a[3]&&a[3].stand)||'?', quelle:(a[3]&&a[3].quelle)||'' };
+  VERSCHRAUBT = a[4] || {};
+  ANWEISUNG   = a[5] || {};
+
+  pf.forEach(function(p){
+    var id = String(p[0]);
+    var t = TISCHE[id] || (TISCHE[id] = { id:id, roh:[], pts:[], typ:null });
+    t.roh.push({ s:String(p[1]||''), ll:[p[2], p[3]] });
+    if(!t.typ) t.typ = p[4];
+  });
+  Object.keys(TISCHE).forEach(function(id){
+    var t = TISCHE[id];
+    t.pts   = umriss(t.roh);
+    t.typ   = typen[id] || t.typ || '';
+    var m   = /^([A-E])[_]?(\d{4}|KF\d{4})?/.exec(t.typ||'');
+    t.grund = m ? m[1] : '?';
+    t.jahr  = (m && m[2]) ? String(m[2]).replace('KF','') : '';
+    t.ber   = ber[id] || '';
+    var b   = bau[id];
+    t.mt    = !!(b && b.s === 'mt');
+    t.mtDat = b && b.mt || '';
+    t.pkDat = b && b.pk || '';
+  });
+
+  filterMalen();
+  karteAufbauen();
+  maengelLaden();
+  netzMalen(); pendSenden();
+  if(location.hash) reiter(location.hash.replace('#','')||'karte');
+}).catch(function(e){
+  toast('Daten konnten nicht geladen werden – einmal mit Internet öffnen.', true);
+});
+
+/* Mängel: erst live vom Buildtrack-Backend, sonst der mitgelieferte Stand. */
+function maengelLaden(){
+  var nutz = function(rows, woher){
+    MAENGEL = {}; MSTAND = woher;
+    rows.forEach(function(m){
+      var id = String(m.tisch||'');
+      if(!id) return;
+      (MAENGEL[id] = MAENGEL[id]||[]).push(m);
+    });
+    if(karte) faerben();
+    if(AKT) blattMalen(AKT);
+  };
+  var offline = function(){
+    jget('uploads/maengel.json').then(function(j){
+      if(j) nutz(j.maengel||[], 'Stand '+dm((j.maengel&&j.maengel[0]&&j.maengel[0].erfasst)||'')+' (offline)');
+    }).catch(function(){});
+  };
+  if(!netzAn()) return offline();
+  btMaengel().then(function(rows){ nutz(rows,'live'); }).catch(offline);
+}
+function btMaengel(){
+  var alle = [], since = 0, runden = 0;
+  function seite(){
+    return jget(BT+'/api/v1/maengel/changes?since='+since+'&limit=2000').then(function(p){
+      if(!p) throw new Error('keine Antwort');
+      var rows = p.maengel||[];
+      alle = alle.concat(rows);
+      runden++;
+      var wm = p.watermark;
+      if(!rows.length || wm==null || wm===since || runden>=50) return alle;
+      since = wm; return seite();
+    });
+  }
+  return seite().then(function(rows){
+    /* letzter Satz je id gewinnt, Gelöschte und Duplikate raus */
+    var letzt = {};
+    rows.forEach(function(m){ if(m && m.id) letzt[m.id] = m; });
+    return Object.keys(letzt).map(function(k){ return letzt[k]; })
+      .filter(function(m){ return !m.deletedAt && !m.duplicateOf
+                && (m.status==='OFFEN' || m.status==='IN_BEARBEITUNG')
+                && (m.entityType==='table' || m.entityType==='drillpoint'); })
+      .map(function(m){ return {
+        nr:m.displayNo, art:m.entityType, key:m.entityKey,
+        tisch:String(m.entityKey||'').split('_')[0], titel:m.title,
+        schwere:m.severity, status:m.status,
+        erfasst:(m.createdAt||'').slice(0,10), von:m.createdBy }; });
+  });
+}
+
+/* ─────────── Karte ─────────── */
+function bereicheSortiert(){
+  var s = {};
+  Object.keys(TISCHE).forEach(function(id){ var b=TISCHE[id].ber; if(b) s[b]=1; });
+  return Object.keys(s).sort();
+}
+function filterMalen(){
+  var h = '<button data-f="alle" class="an" onclick="setFilter(\'alle\')">Alle</button>'
+        + '<button data-f="offen" onclick="setFilter(\'offen\')">Nur offen</button>'
+        + '<button data-f="anw" onclick="setFilter(\'anw\')">Mit Anweisung</button>';
+  bereicheSortiert().forEach(function(b){
+    h += '<button data-f="'+esc(b)+'" onclick="setFilter(\''+esc(b)+'\')">'
+       + esc(b.replace(/^2[67]_/,'')) + '</button>';
+  });
+  $('filter').innerHTML = h;
+  $('filter2').innerHTML = h.replace(/id=/g,'');
+}
+function setFilter(f){
+  FILTER = f;
+  Array.prototype.forEach.call(document.querySelectorAll('.filter button'), function(b){
+    b.classList.toggle('an', b.getAttribute('data-f')===f); });
+  faerben(); listeMalen();
+  var sicht = Object.keys(TISCHE).filter(passt).map(function(id){ return TISCHE[id]; })
+              .filter(function(t){ return t.pts.length>=3; });
+  if(karte && sicht.length && f!=='alle' && f!=='offen' && f!=='anw'){
+    var alle = []; sicht.forEach(function(t){ alle = alle.concat(t.pts); });
+    karte.fitBounds(L.latLngBounds(alle).pad(0.2));
+  }
+}
+function passt(id){
+  var t = TISCHE[id];
+  if(FILTER==='alle') return true;
+  if(FILTER==='offen') return t.mt && !VERSCHRAUBT[id];
+  if(FILTER==='anw')   return !!(ANWEISUNG[id] && !ANWEISUNG[id].erledigt);
+  return t.ber === FILTER;
+}
+function stil(id){
+  var t = TISCHE[id], v = !!VERSCHRAUBT[id],
+      mg = (MAENGEL[id]||[]).length,
+      an = !!(ANWEISUNG[id] && !ANWEISUNG[id].erledigt),
+      sicht = passt(id);
+  var fuell = v ? '#1e9e5a' : (t.mt ? '#e0a800' : '#8a8e94');
+  var rand  = mg ? '#D72622' : (an ? '#1565c0' : '#ffffff');
+  return { color:rand, weight:(mg||an)?3:1.4, fillColor:fuell,
+           fillOpacity: sicht ? .8 : .12, opacity: sicht ? 1 : .25 };
+}
+function karteAufbauen(){
+  karte = L.map('karte', {zoomControl:true, attributionControl:false, tap:true});
+  L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg',
+    {maxZoom:22, maxNativeZoom:19}).addTo(karte);
+  ebene = L.layerGroup().addTo(karte);
+
+  var alle = [];
+  Object.keys(TISCHE).forEach(function(id){
+    var t = TISCHE[id];
+    if(t.pts.length < 3) return;
+    alle = alle.concat(t.pts);
+    var p = L.polygon(t.pts, stil(id)).addTo(ebene);
+    p.on('click', function(){ oeffnen(id); });
+    polys[id] = p;
+  });
+  if(alle.length) karte.fitBounds(L.latLngBounds(alle).pad(0.05));
+  else karte.setView([46.638, 8.769], 15);
+
+  if(navigator.geolocation){
+    navigator.geolocation.watchPosition(function(p){
+      gps = {lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
+      if(gpsMark) gpsMark.setLatLng([gps.lat,gps.lon]);
+      else gpsMark = L.circleMarker([gps.lat,gps.lon],
+        {radius:6, color:'#fff', weight:2, fillColor:'#1565c0', fillOpacity:1}).addTo(karte);
+    }, function(){}, {enableHighAccuracy:true, maximumAge:4000, timeout:20000});
+  }
+}
+function faerben(){
+  Object.keys(polys).forEach(function(id){ polys[id].setStyle(stil(id)); });
+}
+function zuMir(){
+  if(!gps){ toast('Noch kein GPS – Standort erlauben', true); return; }
+  karte.setView([gps.lat, gps.lon], 19);
+}
+function suchen(){
+  var v = String($('q').value||'').replace(/[^0-9]/g,'');
+  if(!v) return;
+  var t = TISCHE[v];
+  if(!t || t.pts.length<3){ toast('Tisch '+v+' nicht in den Lagedaten', true); return; }
+  karte.fitBounds(L.latLngBounds(t.pts).pad(3));
+  oeffnen(v);
+  $('q').blur();
+}
+$('q').addEventListener('keydown', function(e){ if(e.key==='Enter') suchen(); });
+
+/* ─────────── Detail-Blatt ─────────── */
+function oeffnen(id){
+  AKT = id;
+  blattMalen(id);
+  $('blatt').classList.add('auf');
+  $('hint').classList.add('auf');
+}
+function blattZu(){
+  AKT = null;
+  $('blatt').classList.remove('auf');
+  $('hint').classList.remove('auf');
+}
+function typName(t){ var m=/^([A-E])_?(.*)$/.exec(t||''); return m?('Typ '+m[1]+(m[2]?' '+m[2].replace('_',' '):'')):'Typ ?'; }
+function planFuer(t){
+  if(!t.grund || t.grund==='?') return null;
+  var j = t.jahr || '2026';
+  var k = t.grund+'_'+j;
+  if(PLAN[k]) return PLAN[k];
+  /* 2027er sind noch nicht gezeichnet – der 2026er Plan ist der nächstliegende */
+  if(PLAN[t.grund+'_2026']) return PLAN[t.grund+'_2026'].concat(['ersatz']);
+  if(PLAN[t.grund+'_2025']) return PLAN[t.grund+'_2025'].concat(['ersatz']);
+  return null;
+}
+function blattMalen(id){
+  var t = TISCHE[id], v = VERSCHRAUBT[id], an = ANWEISUNG[id], mg = MAENGEL[id]||[];
+  var h = '<div class="bkopf"><h2>Tisch '+esc(id)+'</h2>'
+        + '<span class="typ" style="background:'+(TYPFARBE[t.grund]||'#8a8e94')+'">'+esc(typName(t.typ))+'</span>'
+        + '<span class="zu" onclick="blattZu()">×</span></div>';
+  h += '<div class="bmeta">'+(t.ber?('Bereich '+esc(t.ber)+' · '):'')
+     + (t.mt ? ('Modulträger montiert '+dm(t.mtDat)) : 'Modulträger noch NICHT montiert')
+     + (t.pkDat?(' · PK '+dm(t.pkDat)):'') + '</div>';
+
+  if(an && !an.erledigt){
+    h += '<div class="kasten anw"><b>📋 Arbeitsanweisung</b>'+esc(an.text)
+       + '<div class="q">'+esc(an.von||'Bauleitung')+(an.bis?(' · bis '+dm(an.bis)):'')+'</div></div>';
+  }
+  if(mg.length){
+    h += '<div class="kasten mangel"><b>⚠ '+mg.length+' offene'+(mg.length===1?'r':'')+' Mangel in Nalpi</b>';
+    mg.slice(0,6).forEach(function(m){
+      h += '<div>#'+esc(m.nr)+' '+esc(m.titel)+' <span style="color:var(--mut)">('
+         + esc(m.schwere)+(m.key&&m.key!==id?(' · '+esc(m.key)):'')+')</span></div>';
+    });
+    if(mg.length>6) h += '<div>… und '+(mg.length-6)+' weitere</div>';
+    h += '<div class="q">Quelle: Nalpi-Mängelmanagement ('+esc(MSTAND)+')</div></div>';
+  }
+
+  if(v){
+    h += '<div class="kasten ok"><b>✔ Fertig verschraubt</b>'+dm(v.am)
+       + (v.von?(' · '+esc(v.von)):'')+'</div>';
+    h += '<button class="knopf k-zurueck" onclick="zuruecknehmen(\''+esc(id)+'\')">Rückgängig – doch nicht fertig</button>';
+  } else if(!t.mt){
+    h += '<div class="kasten warn"><b>Noch nicht dran</b>In Nalpi ist der Modulträger auf dieser '
+       + 'Konstruktion nicht als montiert eingetragen. Verschrauben wird erst danach erfasst.'
+       + '<div class="q">Baustand ' + esc(STAND.bau) + '</div></div>';
+    h += '<button class="knopf k-fertig" onclick="fertig(\''+esc(id)+'\')">✔ Trotzdem als verschraubt melden</button>';
+  } else {
+    h += '<button class="knopf k-fertig" onclick="fertig(\''+esc(id)+'\')">✔ Fertig verschraubt</button>';
+  }
+
+  h += '<button class="knopf k-problem" onclick="problemForm(\''+esc(id)+'\')">⚠ Problem melden</button>';
+
+  var p = planFuer(t);
+  if(p){
+    h += '<button class="knopf k-plan" onclick="window.open(\'stahlbau/'+esc(p[0])+'\',\'_blank\')">'
+       + '📄 Stahlbauplan öffnen · '+esc(p[1])+(p[2]?' <span style="color:#D72622">(kein eigener '+esc(t.jahr)+'er Plan)</span>':'')+'</button>';
+  } else {
+    h += '<div class="kasten warn">Für '+esc(typName(t.typ))+' liegt kein Plan-PDF auf der Seite.</div>';
+  }
+  h += '<button class="knopf k-plan" onclick="window.open(\'stahlbau.html\',\'_blank\')">🔩 Schrauben &amp; Drehmomente</button>';
+
+  $('blatt').innerHTML = h;
+}
+
+/* ─────────── Verschraubt melden ─────────── */
+function verSchreiben(id, rec){
+  return fetch(P_VER+'/'+encodeURIComponent(id)+'.json',
+    {method:'PUT', body:JSON.stringify(rec)}).then(function(r){ return r.ok; });
+}
+function nameFragen(){
+  var v = getVon();
+  if(v) return v;
+  v = String(prompt('Wer meldet? (Name – wird gespeichert)')||'').trim();
+  if(v) setVon(v);
+  return v;
+}
+function fertig(id){
+  var von = nameFragen();
+  if(!von){ toast('Ohne Namen wird nichts erfasst.', true); return; }
+  var rec = { am: heute(), von: von, ts: Date.now() };
+  VERSCHRAUBT[id] = rec;
+  faerben(); blattMalen(id); listeMalen();
+  if(!netzAn()){
+    var a = pendLesen(LS_PEND_V); a.push({id:id, rec:rec}); pendSchreiben(LS_PEND_V, a);
+    toast('Ohne Empfang gespeichert – geht automatisch raus.');
+    return;
+  }
+  verSchreiben(id, rec).then(function(ok){
+    if(ok){ toast('✔ Tisch '+id+' verschraubt'); }
+    else { var a=pendLesen(LS_PEND_V); a.push({id:id, rec:rec}); pendSchreiben(LS_PEND_V,a);
+           toast('Server antwortet nicht – wird nachgesendet.', true); }
+  }).catch(function(){
+    var a=pendLesen(LS_PEND_V); a.push({id:id, rec:rec}); pendSchreiben(LS_PEND_V,a);
+    toast('Kein Netz – wird nachgesendet.', true);
+  });
+}
+function zuruecknehmen(id){
+  if(!confirm('Tisch '+id+' wieder auf «offen» setzen?')) return;
+  delete VERSCHRAUBT[id];
+  faerben(); blattMalen(id); listeMalen();
+  fetch(P_VER+'/'+encodeURIComponent(id)+'.json', {method:'DELETE'})
+    .then(function(){ toast('Zurückgenommen'); })
+    .catch(function(){ toast('Kein Netz – am PC prüfen!', true); });
+}
+
+/* ─────────── Problem melden → Nalpi-Mangel ─────────── */
+var FOTOS = [];   /* [{id, blob, url}] */
+function problemForm(id){
+  FOTOS = [];
+  M_SCHWERE = 'MITTEL';        /* muss zum vorbelegten Knopf im Formular passen */
+  var t = TISCHE[id];
+  var h = '<div class="bkopf"><h2>Problem · Tisch '+esc(id)+'</h2>'
+        + '<span class="zu" onclick="oeffnen(\''+esc(id)+'\')">×</span></div>'
+        + '<div class="bmeta">Geht direkt als Mangel ins Nalpi-Mängelmanagement.</div>'
+        + '<label>Was ist das Problem?</label>'
+        + '<input id="m_titel" type="text" placeholder="z.B. Loch passt nicht" maxlength="120">'
+        + '<label>Wie schlimm?</label>'
+        + '<div class="schwere" id="m_schwere">'
+        +   '<button data-s="KRITISCH" onclick="schwereSetzen(\'KRITISCH\')">Kritisch</button>'
+        +   '<button data-s="MITTEL" class="an" onclick="schwereSetzen(\'MITTEL\')">Mittel</button>'
+        +   '<button data-s="GERING" onclick="schwereSetzen(\'GERING\')">Gering</button>'
+        + '</div>'
+        + '<label>Beschreibung (was genau, wo)</label>'
+        + '<textarea id="m_text" placeholder="Kurz und konkret – wer es liest, steht nicht davor."></textarea>'
+        + '<label>Fotos</label>'
+        + '<input id="m_foto" type="file" accept="image/*" capture="environment" multiple '
+        +   'style="font-size:13px" onchange="fotoWaehlen(this)">'
+        + '<div class="fotos" id="m_fotos"></div>'
+        + '<label>Wer meldet?</label>'
+        + '<input id="m_von" type="text" value="'+esc(getVon())+'" placeholder="Name">'
+        + '<button class="knopf k-problem" id="m_ab" onclick="problemSenden(\''+esc(id)+'\')">Melden</button>'
+        + '<button class="knopf k-zurueck" onclick="oeffnen(\''+esc(id)+'\')">Abbrechen</button>';
+  $('blatt').innerHTML = h;
+  $('blatt').scrollTop = 0;
+}
+var M_SCHWERE = 'MITTEL';
+function schwereSetzen(s){
+  M_SCHWERE = s;
+  Array.prototype.forEach.call(document.querySelectorAll('#m_schwere button'), function(b){
+    b.classList.toggle('an', b.getAttribute('data-s')===s); });
+}
+/* Baustellenfotos auf 1600 px / JPEG 0.72 herunterrechnen – sonst dauert das
+   Hochladen am Berg ewig und die Warteschlange läuft voll. */
+function verkleinern(datei){
+  return new Promise(function(ok){
+    var bild = new Image(), url = URL.createObjectURL(datei);
+    bild.onload = function(){
+      var mx = 1600, s = Math.min(1, mx/Math.max(bild.width, bild.height));
+      var c = document.createElement('canvas');
+      c.width = Math.round(bild.width*s); c.height = Math.round(bild.height*s);
+      c.getContext('2d').drawImage(bild, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      c.toBlob(function(b){ ok(b || datei); }, 'image/jpeg', 0.72);
+    };
+    bild.onerror = function(){ URL.revokeObjectURL(url); ok(datei); };
+    bild.src = url;
+  });
+}
+function fotoWaehlen(el){
+  var dateien = Array.prototype.slice.call(el.files||[]);
+  el.value = '';
+  dateien.reduce(function(k, d){
+    return k.then(function(){
+      return verkleinern(d).then(function(b){
+        FOTOS.push({ id: uuid(), blob: b, url: URL.createObjectURL(b) });
+        fotosMalen();
+      });
+    });
+  }, Promise.resolve());
+}
+function fotosMalen(){
+  $('m_fotos').innerHTML = FOTOS.map(function(f,i){
+    return '<div class="f"><img src="'+f.url+'"><span onclick="fotoWeg('+i+')">×</span></div>'; }).join('');
+}
+function fotoWeg(i){ FOTOS.splice(i,1); fotosMalen(); }
+
+function problemSenden(id){
+  var titel = String($('m_titel').value||'').trim();
+  var text  = String($('m_text').value||'').trim();
+  var von   = String($('m_von').value||'').trim();
+  if(!titel){ toast('Bitte kurz sagen, was das Problem ist.', true); return; }
+  if(!von){ toast('Bitte den Namen eintragen.', true); return; }
+  setVon(von);
+
+  var jetzt = new Date().toISOString();
+  var op = {
+    idempotencyKey: uuid(), createdAt: jetzt, kind:'create_mangel',
+    mangelId: uuid(), postId: uuid(),
+    entityType:'table', entityKey: String(id), mangelKind: null,
+    title: titel, severity: M_SCHWERE,
+    body: text + (text?'\n\n':'') + '(gemeldet über Team Verschrauben)',
+    author: von, assetIds: FOTOS.map(function(f){ return f.id; })
+  };
+
+  $('m_ab').disabled = true; $('m_ab').textContent = 'sende …';
+
+  /* Offline: Fotos in IndexedDB parken, Op in die Warteschlange. */
+  if(!netzAn()){
+    Promise.all(FOTOS.map(function(f){ return fotoAblegen(f.id, f.blob); })).then(function(){
+      var a = pendLesen(LS_PEND_M); a.push({op:op}); pendSchreiben(LS_PEND_M, a);
+      toast('Ohne Empfang gespeichert – geht automatisch nach Nalpi.');
+      oeffnen(id);
+    });
+    return;
+  }
+
+  /* PFLICHT-REIHENFOLGE: erst alle Fotos hoch, dann die Op. */
+  FOTOS.reduce(function(k, f){
+    return k.then(function(){
+      return fotoHochladen(f.id, f.blob).then(function(ok){
+        if(!ok) throw new Error('Foto '+f.id+' abgelehnt');
+      });
+    });
+  }, Promise.resolve())
+  .then(function(){ return opsSenden([op]); })
+  .then(function(res){
+    var r = res[0];
+    /* Abgewiesen ist endgueltig – nachsenden wuerde nur ewig wiederholt. */
+    if(r && r.status === 'rejected') throw new Error('ENDGUELTIG:' + (r.error || 'abgewiesen'));
+    toast('⚠ Mangel an Tisch '+id+' in Nalpi angelegt');
+    maengelLaden();
+    oeffnen(id);
+  })
+  .catch(function(e){
+    var txt = String(e && e.message || e);
+    if(txt.indexOf('ENDGUELTIG:') === 0){
+      $('m_ab').disabled = false; $('m_ab').textContent = 'Melden';
+      toast('Nalpi nimmt die Meldung nicht an: '+txt.slice(11)+' – bitte Victor sagen.', true);
+      return;
+    }
+    /* Netzproblem: Fotos parken und alles nachsenden, statt die Meldung zu verlieren. */
+    Promise.all(FOTOS.map(function(f){ return fotoAblegen(f.id, f.blob); })).then(function(){
+      var a = pendLesen(LS_PEND_M); a.push({op:op}); pendSchreiben(LS_PEND_M, a);
+      toast('Nicht durchgekommen ('+txt+') – wird nachgesendet.', true);
+      oeffnen(id);
+    });
+  });
+}
+
+/* ─────────── Liste ─────────── */
+function listeMalen(){
+  /* Modulträger montiert = dran. Wer trotzdem schon gemeldet wurde, bleibt
+     sichtbar, sonst liesse sich eine Fehlmeldung hier nicht zurücknehmen. */
+  var ids = Object.keys(TISCHE)
+            .filter(function(id){ return (TISCHE[id].mt || VERSCHRAUBT[id]) && passt(id); })
+            .sort(function(a,b){ return (parseInt(a,10)||0)-(parseInt(b,10)||0); });
+  if(!ids.length){
+    $('liste').innerHTML = '<div class="kasten warn">Keine Konstruktion in dieser Auswahl, '
+      + 'bei der der Modulträger montiert ist.</div>';
+    return;
+  }
+  var offen = ids.filter(function(id){ return !VERSCHRAUBT[id]; }).length;
+  var h = '<h2 style="margin-top:0">'+ids.length+' Konstruktionen · '+offen+' offen</h2>';
+  ids.forEach(function(id){
+    var t = TISCHE[id], v = VERSCHRAUBT[id], an = ANWEISUNG[id] && !ANWEISUNG[id].erledigt,
+        mg = (MAENGEL[id]||[]).length;
+    h += '<div class="zeile">'
+       + '<div class="nr">'+esc(id)+'</div>'
+       + '<div class="txt">'
+       +   '<span class="pill" style="background:'+(TYPFARBE[t.grund]||'#8a8e94')+'">'+esc(t.grund)+'</span>'
+       +   esc(t.ber||'–')
+       +   (an ? ' · <b style="color:#1565c0">📋 Anweisung</b>' : '')
+       +   (mg ? ' · <b style="color:#D72622">⚠ '+mg+'</b>' : '')
+       +   (v ? '<br>verschraubt '+dm(v.am)+(v.von?(' · '+esc(v.von)):'') : '')
+       + '</div>'
+       + '<button class="hk'+(v?' an':'')+'" onclick="'+(v?'zuruecknehmen':'fertig')+'(\''+esc(id)+'\')">'
+       +   (v?'✔':'') + '</button>'
+       + '<button class="hk" onclick="reiter(\'karte\');oeffnen(\''+esc(id)+'\')" '
+       +   'style="border-color:transparent;font-size:15px">›</button>'
+       + '</div>';
+  });
+  $('liste').innerHTML = h;
+}
+
+/* ─────────── Anweisungen ─────────── */
+function anwMalen(){
+  var ids = Object.keys(ANWEISUNG).filter(function(id){ return !ANWEISUNG[id].erledigt; })
+            .sort(function(a,b){ return (parseInt(a,10)||0)-(parseInt(b,10)||0); });
+  if(!ids.length){
+    $('anwListe').innerHTML = '<div class="kasten ok"><b>Nichts Besonderes</b>'
+      + 'Zurzeit ist für keine Konstruktion eine Zusatzanweisung erfasst.</div>';
+    return;
+  }
+  var h = '';
+  ids.forEach(function(id){
+    var a = ANWEISUNG[id], t = TISCHE[id]||{}, v = VERSCHRAUBT[id];
+    h += '<div class="kasten anw"><b>Tisch '+esc(id)
+       + (t.typ?(' · '+esc(typName(t.typ))):'') + (t.ber?(' · '+esc(t.ber)):'')
+       + (v?' · <span style="color:#1e9e5a">verschraubt</span>':'') + '</b>'
+       + esc(a.text)
+       + '<div class="q">'+esc(a.von||'Bauleitung')+(a.bis?(' · bis '+dm(a.bis)):'')
+       +   ' · <a href="#" onclick="reiter(\'karte\');oeffnen(\''+esc(id)+'\');return false">auf der Karte zeigen</a></div>'
+       + '</div>';
+  });
+  $('anwListe').innerHTML = h;
+}
+
+/* ─────────── Export ─────────── */
+function exportMalen(){
+  var hs = heute();
+  var ids = Object.keys(VERSCHRAUBT);
+  var heuteN = ids.filter(function(id){ return VERSCHRAUBT[id].am === hs; }).length;
+  var montiert = Object.keys(TISCHE).filter(function(id){ return TISCHE[id].mt; });
+  var offen = montiert.filter(function(id){ return !VERSCHRAUBT[id]; }).length;
+  $('expZahlen').innerHTML =
+      '<div class="kasten ok"><b>'+ids.length+' Konstruktionen verschraubt</b>'
+    + 'davon heute gemeldet: '+heuteN+'</div>'
+    + '<div class="kasten warn"><b>'+offen+' noch offen</b>'
+    + 'Modulträger montiert, aber noch nicht als verschraubt gemeldet ('
+    + montiert.length+' montiert insgesamt).</div>';
+  $('quelle').innerHTML =
+      'Lage: uploads/pfaehle.json · Typ: ILF-Belegungslisten (Stand '+esc(STAND.typen)+') · '
+    + 'Bereich: Nalpi Bauphasen_STRABAG_260410 (Stand '+esc(STAND.bereiche)+') · '
+    + 'Montagestand: Nalpi TABLE_DATA (Stand '+esc(STAND.bau)+') · '
+    + 'Mängel: '+esc(MSTAND||'–')+'. Erfassung Verschrauben: Firebase RTDB erfassung/verschrauben.';
+}
+function csvLaden(nurHeute){
+  var hs = heute();
+  var ids = Object.keys(VERSCHRAUBT)
+            .filter(function(id){ return !nurHeute || VERSCHRAUBT[id].am === hs; })
+            .sort(function(a,b){ return (parseInt(a,10)||0)-(parseInt(b,10)||0); });
+  if(!ids.length){ toast('Nichts zu exportieren.', true); return; }
+  var z = ['TISCH_ID;MODULETABLE_SCREWED_DATE;ERFASST_VON;TYP;BEREICH'];
+  ids.forEach(function(id){
+    var v = VERSCHRAUBT[id], t = TISCHE[id]||{};
+    z.push([id, v.am, (v.von||'').replace(/;/g,','), t.typ||'', t.ber||''].join(';'));
+  });
+  /* BOM, damit Excel die Umlaute nicht zerlegt */
+  var blob = new Blob(['﻿'+z.join('\r\n')+'\r\n'], {type:'text/csv;charset=utf-8'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'Verschraubt_'+(nurHeute?hs:'alle_'+hs)+'.csv';
+  a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
+  toast('CSV mit '+ids.length+' Zeilen gespeichert');
+}
+function neuLaden(){ location.reload(); }
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+}
+</script>
+</body>
+</html>
