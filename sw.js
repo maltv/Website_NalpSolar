@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v128';
+var CACHE = 'nalpsolar-v130';
 var PRECACHE = [
   './index.html',
   './protokoll.html',
@@ -83,6 +83,8 @@ var PRECACHE = [
   // Betonspurfertiger (14.08.2026): Seite offline halten, die PDFs bewusst NICHT
   // vorladen (1.4 MB) - die holt man sich im Tal ueber WLAN
   './betonspur.html',
+  // 3D-Modell (18.08.2026): Seite offline halten, die STL (131 KB) laedt sie selbst nach
+  './betonspur-3d.html',
   // Skizzenblock (17.08.2026): Zeichnen muss auch ohne Empfang gehen; der Stand
   // liegt im localStorage, Speichern auf dem Server braucht dann Netz.
   './skizze.html',
@@ -92,7 +94,12 @@ var PRECACHE = [
   // Stoerungsjournal (Admin): Zahlen auch ohne Empfang lesbar; das Zuordnen
   // (Verantwortlicher/Nachtrag) braucht dann trotzdem Netz.
   './stoerungen.html',
-  './uploads/stoerungen/stoerungen.json'
+  './uploads/stoerungen/stoerungen.json',
+  // Team Verschrauben (18.08.2026): muss am Berg ohne Empfang laufen -
+  // Abhaken und Mangelmeldung wandern dann in die Warteschlange.
+  './verschrauben.html',
+  './uploads/pfaehle.json',
+  './uploads/tables/bereiche.json'
 ];
 
 self.addEventListener('install', function(e) {

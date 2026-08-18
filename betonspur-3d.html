@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>NalpSolar · Betonspurfertiger 3D</title>
+<meta name="theme-color" content="#0e141b">
+<script src="assets/js/nalp-gate.js"></script>
+<style>
+  :root{ --rot:#D72622; --ink:#e8eef7; --mut:#93a3b5; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; height:100%; overflow:hidden; }
+  body{ background:#0e141b; color:var(--ink); font-family:Arial,"Helvetica Neue",sans-serif;
+        display:flex; flex-direction:column; }
+  header{ flex:none; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+          padding:9px 13px calc(9px + env(safe-area-inset-top));
+          background:#fff; border-bottom:4px solid var(--rot); color:#1a1a1a; }
+  header a.home{ color:#1a1a1a; text-decoration:none; font-size:19px; }
+  header .logo img{ height:20px; display:block; }
+  header h1{ font-size:15px; margin:0; flex:1; font-weight:900; white-space:nowrap; }
+  .btn{ border:1px solid #c9ccd2; background:#fff; border-radius:6px; padding:7px 11px;
+        font-size:12.5px; font-weight:800; cursor:pointer; color:#1a1a1a; text-decoration:none; white-space:nowrap; }
+  .btn.an{ background:#12304f; border-color:#12304f; color:#fff; }
+  .btn.rot{ background:var(--rot); border-color:var(--rot); color:#fff; }
+  .buehne{ flex:1; min-height:0; position:relative; }
+  canvas{ display:block; width:100%; height:100%; touch-action:none; }
+  .info{ position:absolute; left:12px; bottom:12px; background:rgba(14,20,27,.82);
+         border:1px solid #2a3644; border-radius:8px; padding:9px 12px; font-size:12px; line-height:1.55;
+         max-width:min(420px, calc(100% - 24px)); }
+  .info b{ color:#ffc340; }
+  .info .keil{ color:#f0914a; font-weight:800; }
+  .laden{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+          font-size:14px; color:var(--mut); }
+  .werkzeug{ position:absolute; right:12px; top:12px; display:flex; flex-direction:column; gap:6px; }
+  @media(max-width:560px){ header h1{ font-size:13.5px; } .info{ font-size:11px; } }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="home" href="index.html" title="Startseite">🏠</a>
+  <div class="logo"><img src="assets/img/strabag-logo.png" alt="STRABAG"></div>
+  <h1>🧱 Betonspurfertiger · 3D-Modell</h1>
+  <a class="btn" href="betonspur.html">Zur Übersicht</a>
+  <a class="btn rot" href="Betonspur/modell/betonspurfertiger.stl" download>⬇ STL</a>
+</header>
+
+<div class="buehne">
+  <canvas id="cv"></canvas>
+  <div class="laden" id="laden">Modell wird geladen …</div>
+  <div class="werkzeug">
+    <button class="btn" id="bKeil">Trichter durchsichtig</button>
+    <button class="btn" id="bKanten">Kanten</button>
+    <button class="btn" id="bReset">Ansicht zurück</button>
+  </div>
+  <div class="info">
+    <b>Gerät 274 × 521 × 141 cm</b> · Spur links 81, Mitte 45 frei, Spur rechts 80 ·
+    vier Kufen à 17 breit, 17 hoch<br>
+    <span class="keil">Der orange Keil</span> im Trichter teilt den Beton auf die zwei Spuren
+    (79 breit, First auf 90, Flanke 62°).<br>
+    Ziehen = drehen · zwei Finger / Rad = zoomen · rechte Maustaste = verschieben
+  </div>
+</div>
+
+<script src="assets/js/three/three.min.js"></script>
+<script src="assets/js/three/OrbitControls.js"></script>
+<script>
+'use strict';
+/* Betonspurfertiger als 3D-Modell. Quelle ist die STL aus Victors Tinkercad-Entwurf,
+   ergaenzt um den Aufspaltkeil (die letzten 8 Dreiecke der Datei).
+   Der STL-Parser steht hier direkt drin - so braucht es keinen zusaetzlichen Loader. */
+
+var STL = 'Betonspur/modell/betonspurfertiger.stl';
+var GRUPPEN = 'Betonspur/modell/gruppen.json';   // Dreiecksbereiche je Baugruppe
+
+var renderer, szene, kamera, ctrl, geraet, trichter, keil, kanten, matTrichter,
+    startZiel, startPos;
+
+function stlLesen(puffer) {
+  var dv = new DataView(puffer);
+  var n = dv.getUint32(80, true);
+  var pos = new Float32Array(n * 9), nor = new Float32Array(n * 9);
+  var off = 84;
+  for (var i = 0; i < n; i++) {
+    var nx = dv.getFloat32(off, true), ny = dv.getFloat32(off + 4, true), nz = dv.getFloat32(off + 8, true);
+    for (var e = 0; e < 3; e++) {
+      var b = off + 12 + e * 12, k = i * 9 + e * 3;
+      pos[k]     = dv.getFloat32(b, true);
+      pos[k + 1] = dv.getFloat32(b + 4, true);
+      pos[k + 2] = dv.getFloat32(b + 8, true);
+      nor[k] = nx; nor[k + 1] = ny; nor[k + 2] = nz;
+    }
+    off += 50;
+  }
+  return { pos: pos, nor: nor, anzahl: n };
+}
+
+function geometrie(pos, nor, von, bis) {
+  var g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos.slice(von * 9, bis * 9), 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(nor.slice(von * 9, bis * 9), 3));
+  return g;
+}
+
+function aufbauen(daten, gr) {
+  // gr = Dreiecksbereiche je Baugruppe aus gruppen.json
+  var gGeraet   = geometrie(daten.pos, daten.nor, gr.rahmen[0], gr.rahmen[1]);
+  var gTrichter = geometrie(daten.pos, daten.nor, gr.trichter[0], gr.trichter[1]);
+  var gKeil     = geometrie(daten.pos, daten.nor, gr.keil[0], gr.keil[1]);
+  gGeraet.computeBoundingBox();
+
+  // Modell so verschieben, dass es mittig und mit der Unterkante auf 0 steht
+  var bb = new THREE.Box3().setFromBufferAttribute(gGeraet.getAttribute('position'));
+  var mitte = bb.getCenter(new THREE.Vector3());
+  var verschieb = new THREE.Vector3(-mitte.x, -mitte.y, -bb.min.z);
+
+  var matGeraet = new THREE.MeshPhongMaterial({ color: 0x9fb4c9, specular: 0x3a4a5a, shininess: 22,
+                                                flatShading: true });
+  var matKeil   = new THREE.MeshPhongMaterial({ color: 0xd8752c, specular: 0x6a4a20, shininess: 26,
+                                                flatShading: true });
+  matTrichter = new THREE.MeshPhongMaterial({ color: 0xbfd2c2, specular: 0x3a4a3a, shininess: 18,
+                                              flatShading: true, transparent: true, opacity: 1.0,
+                                              side: THREE.DoubleSide });
+
+  geraet   = new THREE.Mesh(gGeraet, matGeraet);
+  trichter = new THREE.Mesh(gTrichter, matTrichter);
+  keil     = new THREE.Mesh(gKeil, matKeil);
+
+  kanten = new THREE.LineSegments(
+    new THREE.EdgesGeometry(gGeraet, 25),
+    new THREE.LineBasicMaterial({ color: 0x22303f }));
+  kanten.visible = false;
+
+  // Zwei Gruppen verschachteln: innen wird in STL-Koordinaten verschoben (Mitte auf 0,
+  // Unterkante auf 0), aussen wird von Z-oben (STL) auf Y-oben (three) gedreht.
+  // In einer einzigen Gruppe wuerde die Verschiebung nach der Drehung wirken und das
+  // Modell kippt weg.
+  var verschoben = new THREE.Group();
+  verschoben.add(geraet); verschoben.add(trichter); verschoben.add(keil);
+  verschoben.add(kanten);
+  verschoben.position.copy(verschieb);
+
+  var wurzel = new THREE.Group();
+  wurzel.rotation.x = -Math.PI / 2;
+  wurzel.add(verschoben);
+  szene.add(wurzel);
+
+  var groesse = bb.getSize(new THREE.Vector3());
+  var d = Math.max(groesse.x, groesse.y, groesse.z);
+  startPos = new THREE.Vector3(d * 0.95, d * 0.75, d * 1.15);
+  startZiel = new THREE.Vector3(0, groesse.z * 0.35, 0);
+  ansichtZurueck();
+
+  // Boden
+  var gitter = new THREE.GridHelper(d * 2.4, 24, 0x2a3644, 0x1b2530);
+  gitter.position.y = -0.2;
+  szene.add(gitter);
+
+  document.getElementById('laden').style.display = 'none';
+}
+
+function ansichtZurueck() {
+  kamera.position.copy(startPos);
+  ctrl.target.copy(startZiel);
+  ctrl.update();
+}
+
+function start() {
+  var cv = document.getElementById('cv');
+  renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+  szene = new THREE.Scene();
+  szene.background = new THREE.Color(0x0e141b);
+
+  kamera = new THREE.PerspectiveCamera(42, 1, 1, 5000);
+  ctrl = new THREE.OrbitControls(kamera, renderer.domElement);
+  ctrl.enableDamping = true; ctrl.dampingFactor = 0.08;
+
+  szene.add(new THREE.HemisphereLight(0xdceaff, 0x2a3038, 1.05));
+  var s1 = new THREE.DirectionalLight(0xffffff, 0.85); s1.position.set(1, 1.4, 0.8); szene.add(s1);
+  var s2 = new THREE.DirectionalLight(0xa8c4e0, 0.35); s2.position.set(-1, 0.5, -0.9); szene.add(s2);
+
+  groesseAnpassen();
+  window.addEventListener('resize', groesseAnpassen);
+
+  Promise.all([
+    fetch(STL).then(function (r) { if (!r.ok) throw new Error('STL HTTP ' + r.status); return r.arrayBuffer(); }),
+    fetch(GRUPPEN).then(function (r) { if (!r.ok) throw new Error('JSON HTTP ' + r.status); return r.json(); })
+  ]).then(function (a) {
+    aufbauen(stlLesen(a[0]), a[1]);
+  }).catch(function (e) {
+    document.getElementById('laden').textContent = 'Modell konnte nicht geladen werden (' + e.message + ')';
+  });
+
+  document.getElementById('bKeil').addEventListener('click', function () {
+    if (!matTrichter) return;
+    var durchsichtig = matTrichter.opacity > 0.9;
+    matTrichter.opacity = durchsichtig ? 0.28 : 1.0;
+    matTrichter.needsUpdate = true;
+    this.classList.toggle('an', durchsichtig);
+    this.textContent = durchsichtig ? 'Trichter zu' : 'Trichter durchsichtig';
+  });
+  document.getElementById('bKanten').addEventListener('click', function () {
+    if (!kanten) return;
+    kanten.visible = !kanten.visible;
+    this.classList.toggle('an', kanten.visible);
+  });
+  document.getElementById('bReset').addEventListener('click', ansichtZurueck);
+
+  (function schleife() {
+    requestAnimationFrame(schleife);
+    ctrl.update();
+    renderer.render(szene, kamera);
+  })();
+}
+
+function groesseAnpassen() {
+  var b = document.querySelector('.buehne');
+  renderer.setSize(b.clientWidth, b.clientHeight, false);
+  kamera.aspect = b.clientWidth / Math.max(1, b.clientHeight);
+  kamera.updateProjectionMatrix();
+}
+
+start();
+</script>
+</body>
+</html>
