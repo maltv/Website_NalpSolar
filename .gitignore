@@ -10,3 +10,7 @@ uploads/_nalpi/
 # Sicherungskopien des Bestell-Nachtrags (tools/bestellbatch_nachtragen.py)
 *.js.bak
 __pycache__/
+
+# Verschiebungs-Rohdaten nur verschluesselt ins Repo (uploads/verschiebungen/*.enc.json)
+uploads/verschiebungen.json
+uploads/verschiebungen/verschiebungen.json

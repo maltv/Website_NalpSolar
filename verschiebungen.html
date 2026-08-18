@@ -1,0 +1,967 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Bohrbagger-Verschiebungen · Admin</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#ffffff">
+<!-- Verschiebungen und Umstellungen der beiden Bohrbagger seit Baubeginn 11.05.2026.
+     Grunddaten: uploads/verschiebungen.json (erzeugt von
+     Tools\Bohrbagger_Verschiebungen_Bauen.py im KI-Projekt).
+       * Bohrdatum + Sollkoordinaten je Bohrpunkt  -> Nalpi DRILLING_POINT_DATA
+       * Tischtyp (bestimmt den Bagger und die LV-Position) -> Nalpi export-tableId
+       * Hoehe je Bohrpunkt -> swissALTI3D 2 m (swisstopo), bilinear
+       * Fahrweg -> Baupistennetz, gezeichnet von V. Malt am 04.08.2026
+     Die LV-Einstufung passiert HIER im Browser, damit die Planums-Schwelle
+     einstellbar bleibt. Nichts wird geschrieben - reine Anzeige.
+     SCHUTZ: eigenes Passwort wie bei abrechnung.html, KEIN Zahlen-Gate. Die
+     Daten liegen AES-256-GCM-verschluesselt in uploads/verschiebungen/
+     verschiebungen.enc.json; ohne Passwort steht dort nur Chiffrat. Noetig,
+     weil das Website-Repo oeffentlich ist und hier Einheitspreise drinstehen.
+     Passwort: Tools\verschiebungen_passwort.txt im KI-Projekt. -->
+<style>
+  :root {
+    color-scheme: light;
+    --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
+    --flaeche:#ffffff; --grund:#f2f3f5;
+    /* Bagger – kategoriale Slots 1 und 2 (all-pairs validiert, hell) */
+    --b1:#2a78d6; --b2:#eb6834;
+    /* LV-Stufen – ordinale Blaustufen, dunkler = teurer (ordinal validiert) */
+    --lv50:#86b6ef; --lv200:#2a78d6; --lv155:#104281; --lvohne:#d03b3b;
+    --raster:#e8eaed; --achse:#c7cbd1;
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; }
+  body { font-family:Arial,"Helvetica Neue",sans-serif; color:var(--ink);
+         background:var(--grund); padding-bottom:env(safe-area-inset-bottom); }
+
+  .topbar { background:#fff; border-bottom:4px solid var(--rot); padding:12px 18px;
+            display:flex; align-items:center; gap:14px; position:sticky; top:0; z-index:50; }
+  .topbar .t { font-weight:900; font-size:17px; }
+  .topbar .los { font-size:11.5px; color:var(--mut); font-weight:700;
+                 letter-spacing:.06em; margin-left:auto; }
+  .wrap { max-width:1180px; margin:0 auto; padding:16px 14px 60px; }
+
+  .card { background:var(--flaeche); border:1px solid var(--line); border-left:5px solid var(--rot);
+          border-radius:6px; padding:14px 16px; margin-bottom:14px;
+          box-shadow:0 1px 4px rgba(20,25,32,.07); }
+  .card h2 { margin:0 0 8px; font-size:16px; }
+  .card h3 { margin:16px 0 6px; font-size:13.5px; color:var(--mut);
+             text-transform:uppercase; letter-spacing:.05em; }
+  .sub { font-size:12.5px; color:var(--mut); line-height:1.6; }
+  .sub b { color:var(--ink); }
+
+  /* Steuerung */
+  .steu { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:16px; }
+  .steu label { display:block; font-size:11.5px; font-weight:700; color:var(--mut);
+                text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px; }
+  .schwelleZeile { display:flex; align-items:center; gap:10px; }
+  .schwelleZeile input[type=range] { flex:1; accent-color:var(--rot); min-width:110px; }
+  .schwelleZeile input[type=number] { width:74px; padding:6px 8px; font-size:14px; font-weight:900;
+        border:1px solid #c9ccd2; border-radius:4px; text-align:right;
+        font-variant-numeric:tabular-nums; font-family:inherit; }
+  .knopfreihe { display:flex; gap:0; }
+  .knopfreihe button { font:inherit; font-size:12.5px; font-weight:700; padding:7px 12px;
+        border:1px solid #c9ccd2; background:#fff; color:var(--mut); cursor:pointer; }
+  .knopfreihe button:first-child { border-radius:4px 0 0 4px; }
+  .knopfreihe button:last-child { border-radius:0 4px 4px 0; }
+  .knopfreihe button + button { border-left:none; }
+  .knopfreihe button.an { background:var(--ink); border-color:var(--ink); color:#fff; }
+  select { font:inherit; font-size:13px; padding:7px 8px; border:1px solid #c9ccd2;
+           border-radius:4px; background:#fff; width:100%; }
+
+  /* KPI */
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px;
+          margin:14px 0 0; }
+  .kpi { background:#fff; border:1px solid var(--line); border-radius:6px; padding:11px 13px; }
+  .kpi b { display:block; font-size:25px; font-weight:900; line-height:1.1;
+           font-variant-numeric:tabular-nums; }
+  .kpi small { display:block; font-size:11.5px; color:var(--mut); margin-top:4px; line-height:1.4; }
+  .kpi.akz b { color:var(--lv155); } .kpi.rot b { color:var(--rot); }
+
+  /* Tabellen */
+  table.t { width:100%; border-collapse:collapse; font-size:12.5px; }
+  table.t th { text-align:right; color:var(--mut); font-size:10.5px; font-weight:700;
+        padding:4px 5px; border-bottom:1px solid var(--line); text-transform:uppercase;
+        letter-spacing:.04em; white-space:nowrap; }
+  table.t th:first-child, table.t td:first-child { text-align:left; }
+  table.t td { padding:5px; border-bottom:1px solid var(--line); text-align:right;
+        font-variant-numeric:tabular-nums; white-space:nowrap; }
+  table.t tr.gr td { background:#f6f7f9; font-weight:800; color:var(--mut);
+        font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+  table.t tr.sum td { font-weight:900; border-top:2px solid var(--achse); background:#fbfbfc; }
+  table.t td.n0 { color:#b6bac0; }
+  .tScroll { overflow-x:auto; }
+  .pkt { display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:6px;
+         vertical-align:baseline; }
+
+  /* Diagramme */
+  .plot { width:100%; display:block; overflow:visible; }
+  .plot text { font-family:Arial,sans-serif; }
+  .plot .ax { font-size:10.5px; fill:var(--mut); }
+  .plot .axt { font-size:11px; fill:var(--mut); font-weight:700; }
+  .legende { display:flex; flex-wrap:wrap; gap:14px; font-size:12px; color:var(--mut);
+             margin:2px 0 8px; }
+  .legende span { display:flex; align-items:center; gap:6px; }
+
+  /* Karte */
+  .kartenbox { position:relative; background:#fff; border:1px solid var(--line);
+               border-radius:6px; padding:8px; }
+  #karte { width:100%; display:block; border-radius:4px; }
+  .abspiel { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:12px 0 6px; }
+  .abspiel button { font:inherit; font-size:13px; font-weight:700; padding:7px 14px;
+        border:1px solid #c9ccd2; border-radius:4px; background:#fff; cursor:pointer; }
+  .abspiel button.pl { background:var(--rot); border-color:var(--rot); color:#fff; min-width:92px; }
+  #tagRegler { flex:1 1 200px; accent-color:var(--rot); min-width:150px; }
+  .tagkopf { display:flex; flex-wrap:wrap; align-items:baseline; gap:10px; margin:10px 0 6px; }
+  .tagkopf .d { font-size:20px; font-weight:900; font-variant-numeric:tabular-nums; }
+  .marke { font-size:11px; color:var(--mut); border:1px solid var(--line); background:#fff;
+           border-radius:999px; padding:2px 9px; }
+
+  .hinweis { background:#fff8e6; border:1px solid #f0dca8; border-left:5px solid #e08a00;
+             border-radius:6px; padding:12px 14px; margin-bottom:14px; font-size:12.5px;
+             line-height:1.6; }
+  .hinweis > b:first-child { display:block; margin-bottom:4px; }
+  .foot { text-align:center; font-size:12px; color:var(--mut); margin-top:22px; }
+  .foot a { color:var(--rot); font-weight:700; text-decoration:none; }
+  .knopf { display:inline-block; background:var(--rot); color:#fff; text-decoration:none;
+           font-weight:700; font-size:13px; padding:8px 15px; border-radius:5px;
+           border:none; cursor:pointer; font-family:inherit; }
+  #login{ position:fixed; inset:0; z-index:2000; display:flex; align-items:center;
+          justify-content:center; padding:24px;
+          background:linear-gradient(rgba(20,28,38,.45),rgba(20,28,38,.65)) , #223041; }
+  #login .box{ background:#fff; border-radius:8px; border-top:6px solid var(--rot);
+               padding:24px 22px 20px; width:100%; max-width:340px;
+               box-shadow:0 14px 44px rgba(10,14,20,.45); text-align:center; }
+  #login h1{ font-size:17px; margin:0 0 4px; }
+  #login p{ font-size:12.5px; color:var(--mut); margin:0 0 16px; line-height:1.5; }
+  #login input[type=password]{ width:100%; padding:11px 12px; font-size:16px;
+               border:1px solid #c9ccd1; border-radius:5px; font-family:inherit; }
+  #login button{ width:100%; margin-top:10px; padding:11px; font-size:15px; font-weight:700;
+               color:#fff; background:var(--rot); border:0; border-radius:5px; cursor:pointer; }
+  #login .merk{ display:flex; align-items:center; gap:7px; justify-content:center;
+               margin-top:11px; font-size:12.5px; color:var(--mut); }
+  #login .fehler{ color:var(--rot); font-size:12.5px; margin-top:10px; font-weight:700;
+               min-height:16px; }
+
+  .tip { position:fixed; z-index:80; pointer-events:none; background:#1a1a1a; color:#fff;
+         font-size:11.5px; line-height:1.5; padding:7px 10px; border-radius:5px;
+         box-shadow:0 3px 12px rgba(0,0,0,.25); max-width:280px; display:none; }
+  .tip b { color:#fff; }
+</style>
+</head>
+<body>
+
+<div id="login">
+  <div class="box">
+    <h1>Bohrbagger-Verschiebungen</h1>
+    <p>Bohrdaten und Einheitspreise sind verschlüsselt.<br>Passwort eingeben.</p>
+    <input type="password" id="pw" autocomplete="current-password" placeholder="Passwort" autofocus>
+    <button id="go">Öffnen</button>
+    <label class="merk"><input type="checkbox" id="merken"> auf diesem Gerät merken</label>
+    <div class="fehler" id="fehler"></div>
+  </div>
+</div>
+
+<div class="topbar">
+  <div class="t">Bohrbagger-Verschiebungen</div>
+  <div class="los">LOS B8-13</div>
+</div>
+
+<div class="wrap" id="inhalt" style="display:none">
+
+<div class="card">
+  <h2>Was diese Seite zeigt</h2>
+  <div class="sub">
+    Jeder Standortwechsel der beiden Bohrbagger seit Baubeginn, gerechnet aus dem Bohrdatum
+    je Stütze. Neu ist die <b>Höhe</b>: jeder Bohrpunkt bekommt seine Geländehöhe aus
+    swissALTI3D, daraus der Höhenunterschied je Verschiebung.<br><br>
+    Das LV kennt zwei Welten. <b>171.100.154</b> – «Verschieben von Gerätegruppen von Pfahl zu
+    Pfahl, mit geräteeigenen Möglichkeiten, <b>auf gleicher Planumshöhe</b>» – gilt bis 50 m
+    bzw. 51–200 m. <b>171.100.155</b> – «<b>Umstellen</b> von Gerätegruppen, inkl. Auflad,
+    Transport und Ablad», Distanz bis 500 m, Höhenunterschied bis 100 m. <span id="epSatz"></span>
+    Ab welchem Höhenunterschied der Bagger nicht mehr selbst fahren kann, sondern verladen
+    werden muss, ist eine Beurteilung – darum ist die Schwelle hier einstellbar.
+  </div>
+</div>
+
+<div class="card">
+  <h2>Einstellungen</h2>
+  <div class="steu">
+    <div>
+      <label for="schwelleNum">Grenzwert Planumshöhe |Δh|</label>
+      <div class="schwelleZeile">
+        <input type="range" id="schwelleReg" min="0" max="6" step="0.1" value="3">
+        <input type="number" id="schwelleNum" min="0" max="100" step="0.1" value="3.0">
+        <span style="font-size:13px;font-weight:700;color:var(--mut)">m</span>
+      </div>
+      <div class="sub" style="margin-top:5px;font-size:11.5px">
+        Darüber gilt die Verschiebung als Umstellen (LV 155). Vorgabe 3,0 m –
+        hergeleitet unten aus dem Höhenunterschied innerhalb eines einzelnen Tisches.
+      </div>
+    </div>
+    <div>
+      <label>Distanz gerechnet als</label>
+      <div class="knopfreihe" id="basisWahl">
+        <button data-w="fw" class="an">Fahrweg über Piste</button>
+        <button data-w="lu">Luftlinie</button>
+      </div>
+      <div class="sub" style="margin-top:5px;font-size:11.5px">
+        Fahrweg = tatsächlich gefahrene Strecke über das Baupistennetz.
+      </div>
+    </div>
+    <div>
+      <label for="zeitWahl">Zeitraum</label>
+      <select id="zeitWahl"></select>
+      <div class="sub" style="margin-top:5px;font-size:11.5px" id="zeitInfo"></div>
+    </div>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+</div>
+
+<div class="card">
+  <h2>Verteilung der Höhenunterschiede</h2>
+  <div class="sub" style="margin-bottom:10px">
+    Betrag des Höhenunterschieds je Verschiebung. Die senkrechte Linie ist der eingestellte
+    Grenzwert – alles rechts davon ist nach LV ein Umstellen.
+  </div>
+  <div class="legende">
+    <span><i class="pkt" style="background:var(--lv200)"></i>bis Grenzwert · LV 154 «gleiche Planumshöhe»</span>
+    <span><i class="pkt" style="background:var(--b2)"></i>über Grenzwert · LV 155 «Umstellen»</span>
+  </div>
+  <svg id="histo" class="plot" viewBox="0 0 940 306" preserveAspectRatio="xMidYMid meet"
+       role="img" aria-label="Histogramm der Höhenunterschiede"></svg>
+
+  <h3>Wirkung des Grenzwerts</h3>
+  <div class="sub" style="margin-bottom:8px">
+    Wie viele Verschiebungen bei welchem Grenzwert als Umstellen zählen. Zeigt, wie stark
+    das Ergebnis von der Beurteilung abhängt.
+  </div>
+  <svg id="kurve" class="plot" viewBox="0 0 940 250" preserveAspectRatio="xMidYMid meet"
+       role="img" aria-label="Anzahl Umstellungen je Grenzwert"></svg>
+
+  <h3>Woher der Vorgabewert kommt</h3>
+  <div class="sub" id="kalib"></div>
+</div>
+
+<div class="card">
+  <h2>Einstufung nach LV</h2>
+  <div class="sub" style="margin-bottom:10px">
+    Alle Verschiebungen des gewählten Zeitraums, eingestuft nach Distanz und Höhenunterschied.
+    Spalte «LV-Menge» ist die ausgeschriebene Menge des ganzen Auftrags, «bis Mai 26» das,
+    was bis zur 10. Teilzahlung tatsächlich abgerechnet wurde (Quelle: Mengenliste RE/LV
+    vom 29.06.2026).
+  </div>
+  <div class="tScroll"><table class="t" id="lvTab"></table></div>
+  <div class="sub" style="margin-top:10px" id="lvFuss"></div>
+</div>
+
+<div class="card">
+  <h2>Karte und Tagesablauf</h2>
+  <div class="abspiel">
+    <button class="pl" id="play">▶ Abspielen</button>
+    <input type="range" id="tagRegler" min="0" max="0" value="0">
+    <select id="tempo" style="width:auto">
+      <option value="260">normal</option>
+      <option value="120">schnell</option>
+      <option value="600">langsam</option>
+    </select>
+  </div>
+  <div class="tagkopf">
+    <div class="d" id="tagLabel">–</div>
+    <span class="marke" id="tagZahl"></span>
+    <span class="marke" id="tagWe" style="display:none">Wochenende</span>
+  </div>
+  <div class="legende">
+    <span><i class="pkt" style="background:var(--b1)"></i>Bagger 1 · Typ C/D/E</span>
+    <span><i class="pkt" style="background:var(--b2)"></i>Bagger 2 · Typ A/B</span>
+    <span><i class="pkt" style="background:var(--lv155)"></i>Umstellen (über Grenzwert)</span>
+    <span style="gap:4px"><svg width="26" height="8"><line x1="0" y1="4" x2="26" y2="4"
+      stroke="var(--achse)" stroke-width="2"/></svg>Baupiste</span>
+  </div>
+  <div class="kartenbox"><canvas id="karte"></canvas></div>
+
+  <h3>Höhenprofil des Tages</h3>
+  <svg id="profil" class="plot" viewBox="0 0 940 198" preserveAspectRatio="xMidYMid meet"
+       role="img" aria-label="Höhenprofil der Bohrreihenfolge des Tages"></svg>
+
+  <h3>Verschiebungen an diesem Tag</h3>
+  <div class="tScroll"><table class="t" id="tagTab"></table></div>
+</div>
+
+<div class="card">
+  <h2>Alle Umstellungen über dem Grenzwert</h2>
+  <div class="sub" style="margin-bottom:10px" id="umsInfo"></div>
+  <div class="tScroll"><table class="t" id="umsTab"></table></div>
+  <div style="margin-top:12px"><button class="knopf" id="csv">Liste als CSV laden</button></div>
+</div>
+
+<div class="hinweis" id="vorbehalt"></div>
+
+<div class="card">
+  <h2>Quellen</h2>
+  <div class="sub" id="quellen"></div>
+</div>
+
+<div class="foot"><a href="admin.html">← zurück zum Admin</a></div>
+</div>
+
+<div class="tip" id="tip"></div>
+
+<script>
+(function () {
+'use strict';
+
+// ── LV-Stamm (Positionen, Einheitspreise, LV- und RE-Mengen) ───────────────
+// Steht bewusst NICHT hier, sondern in der verschlüsselten Datendatei – das
+// Repo dieser Website ist öffentlich. Wird in starten() aus den Daten gefüllt.
+var EP = {}, LV = [];
+var GRUPPE = {
+  k: { t:'LV 171.100.154 · Verschieben, gleiche Planumshöhe, bis 50 m', ep:0, farbe:'var(--lv50)' },
+  m: { t:'LV 171.100.154 · Verschieben, gleiche Planumshöhe, 51–200 m', ep:0, farbe:'var(--lv200)' },
+  u: { t:'LV 171.100.155 · Umstellen, inkl. Auflad, Transport und Ablad', ep:0, farbe:'var(--lv155)' }
+};
+
+var D = null, tage = [], mv = [];
+var schwelle = 3.0, basis = 'fw', vonIdx = 0, bisIdx = 0;
+var tag = 0, timer = null;
+var $ = function (id) { return document.getElementById(id); };
+var nf = function (n, k) { return Number(n).toLocaleString('de-CH',
+  { minimumFractionDigits: k || 0, maximumFractionDigits: k || 0 }); };
+var chf = function (n) { return nf(Math.round(n)); };
+
+// ── Einstufung einer Verschiebung ──────────────────────────────────────────
+// LV 154 gilt nur "auf gleicher Planumshoehe" und nur bis 200 m. Daraus:
+//   |dh| ueber Grenzwert            -> 155 (Umstellen)      solange <=500 m und |dh|<=100 m
+//   |dh| unter Grenzwert, <=50 m    -> 154 bis 50 m
+//   |dh| unter Grenzwert, <=200 m   -> 154 51-200 m
+//   |dh| unter Grenzwert, >200 m    -> im LV 154 nicht vorgesehen -> 155 bis 500 m
+//   alles darueber                  -> keine LV-Position (Nachtrag)
+function stufe(b) {
+  var d = basis === 'fw' ? b.fw : b.lu;
+  var dh = b.dh === null ? 0 : Math.abs(b.dh);
+  if (dh > schwelle) return (d <= 500 && dh <= 100) ? 'u' : 'x';
+  if (d <= 50) return 'k';
+  if (d <= 200) return 'm';
+  return d <= 500 ? 'u' : 'x';
+}
+function lvTyp(t) { return (t === 'C' || t === 'D' || t === 'E') ? 'CDE' : t; }
+function gleicherTisch(b) {
+  return b.von.split('_')[0] === b.nach.split('_')[0];
+}
+
+function auswahl() {
+  var a = tage[vonIdx].iso, b = tage[bisIdx].iso;
+  return mv.filter(function (m) { return m.tag >= a && m.tag <= b; });
+}
+
+// ── Kopf: KPI ──────────────────────────────────────────────────────────────
+function zeichneKpi(liste) {
+  var z = { k:0, m:0, u:0, x:0 }, wert = 0, wertOhne = 0, innen = 0;
+  liste.forEach(function (b) {
+    var s = stufe(b); z[s]++;
+    if ((s === 'u' || s === 'x') && gleicherTisch(b)) innen++;
+    wert += s === 'k' ? EP.k : s === 'm' ? EP.m : s === 'u' ? EP.u : 0;
+    var d = basis === 'fw' ? b.fw : b.lu;                      // reine Distanzsicht
+    wertOhne += d <= 50 ? EP.k : d <= 200 ? EP.m : d <= 500 ? EP.u : 0;
+  });
+  var diff = wert - wertOhne;
+  $('kpis').innerHTML =
+    '<div class="kpi"><b>' + nf(liste.length) + '</b><small>Verschiebungen im Zeitraum</small></div>' +
+    '<div class="kpi akz"><b>' + nf(z.u) + '</b><small>davon Umstellen · LV 155<br>zu CHF ' +
+      nf(EP.u, 2) + '</small></div>' +
+    '<div class="kpi"><b>' + chf(wert) + '</b><small>CHF nach LV, mit Höhe</small></div>' +
+    '<div class="kpi"><b>' + chf(wertOhne) + '</b><small>CHF nur nach Distanz<br>(bisherige Betrachtung)</small></div>' +
+    '<div class="kpi rot"><b>' + (diff >= 0 ? '+' : '') + chf(diff) + '</b>' +
+      '<small>CHF Unterschied durch die Höhe</small></div>' +
+    (z.x ? '<div class="kpi rot"><b>' + nf(z.x) + '</b><small>ausserhalb LV-Rahmen<br>(&gt;500 m oder &gt;100 m Höhe)</small></div>' : '') +
+    (innen ? '<div class="kpi rot"><b>' + nf(innen) + '</b><small>davon innerhalb <b>desselben</b> Tisches – als Umstellen nicht haltbar</small></div>' : '');
+}
+
+// ── Histogramm |Δh| ────────────────────────────────────────────────────────
+var TIP = $('tip');
+function tipAn(e, html) {
+  TIP.innerHTML = html; TIP.style.display = 'block';
+  var x = e.clientX + 14, y = e.clientY + 14;
+  if (x + TIP.offsetWidth > innerWidth - 8) x = e.clientX - TIP.offsetWidth - 14;
+  if (y + TIP.offsetHeight > innerHeight - 8) y = e.clientY - TIP.offsetHeight - 14;
+  TIP.style.left = x + 'px'; TIP.style.top = y + 'px';
+}
+function tipAus() { TIP.style.display = 'none'; }
+
+function svgEl(n, a) {
+  var e = document.createElementNS('http://www.w3.org/2000/svg', n);
+  for (var k in a) e.setAttribute(k, a[k]);
+  return e;
+}
+
+function zeichneHisto(liste) {
+  var s = $('histo'); s.innerHTML = '';
+  var W = 940, H = 306, L = 52, R = 12, T = 30, B = 46;
+  var BREIT = 0.25, MAX = 5, NB = MAX / BREIT;              // 20 Klassen + Überlauf
+  var bins = new Array(NB + 1).fill(0);
+  liste.forEach(function (b) {
+    var dh = b.dh === null ? 0 : Math.abs(b.dh);
+    bins[dh >= MAX ? NB : Math.floor(dh / BREIT)]++;
+  });
+  var maxY = Math.max.apply(null, bins) || 1;
+  var pw = (W - L - R) / (NB + 1);
+  var yv = function (v) { return H - B - (v / maxY) * (H - T - B); };
+
+  // Raster + Y-Achse
+  var schritt = Math.pow(10, Math.floor(Math.log10(maxY))) / 2;
+  while (maxY / schritt > 8) schritt *= 2;
+  for (var v = 0; v <= maxY; v += schritt) {
+    s.appendChild(svgEl('line', { x1:L, x2:W - R, y1:yv(v), y2:yv(v),
+      stroke: v === 0 ? 'var(--achse)' : 'var(--raster)', 'stroke-width': v === 0 ? 1.5 : 1 }));
+    var tx = svgEl('text', { x:L - 8, y:yv(v) + 4, 'text-anchor':'end', class:'ax' });
+    tx.textContent = nf(v); s.appendChild(tx);
+  }
+  var yl = svgEl('text', { x:6, y:12, class:'axt' });
+  yl.textContent = 'Verschiebungen'; s.appendChild(yl);
+
+  bins.forEach(function (n, i) {
+    if (!n) return;
+    var untere = i * BREIT;
+    var ueber = i === NB || untere >= schwelle;
+    var x = L + i * pw, hh = H - B - yv(n);
+    var r = svgEl('rect', { x:x + 1, y:yv(n), width:Math.max(1, pw - 2), height:Math.max(1.5, hh),
+      rx:2, fill: ueber ? 'var(--b2)' : 'var(--lv200)' });
+    r.style.cursor = 'default';
+    var lbl = i === NB ? 'ab 5,0 m' :
+      untere.toLocaleString('de-CH', { minimumFractionDigits:2 }) + ' – ' +
+      (untere + BREIT).toLocaleString('de-CH', { minimumFractionDigits:2 }) + ' m';
+    r.addEventListener('mousemove', function (e) {
+      tipAn(e, '<b>' + lbl + '</b><br>' + nf(n) + ' Verschiebungen<br>' +
+        (ueber ? 'zählt als Umstellen · LV 155' : 'gleiche Planumshöhe · LV 154'));
+    });
+    r.addEventListener('mouseleave', tipAus);
+    s.appendChild(r);
+  });
+
+  // X-Achse: 0–4 als Skala, der Überlaufbalken bekommt sein eigenes Etikett
+  for (var k = 0; k < MAX; k++) {
+    var x2 = L + (k / BREIT) * pw;
+    var t2 = svgEl('text', { x:x2, y:H - B + 16, 'text-anchor':'middle', class:'ax' });
+    t2.textContent = nf(k, 0); s.appendChild(t2);
+  }
+  var xo = svgEl('text', { x:L + (NB + 0.5) * pw, y:H - B + 16, 'text-anchor':'middle', class:'ax' });
+  xo.textContent = 'ab 5'; s.appendChild(xo);
+  var xl = svgEl('text', { x:(L + W - R) / 2, y:H - 8, 'text-anchor':'middle', class:'axt' });
+  xl.textContent = 'Höhenunterschied |Δh| zwischen den beiden Bohrpunkten [m]'; s.appendChild(xl);
+
+  // Grenzwertlinie
+  if (schwelle <= MAX) {
+    var xs = L + (schwelle / BREIT) * pw;
+    s.appendChild(svgEl('line', { x1:xs, x2:xs, y1:T - 10, y2:H - B,
+      stroke:'var(--rot)', 'stroke-width':2, 'stroke-dasharray':'5 3' }));
+    var g = svgEl('text', { x:xs + 6, y:T - 12, class:'axt', fill:'var(--rot)' });
+    g.textContent = 'Grenzwert ' + nf(schwelle, 1) + ' m'; s.appendChild(g);
+  }
+}
+
+// ── Wirkungskurve ──────────────────────────────────────────────────────────
+function zeichneKurve(liste) {
+  var s = $('kurve'); s.innerHTML = '';
+  var W = 940, H = 250, L = 52, R = 12, T = 28, B = 44;
+  var merk = schwelle, pkte = [];
+  for (var t = 0; t <= 5.0001; t += 0.1) {
+    var g = Math.round(t * 10) / 10, n = 0;
+    schwelle = g;                                   // gleiche Einstufung wie sonst
+    for (var i = 0; i < liste.length; i++) if (stufe(liste[i]) === 'u') n++;
+    pkte.push([g, n]);
+  }
+  schwelle = merk;
+  var maxY = Math.max.apply(null, pkte.map(function (p) { return p[1]; })) || 1;
+  var xv = function (g) { return L + (g / 5) * (W - L - R); };
+  var yv = function (v) { return H - B - (v / maxY) * (H - T - B); };
+
+  var schritt = Math.pow(10, Math.floor(Math.log10(maxY))) / 2;
+  while (maxY / schritt > 6) schritt *= 2;
+  for (var v = 0; v <= maxY; v += schritt) {
+    s.appendChild(svgEl('line', { x1:L, x2:W - R, y1:yv(v), y2:yv(v),
+      stroke: v === 0 ? 'var(--achse)' : 'var(--raster)', 'stroke-width': v === 0 ? 1.5 : 1 }));
+    var tx = svgEl('text', { x:L - 8, y:yv(v) + 4, 'text-anchor':'end', class:'ax' });
+    tx.textContent = nf(v); s.appendChild(tx);
+  }
+  for (var k = 0; k <= 5; k++) {
+    var t2 = svgEl('text', { x:xv(k), y:H - B + 16, 'text-anchor':'middle', class:'ax' });
+    t2.textContent = nf(k); s.appendChild(t2);
+  }
+  var xl = svgEl('text', { x:(L + W - R) / 2, y:H - 8, 'text-anchor':'middle', class:'axt' });
+  xl.textContent = 'Angesetzter Grenzwert Planumshöhe [m]'; s.appendChild(xl);
+  var yl = svgEl('text', { x:6, y:12, class:'axt' });
+  yl.textContent = 'Umstellungen LV 155'; s.appendChild(yl);
+
+  var dPfad = pkte.map(function (p, i) {
+    return (i ? 'L' : 'M') + xv(p[0]).toFixed(1) + ' ' + yv(p[1]).toFixed(1);
+  }).join(' ');
+  s.appendChild(svgEl('path', { d:dPfad, fill:'none', stroke:'var(--lv155)', 'stroke-width':2,
+    'stroke-linejoin':'round' }));
+
+  // aktueller Grenzwert
+  var akt = pkte[Math.min(pkte.length - 1, Math.round(Math.min(schwelle, 5) * 10))];
+  s.appendChild(svgEl('line', { x1:xv(akt[0]), x2:xv(akt[0]), y1:T - 10, y2:H - B,
+    stroke:'var(--rot)', 'stroke-width':2, 'stroke-dasharray':'5 3' }));
+  s.appendChild(svgEl('circle', { cx:xv(akt[0]), cy:yv(akt[1]), r:5,
+    fill:'var(--lv155)', stroke:'#fff', 'stroke-width':2 }));
+  var lb = svgEl('text', { x:xv(akt[0]) + 8, y:yv(akt[1]) - 10, class:'axt', fill:'var(--ink)' });
+  lb.textContent = nf(akt[1]) + ' Umstellungen · CHF ' + chf(akt[1] * EP.u);
+  if (xv(akt[0]) > W - 260) { lb.setAttribute('text-anchor', 'end'); lb.setAttribute('x', xv(akt[0]) - 8); }
+  s.appendChild(lb);
+
+  // Hover
+  var treff = svgEl('rect', { x:L, y:T, width:W - L - R, height:H - T - B, fill:'transparent' });
+  treff.addEventListener('mousemove', function (e) {
+    var bb = s.getBoundingClientRect();
+    var g = ((e.clientX - bb.left) / bb.width * W - L) / (W - L - R) * 5;
+    var p = pkte[Math.max(0, Math.min(pkte.length - 1, Math.round(g * 10)))];
+    tipAn(e, '<b>Grenzwert ' + nf(p[0], 1) + ' m</b><br>' + nf(p[1]) +
+      ' Umstellungen<br>CHF ' + chf(p[1] * EP.u) + ' nach LV 155');
+  });
+  treff.addEventListener('mouseleave', tipAus);
+  s.appendChild(treff);
+}
+
+// ── LV-Tabelle ─────────────────────────────────────────────────────────────
+function zeichneKalib(liste) {
+  var innen = liste.filter(gleicherTisch)
+    .map(function (b) { return b.dh === null ? 0 : Math.abs(b.dh); }).sort(function (a, b) { return a - b; });
+  if (!innen.length) { $('kalib').textContent = ''; return; }
+  var med = innen[Math.floor(innen.length / 2)], mx = innen[innen.length - 1];
+  var wege = liste.filter(gleicherTisch).map(function (b) { return b.fw; }).sort(function (a, b) { return a - b; });
+  var jetzt = liste.filter(function (b) {
+    var st = stufe(b); return (st === 'u' || st === 'x') && gleicherTisch(b);
+  }).length;
+  $('kalib').innerHTML =
+    'Ein Modultisch steht am Hang, seine vier Füsse liegen also nicht auf einer Höhe. ' +
+    'In diesem Zeitraum gab es <b>' + nf(innen.length) + ' Verschiebungen zwischen zwei Füssen ' +
+    'desselben Tisches</b> – Fahrweg im Mittel ' + nf(wege[Math.floor(wege.length / 2)], 1) +
+    ' m, höchstens ' + nf(wege[wege.length - 1], 1) + ' m. Der Höhenunterschied dabei liegt im ' +
+    'Mittel bei <b>' + nf(med, 2) + ' m</b> und geht bis <b>' + nf(mx, 2) + ' m</b>.<br><br>' +
+    'Für diese paar Meter wird kein Bagger auf einen Tieflader geladen. Ein Grenzwert unterhalb ' +
+    'von rund ' + nf(Math.ceil(mx * 10) / 10, 1) + ' m stuft solche Umsetzer als Umstellen ein und ' +
+    'ist damit angreifbar – deshalb die Vorgabe 3,0 m.' +
+    (jetzt ? ' <b style="color:var(--rot)">Mit dem aktuell eingestellten Grenzwert von ' +
+      nf(schwelle, 1) + ' m sind ' + nf(jetzt) + ' solche Fälle als Umstellen eingestuft.</b>' : '');
+}
+
+function zeichneLv(liste) {
+  var z = {};
+  LV.forEach(function (p) { z[p.g + '_' + p.typ] = 0; });
+  var ausser = 0, luecke = 0;
+  liste.forEach(function (b) {
+    var s = stufe(b);
+    var d = basis === 'fw' ? b.fw : b.lu;
+    if (s === 'u' && d > 200 && (b.dh === null || Math.abs(b.dh) <= schwelle)) luecke++;
+    if (s === 'x') { ausser++; return; }
+    var t = s === 'u' ? lvTyp(b.typ) : b.typ;
+    var k = s + '_' + t;
+    if (k in z) z[k]++; else z[k] = 1;
+  });
+  var h = '<thead><tr><th>Position</th><th>Typ</th><th>EP CHF</th>' +
+    '<th>Anzahl<br>11.05.–heute</th><th>Betrag CHF</th>' +
+    '<th>LV-Menge<br>ganzer Auftrag</th><th>abgerechnet<br>bis Mai 26</th></tr></thead><tbody>';
+  var gesA = 0, gesB = 0;
+  ['k', 'm', 'u'].forEach(function (g) {
+    var G = GRUPPE[g], sa = 0, sb = 0;
+    h += '<tr class="gr"><td colspan="7"><i class="pkt" style="background:' + G.farbe +
+         '"></i>' + G.t + '</td></tr>';
+    LV.filter(function (p) { return p.g === g; }).forEach(function (p) {
+      var n = z[p.g + '_' + p.typ] || 0, betrag = n * G.ep;
+      sa += n; sb += betrag;
+      h += '<tr><td>' + p.oz + '</td><td style="text-align:left">Typ ' +
+        (p.typ === 'CDE' ? 'C–E' : p.typ) + '</td><td>' + nf(G.ep, 2) + '</td>' +
+        '<td' + (n ? '' : ' class="n0"') + '>' + nf(n) + '</td>' +
+        '<td' + (n ? '' : ' class="n0"') + '>' + chf(betrag) + '</td>' +
+        '<td>' + nf(p.lvm) + '</td><td>' + nf(p.re) + '</td></tr>';
+    });
+    gesA += sa; gesB += sb;
+    h += '<tr class="sum"><td colspan="3">Zwischentotal</td><td>' + nf(sa) + '</td><td>' +
+         chf(sb) + '</td><td></td><td></td></tr>';
+  });
+  h += '<tr class="sum"><td colspan="3">Total Verschiebungen im Zeitraum</td><td>' + nf(gesA) +
+       '</td><td>' + chf(gesB) + '</td><td></td><td></td></tr></tbody>';
+  $('lvTab').innerHTML = h;
+  var uAnz = ['A', 'B', 'CDE'].reduce(function (a, t) { return a + (z['u_' + t] || 0); }, 0);
+  var f = [];
+  f.push('<b>Die LV-Menge für das Umstellen ist 30 Stück</b> (10 je Position 155.101/102/103) ' +
+    'für den ganzen Auftrag über drei Baujahre. Diese Auswertung kommt allein für 2026 auf ' +
+    nf(uAnz) + '. Eine Mehrmenge in dieser Grössenordnung ist keine reine Ausmassfrage mehr – ' +
+    'sie gehört mit der Bauleitung besprochen, bevor sie ins Ausmass geht (Preisanpassung bei ' +
+    'wesentlicher Mengenänderung, SIA 118).');
+  if (luecke) f.push('<b>' + nf(luecke) + (luecke === 1 ? ' Verschiebung' : ' Verschiebungen') +
+    ' über 200 m ohne nennenswerten Höhenunterschied</b> ' + (luecke === 1 ? 'ist' : 'sind') +
+    ' hier unter 155 geführt, weil das LV für «gleiche Planumshöhe» nur bis 200 m eine Position ' +
+    'kennt. Streng genommen eine Lücke im LV.');
+  if (ausser) f.push('<b>' + nf(ausser) + (ausser === 1 ? ' Verschiebung passt' : ' Verschiebungen passen') +
+    ' in keine LV-Position</b> – über 500 m Distanz oder über 100 m Höhenunterschied. ' +
+    (ausser === 1 ? 'Die ist' : 'Die sind') + ' gesondert als Nachtrag anzumelden.');
+  $('lvFuss').innerHTML = f.join('<br><br>');
+}
+
+// ── Karte ──────────────────────────────────────────────────────────────────
+var cv = $('karte'), ctx = cv.getContext('2d'), W = 0, HH = 0, sk = 1, dpr = 1;
+var PAD = 16;
+function px(p) { return PAD + (p[0] - D.bounds[0]) * sk + (W - 2 * PAD - (D.bounds[2] - D.bounds[0]) * sk) / 2; }
+function py(p) { return HH - PAD - (p[1] - D.bounds[1]) * sk - (HH - 2 * PAD - (D.bounds[3] - D.bounds[1]) * sk) / 2; }
+function messen() {
+  var bw = cv.parentElement.clientWidth - 18;
+  var asp = (D.bounds[3] - D.bounds[1]) / (D.bounds[2] - D.bounds[0]);
+  var bh = Math.min(Math.max(bw * asp, 280), 620);
+  sk = Math.min((bw - 2 * PAD) / (D.bounds[2] - D.bounds[0]), (bh - 2 * PAD) / (D.bounds[3] - D.bounds[1]));
+  W = bw; HH = bh; dpr = window.devicePixelRatio || 1;
+  cv.width = W * dpr; cv.height = HH * dpr;
+  cv.style.width = W + 'px'; cv.style.height = HH + 'px';
+  malen();
+}
+function malen() {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, HH);
+  ctx.fillStyle = '#e8eaed';
+  D.allpts.forEach(function (p) { ctx.fillRect(px(p) - 0.8, py(p) - 0.8, 1.6, 1.6); });
+  ctx.strokeStyle = '#c7cbd1'; ctx.lineWidth = 1.4;
+  D.netz.forEach(function (l) {
+    ctx.beginPath();
+    l.forEach(function (p, i) { i ? ctx.lineTo(px(p), py(p)) : ctx.moveTo(px(p), py(p)); });
+    ctx.stroke();
+  });
+  var farbe = { cde:'#2a78d6', ab:'#eb6834' };
+  ['cde', 'ab'].forEach(function (rig) {
+    ctx.fillStyle = farbe[rig]; ctx.globalAlpha = 0.42;
+    for (var i = 0; i < tag; i++)
+      tage[i].rigs[rig].pts.forEach(function (p) {
+        ctx.beginPath(); ctx.arc(px(p), py(p), 2, 0, 7); ctx.fill();
+      });
+    ctx.globalAlpha = 1;
+    var R = tage[tag].rigs[rig];
+    R.mv.forEach(function (idx) {
+      var b = mv[idx], u = stufe(b) === 'u' || stufe(b) === 'x';
+      ctx.strokeStyle = u ? '#104281' : farbe[rig];
+      ctx.lineWidth = u ? 3.4 : 2;
+      if (b.ue) ctx.setLineDash([3, 4]);
+      ctx.beginPath();
+      var w = b.route || [b.pv, b.p];
+      w.forEach(function (p, i) { i ? ctx.lineTo(px(p), py(p)) : ctx.moveTo(px(p), py(p)); });
+      ctx.stroke(); ctx.setLineDash([]);
+    });
+    R.pts.forEach(function (p) {
+      ctx.fillStyle = farbe[rig]; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(px(p), py(p), 4, 0, 7); ctx.fill(); ctx.stroke();
+    });
+  });
+}
+
+// ── Höhenprofil des Tages ──────────────────────────────────────────────────
+function zeichneProfil() {
+  var s = $('profil'); s.innerHTML = '';
+  var W2 = 940, H2 = 198, L = 56, R = 12, T = 26, B = 34;
+  var reihen = [];
+  ['cde', 'ab'].forEach(function (rig) {
+    var pts = tage[tag].rigs[rig].pts.filter(function (p) { return p[4] !== null; });
+    if (pts.length > 1) reihen.push({ rig:rig, pts:pts, f: rig === 'cde' ? 'var(--b1)' : 'var(--b2)' });
+  });
+  if (!reihen.length) {
+    var t0 = svgEl('text', { x:L, y:H2 / 2, class:'ax' });
+    t0.textContent = 'An diesem Tag wurde nicht gebohrt.'; s.appendChild(t0);
+    return;
+  }
+  var alle = [];
+  reihen.forEach(function (r) { r.pts.forEach(function (p) { alle.push(p[4]); }); });
+  var hi = Math.max.apply(null, alle), lo = Math.min.apply(null, alle);
+  if (hi - lo < 4) { hi += 2; lo -= 2; }
+  // Beide Bagger auf derselben Achse: 1 Schritt = 1 Bohrpunkt, nicht gedehnt
+  var maxN = Math.max.apply(null, reihen.map(function (r) { return r.pts.length; }));
+  var xv = function (i) { return L + (maxN < 2 ? 0.5 : i / (maxN - 1)) * (W2 - L - R); };
+  var yv = function (h) { return H2 - B - (h - lo) / (hi - lo) * (H2 - T - B); };
+
+  [0, 0.5, 1].forEach(function (f) {
+    var h = lo + f * (hi - lo);
+    s.appendChild(svgEl('line', { x1:L, x2:W2 - R, y1:yv(h), y2:yv(h),
+      stroke: f === 0 ? 'var(--achse)' : 'var(--raster)', 'stroke-width': f === 0 ? 1.5 : 1 }));
+    var tx = svgEl('text', { x:L - 8, y:yv(h) + 4, 'text-anchor':'end', class:'ax' });
+    tx.textContent = nf(h, 0); s.appendChild(tx);
+  });
+  var yl = svgEl('text', { x:6, y:12, class:'axt' });
+  yl.textContent = 'm ü. M.'; s.appendChild(yl);
+  var xl = svgEl('text', { x:(L + W2 - R) / 2, y:H2 - 6, 'text-anchor':'middle', class:'axt' });
+  xl.textContent = 'Bohrreihenfolge des Tages (geschätzt) →'; s.appendChild(xl);
+
+  reihen.forEach(function (r) {
+    var d = r.pts.map(function (p, i) {
+      return (i ? 'L' : 'M') + xv(i).toFixed(1) + ' ' + yv(p[4]).toFixed(1);
+    }).join(' ');
+    s.appendChild(svgEl('path', { d:d, fill:'none', stroke:r.f, 'stroke-width':2,
+      'stroke-linejoin':'round' }));
+    r.pts.forEach(function (p, i) {
+      var c = svgEl('circle', { cx:xv(i), cy:yv(p[4]),
+        r: maxN > 60 ? 2.6 : 4, fill:r.f, stroke:'#fff', 'stroke-width':2 });
+      c.addEventListener('mousemove', function (e) {
+        tipAn(e, '<b>' + p[2] + '</b> · Typ ' + p[3] + '<br>' + nf(p[4], 1) + ' m ü. M.<br>' +
+          D.rigNamen[r.rig]);
+      });
+      c.addEventListener('mouseleave', tipAus);
+      s.appendChild(c);
+    });
+  });
+  if (reihen.length > 1 || maxN) {
+    var lg = svgEl('text', { x:W2 - R, y:12, 'text-anchor':'end', class:'ax' });
+    lg.textContent = reihen.map(function (r) { return D.rigNamen[r.rig]; }).join('  ·  ');
+    s.appendChild(lg);
+  }
+}
+
+// ── Tagestabelle ───────────────────────────────────────────────────────────
+function zeichneTag() {
+  var T = tage[tag];
+  $('tagLabel').textContent = T.wd + ', ' + T.d;
+  $('tagZahl').textContent = 'Tag ' + (tag + 1) + ' von ' + tage.length;
+  $('tagWe').style.display = T.we ? '' : 'none';
+  $('tagRegler').value = tag;
+
+  var zeilen = [];
+  ['cde', 'ab'].forEach(function (rig) {
+    T.rigs[rig].mv.forEach(function (i) { zeilen.push(mv[i]); });
+  });
+  var h = '<thead><tr><th>Bagger</th><th>von</th><th>nach</th><th>Fahrweg m</th>' +
+    '<th>Luftlinie m</th><th>Höhe von</th><th>Höhe nach</th><th>Δh m</th>' +
+    '<th>LV</th></tr></thead><tbody>';
+  if (!zeilen.length) {
+    h += '<tr><td colspan="9" style="text-align:left;color:var(--mut)">' +
+      'Keine Verschiebung an diesem Tag.</td></tr>';
+  }
+  zeilen.forEach(function (b) {
+    var s = stufe(b);
+    h += '<tr><td><i class="pkt" style="background:' +
+      (b.rig === 'cde' ? 'var(--b1)' : 'var(--b2)') + '"></i>' +
+      (b.rig === 'cde' ? '1' : '2') + '</td>' +
+      '<td style="text-align:left">' + b.von + (b.ue ? ' <span style="color:var(--mut)">(Vortag)</span>' : '') + '</td>' +
+      '<td style="text-align:left">' + b.nach + '</td>' +
+      '<td>' + nf(b.fw, 1) + '</td><td>' + nf(b.lu, 1) + '</td>' +
+      '<td>' + (b.hv === null ? '–' : nf(b.hv, 1)) + '</td>' +
+      '<td>' + (b.hn === null ? '–' : nf(b.hn, 1)) + '</td>' +
+      '<td style="font-weight:700">' + (b.dh === null ? '–' :
+        (b.dh > 0 ? '+' : '') + nf(b.dh, 1)) + '</td>' +
+      '<td style="text-align:left"><i class="pkt" style="background:' +
+        (s === 'x' ? 'var(--lvohne)' : GRUPPE[s].farbe) + '"></i>' +
+        (s === 'x' ? 'keine' : s === 'k' ? '154 ≤50' : s === 'm' ? '154 51–200' : '155') +
+      '</td></tr>';
+  });
+  $('tagTab').innerHTML = h + '</tbody>';
+  malen();
+  zeichneProfil();
+}
+
+// ── Umstellungs-Liste ──────────────────────────────────────────────────────
+var umsListe = [];
+function zeichneUms(liste) {
+  umsListe = liste.filter(function (b) { var s = stufe(b); return s === 'u' || s === 'x'; })
+    .sort(function (a, b) { return Math.abs(b.dh || 0) - Math.abs(a.dh || 0); });
+  var ausserhalb = umsListe.filter(function (b) { return stufe(b) === 'x'; }).length;
+  $('umsInfo').innerHTML = 'Mit dem Grenzwert ' + nf(schwelle, 1) + ' m sind das <b>' +
+    nf(umsListe.length - ausserhalb) + ' Umstellungen nach LV 171.100.155</b>' +
+    (ausserhalb ? ' plus <b>' + nf(ausserhalb) + '</b>, die über 500 m Distanz oder über 100 m ' +
+      'Höhenunterschied gehen und in keine LV-Position mehr passen' : '') +
+    '. Sortiert nach Höhenunterschied. Bis zur 10. Teilzahlung (Mai 2026) waren über den ganzen ' +
+    'Auftrag <b>12 Umstellungen</b> abgerechnet.';
+  var h = '<thead><tr><th>Datum</th><th>Bagger</th><th>Typ</th><th>von</th><th>nach</th>' +
+    '<th>Fahrweg m</th><th>Δh m</th><th>Höhe von</th><th>Höhe nach</th><th>Position</th></tr></thead><tbody>';
+  umsListe.slice(0, 400).forEach(function (b) {
+    var s = stufe(b);
+    var oz = s === 'x' ? 'keine' :
+      (lvTyp(b.typ) === 'CDE' ? '155.103' : lvTyp(b.typ) === 'A' ? '155.101' : '155.102');
+    h += '<tr><td style="text-align:left">' + b.tag.split('-').reverse().join('.') + '</td>' +
+      '<td><i class="pkt" style="background:' + (b.rig === 'cde' ? 'var(--b1)' : 'var(--b2)') +
+      '"></i>' + (b.rig === 'cde' ? '1' : '2') + '</td><td>' + b.typ + '</td>' +
+      '<td style="text-align:left">' + b.von + '</td><td style="text-align:left">' + b.nach + '</td>' +
+      '<td>' + nf(b.fw, 1) + '</td>' +
+      '<td style="font-weight:700">' + (b.dh === null ? '–' : (b.dh > 0 ? '+' : '') + nf(b.dh, 1)) + '</td>' +
+      '<td>' + (b.hv === null ? '–' : nf(b.hv, 1)) + '</td>' +
+      '<td>' + (b.hn === null ? '–' : nf(b.hn, 1)) + '</td>' +
+      '<td style="text-align:left' + (s === 'x' ? ';color:var(--rot);font-weight:700' : '') + '">' +
+      oz + '</td></tr>';
+  });
+  if (umsListe.length > 400)
+    h += '<tr><td colspan="10" style="text-align:left;color:var(--mut)">… ' +
+      nf(umsListe.length - 400) + ' weitere – vollständig im CSV.</td></tr>';
+  $('umsTab').innerHTML = h + '</tbody>';
+}
+
+// ── Alles neu rechnen ──────────────────────────────────────────────────────
+function neu() {
+  var liste = auswahl();
+  zeichneKpi(liste); zeichneHisto(liste); zeichneKurve(liste);
+  zeichneLv(liste); zeichneKalib(liste); zeichneUms(liste); zeichneTag();
+  $('zeitInfo').textContent = tage[vonIdx].d + ' bis ' + tage[bisIdx].d +
+    ' · ' + nf(liste.length) + ' Verschiebungen';
+}
+
+// ── Bedienung ──────────────────────────────────────────────────────────────
+function setzeSchwelle(v) {
+  schwelle = Math.max(0, Math.round(v * 10) / 10);
+  $('schwelleNum').value = schwelle.toFixed(1);
+  $('schwelleReg').value = Math.min(6, schwelle);
+  neu();
+}
+$('schwelleReg').addEventListener('input', function () { setzeSchwelle(+this.value); });
+$('schwelleNum').addEventListener('input', function () { setzeSchwelle(+this.value || 0); });
+$('basisWahl').addEventListener('click', function (e) {
+  var b = e.target.closest('button'); if (!b) return;
+  basis = b.dataset.w;
+  [].forEach.call(this.children, function (c) { c.classList.toggle('an', c === b); });
+  neu();
+});
+$('zeitWahl').addEventListener('change', function () {
+  var v = this.value.split('|');
+  vonIdx = +v[0]; bisIdx = +v[1];
+  if (tag < vonIdx) tag = vonIdx;
+  if (tag > bisIdx) tag = bisIdx;
+  $('tagRegler').min = vonIdx; $('tagRegler').max = bisIdx;
+  neu();
+});
+$('tagRegler').addEventListener('input', function () { tag = +this.value; zeichneTag(); });
+$('play').addEventListener('click', function () {
+  if (timer) { clearInterval(timer); timer = null; this.textContent = '▶ Abspielen'; return; }
+  this.textContent = '❚❚ Pause';
+  if (tag >= bisIdx) tag = vonIdx;
+  var self = this;
+  timer = setInterval(function () {
+    if (tag >= bisIdx) { clearInterval(timer); timer = null; self.textContent = '▶ Abspielen'; return; }
+    tag++; zeichneTag();
+  }, +$('tempo').value);
+});
+$('tempo').addEventListener('change', function () {
+  if (timer) { $('play').click(); $('play').click(); }
+});
+$('csv').addEventListener('click', function () {
+  var kopf = ['Datum', 'Bagger', 'Tischtyp', 'von', 'nach', 'Fahrweg_m', 'Luftlinie_m',
+    'Hoehe_von_mueM', 'Hoehe_nach_mueM', 'dh_m', 'LV_Position', 'EP_CHF'];
+  var z = umsListe.map(function (b) {
+    var s = stufe(b);
+    var oz = s === 'x' ? 'keine' :
+      (lvTyp(b.typ) === 'CDE' ? '171.100.155.103' : lvTyp(b.typ) === 'A' ?
+        '171.100.155.101' : '171.100.155.102');
+    return [b.tag, b.rig === 'cde' ? 'Bagger 1' : 'Bagger 2', b.typ, b.von, b.nach,
+      b.fw, b.lu, b.hv, b.hn, b.dh, oz, s === 'x' ? '' : EP.u].join(';');
+  });
+  var txt = '﻿' + kopf.join(';') + '\n' + z.join('\n');
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([txt], { type:'text/csv;charset=utf-8' }));
+  a.download = 'Umstellungen_Grenzwert_' + schwelle.toFixed(1).replace('.', '_') + 'm.csv';
+  a.click(); URL.revokeObjectURL(a.href);
+});
+addEventListener('resize', messen);
+
+// ── Start: Daten liegen AES-256-GCM-verschlüsselt ──────────────────────────
+var PWKEY = 'nalp_versch_pw_v1', PAKET = null;
+
+function b64(t) {
+  var b = atob(t), a = new Uint8Array(b.length);
+  for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i);
+  return a;
+}
+function entschluesseln(paket, pw) {
+  return crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey'])
+    .then(function (basis) {
+      return crypto.subtle.deriveKey(
+        { name:'PBKDF2', salt:b64(paket.salt), iterations:paket.iter, hash:'SHA-256' },
+        basis, { name:'AES-GCM', length:256 }, false, ['decrypt']);
+    })
+    .then(function (key) {
+      return crypto.subtle.decrypt({ name:'AES-GCM', iv:b64(paket.iv) }, key, b64(paket.ct));
+    })
+    .then(function (klar) { return JSON.parse(new TextDecoder().decode(klar)); });
+}
+function paketHolen() {
+  if (PAKET) return Promise.resolve(PAKET);
+  return fetch('uploads/verschiebungen/verschiebungen.enc.json', { cache:'no-store' })
+    .then(function (r) {
+      if (!r.ok) throw new Error('Datendatei nicht gefunden');
+      return r.json();
+    })
+    .then(function (j) { PAKET = j; return j; });
+}
+function oeffnen(pw, merken) {
+  $('fehler').textContent = 'einen Moment …';
+  paketHolen()
+    .then(function (paket) { return entschluesseln(paket, pw); })
+    .then(function (j) {
+      if (merken) { try { localStorage.setItem(PWKEY, pw); } catch (e) {} }
+      $('login').style.display = 'none';
+      $('inhalt').style.display = '';
+      starten(j);
+    })
+    .catch(function (e) {
+      $('fehler').textContent = (PAKET ? 'Passwort stimmt nicht.'
+        : 'uploads/verschiebungen/verschiebungen.enc.json fehlt – bitte ' +
+          'Tools\\Bohrbagger_Verschiebungen_Bauen.py laufen lassen.');
+      $('pw').select();
+      console.error(e);
+    });
+}
+$('go').onclick = function () { oeffnen($('pw').value, $('merken').checked); };
+$('pw').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('go').click(); });
+try {
+  var gemerkt = localStorage.getItem(PWKEY);
+  if (gemerkt) { $('merken').checked = true; oeffnen(gemerkt, false); }
+} catch (e) {}
+
+function starten(j) {
+  D = j; tage = j.tage; mv = j.mv;
+  EP = j.ep; LV = j.lv;
+  GRUPPE.k.ep = EP.k; GRUPPE.m.ep = EP.m; GRUPPE.u.ep = EP.u;
+  $('epSatz').innerHTML = 'Die Preise dazu: <b>CHF ' + nf(EP.k, 2) + '</b> · <b>CHF ' +
+    nf(EP.m, 2) + '</b> · <b>CHF ' + nf(EP.u, 2) + '</b> je Verschiebung.';
+  bisIdx = tage.length - 1; tag = bisIdx;
+
+  // Zeitraum-Auswahl: alles + je Monat
+  var opt = ['<option value="0|' + bisIdx + '">ganze Bauzeit 2026 (' + j.von + ' – ' + j.bis + ')</option>'];
+  var mon = {};
+  tage.forEach(function (t, i) {
+    var m = t.iso.slice(0, 7);
+    if (!mon[m]) mon[m] = [i, i]; else mon[m][1] = i;
+  });
+  var MN = ['Januar','Februar','März','April','Mai','Juni','Juli','August',
+            'September','Oktober','November','Dezember'];
+  Object.keys(mon).sort().forEach(function (m) {
+    opt.push('<option value="' + mon[m][0] + '|' + mon[m][1] + '">' +
+      MN[+m.slice(5) - 1] + ' ' + m.slice(0, 4) + '</option>');
+  });
+  // Zeitraum des Berichts an Borner vom 04.08.2026
+  var bis31 = -1;
+  tage.forEach(function (t, i) { if (t.iso <= '2026-07-31') bis31 = i; });
+  if (bis31 > 0) opt.splice(1, 0, '<option value="0|' + bis31 +
+    '">11.05. – 31.07.2026 (Stand Meldung an die BL vom 04.08.)</option>');
+  $('zeitWahl').innerHTML = opt.join('');
+
+  $('tagRegler').max = bisIdx; $('tagRegler').value = tag;
+  $('quellen').innerHTML =
+    '<b>Bohrdatum und Sollkoordinaten je Stütze:</b> Nalpi-Liste DRILLING_POINT_DATA, Auszug ' +
+      j.quelle.bohrpunkte + '<br>' +
+    '<b>Tischtyp (bestimmt Bagger und LV-Position):</b> Nalpi ' + j.quelle.tischtypen + '<br>' +
+    '<b>Höhen:</b> ' + j.quelle.hoehen + '<br>' +
+    '<b>Fahrweg:</b> ' + j.quelle.fahrnetz + '<br>' +
+    '<b>LV-Positionen, Einheitspreise, LV- und RE-Mengen:</b> Mengenliste Mai 2026 RE/LV ' +
+      'vom 29.06.2026 (10. Teilzahlung), Seiten 24–25, und Ausmass Mai 2026 Kumulation, ' +
+      'Seiten 93–96<br>' +
+    '<b>Stand der Auswertung:</b> ' + j.stand;
+  $('vorbehalt').innerHTML = '<b>Was diese Zahlen nicht können</b>' +
+    'Die <b>Reihenfolge der Bohrungen innerhalb eines Tages</b> ist nirgends erfasst. Sie wird ' +
+    'über den jeweils nächstgelegenen Punkt rekonstruiert – das ergibt den kürzest möglichen ' +
+    'Weg und unterschätzt die Verschiebungen eher, als dass es sie übertreibt.<br>' +
+    'Die <b>Höhen sind Geländehöhen</b> aus swissALTI3D (Aufnahme 2023), nicht die heutige ' +
+    'Planumshöhe nach Aushub. Für den Vergleich zweier Standorte ist das brauchbar, für eine ' +
+    'einzelne absolute Höhe nicht.<br>' +
+    'Das <b>Baupistennetz</b> ist der Stand vom 04.08.2026. Wo seither in Bereiche gebohrt wurde, ' +
+    'die noch nicht im Netz sind, wird auf die Luftlinie zurückgefallen – auch das rechnet zu ' +
+    'unseren Ungunsten.<br>' +
+    'Der <b>Tischtyp</b> kommt aus Nalpi und ändert sich dort gelegentlich rückwirkend. Er ' +
+    'bestimmt sowohl den Bagger als auch die LV-Position.';
+  messen(); neu();
+}
+})();
+</script>
+</body>
+</html>

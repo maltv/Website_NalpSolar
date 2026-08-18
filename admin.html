@@ -7,7 +7,9 @@
 <meta name="robots" content="noindex,nofollow">
 <!-- Admin-Werkzeuge (nur Victor), Reiter:
        Übersicht   – Aufgabenliste + Links auf die anderen Admin-Seiten
-                     (darunter seit 18.08.2026 Bestellungen & offene Punkte)
+                     (darunter seit 18.08.2026 Bestellungen & offene Punkte sowie
+                     Bohrbagger-Verschiebungen, verschiebungen.html + uploads/verschiebungen.json,
+                     gebaut mit Tools\Bohrbagger_Verschiebungen_Bauen.py)
        Störungen   – Bauablaufstörungs- und Mehrkostentracking (uploads/stoerungsregister.json
                      + Statusänderungen/Neueinträge in RTDB erfassung/stoerungen);
                      dazu die Stundenseite aus uploads/stoerungen/stoerungen.json
@@ -328,6 +330,19 @@
     <a href="bestellungen.html" style="display:inline-block;background:#D72622;color:#fff;
        text-decoration:none;font-weight:700;font-size:14px;padding:9px 16px;border-radius:5px;">
        Bestellungen öffnen</a>
+  </div>
+
+  <div class="card">
+    <h2>Bohrbagger-Verschiebungen &amp; Umstellungen</h2>
+    <div class="sub">Jeder Standortwechsel der beiden Bohrbagger seit Baubeginn, mit
+      Fahrweg über die Baupisten <b>und neu mit der Geländehöhe je Bohrpunkt</b>
+      (swissALTI3D). Damit lässt sich trennen, was nach LV 154 «auf gleicher
+      Planumshöhe» verschoben wurde und was nach LV 155 ein Umstellen mit Auflad,
+      Transport und Ablad ist – die Position, die bisher fast nie ausgemessen wurde.
+      Der Grenzwert für die Planumshöhe ist auf der Seite einstellbar.</div>
+    <a href="verschiebungen.html" style="display:inline-block;background:#D72622;color:#fff;
+       text-decoration:none;font-weight:700;font-size:14px;padding:9px 16px;border-radius:5px;">
+       Verschiebungen öffnen</a>
   </div>
 
   <div class="card">
