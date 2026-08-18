@@ -54,6 +54,28 @@
   .legende i { display:inline-block; width:10px; height:10px; border-radius:2px;
                margin-right:3px; vertical-align:-1px; }
   .suche { position:absolute; z-index:600; top:8px; left:50px; right:8px; display:flex; gap:6px; }
+  /* Tisch-Nummer auf der Konstruktion (ab Zoom 18) */
+  .tnr { font:900 12px Arial,sans-serif; color:#fff; text-align:center; line-height:14px;
+         text-shadow:0 0 3px #000, 0 0 3px #000, 0 1px 2px #000; white-space:nowrap;
+         pointer-events:none; }
+  .tnr.ok { color:#b9f6ca; }
+  /* Zeichen: Arbeitsanweisung / offener Mangel */
+  .zeichen { position:relative; width:26px; height:26px; border-radius:50%;
+             display:flex; align-items:center; justify-content:center;
+             font-size:14px; line-height:1; background:#fff; cursor:pointer;
+             box-shadow:0 1px 5px rgba(10,14,20,.55); }
+  .zeichen.anw { border:2.5px solid var(--blau); }
+  .zeichen.mng { border:2.5px solid var(--rot); }
+  /* dieselben Zeichen klein in der Legende */
+  .legende .lz { display:inline-flex; align-items:center; justify-content:center;
+                 width:16px; height:16px; border-radius:50%; background:#fff;
+                 font-size:9px; margin-right:3px; vertical-align:-3px; }
+  .legende .lz.anw { border:2px solid var(--blau); }
+  .legende .lz.mng { border:2px solid var(--rot); }
+  .zeichen b { position:absolute; right:-7px; bottom:-5px; font-size:11px;
+               background:#fff; border-radius:50%; border:2px solid var(--rot);
+               width:16px; height:16px; display:flex; align-items:center;
+               justify-content:center; }
   .suche input { flex:1; min-width:0; border:1px solid var(--line); border-radius:5px; padding:7px 9px;
                  font-size:15px; box-shadow:0 2px 8px rgba(20,25,32,.18); }
   .suche button { border:none; background:#fff; border-radius:5px; padding:7px 10px; font-size:15px;
@@ -121,6 +143,7 @@
   .zeile .hk { width:34px; height:34px; border-radius:5px; border:2px solid var(--line);
                background:#fff; font-size:18px; cursor:pointer; flex:0 0 auto; }
   .zeile .hk.an { background:var(--gruen); border-color:var(--gruen); color:#fff; }
+  .zeile .hk.nalpi { background:var(--grau); border-color:var(--grau); }
   .zeile.gesperrt { opacity:.55; }
   .pill { display:inline-block; font-size:10.5px; font-weight:700; border-radius:3px;
           padding:1px 5px; color:#fff; margin-right:4px; }
@@ -168,8 +191,9 @@
       <span><i style="background:#1e9e5a"></i>verschraubt</span>
       <span><i style="background:#e0a800"></i>offen (MT montiert)</span>
       <span><i style="background:#8a8e94"></i>noch nicht montiert</span>
-      <span><i style="background:#1565c0"></i>Arbeitsanweisung</span>
-      <span><i style="background:#D72622"></i>offener Mangel</span>
+      <span><span class="lz anw">📋</span>Arbeitsanweisung</span>
+      <span><span class="lz mng">⚠</span>offener Mangel <b>am Tisch</b></span>
+      <span style="margin-left:auto">Tisch-Nr. ab Zoom 18</span>
     </div>
   </section>
 
@@ -266,7 +290,7 @@ var MAENGEL = {};       /* id -> [ {nr,titel,schwere,status,von,erfasst} … ] *
 var MSTAND = '';        /* Herkunft der Mängel: 'live' oder Datum des Offline-Stands */
 var STAND = {};         /* Datenstände zum Belegen */
 
-var karte = null, ebene = null, polys = {}, AKT = null, FILTER = 'alle';
+var karte = null, ebene = null, ebeneM = null, polys = {}, AKT = null, FILTER = 'alle';
 var gpsMark = null, gps = null;
 
 function $(id){ return document.getElementById(id); }
@@ -477,6 +501,16 @@ Promise.all([
   VERSCHRAUBT = a[4] || {};
   ANWEISUNG   = a[5] || {};
 
+  /* Was in Nalpi schon als «Modultisch verschraubt» steht, gilt hier auch als
+     verschraubt – sonst meldet das Team Tische ein zweites Mal. Quelle ist
+     baustand.json (Feld vs, TABLE_DATA.MODULETABLE_SCREWED_DATE, Task 06:30).
+     Eine eigene Meldung in der RTDB hat Vorrang: sie ist immer jünger als der
+     nächtliche Stand. */
+  Object.keys(bau).forEach(function(id){
+    var vs = bau[id] && bau[id].vs;
+    if(vs && !VERSCHRAUBT[id]) VERSCHRAUBT[id] = { am: String(vs).slice(0,10), nalpi: true };
+  });
+
   pf.forEach(function(p){
     var id = String(p[0]);
     var t = TISCHE[id] || (TISCHE[id] = { id:id, roh:[], pts:[], typ:null });
@@ -511,6 +545,9 @@ function maengelLaden(){
   var nutz = function(rows, woher){
     MAENGEL = {}; MSTAND = woher;
     rows.forEach(function(m){
+      /* Nur Mängel, die am TISCH hängen – Bohrpunkt-Mängel sind Sache des
+         Bohr-/Pfahlkopfteams (Entscheid Victor 18.08.2026). */
+      if(m.art && m.art !== 'table') return;
       var id = String(m.tisch||'');
       if(!id) return;
       (MAENGEL[id] = MAENGEL[id]||[]).push(m);
@@ -544,9 +581,13 @@ function btMaengel(){
     var letzt = {};
     rows.forEach(function(m){ if(m && m.id) letzt[m.id] = m; });
     return Object.keys(letzt).map(function(k){ return letzt[k]; })
+      /* NUR Tisch-Mängel. Bohrpunkt-Mängel (entityType 'drillpoint', z.B.
+         «Kopf nicht montiert» an 202_S1) gehören dem Bohr-/Pfahlkopfteam und
+         haben mit dem Verschrauben nichts zu tun – sie würden die Karte
+         zurotten (Entscheid Victor 18.08.2026). */
       .filter(function(m){ return !m.deletedAt && !m.duplicateOf
                 && (m.status==='OFFEN' || m.status==='IN_BEARBEITUNG')
-                && (m.entityType==='table' || m.entityType==='drillpoint'); })
+                && m.entityType==='table'; })
       .map(function(m){ return {
         nr:m.displayNo, art:m.entityType, key:m.entityKey,
         tisch:String(m.entityKey||'').split('_')[0], titel:m.title,
@@ -606,18 +647,23 @@ function karteAufbauen(){
   L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg',
     {maxZoom:22, maxNativeZoom:19}).addTo(karte);
   ebene = L.layerGroup().addTo(karte);
+  ebeneM = L.layerGroup().addTo(karte);
 
   var alle = [];
   Object.keys(TISCHE).forEach(function(id){
     var t = TISCHE[id];
     if(t.pts.length < 3) return;
     alle = alle.concat(t.pts);
+    t.mitte = mitte(t.pts);
     var p = L.polygon(t.pts, stil(id)).addTo(ebene);
     p.on('click', function(){ oeffnen(id); });
     polys[id] = p;
   });
   if(alle.length) karte.fitBounds(L.latLngBounds(alle).pad(0.05));
   else karte.setView([46.638, 8.769], 15);
+
+  karte.on('zoomend moveend', marker);
+  marker();
 
   if(navigator.geolocation){
     navigator.geolocation.watchPosition(function(p){
@@ -630,6 +676,52 @@ function karteAufbauen(){
 }
 function faerben(){
   Object.keys(polys).forEach(function(id){ polys[id].setStyle(stil(id)); });
+  marker();          /* Nummern und Zeichen immer zur Farbe passend */
+}
+
+/* ── Beschriftung und Zeichen auf der Karte ───────────────────────────
+   Tisch-Nummer steht auf der Konstruktion, aber erst ab Zoom 18 – 1'048
+   Nummern gleichzeitig wären am Handy weder lesbar noch flüssig. Gezeichnet
+   wird nur, was gerade im Bild ist.
+   Zeichen dagegen IMMER, damit man von weitem sieht, wo etwas ist:
+     📋 blau = Arbeitsanweisung   ⚠ rot = offener Mangel am Tisch          */
+var LABEL_ZOOM = 18;
+function mitte(pts){
+  var la = 0, lo = 0;
+  pts.forEach(function(p){ la += p[0]; lo += p[1]; });
+  return [la/pts.length, lo/pts.length];
+}
+function marker(){
+  if(!karte || !ebeneM) return;
+  ebeneM.clearLayers();
+  var z = karte.getZoom(), sicht = karte.getBounds(), nummern = z >= LABEL_ZOOM;
+
+  Object.keys(TISCHE).forEach(function(id){
+    var t = TISCHE[id];
+    if(!t.mitte || !passt(id)) return;
+    if(!sicht.contains(t.mitte)) return;
+
+    var an = !!(ANWEISUNG[id] && !ANWEISUNG[id].erledigt);
+    var mg = (MAENGEL[id]||[]).length;
+
+    if(an || mg){
+      var zeichen = an ? '📋' : '⚠';
+      L.marker(t.mitte, {
+        interactive: true, keyboard: false,
+        icon: L.divIcon({ className:'', iconSize:[26,26], iconAnchor:[13,13],
+          html:'<div class="zeichen '+(an?'anw':'mng')+'">'+zeichen
+             + (an && mg ? '<b>⚠</b>' : '') + '</div>' })
+      }).addTo(ebeneM).on('click', function(){ oeffnen(id); });
+    }
+
+    if(nummern){
+      L.marker(t.mitte, {
+        interactive: false, keyboard: false,
+        icon: L.divIcon({ className:'', iconSize:[46,14], iconAnchor:[23, an||mg?20:7],
+          html:'<div class="tnr'+(VERSCHRAUBT[id]?' ok':'')+'">'+esc(id)+'</div>' })
+      }).addTo(ebeneM);
+    }
+  });
 }
 function zuMir(){
   if(!gps){ toast('Noch kein GPS – Standort erlauben', true); return; }
@@ -692,7 +784,12 @@ function blattMalen(id){
     h += '<div class="q">Quelle: Nalpi-Mängelmanagement ('+esc(MSTAND)+')</div></div>';
   }
 
-  if(v){
+  if(v && v.nalpi){
+    /* Kommt aus Nalpi, nicht von dieser Seite – hier gibt es nichts zurückzunehmen. */
+    h += '<div class="kasten ok"><b>✔ Fertig verschraubt</b>'+dm(v.am)
+       + '<div class="q">Steht schon so in Nalpi – nichts mehr zu melden. '
+       + 'Falsch? Dann in Nalpi korrigieren, nicht hier.</div></div>';
+  } else if(v){
     h += '<div class="kasten ok"><b>✔ Fertig verschraubt</b>'+dm(v.am)
        + (v.von?(' · '+esc(v.von)):'')+'</div>';
     h += '<button class="knopf k-zurueck" onclick="zuruecknehmen(\''+esc(id)+'\')">Rückgängig – doch nicht fertig</button>';
@@ -918,10 +1015,14 @@ function listeMalen(){
        +   esc(t.ber||'–')
        +   (an ? ' · <b style="color:#1565c0">📋 Anweisung</b>' : '')
        +   (mg ? ' · <b style="color:#D72622">⚠ '+mg+'</b>' : '')
-       +   (v ? '<br>verschraubt '+dm(v.am)+(v.von?(' · '+esc(v.von)):'') : '')
+       +   (v ? '<br>verschraubt '+dm(v.am)
+                + (v.nalpi ? ' · aus Nalpi' : (v.von?(' · '+esc(v.von)):'')) : '')
        + '</div>'
-       + '<button class="hk'+(v?' an':'')+'" onclick="'+(v?'zuruecknehmen':'fertig')+'(\''+esc(id)+'\')">'
-       +   (v?'✔':'') + '</button>'
+       + (v && v.nalpi
+            ? '<button class="hk an nalpi" title="Steht schon in Nalpi" '
+              + 'onclick="toast(\'Tisch '+esc(id)+' steht schon in Nalpi als verschraubt.\')">✔</button>'
+            : '<button class="hk'+(v?' an':'')+'" onclick="'+(v?'zuruecknehmen':'fertig')+'(\''+esc(id)+'\')">'
+              + (v?'✔':'') + '</button>')
        + '<button class="hk" onclick="reiter(\'karte\');oeffnen(\''+esc(id)+'\')" '
        +   'style="border-color:transparent;font-size:15px">›</button>'
        + '</div>';
@@ -956,12 +1057,17 @@ function anwMalen(){
 function exportMalen(){
   var hs = heute();
   var ids = Object.keys(VERSCHRAUBT);
-  var heuteN = ids.filter(function(id){ return VERSCHRAUBT[id].am === hs; }).length;
+  var eigen = ids.filter(function(id){ return !VERSCHRAUBT[id].nalpi; });
+  var ausNalpi = ids.length - eigen.length;
+  var heuteN = eigen.filter(function(id){ return VERSCHRAUBT[id].am === hs; }).length;
   var montiert = Object.keys(TISCHE).filter(function(id){ return TISCHE[id].mt; });
   var offen = montiert.filter(function(id){ return !VERSCHRAUBT[id]; }).length;
   $('expZahlen').innerHTML =
       '<div class="kasten ok"><b>'+ids.length+' Konstruktionen verschraubt</b>'
-    + 'davon heute gemeldet: '+heuteN+'</div>'
+    + eigen.length+' hier gemeldet (davon heute '+heuteN+'), '
+    + ausNalpi+' standen schon in Nalpi.<br>'
+    + '<b style="display:inline">In die CSV gehen nur die '+eigen.length+' eigenen Meldungen</b> – '
+    + 'was aus Nalpi kam, muss nicht zurück.</div>'
     + '<div class="kasten warn"><b>'+offen+' noch offen</b>'
     + 'Modulträger montiert, aber noch nicht als verschraubt gemeldet ('
     + montiert.length+' montiert insgesamt).</div>';
@@ -973,7 +1079,9 @@ function exportMalen(){
 }
 function csvLaden(nurHeute){
   var hs = heute();
+  /* Was aus Nalpi kam, muss nicht zurück nach Nalpi. */
   var ids = Object.keys(VERSCHRAUBT)
+            .filter(function(id){ return !VERSCHRAUBT[id].nalpi; })
             .filter(function(id){ return !nurHeute || VERSCHRAUBT[id].am === hs; })
             .sort(function(a,b){ return (parseInt(a,10)||0)-(parseInt(b,10)||0); });
   if(!ids.length){ toast('Nichts zu exportieren.', true); return; }

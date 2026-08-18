@@ -13,6 +13,7 @@ build_baustand.py – erzeugt die beiden Datendateien fuer den 3D-Baustand:
       Quelle: Nalpi-Export "export-tableId-*.csv" (Victor legt ihn in
       _ZWISCHENABLAGE ab). Nur Tische MIT Datum "Primärkonstruktion montiert".
       s = 'mt' wenn auch "Modulträger montiert", sonst 'pk'.
+      vs = Datum "Modultisch verschraubt", falls in Nalpi gesetzt.
 
 Aufruf (aus Website_NalpSolar):
   python tools/build_baustand.py "<pfad zu export-tableId-JJJJ-MM-TT.csv>"
@@ -107,12 +108,16 @@ def lese_nalpi(csv_pfad):
             tid = r['Nr.'].strip()
             pk = r.get('Primärkonstruktion montiert', '').strip()
             mt = r.get('Modulträger montiert', '').strip()
+            # Spalte gibt es erst seit 18.08.2026 – aeltere CSV haben sie nicht
+            vs = r.get('Modultisch verschraubt', '').strip()
             stati[r.get('Baustatus', '?')] = stati.get(r.get('Baustatus', '?'), 0) + 1
             if pk in ('', '—', '-'):
                 continue
             e = {'s': 'mt' if mt not in ('', '—', '-') else 'pk', 'pk': pk}
             if e['s'] == 'mt':
                 e['mt'] = mt
+            if vs not in ('', '—', '-'):
+                e['vs'] = vs          # Modultisch verschraubt (Nalpi)
             st[tid] = e
     return st, stati
 
