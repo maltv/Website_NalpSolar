@@ -1512,7 +1512,11 @@ function sollIndex(){
    sowohl in der Checkliste als auch bei den Karten das Richtige zuoberst. */
 function aktuellerBatch(){
   var map=batchPositionen(), da=psErfasst(), heuteS=heute();
-  var bs=Object.keys(map).map(Number).sort(function(a,b){ return a-b; });
+  // Nur nummerierte Batches: die Sonderbestellung 'RES' (Reserve-Passstuecke)
+  // hat keine Batchnummer - ohne diesen Filter wird map[NaN] gelesen, die
+  // Funktion wirft und die Karten werden gar nicht erst gebaut.
+  var bs=Object.keys(map).map(Number).filter(function(b){ return !isNaN(b); })
+                         .sort(function(a,b){ return a-b; });
   var offen=bs.filter(function(b){ return Object.keys(map[b]).some(function(k){ return !da[k]; }); });
   var geliefert=offen.filter(function(b){
     var l=LIEFERUNG[b]; return l && (l.ist || (l.soll && l.soll<=heuteS));
