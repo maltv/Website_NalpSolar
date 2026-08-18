@@ -32,6 +32,13 @@
   .laden{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
           font-size:14px; color:var(--mut); }
   .werkzeug{ position:absolute; right:12px; top:12px; display:flex; flex-direction:column; gap:6px; }
+  #labels{ position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+  .lbl{ font:700 11.5px Arial,sans-serif; color:#e8eef7; background:rgba(14,20,27,.72);
+        border:1px solid #3a4a5c; border-radius:5px; padding:2px 6px; white-space:nowrap;
+        transform:translate(-50%,-50%); }
+  .lbl.pos{ color:#ffc340; }
+  .lbl.keil{ color:#f0914a; border-color:#7a4a20; }
+  .lbl.mass{ color:#ff8b8b; background:rgba(30,12,12,.78); border-color:#6a3030; font-size:11px; }
   @media(max-width:560px){ header h1{ font-size:13.5px; } .info{ font-size:11px; } }
 </style>
 </head>
@@ -47,9 +54,12 @@
 
 <div class="buehne">
   <canvas id="cv"></canvas>
+  <div id="labels"></div>
   <div class="laden" id="laden">Modell wird geladen …</div>
   <div class="werkzeug">
     <button class="btn" id="bKeil">Trichter durchsichtig</button>
+    <button class="btn" id="bMasse">Bemassung</button>
+    <button class="btn" id="bText">Beschriftung</button>
     <button class="btn" id="bKanten">Kanten</button>
     <button class="btn" id="bReset">Ansicht zurück</button>
   </div>
@@ -64,6 +74,7 @@
 
 <script src="assets/js/three/three.min.js"></script>
 <script src="assets/js/three/OrbitControls.js"></script>
+<script src="assets/js/three/CSS2DRenderer.js"></script>
 <script>
 'use strict';
 /* Betonspurfertiger als 3D-Modell. Quelle ist die STL aus Victors Tinkercad-Entwurf,
@@ -74,7 +85,7 @@ var STL = 'Betonspur/modell/betonspurfertiger.stl';
 var GRUPPEN = 'Betonspur/modell/gruppen.json';   // Dreiecksbereiche je Baugruppe
 
 var renderer, szene, kamera, ctrl, geraet, trichter, keil, kanten, matTrichter,
-    startZiel, startPos;
+    startZiel, startPos, labelRenderer, gMasse, gText;
 
 function stlLesen(puffer) {
   var dv = new DataView(puffer);
@@ -100,6 +111,86 @@ function geometrie(pos, nor, von, bis) {
   g.setAttribute('position', new THREE.BufferAttribute(pos.slice(von * 9, bis * 9), 3));
   g.setAttribute('normal', new THREE.BufferAttribute(nor.slice(von * 9, bis * 9), 3));
   return g;
+}
+
+
+/* ---- Bemassung und Beschriftung (beide zuschaltbar) --------------------
+   Alle Punkte in Modellkoordinaten (cm, wie in der STL): X quer, Y in
+   Fahrtrichtung, Z nach oben. Die Gruppen haengen im gleichen Knoten wie
+   das Modell, also wandern sie beim Drehen mit. */
+
+function schild(text, klasse, x, y, z) {
+  var e = document.createElement('div');
+  e.className = 'lbl ' + (klasse || '');
+  e.textContent = text;
+  var o = new THREE.CSS2DObject(e);
+  o.position.set(x, y, z);
+  return o;
+}
+
+function linie(a, b, farbe) {
+  var g = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(a[0], a[1], a[2]), new THREE.Vector3(b[0], b[1], b[2])]);
+  return new THREE.Line(g, new THREE.LineBasicMaterial({ color: farbe }));
+}
+
+function mass(a, b, text, quer) {
+  /* quer = kurzer Endstrich-Richtungsvektor */
+  var G = new THREE.Group(), F = 0xff6b6b, q = quer || [0, 0, 6];
+  G.add(linie(a, b, F));
+  [a, b].forEach(function (p) {
+    G.add(linie([p[0] - q[0], p[1] - q[1], p[2] - q[2]],
+                [p[0] + q[0], p[1] + q[1], p[2] + q[2]], F));
+  });
+  G.add(schild(text, 'mass', (a[0]+b[0])/2, (a[1]+b[1])/2, (a[2]+b[2])/2));
+  return G;
+}
+
+function bemassungBauen() {
+  var G = new THREE.Group();
+  var yv = -118, yv2 = -150;          // Massketten vor dem Geraet
+  // Breitenkette
+  [[-210,-193,'17'], [-193,-112,'81 Spur'], [-112,-95,'17'], [-95,-50,'45 frei'],
+   [-50,-33,'17'], [-33,47,'80 Spur'], [47,64,'17']].forEach(function (m) {
+    G.add(mass([m[0], yv, 0], [m[1], yv, 0], m[2], [0, 5, 0]));
+  });
+  G.add(mass([-210, yv2, 0], [64, yv2, 0], '274 gesamt', [0, 6, 0]));
+  // Laenge und Hoehe seitlich
+  G.add(mass([95, -75, 0], [95, 446, 0], '521 ueber die Kufen', [6, 0, 0]));
+  G.add(mass([95, 60, 0], [95, 60, 140.6], '141 Bauhoehe', [6, 0, 0]));
+  G.add(mass([80, 60, 17], [80, 60, 140.6], '124 Trichter', [5, 0, 0]));
+  G.add(mass([-215, 200, 0], [-215, 200, 17], '17 Kufe', [0, 5, 0]));
+  // Keil an der hinteren Trichterkante
+  G.add(mass([-112, 118, 17], [-33, 118, 17], '79 Keil', [0, 4, 0]));
+  G.add(mass([-72.5, 118, 17], [-72.5, 118, 90], '73 hoch', [4, 0, 0]));
+  // Bauteilbereiche in Laengsrichtung
+  [[-60, 113, 'Trichter 173'], [154, 266, 'Platte 112'], [266, 399, '133 Arbeitsraum'],
+   [399, 446, 'Ballast 47']].forEach(function (m) {
+    G.add(mass([-215, m[0], 30], [-215, m[1], 30], m[2], [5, 0, 0]));
+  });
+  G.visible = false;
+  return G;
+}
+
+function beschriftungBauen() {
+  var G = new THREE.Group();
+  [['A  Kufe aussen links', 'pos', -201, 150, 17],
+   ['B  Kufe innen links', 'pos', -103, 250, 17],
+   ['C  Kufe innen rechts', 'pos', -41, 330, 17],
+   ['D  Kufe aussen rechts', 'pos', 55, 420, 17],
+   ['E  Betontrichter', 'pos', -73, 20, 148],
+   ['F  Aufspaltkeil', 'keil', -73, 60, 95],
+   ['G  Platte zieht die Spur ab', 'pos', -73, 210, 30],
+   ['H  Ballast', 'pos', -73, 422, 55],
+   ['J  Anhaengung', 'pos', -71, -80, 30],
+   ['Spur links 81', '', -152, 480, 2],
+   ['Mitte 45 frei', '', -73, 480, 2],
+   ['Spur rechts 80', '', 7, 480, 2],
+   ['ZUGSEITE', 'keil', -73, -120, 60]].forEach(function (l) {
+    G.add(schild(l[0], l[1], l[2], l[3], l[4]));
+  });
+  G.visible = false;
+  return G;
 }
 
 function aufbauen(daten, gr) {
@@ -135,9 +226,12 @@ function aufbauen(daten, gr) {
   // Unterkante auf 0), aussen wird von Z-oben (STL) auf Y-oben (three) gedreht.
   // In einer einzigen Gruppe wuerde die Verschiebung nach der Drehung wirken und das
   // Modell kippt weg.
+  gMasse = bemassungBauen();
+  gText = beschriftungBauen();
+
   var verschoben = new THREE.Group();
   verschoben.add(geraet); verschoben.add(trichter); verschoben.add(keil);
-  verschoben.add(kanten);
+  verschoben.add(kanten); verschoben.add(gMasse); verschoben.add(gText);
   verschoben.position.copy(verschieb);
 
   var wurzel = new THREE.Group();
@@ -181,6 +275,8 @@ function start() {
   var s1 = new THREE.DirectionalLight(0xffffff, 0.85); s1.position.set(1, 1.4, 0.8); szene.add(s1);
   var s2 = new THREE.DirectionalLight(0xa8c4e0, 0.35); s2.position.set(-1, 0.5, -0.9); szene.add(s2);
 
+  labelRenderer = new THREE.CSS2DRenderer({ element: document.getElementById('labels') });
+
   groesseAnpassen();
   window.addEventListener('resize', groesseAnpassen);
 
@@ -206,18 +302,30 @@ function start() {
     kanten.visible = !kanten.visible;
     this.classList.toggle('an', kanten.visible);
   });
+  document.getElementById('bMasse').addEventListener('click', function () {
+    if (!gMasse) return;
+    gMasse.visible = !gMasse.visible;
+    this.classList.toggle('an', gMasse.visible);
+  });
+  document.getElementById('bText').addEventListener('click', function () {
+    if (!gText) return;
+    gText.visible = !gText.visible;
+    this.classList.toggle('an', gText.visible);
+  });
   document.getElementById('bReset').addEventListener('click', ansichtZurueck);
 
   (function schleife() {
     requestAnimationFrame(schleife);
     ctrl.update();
     renderer.render(szene, kamera);
+    if (labelRenderer) labelRenderer.render(szene, kamera);
   })();
 }
 
 function groesseAnpassen() {
   var b = document.querySelector('.buehne');
   renderer.setSize(b.clientWidth, b.clientHeight, false);
+  if (labelRenderer) labelRenderer.setSize(b.clientWidth, b.clientHeight);
   kamera.aspect = b.clientWidth / Math.max(1, b.clientHeight);
   kamera.updateProjectionMatrix();
 }
