@@ -19,19 +19,17 @@
   };
 
   // Fixed repo paths for each PDF slot
+  // Begleitplan-Slots (bohren/stahlbau/bestellung/stapel) am 18.08.2026 entfernt -
+  // die Plaene waren Stand KW21-25 und sind nach _Archiv°818_Begleitplaene\ weg.
   var PDF_REPO_PATHS = {
-    '5w': '5W-Programm/KW21-25.pdf',
-    bohren: '5W-Programm/Begleitplaene/Bohren/5W_Bohren_21-25.pdf',
-    stahlbau: '5W-Programm/Begleitplaene/Stahlbau/5W_Stahlbau_21-25_Optimized.pdf',
-    bestellung: '5W-Programm/Begleitplaene/StahlbauBestellungen/5W_Stahlbaubestellung_21-25.pdf',
-    stapel: '5W-Programm/Begleitplaene/Stapel/5W_Stapel_21-25.pdf'
+    '5w': '5W-Programm/KW21-25.pdf'
   };
 
   // ── Settings (localStorage) ─────────────────────────────────────────────────
 
   function defaultSettings() {
     return {
-      pdfMeta: { '5w': null, bohren: null, stahlbau: null, bestellung: null, stapel: null },
+      pdfMeta: { '5w': null },
       ifcMeta: { wl: null, erdung: null },
       geojsonIds: []
     };

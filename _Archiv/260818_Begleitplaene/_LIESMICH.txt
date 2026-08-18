@@ -1,0 +1,14 @@
+Begleitplaene zum 5W-Programm - ARCHIVIERT am 18.08.2026 (Entscheid Victor).
+
+Grund: die Plaene waren durchgehend Stand KW21-25 (Juli 2026) und damit veraltet.
+Enthalten: begleitplaene.html (Anzeigeseite) + Ordner Begleitplaene\ mit den vier
+PDF-Slots Bohren / Stahlbau / StahlbauBestellungen / Stapel.
+
+Mit entfernt wurden:
+  - 5w-programm.html        : Button "Begleitplaene"
+  - karte.html              : Funktion openPlansPage() (wurde nie aufgerufen)
+  - assets/js/nalp-storage.js: PDF-Slots bohren/stahlbau/bestellung/stapel
+  - firebase.json           : ignore-Eintrag begleitplaene.html
+
+NICHT neu aufbauen ohne Ruecksprache. Karten zum 5W-Programm zeichnet Victor
+seit 18.08.2026 selbst in Trimble.

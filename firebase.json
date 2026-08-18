@@ -12,7 +12,6 @@
       "*.csv",
       "*.md",
       "index.html",
-      "begleitplaene.html",
       "5w-programm.html"
     ],
     "rewrites": [

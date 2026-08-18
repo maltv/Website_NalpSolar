@@ -1,6 +1,6 @@
 # Firebase Auth für Logistik + Lieferscheine – Einrichtung
 
-Stand 28.07.2026. Die Seiten `logistik.html` und `lieferscheine.html` verlangen neu einen
+Stand 28.07.2026. Die Seite `lieferscheine.html` verlangt neu einen
 echten Login (E-Mail/Passwort, Firebase Authentication) statt des Zahlen-Codes 7188.
 Technik: `assets/js/nalp-auth.js` (REST, kein SDK). Alle übrigen Seiten behalten das Zahlen-Gate.
 

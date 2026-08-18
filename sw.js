@@ -1,12 +1,11 @@
 'use strict';
-var CACHE = 'nalpsolar-v125';
+var CACHE = 'nalpsolar-v128';
 var PRECACHE = [
   './index.html',
   './protokoll.html',
   './assets/js/nalp-protokoll.js',
   './assets/js/nalp-scan-parse.js',
   './sicherheit.html',
-  './logistik.html',
   './lieferscheine.html',
   './vormontage.html',
   './gewinde.html',

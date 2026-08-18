@@ -235,6 +235,16 @@
     <div id="rows"></div>
   </div>
 
+  <details class="card konst" id="resCard">
+    <summary>🧱 Reserve-Rohlinge &amp; offene Lieferung</summary>
+    <div class="lead" style="margin-top:8px;" id="resLead"></div>
+    <table>
+      <thead><tr><th>Typ</th><th>Tal (S1/S4)</th><th>Berg (S2/S3)</th></tr></thead>
+      <tbody id="resTb"></tbody>
+    </table>
+    <div class="hint" id="resHint"></div>
+  </details>
+
   <details class="card konst" id="konstCard">
     <summary>⚙ Konstanten (ABZ je Typ) &amp; Grundlagen</summary>
     <div class="lead" style="margin-top:8px;">ABZ = Abzug vom Höhenunterschied (SOLL UK Modul − IST OK Pfahl) bis zum Passstück:
@@ -262,7 +272,7 @@
     Diagnose-Referenzen: freigegebene Längen, IST-Höhen und Lageabweichungen (Abw RL) aus denselben ILF-Freigabedateien;
     Jahrgangs-Differenzen (Kontrolle 5) aus der ILF-Konstantentabelle ·
     Tischtypen inkl. KF-Varianten: Nalpi-Voll-Export 13.07.2026 ·
-    Bestellte Längen: Mauchle-Bestellbatches NR 1–10 (Stand 08.07.2026; Batch 5+6 = Korrekturversion 08.06.2026) ·
+    Bestellte Längen: Mauchle-Bestellbatches NR 1–16 (Stand 17.08.2026; Batch 5+6 = Korrekturversion 08.06.2026) sowie die Sonderbestellung RESERVE vom 06.08.2026 ·
     Toleranz ±100 mm Modulhöhe (Verschattung, ILF 06/2025) ·
     Mindestlängen: J. Mäder/Mauchle 16.03.2026 (deckt sich mit ILF-Tabelle ABS_PS_B_MIN).
     <span id="quellenKonst"></span>
@@ -318,12 +328,85 @@
   (D.bestellungen||[]).forEach(function(b){ (BEST[b[0]]=BEST[b[0]]||[]).push(b); });
   // ILF-Freigaben: key "id_Sx" -> [laenge_mm, ist_h, soll_h_freigabe, abw_rl_mm, quelle]
   var FRG = D.frg || {};
+
+  // Reserve-Rohlinge (Sonderbestellung RES): Hohlprofil auf Maximallaenge, mit
+  // Lasche(n), OHNE Fussplatte -> bauseits auf Mass kürzen und Fussplatte anschweissen.
+  var RES = D.reserve || null;
+  // Typschluessel des Rechners ("B", "D_2026", "B_KF2025", "E_2025") auf die
+  // Typbezeichnung der Reserveliste bringen. KF2025 = Primaerkonstruktion Serie 2026.
+  function resTyp(key){
+    var m = /^([A-E])(?:_(KF)?(\d{4}))?$/.exec(key||'');
+    if(!m) return null;
+    if(m[2]) return m[1]+'_2026';          // X_KF2025 -> Serie 2026
+    return m[1]+'_'+(m[3]||'2026');        // blank = Serie 2026
+  }
+  // Passt ein Rohling fuer diese Position? Er wird gekuerzt, also reicht jede
+  // Laenge BIS zum Rohmass; laenger als der Rohling geht nicht.
+  function lookupReserve(target, typKey, st){
+    if(!RES || !RES.stueck || target==null) return null;
+    var typ = resTyp(typKey), lage = (st==='S1'||st==='S4') ? 'T' : 'B';
+    if(!typ) return null;
+    for(var i=0;i<RES.stueck.length;i++){
+      var r = RES.stueck[i];
+      if(r[0]===typ && r[1]===lage)
+        return { typ:typ, lage:lage, roh:r[2], anzahl:r[3], schnitt:r[2]-target,
+                 passt:r[2] >= target };
+    }
+    return { typ:typ, lage:lage, roh:null, anzahl:0, schnitt:null, passt:false };
+  }
+  function resDatum(){
+    if(!RES) return '';
+    var d = RES.liefertermin||'';
+    return d ? d.split('-').reverse().join('.') : '';
+  }
+  function resHtml(target, typKey, st){
+    var r = lookupReserve(target, typKey, st);
+    if(!r) return '';
+    var lage = r.lage==='T' ? 'Tal (S1/S4)' : 'Berg (S2/S3)';
+    if(r.roh==null)
+      return '<div class="cand">Reserve-Rohling: für Typ <b>'+esc(r.typ)+'</b> ist keiner bestellt '+
+             '(A_2026 nie bestellt, Typ C gibt es in Serie 2025 nicht).</div>';
+    if(!r.passt)
+      return '<div class="cand">Reserve-Rohling '+esc(r.typ)+' '+lage+' ist mit <b>'+r.roh+' mm</b> '+
+             '<b>zu kurz</b> für '+Math.round(target)+' mm – hier hilft nur Neubau bei Mauchle.</div>';
+    return '<div class="cand">➜ <b>Reserve-Rohling '+esc(r.typ)+'</b>, '+lage+': '+r.roh+' mm auf Lager'+
+           ' ('+r.anzahl+' Stk) → auf <b>'+Math.round(target)+' mm</b> kürzen ('+Math.round(r.schnitt)+
+           ' mm weg) und Fussplatte anschweissen. <b>Nimmt keinem anderen Tisch sein Stück weg.</b>'+
+           ' Lieferung '+resDatum()+'.</div>';
+  }
   function saveAbz(){
     var diff = {};
     Object.keys(abz).forEach(function(k){
       if(!ABZ_DEFAULTS[k] || ABZ_DEFAULTS[k].wert !== abz[k]) diff[k]=abz[k];
     });
     try { localStorage.setItem(LS_KEY, JSON.stringify(diff)); } catch(e){}
+  }
+
+  function renderRes(){
+    var card=document.getElementById('resCard'); if(!card) return;
+    if(!RES || !RES.stueck || !RES.stueck.length){ card.style.display='none'; return; }
+    var offen=[], liefer=resDatum();
+    Object.keys(RES.vorgezogen||{}).forEach(function(k){
+      offen.push('<b>'+esc(k)+'</b> (Nachbestellung, komplettes Passstück mit Fussplatte) kommt vorgezogen am <b>'+
+                 (RES.vorgezogen[k]||'').split('-').reverse().join('.')+'</b>');
+    });
+    document.getElementById('resLead').innerHTML =
+      'Sonderbestellung vom '+(RES.bestellt||'').split('-').reverse().join('.')+
+      ' bei Mauchle, Liefertermin <b>'+liefer+'</b>. '+esc(RES.zweck||'')+
+      (offen.length ? '<br>'+offen.join('<br>') : '');
+    // je Typ eine Zeile mit Tal- und Bergmass
+    var typen=[], nach={};
+    RES.stueck.forEach(function(r){
+      if(!nach[r[0]]){ nach[r[0]]={}; typen.push(r[0]); }
+      nach[r[0]][r[1]]=r;
+    });
+    document.getElementById('resTb').innerHTML = typen.map(function(t){
+      function z(l){ var r=nach[t][l]; return r ? r[2]+' mm <span class="sub">('+r[3]+' Stk)</span>' : '–'; }
+      return '<tr><td><b>'+esc(t)+'</b></td><td>'+z('T')+'</td><td>'+z('B')+'</td></tr>';
+    }).join('');
+    document.getElementById('resHint').innerHTML =
+      esc(RES.ausfuehrung||'')+'<br>'+esc(RES.hinweis||'')+
+      '<br>Quelle: '+esc(RES.quelle||'')+'. Wird ein Rohling gebraucht, schlägt Kontrolle 3 ihn automatisch vor.';
   }
 
   function renderKonst(){
@@ -657,10 +740,15 @@
       if(d<=tol) out.push({key:key, len:b[2], info:'Batch '+b[3]+', '+b[4]+', '+b[5], diff:d});
     });
     out.sort(function(a,b){ return a.diff-b.diff; });
+    // dieselbe Position kann mehrfach bestellt sein (z. B. 1076_S4 in Batch 9 und
+    // als Nachbestellung RES) - nur einmal anbieten
+    var seen={}; out = out.filter(function(c){
+      if(seen[c.key]) return false; seen[c.key]=1; return true;
+    });
     return out.slice(0,6);
   }
   function candHtml(list, prefix){
-    if(!list.length) return '<div class="cand">'+prefix+': keine Position mit passender Länge in den Bestellbatches 1–10 gefunden.</div>';
+    if(!list.length) return '<div class="cand">'+prefix+': keine Position mit passender Länge in den bisherigen Bestellbatches gefunden.</div>';
     return '<div class="cand">'+prefix+': '+list.map(function(c){
       return '<b>'+c.key+'</b> ('+c.len+' mm, '+esc(c.info)+')';
     }).join(' · ')+'</div>';
@@ -908,7 +996,8 @@
       el.className='dres bad'; verd.c3[st]='bad';
       el.innerHTML='✗ Gemessen '+v+' mm ≠ '+refname+' '+refv+' mm (Δ '+(d>0?'+':'')+d.toFixed(1)+' mm) → <b>falsch gefertigt</b>: '+
         'Foto + Mass dokumentieren, Mauchle via J. Mäder reklamieren, <b>REGIE erfassen</b>, Neubau via Mike Berndt.';
-      if(cd&&p&&!istKorr()) cd.innerHTML=candHtml(lookupByLen(p.len, Math.max(tolLen(),3), current.id+'_'+st),
+      if(cd&&p&&!istKorr()) cd.innerHTML=resHtml(p.len, abzKey(current), st)+
+        candHtml(lookupByLen(p.len, Math.max(tolLen(),3), current.id+'_'+st),
         'Ersatz mit Soll-Länge '+p.len+' mm (nur nach Freigabe ILF/Nalpi – das Stück fehlt dann an seiner Originalposition!)');
       else if(cd&&istKorr()) cd.innerHTML='<div class="cand">SOLL geändert – benötigte Länge zuerst neu rechnen (Abschnitt 3 / Nalpi), dann Ersatz suchen.</div>';
     }
@@ -1044,6 +1133,7 @@
     }
   })();
 
+  renderRes();
   renderKonst();
 })();
 </script>

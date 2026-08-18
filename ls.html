@@ -3,11 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>NalpSolar · Lieferschein hochladen / Upload delivery note</title>
+<title>NalpSolar · Lieferschein / Unterweisung hochladen</title>
 <meta name="theme-color" content="#D72622">
 <!-- OFFENE SEITE - BEWUSST OHNE GATE-CODE (Auftrag V. Malt 13.08.2026).
      Schreibt in dieselbe Firebase-RTDB wie lieferscheine.html, damit alles
-     an EINEM Ort liegt. Der Mailversand an Victor macht Tools\Lieferschein_Mail.py. -->
+     an EINEM Ort liegt. Der Mailversand macht Tools\Lieferschein_Mail.py.
+
+     Erweitert 18.08.2026 (Auftrag V. Malt):
+       - MEHRERE SEITEN je Beleg (Vorder-/Rueckseite, mehrblaettrige Unterweisungslisten)
+       - Belegart: Lieferschein ODER Unterweisung (gleicher Datentopf, Feld art)
+       - Zusaetzliche Mailempfaenger ankreuzbar (feste Namensliste)
+     WICHTIG: Auf dieser offenen Seite stehen bewusst NUR Namen, keine Mailadressen -
+     die Zuordnung Name -> Adresse macht erst Tools\Lieferschein_Mail.py. Sonst waeren
+     STRABAG-Adressen im Quelltext einer offen im Netz stehenden Seite abgreifbar,
+     und die Seite koennte als Mailschleuder an beliebige Adressen missbraucht werden. -->
 <style>
   :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
          --gruen:#1e9e5a; }
@@ -30,6 +39,16 @@
         border-radius:6px; padding:15px; margin-bottom:14px; box-shadow:0 1px 4px rgba(20,25,32,.07); }
   .box h2{ margin:0 0 4px; font-size:17px; }
   .box p.sub{ margin:0 0 12px; font-size:13.5px; color:var(--mut); line-height:1.5; }
+
+  /* Belegart: Lieferschein oder Unterweisung */
+  .art{ display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-bottom:4px; }
+  .art button{ display:flex; flex-direction:column; align-items:center; gap:5px;
+        padding:13px 8px; border:2px solid #c9ccd2; border-radius:8px; background:#fff;
+        cursor:pointer; font-family:inherit; color:var(--mut); }
+  .art button .ic{ font-size:26px; line-height:1; }
+  .art button .tx{ font-size:14px; font-weight:800; }
+  .art button.on{ border-color:var(--rot); background:#fff5f5; color:var(--ink); }
+
   label.fl{ display:block; font-size:11.5px; font-weight:700; color:var(--mut); margin:13px 0 5px;
             text-transform:uppercase; letter-spacing:.04em; }
   label.fl .opt{ text-transform:none; letter-spacing:0; font-weight:400; }
@@ -44,11 +63,30 @@
   .pick .ic{ font-size:30px; line-height:1; }
   .pick .tx{ font-size:13.5px; font-weight:800; }
   .pick input[type=file]{ display:none; }
-  #prev{ margin-top:12px; display:none; }
-  #prev img{ max-width:100%; border-radius:6px; border:1px solid var(--line); display:block; }
-  #prev .pdf{ display:flex; align-items:center; gap:10px; padding:14px; background:#f5f6f8;
-          border:1px solid var(--line); border-radius:6px; font-size:14px; font-weight:700; }
-  #prev .meta{ font-size:12px; color:var(--mut); margin-top:6px; }
+
+  /* Seitenvorschau: Kacheln mit Nummer, antippbares Kreuz zum Entfernen */
+  #prev{ margin-top:12px; display:none; grid-template-columns:repeat(3,1fr); gap:8px; }
+  #prev.an{ display:grid; }
+  .pg{ position:relative; border:1px solid var(--line); border-radius:6px; overflow:hidden;
+       background:#f5f6f8; aspect-ratio:3/4; }
+  .pg img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .pg .pdf{ width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+       font-size:30px; }
+  .pg .nr{ position:absolute; left:0; top:0; background:var(--rot); color:#fff;
+       font-size:11px; font-weight:900; padding:2px 7px; border-bottom-right-radius:6px; }
+  .pg .del{ position:absolute; right:3px; top:3px; width:26px; height:26px; border:none;
+       border-radius:50%; background:rgba(20,25,32,.72); color:#fff; font-size:15px;
+       line-height:1; cursor:pointer; font-family:inherit; }
+  #prevInfo{ font-size:12px; color:var(--mut); margin-top:7px; display:none; }
+  #prevInfo.an{ display:block; }
+
+  /* Zusaetzliche Empfaenger */
+  .emp label{ display:flex; align-items:center; gap:10px; padding:9px 10px; border:1px solid var(--line);
+       border-radius:6px; margin-bottom:7px; cursor:pointer; background:#fafbfc; }
+  .emp input{ width:20px; height:20px; flex:none; accent-color:var(--rot); }
+  .emp .nm{ font-size:14px; font-weight:700; }
+  .emp .ro{ font-size:11.5px; color:var(--mut); }
+
   .btn{ display:block; width:100%; border:none; border-radius:7px; padding:16px;
         font-size:17px; font-weight:800; cursor:pointer; color:#fff; background:var(--rot);
         font-family:inherit; margin-top:18px; }
@@ -64,12 +102,15 @@
   html[data-l="en"] .de{ display:none; }
   html[data-l="en"] .en{ display:inline; }
   html[data-l="en"] div.en, html[data-l="en"] p.en{ display:block; }
+  /* Feldgruppen je Belegart */
+  html[data-art="unterweisung"] .nurLS{ display:none; }
+  html[data-art="lieferschein"] .nurUW{ display:none; }
 </style>
 </head>
 <body>
 <header>
   <div class="logo"><img src="assets/img/strabag-logo.png" alt="STRABAG"></div>
-  <h1><span class="de">Lieferschein hochladen</span><span class="en">Upload delivery note</span></h1>
+  <h1><span class="de">Beleg hochladen</span><span class="en">Upload document</span></h1>
   <div class="langsw">
     <button id="bDe" onclick="setL('de')">DE</button>
     <button id="bEn" onclick="setL('en')">EN</button>
@@ -79,57 +120,120 @@
 <main>
   <div id="form">
     <div class="box">
-      <h2><span class="de">Lieferschein senden</span><span class="en">Send delivery note</span></h2>
+      <h2><span class="de">Was schickst du?</span><span class="en">What are you sending?</span></h2>
+      <div class="art">
+        <button id="aLS" onclick="setArt('lieferschein')">
+          <span class="ic">📄</span>
+          <span class="tx"><span class="de">Lieferschein</span><span class="en">Delivery note</span></span>
+        </button>
+        <button id="aUW" onclick="setArt('unterweisung')">
+          <span class="ic">🦺</span>
+          <span class="tx"><span class="de">Unterweisung</span><span class="en">Instruction</span></span>
+        </button>
+      </div>
+    </div>
+
+    <div class="box">
+      <h2><span class="de">Seiten fotografieren</span><span class="en">Photograph pages</span></h2>
+      <p class="sub">
+        <span class="de">Jede Seite einzeln – Vorder- und Rückseite, mehrere Blätter.
+          Du kannst so oft hinzufügen, wie du willst.</span>
+        <span class="en">One page at a time – front and back, several sheets.
+          Add as many pages as you need.</span>
+      </p>
 
       <div class="pick">
         <label>
           <span class="ic">📷</span>
-          <span class="tx"><span class="de">Foto machen</span><span class="en">Take photo</span></span>
+          <span class="tx"><span class="de">Seite fotografieren</span><span class="en">Photograph page</span></span>
           <input type="file" id="fCam" accept="image/*" capture="environment">
         </label>
         <label>
           <span class="ic">📎</span>
-          <span class="tx"><span class="de">Datei / Scan</span><span class="en">File / scan</span></span>
-          <input type="file" id="fFile" accept="image/*,application/pdf">
+          <span class="tx"><span class="de">Dateien / Scan</span><span class="en">Files / scan</span></span>
+          <input type="file" id="fFile" accept="image/*,application/pdf" multiple>
         </label>
       </div>
       <div id="prev"></div>
+      <div id="prevInfo"></div>
+    </div>
 
-      <label class="fl"><span class="de">Lieferant / Transporteur</span><span class="en">Supplier / haulier</span> *</label>
-      <input id="fLief" list="lieferanten" autocomplete="off"
-             placeholder="Schuoler, Röfix, Mäder …">
-      <datalist id="lieferanten">
-        <option>Schuoler Logistik</option><option>Röfix</option><option>Mäder / Mauchle</option>
-        <option>Zeitler</option><option>Barit / bmsuisse</option><option>Geowork</option>
-        <option>CKW</option><option>Terno</option><option>Vulkanox</option>
-      </datalist>
+    <div class="box">
+      <h2><span class="de">Angaben</span><span class="en">Details</span></h2>
 
-      <label class="fl"><span class="de">Dein Name</span><span class="en">Your name</span> *</label>
+      <div class="nurLS">
+        <label class="fl"><span class="de">Lieferant / Transporteur</span><span class="en">Supplier / haulier</span> *</label>
+        <input id="fLief" list="lieferanten" autocomplete="off"
+               placeholder="Schuoler, Röfix, Mäder …">
+        <datalist id="lieferanten">
+          <option>Schuoler Logistik</option><option>Röfix</option><option>Mäder / Mauchle</option>
+          <option>Zeitler</option><option>Barit / bmsuisse</option><option>Geowork</option>
+          <option>CKW</option><option>Terno</option><option>Vulkanox</option>
+        </datalist>
+      </div>
+
+      <div class="nurUW">
+        <label class="fl"><span class="de">Thema der Unterweisung</span><span class="en">Instruction topic</span> *</label>
+        <input id="fThema" list="themen" autocomplete="off"
+               placeholder="z.B. PSAgA / Aluleiter">
+        <datalist id="themen">
+          <option>PSAgA / Aluleiter</option><option>Baustelleneinführung</option>
+          <option>Gefahren &amp; Massnahmen Berg</option><option>Gefahren &amp; Massnahmen Tal</option>
+          <option>Gefahren &amp; Massnahmen Montage</option><option>Notfallkonzept</option>
+          <option>Sicherheitstag</option><option>Temporäre Arbeitskräfte (FO 2.1-22)</option>
+        </datalist>
+
+        <label class="fl"><span class="de">Datum der Unterweisung</span><span class="en">Date of instruction</span> *</label>
+        <input id="fDatum" type="date">
+
+        <label class="fl"><span class="de">Teilnehmer</span><span class="en">Participants</span>
+          <span class="opt"><span class="de">(Anzahl oder Namen, optional)</span><span class="en">(number or names, optional)</span></span></label>
+        <input id="fTeil" placeholder="z.B. 6 Mann Stahlbau">
+      </div>
+
+      <label class="fl">
+        <span class="nurLS"><span class="de">Dein Name</span><span class="en">Your name</span></span>
+        <span class="nurUW"><span class="de">Unterwiesen durch</span><span class="en">Instruction given by</span></span> *
+      </label>
       <input id="fVon" autocomplete="name" placeholder="Name / Firma">
 
-      <label class="fl"><span class="de">Lieferschein-Nr.</span><span class="en">Delivery note no.</span>
-        <span class="opt"><span class="de">(optional)</span><span class="en">(optional)</span></span></label>
-      <input id="fNr" placeholder="z.B. LS-4711">
+      <div class="nurLS">
+        <label class="fl"><span class="de">Lieferschein-Nr.</span><span class="en">Delivery note no.</span>
+          <span class="opt"><span class="de">(optional)</span><span class="en">(optional)</span></span></label>
+        <input id="fNr" placeholder="z.B. LS-4711">
+      </div>
 
       <label class="fl"><span class="de">Material / Bemerkung</span><span class="en">Material / remark</span>
         <span class="opt"><span class="de">(optional)</span><span class="en">(optional)</span></span></label>
       <input id="fText" placeholder="…">
-
-      <button class="btn" id="btnSend" onclick="senden()">
-        <span class="de">📤 Absenden</span><span class="en">📤 Send</span>
-      </button>
-      <div id="status"></div>
     </div>
 
-    <div class="hint">
-      <span class="de">Der Lieferschein muss <b>unterschrieben</b> sein.</span>
-      <span class="en">The delivery note must be <b>signed</b>.</span>
+    <div class="box">
+      <h2><span class="de">Wer soll es bekommen?</span><span class="en">Who should receive it?</span></h2>
+      <p class="sub">
+        <span class="de">Die Bauleitung bekommt jeden Beleg automatisch. Zusätzlich:</span>
+        <span class="en">Site management receives every document automatically. In addition:</span>
+      </p>
+      <div class="emp" id="empf"></div>
+    </div>
+
+    <button class="btn" id="btnSend" onclick="senden()">
+      <span class="de">📤 Absenden</span><span class="en">📤 Send</span>
+    </button>
+    <div id="status"></div>
+
+    <div class="hint" style="margin-top:14px">
+      <span class="de nurLS">Der Lieferschein muss <b>unterschrieben</b> sein.</span>
+      <span class="en nurLS">The delivery note must be <b>signed</b>.</span>
+      <span class="de nurUW">Die Unterweisungsliste muss von <b>allen Teilnehmern unterschrieben</b> sein.</span>
+      <span class="en nurUW">The instruction sheet must be <b>signed by all participants</b>.</span>
     </div>
   </div>
 
   <div class="ok" id="ok">
     <div class="hk">✅</div>
     <h2><span class="de">Danke – angekommen!</span><span class="en">Thank you – received!</span></h2>
+    <p id="okInfo"></p>
     <button class="btn" onclick="location.reload()">
       <span class="de">➕ Noch einen senden</span><span class="en">➕ Send another one</span>
     </button>
@@ -141,7 +245,16 @@
 var DB='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app';
 var P_LS='lieferscheine/eintraege', P_LSF='lieferscheine/fotos';
 var LS_VON='nalp_erfasser_v1';
-var datei=null, dateiMime='', dateiName='', gpsFix=null;
+var MAX_SEITEN=12;                    /* Bremse: 12 Seiten sind ~10 MB, mehr ist kein Lieferschein mehr */
+
+/* Nur Namen, keine Mailadressen - die Zuordnung macht Tools\Lieferschein_Mail.py.
+   IDs muessen dort in EXTRA_EMPFAENGER identisch heissen. */
+var EMPF=[
+  {id:'barbara',  name:'Barbara Stamenitis', de:'Ausmass / Bohrprotokolle', en:'Quantities / drilling records'},
+  {id:'francois', name:'François Borner',    de:'Bauleitung',               en:'Site management'}
+];
+
+var seiten=[], gpsFix=null, art='lieferschein';
 
 function $(id){ return document.getElementById(id); }
 
@@ -152,6 +265,8 @@ function setL(l){
   $('bDe').className = l==='de'?'on':'';
   $('bEn').className = l==='en'?'on':'';
   try{ localStorage.setItem('nalp_ls_lang',l); }catch(e){}
+  empfZeichnen();
+  seitenZeichnen();
 }
 (function(){
   var l='de';
@@ -160,6 +275,32 @@ function setL(l){
   setL(l);
 })();
 function T(de,en){ return document.documentElement.getAttribute('data-l')==='en'?en:de; }
+
+/* Belegart umschalten (steuert per data-art die Feldgruppen im CSS) */
+function setArt(a){
+  art=a;
+  document.documentElement.setAttribute('data-art',a);
+  $('aLS').className = a==='lieferschein'?'on':'';
+  $('aUW').className = a==='unterweisung'?'on':'';
+}
+setArt('lieferschein');
+
+/* Empfaengerliste zeichnen (Sprache beachten, Haken bleiben erhalten) */
+function empfZeichnen(){
+  var h='';
+  EMPF.forEach(function(e){
+    var an=document.getElementById('e_'+e.id);
+    var chk=(an&&an.checked)?' checked':'';
+    h+='<label><input type="checkbox" id="e_'+e.id+'" value="'+e.id+'"'+chk+'>'
+      +'<span><span class="nm">'+e.name+'</span><br>'
+      +'<span class="ro">'+T(e.de,e.en)+'</span></span></label>';
+  });
+  $('empf').innerHTML=h;
+}
+function gewaehlteEmpf(){
+  return EMPF.filter(function(e){ var c=document.getElementById('e_'+e.id); return c&&c.checked; })
+             .map(function(e){ return e.id; });
+}
 
 /* GPS einmalig, nicht blockierend - gleiches Muster wie lieferscheine.html */
 if(navigator.geolocation) navigator.geolocation.getCurrentPosition(function(p){
@@ -188,74 +329,132 @@ function pdfLesen(file, cb){
   r.onerror=function(){ cb(null); };
   r.readAsDataURL(file);
 }
-function gewaehlt(file){
-  if(!file) return;
-  dateiName=file.name||'';
-  $('status').textContent=T('Datei wird vorbereitet …','Preparing file …');
+
+function seitenZeichnen(){
+  var p=$('prev'), i=$('prevInfo');
+  if(!seiten.length){ p.className=''; p.innerHTML=''; i.className=''; i.textContent=''; return; }
+  var h='';
+  seiten.forEach(function(s,ix){
+    h+='<div class="pg"><span class="nr">'+(ix+1)+'</span>'
+      +'<button class="del" onclick="seiteWeg('+ix+')" title="'+T('Seite entfernen','Remove page')+'">✕</button>'
+      +(s.mime==='application/pdf' ? '<div class="pdf">📄</div>' : '<img src="'+s.data+'" alt="">')
+      +'</div>';
+  });
+  p.className='an'; p.innerHTML=h;
+  i.className='an';
+  i.textContent = seiten.length===1
+    ? T('1 Seite – lesbar? Sonst antippen und neu fotografieren.',
+        '1 page – readable? Otherwise remove it and take a new photo.')
+    : T(seiten.length+' Seiten in dieser Reihenfolge.',
+        seiten.length+' pages in this order.');
+}
+function seiteWeg(ix){ seiten.splice(ix,1); seitenZeichnen(); }
+
+/* Eine Datei anhaengen; cb() wenn fertig (auch im Fehlerfall - Reihenfolge bleibt erhalten) */
+function seiteAnhaengen(file, cb){
+  if(!file){ cb(); return; }
+  if(seiten.length>=MAX_SEITEN){
+    alert(T('Mehr als '+MAX_SEITEN+' Seiten gehen nicht. Bitte den Rest separat senden.',
+            'More than '+MAX_SEITEN+' pages is not possible. Please send the rest separately.'));
+    cb(); return;
+  }
   if(file.type==='application/pdf'){
     if(file.size>3500000){
-      $('status').textContent='';
-      alert(T('Das PDF ist zu gross (max. 3,5 MB). Bitte stattdessen ein Foto machen.',
+      alert(T('Das PDF ist zu gross (max. 3,5 MB). Bitte stattdessen fotografieren.',
               'This PDF is too large (max 3.5 MB). Please take a photo instead.'));
-      return;
+      cb(); return;
     }
     pdfLesen(file,function(d){
-      if(!d){ $('status').textContent=''; alert(T('Datei konnte nicht gelesen werden.','Could not read file.')); return; }
-      datei=d; dateiMime='application/pdf';
-      $('prev').style.display='block';
-      $('prev').innerHTML='<div class="pdf">📄 '+(dateiName||'PDF')+'</div>'
-        +'<div class="meta">'+Math.round(file.size/1024)+' KB</div>';
-      $('status').textContent='';
+      if(d) seiten.push({data:d, mime:'application/pdf', name:file.name||'Scan.pdf'});
+      else alert(T('Datei konnte nicht gelesen werden.','Could not read file.'));
+      cb();
     });
   } else {
     bildLesen(file,function(d){
-      if(!d){ $('status').textContent=''; alert(T('Bild konnte nicht gelesen werden.','Could not read image.')); return; }
-      datei=d; dateiMime='image/jpeg';
-      $('prev').style.display='block';
-      $('prev').innerHTML='<img src="'+d+'" alt="">'
-        +'<div class="meta">'+T('Lesbar? Sonst nochmals fotografieren.','Readable? Otherwise take a new photo.')+'</div>';
-      $('status').textContent='';
+      if(d) seiten.push({data:d, mime:'image/jpeg', name:file.name||''});
+      else alert(T('Bild konnte nicht gelesen werden.','Could not read image.'));
+      cb();
     });
   }
 }
-$('fCam').addEventListener('change',function(){ gewaehlt(this.files&&this.files[0]); });
-$('fFile').addEventListener('change',function(){ gewaehlt(this.files&&this.files[0]); });
+/* Mehrere Dateien der Reihe nach - nicht parallel, sonst wuerfelt es die Seiten durcheinander */
+function dateienAnhaengen(fileList){
+  var files=Array.prototype.slice.call(fileList||[]);
+  if(!files.length) return;
+  $('status').textContent=T('Seiten werden vorbereitet …','Preparing pages …');
+  (function naechste(){
+    if(!files.length){ $('status').textContent=''; seitenZeichnen(); return; }
+    seiteAnhaengen(files.shift(), function(){ seitenZeichnen(); naechste(); });
+  })();
+}
+$('fCam').addEventListener('change',function(){ dateienAnhaengen(this.files); this.value=''; });
+$('fFile').addEventListener('change',function(){ dateienAnhaengen(this.files); this.value=''; });
 
 /* REST auf dieselbe RTDB wie lieferscheine.html */
 function apiPost(p,body){ return fetch(DB+'/'+p+'.json',{method:'POST',body:JSON.stringify(body)})
   .then(function(r){ return r.ok?r.json():null; }).then(function(j){ return j&&j.name?j.name:null; }); }
 function apiPut(p,body){ return fetch(DB+'/'+p+'.json',{method:'PUT',body:JSON.stringify(body)})
   .then(function(r){ return r.ok; }); }
+function apiPatch(p,body){ return fetch(DB+'/'+p+'.json',{method:'PATCH',body:JSON.stringify(body)})
+  .then(function(r){ return r.ok; }); }
 function heute(){ var d=new Date();
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 
 function senden(){
-  var lief=$('fLief').value.trim(), von=$('fVon').value.trim();
-  if(!datei){ alert(T('Bitte zuerst den Lieferschein fotografieren oder eine Datei wählen.',
-                      'Please photograph the delivery note or select a file first.')); return; }
-  if(!lief){ alert(T('Bitte den Lieferanten angeben.','Please enter the supplier.')); return; }
+  var von=$('fVon').value.trim();
+  var lief=$('fLief').value.trim(), thema=$('fThema').value.trim();
+  if(!seiten.length){ alert(T('Bitte zuerst mindestens eine Seite fotografieren.',
+                              'Please photograph at least one page first.')); return; }
+  if(art==='lieferschein' && !lief){ alert(T('Bitte den Lieferanten angeben.','Please enter the supplier.')); return; }
+  if(art==='unterweisung' && !thema){ alert(T('Bitte das Thema der Unterweisung angeben.','Please enter the instruction topic.')); return; }
+  if(art==='unterweisung' && !$('fDatum').value){ alert(T('Bitte das Datum der Unterweisung angeben.','Please enter the date of the instruction.')); return; }
   if(!von){ alert(T('Bitte deinen Namen angeben.','Please enter your name.')); return; }
   try{ localStorage.setItem(LS_VON,von); }catch(e){}
 
   $('btnSend').disabled=true;
   $('status').textContent=T('Wird gesendet …','Sending …');
 
-  /* Datenmodell identisch zu lieferscheine.html, plus quelle/mail fuer das Mail-Skript */
-  var rec={ ts:Date.now(), datum:heute(), lieferant:lief, nr:$('fNr').value.trim(),
-            text:$('fText').value.trim(), ort:'', von:von, auftrag:'',
-            status:'neu', quelle:'qr', mail:'offen' };
+  /* Datenmodell wie bisher (lieferscheine.html liest es), plus art / an / seiten */
+  var rec={ ts:Date.now(), datum:heute(), art:art,
+            lieferant: art==='lieferschein'?lief:'', thema: art==='unterweisung'?thema:'',
+            nr:$('fNr').value.trim(), text:$('fText').value.trim(), ort:'', von:von, auftrag:'',
+            status:'neu', quelle:'qr', mail:'offen', seiten:seiten.length };
+  if(art==='unterweisung'){
+    rec.datumUW=$('fDatum').value||'';
+    rec.teilnehmer=$('fTeil').value.trim();
+  }
+  var an=gewaehlteEmpf();
+  if(an.length) rec.an=an;
   if(gpsFix){ rec.lat=gpsFix.lat; rec.lon=gpsFix.lon; }
 
+  var eintragKey=null;
   apiPost(P_LS,rec).then(function(key){
     if(!key) throw 0;
-    return apiPost(P_LSF,{eintrag:key, von:von, ts:Date.now(), data:datei,
-                          mime:dateiMime, name:dateiName})
-      .then(function(fk){ if(!fk) throw 0; return apiPut(P_LS+'/'+key+'/fotos/'+fk,true); });
+    eintragKey=key;
+    /* Seiten NACHEINANDER speichern - so bleibt die Reihenfolge auch in den Push-IDs
+       erhalten, und ein Handy mit schlechtem Empfang wird nicht mit 12 parallelen
+       Uploads erschlagen. Feld seite ist die verbindliche Reihenfolge. */
+    return seiten.reduce(function(kette,s,ix){
+      return kette.then(function(){
+        $('status').textContent=T('Seite '+(ix+1)+' von '+seiten.length+' …',
+                                  'Page '+(ix+1)+' of '+seiten.length+' …');
+        return apiPost(P_LSF,{eintrag:key, von:von, ts:Date.now(), data:s.data,
+                              mime:s.mime, name:s.name, seite:ix+1})
+          .then(function(fk){ if(!fk) throw 0; return apiPut(P_LS+'/'+key+'/fotos/'+fk,true); });
+      });
+    }, Promise.resolve());
   }).then(function(){
+    $('okInfo').textContent = (seiten.length>1
+      ? T(seiten.length+' Seiten übermittelt.', seiten.length+' pages submitted.')+' '
+      : '')
+      + T('Die Bauleitung bekommt es per Mail.','Site management will receive it by e-mail.');
     $('form').style.display='none';
     $('ok').style.display='block';
     window.scrollTo(0,0);
   }).catch(function(){
+    /* Halb hochgeladen? Dann den Eintrag nicht verschicken lassen, sonst geht eine
+       Mail mit fehlenden Seiten raus. Victor sieht ihn in der Liste als unvollstaendig. */
+    if(eintragKey) apiPatch(P_LS+'/'+eintragKey,{mail:'unvollstaendig'});
     $('btnSend').disabled=false;
     $('status').textContent='';
     alert(T('Senden fehlgeschlagen – bitte Empfang prüfen und nochmals versuchen.',
@@ -263,8 +462,9 @@ function senden(){
   });
 }
 
-/* Name merken, falls schon einmal erfasst */
+/* Name merken, falls schon einmal erfasst; Datum auf heute vorbelegen */
 try{ $('fVon').value=localStorage.getItem(LS_VON)||''; }catch(e){}
+$('fDatum').value=heute();
 </script>
 </body>
 </html>

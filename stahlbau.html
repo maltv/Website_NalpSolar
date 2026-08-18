@@ -237,8 +237,15 @@
     </span>
   </a>
 
-  <!-- SCHRITT 1: Schraube erkennen -->
-  <h2>1 · Welche Schraube? → welche Tabelle?</h2>
+  <!-- PLÄNE -->
+  <h2>1 · Pläne – wo sitzt welche Schraube (nach Typ &amp; Baujahr)</h2>
+  <div class="lead">Zuerst der Plan: Montagekonzept und die Primärkonstruktion je Typ und Baujahr.
+    Auf der Karte steht die Stosslänge der Bergstütze; die Schrauben sind farbig nach
+    <b>Tal</b> (vormontiert) und <b>Berg</b> (Montage) markiert.</div>
+  <div class="plans" id="plans"></div>
+
+  <!-- SCHRITT 2: Schraube erkennen -->
+  <h2>2 · Welche Schraube? → welche Tabelle?</h2>
   <div class="rule">
     <div class="rr">
       <div class="dot b">8.8</div>
@@ -286,8 +293,22 @@
     </div></td></tr></tbody>
   </table>
 
-  <!-- ══════ PZ2025 – RESTKONSTRUKTIONEN ══════ -->
-  <h2>2 · PZ2025 fertig machen – die 17 Restkonstruktionen</h2>
+  <!-- ══════ PENDENTE MÄNGEL ══════ -->
+  <h2>3 · Pendente Mängel – aus dem Nalpi-Mängelmanagement</h2>
+  <div class="lead">Alle offenen Mängel an Tischen und Bohrpunkten, live aus dem Mängeltool.
+    Ohne Empfang wird der zuletzt mitgelieferte Stand angezeigt.</div>
+
+  <div class="mgKopf" id="mgKopf"></div>
+  <div class="pzBar">
+    <button class="pzF on" data-m="pz" onclick="mgFilter('pz')">Nur PZ2025 (17)</button>
+    <button class="pzF" data-m="krit" onclick="mgFilter('krit')">🛑 Kritisch</button>
+    <button class="pzF" data-m="ohnekopf" onclick="mgFilter('ohnekopf')">Ohne «Kopf nicht montiert»</button>
+    <button class="pzF" data-m="alle" onclick="mgFilter('alle')">Alle</button>
+  </div>
+  <div id="mgListe"><div class="mgLeer">Mängel werden geladen …</div></div>
+
+  <!-- ══════ PZ2025 – RESTKONSTRUKTIONEN (bewusst zuletzt, Auftrag V. Malt 18.08.2026) ══════ -->
+  <h2>4 · PZ2025 fertig machen – die 17 Restkonstruktionen</h2>
   <div class="lead">Bereich 2.2 läuft aus, 4.1 startet frühestens Do 13.08. – das Fenster dazwischen gehört
     dem Rest aus dem Perimeter 2025. Stand Nalpi 10.08.2026.
     <b>Was hier nicht belegt ist, steht als „offen" da – nicht raten, im Feld prüfen.</b></div>
@@ -359,24 +380,6 @@
     Gewinde-Erfassung = Firebase <i>erfassung/gewinde</i>, Abfrage 11.08.2026: <b>für diese 17 Tische
     liegt keine einzige Messung vor</b>.
   </div>
-
-  <!-- ══════ PENDENTE MÄNGEL ══════ -->
-  <h2>3 · Pendente Mängel – aus dem Nalpi-Mängelmanagement</h2>
-  <div class="lead">Alle offenen Mängel an Tischen und Bohrpunkten, live aus dem Mängeltool.
-    Ohne Empfang wird der zuletzt mitgelieferte Stand angezeigt.</div>
-
-  <div class="mgKopf" id="mgKopf"></div>
-  <div class="pzBar">
-    <button class="pzF on" data-m="pz" onclick="mgFilter('pz')">Nur PZ2025 (17)</button>
-    <button class="pzF" data-m="krit" onclick="mgFilter('krit')">🛑 Kritisch</button>
-    <button class="pzF" data-m="ohnekopf" onclick="mgFilter('ohnekopf')">Ohne «Kopf nicht montiert»</button>
-    <button class="pzF" data-m="alle" onclick="mgFilter('alle')">Alle</button>
-  </div>
-  <div id="mgListe"><div class="mgLeer">Mängel werden geladen …</div></div>
-
-  <!-- PLÄNE -->
-  <h2>4 · Pläne – wo sitzt welche Schraube (nach Typ &amp; Baujahr)</h2>
-  <div class="plans" id="plans"></div>
 
   <div class="src" id="src"></div>
 </div>

@@ -17,6 +17,9 @@ Batch nochmals vor, ist nur die NEUESTE Bestellung gueltig=1; alle aelteren Zeil
 dazu werden auf 0 (=ersetzt) gesetzt. Flags von Positionen, die der neue Batch NICHT
 enthaelt, bleiben unangetastet (die Batch-5/6-Korrektur von 06/2026 ist kuratiert).
 Der Lauf ist idempotent: ein bereits eingetragener Batch wird ersetzt, nicht doppelt.
+
+Sonderbestellungen mit nicht-numerischem Batch (z. B. "RES") kommen aus
+tools/reserve_nachtragen.py; dieses Skript laesst sie unangetastet stehen.
 """
 import json
 import re
@@ -28,6 +31,13 @@ from pathlib import Path
 import openpyxl
 
 JS = Path(__file__).resolve().parent.parent / "assets" / "js" / "nalp-passstueck-daten.js"
+
+
+def bkey(b):
+    """Sortier-/Vergleichsschluessel fuer Batchnummern. Seit der Sonderbestellung
+    RESERVE (tools/reserve_nachtragen.py) stehen neben Zahlen auch Kuerzel wie
+    "RES" in der Liste - ohne diesen Helfer vergleicht Python int mit str."""
+    return (0, b, "") if isinstance(b, int) else (1, 0, str(b))
 
 
 def batch_lesen(pfad):
@@ -72,7 +82,7 @@ def gueltig_nachziehen(bestellungen, betroffen):
         k = (int(p[0]), p[1])
         if k not in betroffen:
             continue
-        rang = (p[4], p[3])                       # Datum, dann Batchnummer
+        rang = (p[4], bkey(p[3]))                  # Datum, dann Batchnummer
         if k not in neueste or rang > neueste[k]:
             neueste[k] = rang
     ersetzt = []
@@ -80,7 +90,7 @@ def gueltig_nachziehen(bestellungen, betroffen):
         k = (int(p[0]), p[1])
         if k not in betroffen:
             continue
-        soll = 1 if (p[4], p[3]) == neueste[k] else 0
+        soll = 1 if (p[4], bkey(p[3])) == neueste[k] else 0
         if soll != p[6]:
             ersetzt.append((p[3], k[0], k[1]))
         p[6] = soll
@@ -110,11 +120,13 @@ def main(argv):
               % (nr, datum, len(pos), len({p[0] for p in pos}),
                  "  (ersetzt %d vorhandene)" % len(alt) if alt else ""))
 
-    best.sort(key=lambda p: (p[3], int(p[0]), p[1]))
+    best.sort(key=lambda p: (bkey(p[3]), int(p[0]), p[1]))
     geaendert = gueltig_nachziehen(best, betroffen)
-    nr_alle = sorted({p[3] for p in best})
-    print("Positionen gesamt: %d -> %d | gueltig: %d | Batches: %d-%d"
-          % (vorher, len(best), sum(1 for p in best if p[6] == 1), nr_alle[0], nr_alle[-1]))
+    nr_alle = sorted({p[3] for p in best if isinstance(p[3], int)})
+    sonder = sorted({str(p[3]) for p in best if not isinstance(p[3], int)})
+    print("Positionen gesamt: %d -> %d | gueltig: %d | Batches: %d-%d%s"
+          % (vorher, len(best), sum(1 for p in best if p[6] == 1), nr_alle[0], nr_alle[-1],
+             " + " + ", ".join(sonder) if sonder else ""))
     if geaendert:
         je_batch = {}
         for b, t, s in geaendert:
@@ -134,6 +146,11 @@ def main(argv):
         "neu bestellt. ACHTUNG: belegt nur die BESTELLUNG (Basis = damaliger SOLL-Stand), "
         "nicht die Lieferung." % (nr_alle[0], nr_alle[-1], date.today().strftime("%d.%m.%Y"))
     )
+    if sonder:
+        daten["meta"]["bestellungen_quelle"] += (
+            " Dazu Sonderbestellung(en) %s - siehe Block `reserve` "
+            "(tools/reserve_nachtragen.py)." % ", ".join(sonder)
+        )
 
     shutil.copy2(JS, JS.with_suffix(".js.bak"))
     neu = kopf + "window.NALP_PS_DATEN = " + json.dumps(daten, ensure_ascii=True,
