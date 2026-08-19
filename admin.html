@@ -37,7 +37,6 @@
 <script src="assets/js/nalp-gate.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="assets/js/nalp-ueberstand.js"></script>
 <style>
   :root { color-scheme: light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
           --gruen:#2e9e46; --orange:#e08a00; --blau:#1a5fb4; }
@@ -266,7 +265,6 @@
   <button data-tab="stoerungen">Störungen<span class="zahl" id="zStoer">–</span></button>
   <button data-tab="regie">Regie<span class="zahl" id="zRegie">–</span></button>
   <button data-tab="material">Material<span class="zahl" id="zMat">–</span></button>
-  <button data-tab="ueberstand">Überstand<span class="zahl" id="zUeb">–</span></button>
   <button data-tab="schrauben">Schrauben<span class="zahl" id="zSchr">–</span></button>
   <button data-tab="anweisungen">Anweisungen<span class="zahl" id="zAnw">–</span></button>
   <button data-tab="foehn">Föhn</button>
@@ -610,33 +608,6 @@
 </div>
 
 <!-- ══════════════════════════════════════════════════════════════
-     REITER – PFAHLÜBERSTAND
-     Karte und Arbeitsliste kommen aus assets/js/nalp-ueberstand.js;
-     dieselbe Datei bedient die eigenstaendige Seite pfahlueberstand.html,
-     damit beide nicht auseinanderlaufen.
-     ══════════════════════════════════════════════════════════════ -->
-<div class="tab" id="tab-ueberstand"><div class="wrap">
-
-  <div class="card">
-    <h2>Pfahlüberstand über Urgelände</h2>
-    <div class="sub">Welche Pfähle ragen mehr als die zulässigen 15 cm aus dem Urgelände
-      (Typenplan Mikropfahl 2026+, Mail ILF 22.01.2026) – die Arbeitsliste für die Gruppe,
-      die eindeckt. Verglichen wird die eingemessene Pfahlhöhe aus Nalpi (OK Rohr) mit dem
-      Urgelände aus den Drohnenmodellen der Vermessung. <b>Wichtig:</b> der Maiflug 14.05.2025
-      ist das echte Urgelände, bricht aber in den Schattenlagen des Morgenflugs zusammen und
-      liefert dort glatte Plateaus statt Löcher – erkannt wird das automatisch, betroffene
-      Pfähle laufen über den Septemberflug bzw. swissALTI3D und sind hohl gezeichnet und als
-      «nachmessen» markiert. Neubau der Daten: <code>PFAHLUEBERSTAND.bat</code>.</div>
-  </div>
-
-  <div id="uebWurzel"></div>
-
-  <div class="foot"><a href="index.html">← zurück zum Portal</a> ·
-    eigene Seite: <a href="pfahlueberstand.html">pfahlueberstand.html</a> ·
-    Herleitung: <code>Pfahlueberstand\STATUS.txt</code></div>
-</div></div>
-
-<!-- ══════════════════════════════════════════════════════════════
      REITER 6 – FÖHN
      ══════════════════════════════════════════════════════════════ -->
 <div class="tab" id="tab-foehn"><div class="wrap">
@@ -739,9 +710,6 @@ Array.prototype.forEach.call(document.querySelectorAll('#reiter button'),functio
     if(ziel==='schrauben') schrStarten();
     if(ziel==='anweisungen') anwStarten();
     if(ziel==='material') matStarten();
-    /* Erst nach dem Einblenden starten - im verborgenen Reiter hat das Canvas
-       Breite 0 und die Karte wuerde auf einen leeren Ausschnitt rechnen. */
-    if(ziel==='ueberstand') uebStarten();
   };
 });
 function reiterOeffnen(name){
@@ -1694,21 +1662,6 @@ function matAmpelZahl(liste){
   liste.forEach(function(a){ z[a.ampel]++; });
   return z;
 }
-
-/* ══ Pfahlüberstand ══════════════════════════════════════════
-   Der Baustein liegt in assets/js/nalp-ueberstand.js und bedient auch die
-   eigenstaendige Seite pfahlueberstand.html. start() darf mehrfach kommen:
-   beim ersten Mal laedt es, danach passt es nur den Ausschnitt neu an - das
-   ist noetig, weil das Canvas im verborgenen Reiter Breite 0 hat. */
-function uebStarten(){
-  NalpUeberstand.start($('uebWurzel'));
-}
-/* Zahl am Reiterknopf frueh setzen, ohne den ganzen Baustein zu starten -
-   sonst steht dort ein Strich, bis man den Reiter zum ersten Mal oeffnet. */
-fetch('uploads/pfahlueberstand.json',{cache:'no-store'})
-  .then(function(r){ return r.ok?r.json():null; })
-  .then(function(j){ if(j&&j.zusammenfassung) $('zUeb').textContent=j.zusammenfassung.rot; })
-  .catch(function(){});
 
 function matStarten(){
   if(matGeladen) return; matGeladen=true;
