@@ -161,7 +161,18 @@
       }
     }
   ],
-  "sonderfaelle": [],
+  "sonderfaelle": [
+    {
+      "tisch": 1049,
+      "stuetze": "S1",
+      "laenge": null,
+      "aktion": "fragen",
+      "de": "Am 19.08.2026 wurde ein Stück 1049-S1 mit falsch angeschweisster Lasche (um 90° verdreht) gemeldet. Ersatz ist bei Mauchle angefordert. Das defekte Stück NICHT verbauen, NICHT entsorgen und NICHT einfach mitladen – separat stellen und der Bauleitung melden. Das neue, einwandfreie Stück (2552 mm, Typ D) wird gebraucht.",
+      "en": "On 19.08.2026 a piece 1049-S1 with a wrongly welded lug (turned by 90°) was reported. A replacement has been ordered from Mauchle. Do NOT install, do NOT scrap and do NOT just load the faulty piece – set it aside and tell site management. The new, sound piece (2552 mm, type D) is needed.",
+      "pl": "19.08.2026 zgłoszono element 1049-S1 ze źle przyspawaną nakładką (obrócona o 90°). Zamówiono zamiennik u Mauchle. Wadliwego elementu NIE montować, NIE złomować i NIE ładować – odstawić i zgłosić kierownictwu. Nowy, prawidłowy element (2552 mm, typ D) jest potrzebny.",
+      "quelle": "Meldung V. Malt 19.08.2026 mit Foto des Poliers (Bestellungen\\20260819_1049_S1_Lasche_verdreht.jpg); Ersatzanforderung an J. Mäder offen"
+    }
+  ],
   "sonderfall_muster": {
     "_kommentar": "Einzelstücke, die von der Regel abweichen. Greift ZUERST – vor Bestellhistorie und Normteil-Regel. Felder stuetze/laenge optional; fehlt laenge, gilt der Eintrag für alle Längen dieser Position.",
     "tisch": 1076,
