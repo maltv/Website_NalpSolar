@@ -1,0 +1,176 @@
+{
+  "stand": "2026-08-19",
+  "hinweis": "Regeln für den Reiter «Weg?» (Vormontage IP Tal 1): darf ein Stahlteil entsorgt oder nach Sursee zurückgegeben werden? Grundsatz: NUR was hier belegt als überzählig steht, darf weg – alles andere bleibt liegen. Jede Regel mit Quelle. Von Hand gepflegt (kein Generator).",
+  "toleranz_mm": 2,
+  "warn_mm": 20,
+  "aktionen": {
+    "behalten": { "farbe": "gruen", "de": "BLEIBT HIER", "en": "KEEP", "pl": "ZOSTAJE" },
+    "sursee": { "farbe": "blau", "de": "ZURÜCK NACH SURSEE", "en": "BACK TO SURSEE", "pl": "ZWROT DO SURSEE" },
+    "entsorgen": { "farbe": "rot", "de": "DARF ENTSORGT WERDEN", "en": "MAY BE SCRAPPED", "pl": "MOŻNA ZŁOMOWAĆ" },
+    "fragen": { "farbe": "gelb", "de": "STEHEN LASSEN – MELDEN", "en": "LEAVE IT – REPORT", "pl": "ZOSTAW – ZGŁOŚ" }
+  },
+  "passstueck": {
+    "gueltig": {
+      "aktion": "behalten",
+      "de": "Dieses Passstück wird noch gebraucht.",
+      "en": "This fitting piece is still needed.",
+      "pl": "Ten element jest jeszcze potrzebny.",
+      "quelle": "Bestellhistorie Mauchle Batch 1–16 (Feld gueltig=1)"
+    },
+    "ersetzt": {
+      "aktion": "entsorgen",
+      "de": "Diese Position wurde später neu bestellt – das alte Stück passt nicht mehr (falsche Länge).",
+      "en": "This position was re-ordered later – the old piece no longer fits (wrong length).",
+      "pl": "Ta pozycja została zamówiona ponownie – stary element już nie pasuje (zła długość).",
+      "quelle": "Bestellhistorie Mauchle Batch 1–16 (Feld gueltig=0 = dieselbe Position später neu bestellt); ILF-Freigabekommentar «Doppelte Bestellung = altes Stück überholt»"
+    },
+    "unbekannt": {
+      "aktion": "fragen",
+      "de": "Zu dieser Nummer/Länge steht nichts in der Bestellliste. Nicht entsorgen.",
+      "en": "Nothing on file for this number/length. Do not scrap.",
+      "pl": "Brak danych dla tego numeru/długości. Nie złomować.",
+      "quelle": "kein Treffer in der Bestellhistorie"
+    },
+    "laenger_hinweis": {
+      "de": "Achtung: Dieses Stück ist länger als das neue. Es kann als Reserve-Rohling gekürzt werden – vor dem Entsorgen die Bauleitung fragen.",
+      "en": "Note: this piece is longer than the new one. It can be shortened as a spare blank – ask site management before scrapping.",
+      "pl": "Uwaga: ten element jest dłuższy niż nowy. Można go skrócić jako materiał zapasowy – zapytaj kierownictwo przed złomowaniem.",
+      "quelle": "Reservebestellung 06.08.2026 (Zuschnitt und Fussplatte bauseits); Vorgehen bei Tisch 370 mit Spender 1076_S4 (18.08.2026)"
+    }
+  },
+  "normteile": [
+    {
+      "id": "nst_tal",
+      "de": "Normstütze TAL (Fixstütze)",
+      "en": "Standard post VALLEY (fixed)",
+      "pl": "Podpora standardowa DOLINA",
+      "hilfe_de": "Gerade Stütze am Talfuss, ohne Mauchle-Etikett mit Länge. Gibt es nur aus Serie 2025.",
+      "hilfe_en": "Straight post at the valley foot, no Mauchle length label. Series 2025 only.",
+      "hilfe_pl": "Prosta podpora u podstawy od doliny, bez etykiety z długością. Tylko seria 2025.",
+      "serien": {
+        "2025": {
+          "aktion": "sursee",
+          "de": "Alle Normstützen Tal gehen zurück nach Sursee zu Mauchle – NICHT entsorgen. Sortieren macht Mauchle, nicht wir.",
+          "en": "All valley standard posts go back to Mauchle in Sursee – do NOT scrap. Mauchle sorts them, not us.",
+          "pl": "Wszystkie podpory dolinowe wracają do Mauchle w Sursee – NIE złomować. Sortuje Mauchle, nie my.",
+          "quelle": "V. Malt 19.08.2026 (Anweisung); ILF B. Rüde 08.05.2026 «Verwendung ehemalige Normstützen Tal (Fixstütze)» + Freigabe/Transportauftrag C. Schmuckle 11.05.2026 an J. Mäder (erste Rücklieferung mit Schuoler)",
+          "hinweis_de": "ILF 08.05.2026: Typ B wird bei Mauchle auf Mass gekürzt und wiederverwendet, Typ A/D/E laut ILF nicht wirtschaftlich verwertbar. Die Trennung macht Mauchle – im Tal nicht selbst aussortieren.",
+          "hinweis_en": "ILF 08.05.2026: type B is shortened and reused at Mauchle, types A/D/E are not economical to reuse. Mauchle decides – do not sort here.",
+          "hinweis_pl": "ILF 08.05.2026: typ B jest skracany i używany ponownie u Mauchle, typy A/D/E nieopłacalne. Decyduje Mauchle – nie sortować tutaj."
+        },
+        "2026": {
+          "aktion": "fragen",
+          "de": "Normstützen Tal gibt es in der Serie 2026 nicht (Talstütze ist passgenau). Bitte melden – vermutlich ein Passstück ohne Etikett.",
+          "en": "There are no valley standard posts in series 2026 (valley post is made to measure). Please report – probably a fitting piece without a label.",
+          "pl": "W serii 2026 nie ma podpór dolinowych (podpora na wymiar). Zgłoś – prawdopodobnie element bez etykiety.",
+          "quelle": "Koo-Liste Blatt «Auswertung» (ILF): 0 Normstützen talseitig ab Serie 2026"
+        }
+      }
+    },
+    {
+      "id": "nst_berg",
+      "de": "Normstütze BERG (unteres Stück)",
+      "en": "Standard post MOUNTAIN (lower part)",
+      "pl": "Podpora standardowa GÓRA (dolna część)",
+      "hilfe_de": "Unterer Standardteil der schrägen Bergstütze, 2 Stück je Tisch.",
+      "hilfe_en": "Lower standard part of the inclined mountain post, 2 per table.",
+      "hilfe_pl": "Dolna część pochyłej podpory górskiej, 2 sztuki na stół.",
+      "serien": {
+        "2025": {
+          "aktion": "behalten",
+          "de": "Wird gebraucht – besonders Typ D für die Baupiste. Bleibt hier.",
+          "en": "Still needed – type D especially for the access road tables. Stays here.",
+          "pl": "Jeszcze potrzebne – zwłaszcza typ D dla drogi budowlanej. Zostaje.",
+          "quelle": "V. Malt an J. Mäder 14.08.2026 «Standardstützen Berg Typ D der 2025er Serie für die Baupiste dringend»; Normteile-Bilanz 05.08.2026 (2025er-Bedarf via Rückbau decken)"
+        },
+        "2026": {
+          "aktion": "behalten",
+          "de": "Laufendes Material 2026. Bleibt hier.",
+          "en": "Current 2026 material. Stays here.",
+          "pl": "Bieżący materiał 2026. Zostaje.",
+          "quelle": "Bauprogramm 03.08.2026: PK-Montage 2026 läuft"
+        }
+      }
+    },
+    {
+      "id": "qt",
+      "de": "Quertraverse (QT)",
+      "en": "Cross beam (QT)",
+      "pl": "Trawersa poprzeczna (QT)",
+      "hilfe_de": "1 Stück je Tisch, liegt quer über den beiden Bergstützen.",
+      "hilfe_en": "1 per table, lies across the two mountain posts.",
+      "hilfe_pl": "1 na stół, leży w poprzek dwóch podpór górskich.",
+      "serien": {
+        "2025": {
+          "aktion": "behalten",
+          "de": "Wird noch gebraucht: 17 Restkonstruktionen aus 2025 sind offen (13× Typ E, 4× Typ B), dazu die Baupiste.",
+          "en": "Still needed: 17 tables from 2025 are still open (13× type E, 4× type B), plus the access road.",
+          "pl": "Jeszcze potrzebne: 17 konstrukcji z 2025 otwartych (13× typ E, 4× typ B) plus droga budowlana.",
+          "quelle": "uploads/pz2025.json (Stand 10.08.2026, Nalpi-Export)"
+        },
+        "2026": {
+          "aktion": "behalten",
+          "de": "Laufendes Material 2026 – im Tal fehlen Quertraversen sogar. Bleibt hier.",
+          "en": "Current 2026 material – cross beams are actually short here. Stays.",
+          "pl": "Bieżący materiał 2026 – trawers wręcz brakuje. Zostaje.",
+          "quelle": "Normteile-Bilanz 05.08.2026 (Bestellungen\\20260805_Normteile_Bilanz_Rest2026.md): QT/KT fehlen im Tal auf breiter Front"
+        }
+      }
+    },
+    {
+      "id": "kt",
+      "de": "Knieträger S-1 / S-4",
+      "en": "Knee beam S-1 / S-4",
+      "pl": "Wspornik S-1 / S-4",
+      "hilfe_de": "Je 1 Stück pro Talstütze (S1 und S4).",
+      "hilfe_en": "One per valley post (S1 and S4).",
+      "hilfe_pl": "Po jednym na podporę dolinową (S1 i S4).",
+      "serien": {
+        "2025": {
+          "aktion": "behalten",
+          "de": "Wird noch gebraucht: 17 Restkonstruktionen aus 2025 sind offen (13× Typ E, 4× Typ B), dazu die Baupiste.",
+          "en": "Still needed: 17 tables from 2025 are still open (13× type E, 4× type B), plus the access road.",
+          "pl": "Jeszcze potrzebne: 17 konstrukcji z 2025 otwartych (13× typ E, 4× typ B) plus droga budowlana.",
+          "quelle": "uploads/pz2025.json (Stand 10.08.2026, Nalpi-Export)"
+        },
+        "2026": {
+          "aktion": "behalten",
+          "de": "Laufendes Material 2026 – Knieträger fehlen im Tal sogar. Bleibt hier.",
+          "en": "Current 2026 material – knee beams are actually short here. Stays.",
+          "pl": "Bieżący materiał 2026 – wsporniki wręcz brakuje. Zostaje.",
+          "quelle": "Normteile-Bilanz 05.08.2026: D_2026 KT −57/−57, B_2026 0 KT S-1 bei 78 offenen Tischen"
+        }
+      }
+    },
+    {
+      "id": "anderes",
+      "de": "Etwas anderes / weiss nicht",
+      "en": "Something else / not sure",
+      "pl": "Coś innego / nie wiem",
+      "hilfe_de": "Modulträger, Schrauben, Reste, unklare Teile.",
+      "hilfe_en": "Module beams, bolts, leftovers, unclear parts.",
+      "hilfe_pl": "Belki modułowe, śruby, resztki, niejasne części.",
+      "serien": {
+        "alle": {
+          "aktion": "fragen",
+          "de": "Nicht entsorgen und nicht verladen. Bauleitung fragen.",
+          "en": "Do not scrap, do not load. Ask site management.",
+          "pl": "Nie złomować i nie ładować. Zapytaj kierownictwo.",
+          "quelle": "Grundsatz V. Malt 19.08.2026: im Zweifel bleibt alles liegen"
+        }
+      }
+    }
+  ],
+  "sonderfaelle": [],
+  "sonderfall_muster": {
+    "_kommentar": "Einzelstücke, die von der Regel abweichen. Greift ZUERST – vor Bestellhistorie und Normteil-Regel. Felder stuetze/laenge optional; fehlt laenge, gilt der Eintrag für alle Längen dieser Position.",
+    "tisch": 1076,
+    "stuetze": "S4",
+    "laenge": null,
+    "aktion": "fragen",
+    "de": "Text für die Leute im Tal",
+    "en": "...",
+    "pl": "...",
+    "quelle": "Mail/Beschluss mit Datum"
+  }
+}

@@ -12,6 +12,7 @@
   window.NALP_GATE_TITEL = 'Team Verschrauben';
 </script>
 <script src="assets/js/nalp-gate.js"></script>
+<script src="assets/js/nalp-anweisungen.js"></script>
 <link rel="stylesheet" href="assets/js/leaflet/leaflet.css">
 <script src="assets/js/leaflet/leaflet.js"></script>
 <style>
@@ -32,7 +33,7 @@
 
   .reiter { background:#fff; border-bottom:1px solid var(--line); display:flex; flex:0 0 auto; }
   .reiter button { flex:1; border:none; background:none; cursor:pointer; padding:9px 4px 7px;
-                   font:700 12.5px Arial,sans-serif; color:var(--mut);
+                   font:700 12px Arial,sans-serif; color:var(--mut); white-space:nowrap;
                    border-bottom:3px solid transparent; }
   .reiter button.an { color:var(--rot); border-bottom-color:var(--rot); }
 
@@ -133,6 +134,36 @@
   .fotos .f span { position:absolute; top:0; right:0; background:rgba(0,0,0,.6); color:#fff;
                    font-size:12px; line-height:1; padding:3px 5px; cursor:pointer; }
 
+  /* ── Tempo (Dashboard) ───────────────── */
+  .kacheln { display:flex; gap:7px; margin:6px 0 2px; }
+  .kachel { flex:1; min-width:0; background:#fff; border:1px solid var(--line);
+            border-radius:6px; padding:9px 10px; }
+  .kachel .z { font-size:25px; font-weight:900; line-height:1.05; }
+  .kachel .z small { font-size:13px; font-weight:700; color:var(--mut); }
+  .kachel .l { font-size:10px; color:var(--mut); font-weight:700; margin-top:3px;
+               text-transform:uppercase; letter-spacing:.03em; }
+  .kachel .s { font-size:11px; color:var(--mut); margin-top:2px; }
+  /* eine Balkenzeile: Beschriftung · Balken · Zahl */
+  .balz { display:flex; align-items:center; gap:8px; margin-bottom:5px; }
+  .balz .tg { flex:0 0 74px; font-size:11.5px; font-weight:700; color:var(--mut);
+              white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .balz .bar { flex:1; min-width:0; height:11px; background:#e9ebee; border-radius:4px;
+               display:flex; gap:2px; }
+  .balz .bar i { display:block; height:100%; border-radius:0 4px 4px 0; min-width:2px; }
+  .balz .bar i:not(:last-child) { border-radius:0; }
+  .balz .bar i.e { background:var(--gruen); }
+  .balz .bar i.n { background:var(--grau); }
+  .balz .zl { flex:0 0 48px; text-align:right; font-size:12.5px; font-weight:900; }
+  .balz.leer .tg, .balz.leer .zl { color:#b7bbc0; font-weight:700; }
+  .balz.we .tg { font-weight:400; }
+  .balz.name .tg { flex:0 0 112px; }
+  .fort .bar { height:15px; }
+  .mini { font-size:11px; color:var(--mut); margin:-1px 0 12px 82px; }
+  .mini i { display:inline-block; width:10px; height:10px; border-radius:2px;
+            margin:0 3px 0 0; vertical-align:-1px; }
+  .zeile.mld { padding:8px 10px; }
+  .zeile.mld .nr { font-size:15px; min-width:46px; }
+
   /* ── Listen ──────────────────────────── */
   .inhalt { padding:12px 14px 40px; max-width:760px; margin:0 auto; }
   .inhalt h2 { font-size:15px; margin:16px 0 6px; }
@@ -171,7 +202,8 @@
 <div class="reiter" id="reiter">
   <button data-tab="karte" class="an">🗺 Karte</button>
   <button data-tab="liste">✔ Liste</button>
-  <button data-tab="anweisung">📋 Anweisungen</button>
+  <button data-tab="tempo">📊 Tempo</button>
+  <button data-tab="anweisung">📋 Anweis.</button>
   <button data-tab="export">⤓ Export</button>
 </div>
 
@@ -207,12 +239,25 @@
     </div>
   </section>
 
+  <!-- ══ Tempo ══ -->
+  <section id="s_tempo">
+    <div class="inhalt">
+      <h2 style="margin-top:0">Tempo &amp; Leistung</h2>
+      <div class="lead">Was das Team verschraubt hat und wie schnell es vorangeht.
+        Gezählt wird über die ganze Baustelle, unabhängig vom Filter auf der Karte.</div>
+      <div class="filter" id="tfilter" style="border:0;padding:0 0 10px;background:none"></div>
+      <div id="tempo"></div>
+      <div class="quelle" id="tquelle"></div>
+    </div>
+  </section>
+
   <!-- ══ Anweisungen ══ -->
   <section id="s_anweisung">
     <div class="inhalt">
       <h2 style="margin-top:0">Arbeitsanweisungen</h2>
-      <div class="lead">Was an einzelnen Konstruktionen zusätzlich zu tun ist. Erfasst wird das
-        im Admin (Reiter «Anweisungen») – hier steht immer der aktuelle Stand.</div>
+      <div class="lead">Was an einzelnen Konstruktionen zusätzlich zu tun ist – von der Bauleitung
+        und aus der PZ2025-Restliste. <b>Meldet zurück</b>, ob es erledigt ist, nicht geht oder ihr
+        eine Frage habt. Die Rückmeldung steht sofort auch im Stahlbau-Blatt und in der Vormontage.</div>
       <div id="anwListe"></div>
     </div>
   </section>
@@ -319,10 +364,11 @@ Array.prototype.forEach.call(document.querySelectorAll('#reiter button'), functi
 function reiter(name){
   Array.prototype.forEach.call(document.querySelectorAll('#reiter button'), function(o){
     o.classList.toggle('an', o.getAttribute('data-tab')===name); });
-  ['karte','liste','anweisung','export'].forEach(function(n){
+  ['karte','liste','tempo','anweisung','export'].forEach(function(n){
     $('s_'+n).classList.toggle('an', n===name); });
   if(name==='karte' && karte) setTimeout(function(){ karte.invalidateSize(); },60);
   if(name==='liste') listeMalen();
+  if(name==='tempo') tempoMalen();
   if(name==='anweisung') anwMalen();
   if(name==='export') exportMalen();
   try{ history.replaceState(null,'','#'+name); }catch(e){}
@@ -534,6 +580,7 @@ Promise.all([
   filterMalen();
   karteAufbauen();
   maengelLaden();
+  if(window.NalpAnw) NalpAnw.laden().then(function(){ if(AKT) blattMalen(AKT); }).catch(function(){});
   netzMalen(); pendSenden();
   if(location.hash) reiter(location.hash.replace('#','')||'karte');
 }).catch(function(e){
@@ -770,9 +817,21 @@ function blattMalen(id){
      + (t.mt ? ('Modulträger montiert '+dm(t.mtDat)) : 'Modulträger noch NICHT montiert')
      + (t.pkDat?(' · PK '+dm(t.pkDat)):'') + '</div>';
 
+  var pzA = (window.NalpAnw && NalpAnw.daten.pz[id]) || null;
+  var rSt = window.NalpAnw ? NalpAnw.stand(id) : null;
   if(an && !an.erledigt){
     h += '<div class="kasten anw"><b>📋 Arbeitsanweisung</b>'+esc(an.text)
        + '<div class="q">'+esc(an.von||'Bauleitung')+(an.bis?(' · bis '+dm(an.bis)):'')+'</div></div>';
+  }
+  if(pzA && pzA.akt){
+    /* Text der geprüften PZ2025-Restliste (uploads/pz2025.json) – bewusst HTML. */
+    h += '<div class="kasten anw"><b>📋 PZ2025-Restliste</b>'+pzA.akt
+       + '<div class="q">Stand '+esc(NalpAnw.daten.pzStand||'?')+'</div></div>';
+  }
+  if((an && !an.erledigt) || pzA){
+    if(rSt) h += '<div class="q" style="margin:-2px 0 6px">Letzte Rückmeldung: '+NalpAnw.chip(id)+'</div>';
+    h += '<button class="knopf k-plan" onclick="NalpAnw.melden(\''+esc(id)+'\')">'
+       + '✎ Rückmeldung zur Anweisung</button>';
   }
   if(mg.length){
     h += '<div class="kasten mangel"><b>⚠ '+mg.length+' offene'+(mg.length===1?'r':'')+' Mangel in Nalpi</b>';
@@ -1030,28 +1089,255 @@ function listeMalen(){
   $('liste').innerHTML = h;
 }
 
+/* ─────────── Tempo (Dashboard) ─────────── */
+function isoTag(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')
+                         +'-'+String(d.getDate()).padStart(2,'0'); }
+function wochenTag(d){ return ['So','Mo','Di','Mi','Do','Fr','Sa'][d.getDay()]; }
+function montagIso(){ var d=new Date(); d.setDate(d.getDate()-((d.getDay()+6)%7)); return isoTag(d); }
+function kwNr(d){
+  var t=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+  t.setDate(t.getDate()+3-((t.getDay()+6)%7));
+  var e=new Date(t.getFullYear(),0,4);
+  e.setDate(e.getDate()+3-((e.getDay()+6)%7));
+  return 1+Math.round((t-e)/604800000);
+}
+function nk(x){ return (Math.round(x*10)/10).toFixed(1).replace('.',','); }
+function tageSeit(iso){
+  var a=new Date(iso+'T00:00:00'), b=new Date(heute()+'T00:00:00');
+  return Math.round((b-a)/86400000);
+}
+function kachel(z,l,s){
+  return '<div class="kachel"><div class="z">'+z+'</div><div class="l">'+l+'</div>'
+       + (s?('<div class="s">'+s+'</div>'):'')+'</div>';
+}
+function balken(label, teile, zahl, klasse){
+  var h = '<div class="balz'+(klasse?(' '+klasse):'')+'">'
+        + '<div class="tg">'+label+'</div><div class="bar">';
+  teile.forEach(function(t){
+    if(t.p > 0) h += '<i class="'+t.k+'" style="width:'+(Math.round(t.p*10)/10)+'%"></i>';
+  });
+  return h + '</div><div class="zl">'+zahl+'</div></div>';
+}
+
+/* Jahrgang: die 2025er sind gebaut, bevor es in Nalpi überhaupt ein Feld
+   «Modultisch verschraubt» gab (04.08.2026). Sie stehen darum fast alle als
+   «offen» da, obwohl sie längst verschraubt sind – im Tempo 2026 haben sie
+   nichts verloren. Darum die Vorgabe «nur 2026». */
+var TJAHR = '2026';
+function tempoJahr(j){ TJAHR = j; tempoMalen(); }
+function imJahr(id){
+  if(TJAHR === 'alle') return true;
+  var t = TISCHE[id];
+  return !!(t && t.jahr === TJAHR);
+}
+function tfilterMalen(){
+  var w = [['2026','nur 2026'], ['2025','nur 2025'], ['alle','alles']];
+  $('tfilter').innerHTML = w.map(function(o){
+    return '<button class="'+(TJAHR===o[0]?'an':'')+'" onclick="tempoJahr(&#39;'+o[0]+'&#39;)">'
+         + o[1]+'</button>'; }).join('');
+}
+
+function tempoMalen(){
+  var hs = heute(), mo = montagIso();
+  tfilterMalen();
+  var proTag = {}, proMann = {}, meldungen = [];
+  var total=0, eigen=0, ausNalpi=0, heuteN=0, wocheN=0;
+
+  Object.keys(VERSCHRAUBT).forEach(function(id){
+    if(!imJahr(id)) return;
+    var v = VERSCHRAUBT[id], am = String(v.am||'').slice(0,10);
+    if(!am) return;                       /* ohne Datum nicht zählbar */
+    total++;
+    var t = proTag[am] || (proTag[am] = {e:0, n:0});
+    if(v.nalpi){ t.n++; ausNalpi++; }
+    else {
+      t.e++; eigen++;
+      var nm = String(v.von||'').trim() || 'ohne Name';
+      var m = proMann[nm] || (proMann[nm] = {g:0, w:0});
+      m.g++; if(am >= mo) m.w++;
+      meldungen.push({ id:id, am:am, von:nm, ts:v.ts||0 });
+    }
+    if(am === hs) heuteN++;
+    if(am >= mo) wocheN++;
+  });
+
+  /* Schnitt über die Tage, an denen überhaupt verschraubt wurde – nicht über
+     Mo–Fr: die Nalpi-Daten tragen teils Sonntagsdaten (Sammelbuchung). */
+  var tage = Object.keys(proTag), tageMit = tage.length;
+  var schnitt = tageMit ? total/tageMit : 0;
+  var bestT='', bestN=0;
+  tage.forEach(function(d){ var n=proTag[d].e+proTag[d].n; if(n>bestN){ bestN=n; bestT=d; } });
+
+  /* Was überhaupt drankommt: Modulträger montiert – oder schon gemeldet. */
+  var basis  = Object.keys(TISCHE).filter(function(id){
+    return imJahr(id) && (TISCHE[id].mt || VERSCHRAUBT[id]); });
+  var fertig = basis.filter(function(id){ return VERSCHRAUBT[id]; }).length;
+  var offen  = basis.length - fertig;
+  var pzF    = basis.length ? Math.round(fertig*100/basis.length) : 0;
+
+  var h = '';
+
+  /* ── Zahlen oben ── */
+  h += '<div class="kacheln">'
+     + kachel(heuteN, 'heute', '')
+     + kachel(wocheN, 'diese Woche', 'KW '+kwNr(new Date()))
+     + kachel(total,  'gesamt', eigen+' hier · '+ausNalpi+' Nalpi')
+     + '</div>'
+     + '<div class="kacheln">'
+     + kachel(tageMit ? nk(schnitt) : '–', 'Ø je Arbeitstag',
+              tageMit ? (tageMit+' Tage mit Arbeit') : 'noch keine Meldung')
+     + kachel(bestN || '–', 'bester Tag', bestT ? dm(bestT) : '')
+     + '</div>';
+
+  /* ── Tagesbalken ── */
+  h += '<h2>Die letzten 14 Tage</h2>';
+  var reihe = [], d = new Date(), i;
+  for(i=0; i<14; i++){
+    var k = isoTag(d), p = proTag[k] || {e:0, n:0};
+    reihe.push({ k:k, e:p.e, n:p.n, wt:wochenTag(d), we:(d.getDay()===0 || d.getDay()===6) });
+    d.setDate(d.getDate()-1);
+  }
+  var maxT = 1;
+  reihe.forEach(function(r){ if(r.e+r.n > maxT) maxT = r.e+r.n; });
+  reihe.forEach(function(r){
+    var g = r.e+r.n;
+    h += balken(r.wt+' '+dm(r.k).slice(0,6),
+                [{k:'e', p:r.e/maxT*100}, {k:'n', p:r.n/maxT*100}],
+                (g || '–'), (g?'':'leer') + (r.we?' we':''));
+  });
+  h += '<div class="mini"><i style="background:#1e9e5a"></i>hier gemeldet'
+     + ' &nbsp; <i style="background:#8a8e94"></i>aus Nalpi übernommen</div>';
+
+  /* ── Wer ── */
+  h += '<h2>Wer hat gemeldet</h2>';
+  var leute = Object.keys(proMann).sort(function(a,b){ return proMann[b].g - proMann[a].g; });
+  if(!leute.length){
+    h += '<div class="kasten warn"><b>Noch keine eigene Meldung</b>'
+       + 'Bis jetzt steht hier nur, was aus Nalpi übernommen wurde. Sobald das Team auf der '
+       + 'Karte oder in der Liste abhakt, erscheint hier, wer wie viel gemacht hat.</div>';
+  } else {
+    var maxM = proMann[leute[0]].g;
+    leute.forEach(function(n){
+      var m = proMann[n];
+      h += balken(esc(n), [{k:'e', p:m.g/maxM*100}], m.g, 'name');
+    });
+    h += '<div class="mini">Diese Woche: '
+       + leute.map(function(n){ return esc(n)+' '+proMann[n].w; }).join(' · ') + '</div>';
+  }
+
+  /* ── Was zuletzt gemacht wurde ── */
+  if(meldungen.length){
+    meldungen.sort(function(a,b){ return (b.ts-a.ts) || (a.am<b.am?1:-1); });
+    h += '<h2>Zuletzt gemeldet</h2>';
+    meldungen.slice(0,12).forEach(function(m){
+      var t = TISCHE[m.id] || {};
+      h += '<div class="zeile mld">'
+         + '<div class="nr">'+esc(m.id)+'</div>'
+         + '<div class="txt">'
+         +   '<span class="pill" style="background:'+(TYPFARBE[t.grund]||'#8a8e94')+'">'
+         +   esc(t.grund||'?')+'</span>'+esc(t.ber||'–')
+         +   '<br>'+dm(m.am)+' · '+esc(m.von)
+         + '</div>'
+         + '<button class="hk" onclick="reiter(&#39;karte&#39;);oeffnen(&#39;'+esc(m.id)+'&#39;)" '
+         +   'style="border-color:transparent;font-size:15px">›</button>'
+         + '</div>';
+    });
+    if(meldungen.length > 12)
+      h += '<div class="mini" style="margin-left:0">… und '+(meldungen.length-12)+' weitere.</div>';
+  }
+
+  /* ── Fortschritt und was das für den Rest heisst ── */
+  h += '<h2>Fortschritt</h2>'
+     + balken('verschraubt', [{k:'e', p:pzF}], pzF+'%', 'fort')
+     + '<div class="kasten '+(offen?'warn':'ok')+'"><b>'+fertig+' von '+basis.length
+     + ' montierten Konstruktionen verschraubt</b>'
+     + offen+' noch offen'
+     + ((offen && tageMit >= 3 && schnitt >= 0.5)
+          ? (' – bei Ø '+nk(schnitt)+' pro Arbeitstag rund '
+             + Math.ceil(offen/schnitt)+' Arbeitstage.')
+          : (offen && tageMit ? ' – für eine Hochrechnung sind das noch zu wenige Tage.' : '.'))
+     + '</div>';
+  /* Die 2025er getrennt beziffern: mit und ohne Eintrag in Nalpi. */
+  var a25o = 0, a25v = 0;
+  Object.keys(TISCHE).forEach(function(id){
+    var t = TISCHE[id];
+    if(t.jahr !== '2025' || !(t.mt || VERSCHRAUBT[id])) return;
+    if(VERSCHRAUBT[id]) a25v++; else a25o++;
+  });
+  if(a25o && TJAHR !== '2026')
+    h += '<div class="kasten warn"><b>'+a25o+(TJAHR==='2025'
+           ? ' davon haben in Nalpi nie einen Eintrag «verschraubt» bekommen'
+           : ' davon sind Konstruktionen aus 2025')+'</b>'
+       + 'In Nalpi gibt es das Feld «Modultisch verschraubt» erst seit dem 04.08.2026. '
+       + 'Für die meisten 2025er wurde nie eines gesetzt – sie stehen hier als offen, '
+       + 'obwohl sie gebaut sind. Mit «nur 2026» oben bleibt die laufende Bauzeit übrig.</div>';
+  else if((a25o+a25v) && TJAHR === '2026')
+    h += '<div class="mini" style="margin-left:0">Nicht mitgezählt: '+(a25o+a25v)
+       + ' Konstruktionen aus 2025 – '+a25v+' mit Eintrag «verschraubt» in Nalpi, '
+       + a25o+' ohne. Das Feld gibt es erst seit 04.08.2026.</div>';
+  var aelt = null;
+  basis.forEach(function(id){
+    if(VERSCHRAUBT[id]) return;
+    var dt = TISCHE[id].mtDat;
+    if(dt && (!aelt || dt < aelt.d)) aelt = { d:dt, id:id };
+  });
+  if(aelt)
+    h += '<div class="mini" style="margin-left:0">Am längsten offen: Tisch '+esc(aelt.id)
+       + ' – Modulträger montiert am '+dm(aelt.d)+' ('+tageSeit(aelt.d)+' Tage).</div>';
+
+  /* ── Fortschritt je Bereich ── */
+  var ber = {};
+  basis.forEach(function(id){
+    var b = TISCHE[id].ber || 'ohne Bereich';
+    var o = ber[b] || (ber[b] = {g:0, f:0});
+    o.g++; if(VERSCHRAUBT[id]) o.f++;
+  });
+  var bs = Object.keys(ber).sort(function(a,b){
+    if(a === 'ohne Bereich') return 1;         /* Datenlücke gehört nach unten */
+    if(b === 'ohne Bereich') return -1;
+    return ((ber[b].g-ber[b].f) - (ber[a].g-ber[a].f)) || (a<b?-1:1); });
+  if(bs.length){
+    h += '<h2>Je Bereich – oben liegt am meisten Arbeit</h2>';
+    bs.slice(0,14).forEach(function(b){
+      var o = ber[b];
+      h += balken(esc(b), [{k:'e', p:o.f*100/o.g}], o.f+'/'+o.g);
+    });
+    if(bs.length > 14)
+      h += '<div class="mini" style="margin-left:0">… und '+(bs.length-14)+' weitere Bereiche.</div>';
+  }
+
+  $('tempo').innerHTML = h;
+  $('tquelle').innerHTML =
+      'Auswahl: '+(TJAHR==='alle' ? 'alle Bauzeiten' : 'Bauzeit '+TJAHR)+'. '
+    + 'Eigene Meldungen: Firebase RTDB erfassung/verschrauben ('+eigen+'). '
+    + 'Übernommen: Nalpi TABLE_DATA.MODULETABLE_SCREWED_DATE ('+ausNalpi+'), '
+    + 'Montagestand und Bereich aus demselben Stand vom '+esc(STAND.bau)+'. '
+    + '<b>Achtung:</b> Die aus Nalpi übernommenen Zeilen tragen das Datum, an dem in Nalpi '
+    + 'erfasst wurde – nicht zwingend den Tag der Arbeit. Sammelbuchungen erscheinen darum '
+    + 'als ein einzelner grosser Tag.';
+}
+
 /* ─────────── Anweisungen ─────────── */
+/* Anzeige UND Rückmeldung laufen über assets/js/nalp-anweisungen.js – dasselbe
+   Modul benutzen stahlbau.html und vormontage.html, damit es nur einen Stand gibt.
+   Die Seite selbst laedt ANWEISUNG weiterhin fuer die Karte (blauer Rand). */
 function anwMalen(){
-  var ids = Object.keys(ANWEISUNG).filter(function(id){ return !ANWEISUNG[id].erledigt; })
-            .sort(function(a,b){ return (parseInt(a,10)||0)-(parseInt(b,10)||0); });
-  if(!ids.length){
-    $('anwListe').innerHTML = '<div class="kasten ok"><b>Nichts Besonderes</b>'
-      + 'Zurzeit ist für keine Konstruktion eine Zusatzanweisung erfasst.</div>';
+  if(!window.NalpAnw){
+    $('anwListe').innerHTML = '<div class="kasten warn"><b>Anweisungen nicht verf\u00fcgbar</b>'
+      + 'Das Modul nalp-anweisungen.js fehlt \u2013 Seite einmal mit Internet neu laden.</div>';
     return;
   }
-  var h = '';
-  ids.forEach(function(id){
-    var a = ANWEISUNG[id], t = TISCHE[id]||{}, v = VERSCHRAUBT[id];
-    h += '<div class="kasten anw"><b>Tisch '+esc(id)
-       + (t.typ?(' · '+esc(typName(t.typ))):'') + (t.ber?(' · '+esc(t.ber)):'')
-       + (v?' · <span style="color:#1e9e5a">verschraubt</span>':'') + '</b>'
-       + esc(a.text)
-       + '<div class="q">'+esc(a.von||'Bauleitung')+(a.bis?(' · bis '+dm(a.bis)):'')
-       +   ' · <a href="#" onclick="reiter(\'karte\');oeffnen(\''+esc(id)+'\');return false">auf der Karte zeigen</a></div>'
-       + '</div>';
-  });
-  $('anwListe').innerHTML = h;
+  if(!NalpAnw.daten.geladen){
+    $('anwListe').innerHTML = '<div class="kasten warn">Wird geladen \u2026</div>';
+    NalpAnw.laden().then(function(){ NalpAnw.liste('anwListe'); })
+      .catch(function(){ $('anwListe').innerHTML =
+        '<div class="kasten warn"><b>Kein Netz</b>Einmal mit Empfang \u00f6ffnen.</div>'; });
+    return;
+  }
+  NalpAnw.liste('anwListe');
 }
+/* Nach einer Rückmeldung das offene Blatt nachziehen. */
+window.nalpAnwGeaendert = function(){ if(AKT) blattMalen(AKT); };
 
 /* ─────────── Export ─────────── */
 function exportMalen(){

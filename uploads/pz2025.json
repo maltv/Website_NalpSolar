@@ -1,0 +1,194 @@
+{
+ "stand": "2026-08-10",
+ "quelle": "Nalpi-Export 10.08.2026 (Baustatus/Typ/Bereich/PK-Datum) · Nalpi-Vollexport 01.07.2026 (Stapel/Pos/Stack geliefert) · Mauchle-Bestellbatches 1-10 + 013 · Mails Borner 22.07. / Bühler 06.08. · Dossier Falsche_Hoehen_PZ2025. Nichts geschaetzt – unbelegte Felder stehen als «offen».",
+ "herkunft": "ausgelagert am 19.08.2026 aus stahlbau.html (war dort fest im Seitencode)",
+ "tische": [
+  {
+   "id": 326,
+   "typ": "E_2025",
+   "ber": "26_1.2",
+   "pk": null,
+   "bstat": "Passstück geliefert",
+   "kl": "stop",
+   "ps": "Batch <b>011</b> · best. 15.07.<span class=\"sub\" style=\"color:#a51d21\"><b>⚠ NOCH NICHT DA – Anlieferung Di 11.08. abends</b></span><span class=\"sub\">bis dahin kann nichts davon verbaut werden</span><span class=\"len\">S1 2093 · S2 669 · S3 1116 · S4 2262</span>",
+   "st": "<b class=\"rot\">neuer 5er-Stapel</b><span class=\"sub\">Nr. offen (bisher 33/Pos. 8)</span>",
+   "akt": "<b class=\"rot\">Modulträger kaputt</b> → neuer MT im neuen 5er-Stapel (mit 380 + 3 Tischen aus 2.2). Stapel-Nr. nicht bestätigt, Rückfrage CKW 06.08. offen. Falsche Höhen (Rev. A8/A9) – alte Passstücke aus Batch 2/3 passen nicht mehr, Ersatz kommt mit Batch 11."
+  },
+  {
+   "id": 327,
+   "typ": "E_2025",
+   "ber": "26_1.2",
+   "pk": "29.07.2026",
+   "bstat": "Primärkonstruktion montiert",
+   "kl": "warn2",
+   "ps": "Batch <b>011</b> · best. 15.07.<span class=\"sub\" style=\"color:#a51d21\"><b>⚠ NOCH NICHT DA – Anlieferung Di 11.08. abends</b></span><span class=\"sub\">bis dahin kann nichts davon verbaut werden</span><span class=\"len\">S1 2363 · S2 1885 · S3 1787 · S4 2945</span>",
+   "st": "<b>34</b> / Pos. 4<span class=\"sub\">am Berg 12.05.2026</span>",
+   "akt": "PK steht, nur Modulträger fehlt. Falsche Höhen (Rev. A8/A9) – alte Passstücke aus Batch 2/3 passen nicht mehr, Ersatz kommt mit Batch 11."
+  },
+  {
+   "id": 342,
+   "typ": "E_2025",
+   "ber": "26_1.3",
+   "pk": null,
+   "bstat": "Passstück geliefert",
+   "kl": "warn2",
+   "ps": "Batch <b>011</b> · best. 15.07.<span class=\"sub\" style=\"color:#a51d21\"><b>⚠ NOCH NICHT DA – Anlieferung Di 11.08. abends</b></span><span class=\"sub\">bis dahin kann nichts davon verbaut werden</span><span class=\"len\">S1 2278 · S2 466 · S3 290 · S4 2388</span>",
+   "st": "<b>27</b> / Pos. 10<span class=\"sub\">am Berg 02.01.2026</span>",
+   "akt": "Falsche Höhen (Rev. A8/A9) – alte Passstücke aus Batch 2/3 passen nicht mehr, Ersatz kommt mit Batch 11."
+  },
+  {
+   "id": 357,
+   "typ": "E_2025",
+   "ber": "26_1.2",
+   "pk": "06.07.2026",
+   "bstat": "Primärkonstruktion montiert",
+   "kl": "stop",
+   "ps": "Batch 2 · <b class=\"rot\">S2/S3 neu: Batch 013</b><span class=\"sub\">best. 27.07. · Liefertermin 24.08.2026</span><span class=\"len\">S2 2203 · S3 2279</span>",
+   "st": "<b>34</b> / Pos. 6<span class=\"sub\">am Berg 12.05.2026</span>",
+   "akt": "<b class=\"rot\">Fehlerhafte Pfähle S2 + S3</b> (Borner 22.07.). Erst montieren, wenn die neuen Stücke da sind – laut Terminplan erst <b>24.08.</b>"
+  },
+  {
+   "id": 358,
+   "typ": "E_2025",
+   "ber": "26_1.3",
+   "pk": "09.07.2026",
+   "bstat": "Primärkonstruktion montiert",
+   "kl": "warn2",
+   "ps": "Batch 3 · 01.05.2026<span class=\"sub\">laut Nalpi geliefert</span>",
+   "st": "<b>26</b> / Pos. 9<span class=\"sub\">am Berg 01.01.2026</span>",
+   "akt": "PK steht, MT fehlt. <b>NO024 klären:</b> Rückbau offeriert, ILF lässt «vorerst bestehen» – Widerspruch offen."
+  },
+  {
+   "id": 359,
+   "typ": "E_2025",
+   "ber": "26_1.3",
+   "pk": null,
+   "bstat": "Passstück geliefert",
+   "kl": "warn2",
+   "ps": "Batch <b>011</b> · best. 15.07.<span class=\"sub\" style=\"color:#a51d21\"><b>⚠ NOCH NICHT DA – Anlieferung Di 11.08. abends</b></span><span class=\"sub\">bis dahin kann nichts davon verbaut werden</span><span class=\"len\">S1 2032 · S2 2570 D · S3 598 · S4 2398</span>",
+   "st": "<b>26</b> / Pos. 10<span class=\"sub\">am Berg 01.01.2026</span>",
+   "akt": "Im Tal vormontiert (13.07.). Falsche Höhen (Rev. A8/A9) – alte Passstücke aus Batch 2/3 passen nicht mehr, Ersatz kommt mit Batch 11."
+  },
+  {
+   "id": 361,
+   "typ": "E_2025",
+   "ber": "26_1.3",
+   "pk": null,
+   "bstat": "Passstück geliefert",
+   "kl": "warn2",
+   "ps": "Batch <b>011</b> · best. 15.07.<span class=\"sub\" style=\"color:#a51d21\"><b>⚠ NOCH NICHT DA – Anlieferung Di 11.08. abends</b></span><span class=\"sub\">bis dahin kann nichts davon verbaut werden</span><span class=\"len\">S1 2547 · S2 2402 D · S3 2653 D · S4 2640</span>",
+   "st": "<b>27</b> / Pos. 9<span class=\"sub\">am Berg 02.01.2026</span>",
+   "akt": "Im Tal vormontiert (13.07.). Falsche Höhen (Rev. A8/A9) – alte Passstücke aus Batch 2/3 passen nicht mehr, Ersatz kommt mit Batch 11."
+  },
+  {
+   "id": 362,
+   "typ": "E_2025",
+   "ber": "26_1.3",
+   "pk": null,
+   "bstat": "Passstück bestellt",
+   "kl": "stop",
+   "ps": "Batch <b>011</b> · best. 15.07.<span class=\"sub\" style=\"color:#a51d21\"><b>⚠ NOCH NICHT DA – Anlieferung Di 11.08. abends</b></span><span class=\"sub\">bis dahin kann nichts davon verbaut werden</span><span class=\"len\">S1 2593 · S2 2646 D · S3 2269 D · S4 2395</span>",
+   "st": "<b>27</b> / Pos. 8<span class=\"sub\">am Berg 02.01.2026</span>",
+   "akt": "<b class=\"rot\">Einziger noch auf «Passstück bestellt»</b> – Lieferstand prüfen, bevor eine Kolonne hochfährt. Im Tal vormontiert (13.07.). Falsche Höhen (Rev. A8/A9) – alte Passstücke aus Batch 2/3 passen nicht mehr, Ersatz kommt mit Batch 11."
+  },
+  {
+   "id": 379,
+   "typ": "B_2025",
+   "ber": "26_1.3",
+   "pk": "09.07.2026",
+   "bstat": "Primärkonstruktion montiert",
+   "kl": "warn2",
+   "ps": "Batch 3 · 01.05.2026<span class=\"sub\">laut Nalpi geliefert</span>",
+   "st": "<b>26</b> / Pos. 7<span class=\"sub\">am Berg 01.01.2026</span>",
+   "akt": "PK steht, MT fehlt. <b>NO024 klären</b> (wie 358/382)."
+  },
+  {
+   "id": 380,
+   "typ": "E_2025",
+   "ber": "26_1.3",
+   "pk": "20.10.2025",
+   "bstat": "Primärkonstruktion montiert",
+   "kl": "stop",
+   "ps": "keine Position in Batch 1–10<span class=\"sub\">Konstruktion 2025 gestellt</span>",
+   "st": "<b class=\"rot\">neuer 5er-Stapel</b><span class=\"sub\">Nr. offen (bisher 24/Pos. 6)</span>",
+   "akt": "<b class=\"rot\">Modulträger kaputt</b> → neuer MT im neuen 5er-Stapel. Am 01.07. noch als «MT montiert» erfasst, jetzt zurück auf PK. Stapel-Nr. offen (Rückfrage CKW 06.08.)."
+  },
+  {
+   "id": 381,
+   "typ": "E_2025",
+   "ber": "26_1.3",
+   "pk": null,
+   "bstat": "Passstück geliefert",
+   "kl": "warn2",
+   "ps": "Batch <b>011</b> · best. 15.07.<span class=\"sub\" style=\"color:#a51d21\"><b>⚠ NOCH NICHT DA – Anlieferung Di 11.08. abends</b></span><span class=\"sub\">bis dahin kann nichts davon verbaut werden</span><span class=\"len\">S1 2431 · S2 174 · S3 331 · S4 2682</span>",
+   "st": "<b>26</b> / Pos. 8<span class=\"sub\">am Berg 01.01.2026</span>",
+   "akt": "Falsche Höhen (Rev. A8/A9) – alte Passstücke aus Batch 2/3 passen nicht mehr, Ersatz kommt mit Batch 11."
+  },
+  {
+   "id": 382,
+   "typ": "E_2025",
+   "ber": "26_1.3",
+   "pk": "24.06.2026",
+   "bstat": "Primärkonstruktion montiert",
+   "kl": "warn2",
+   "ps": "Batch 3 · 01.05.2026<span class=\"sub\">montiert</span>",
+   "st": "<b>27</b> / Pos. 7<span class=\"sub\">am Berg 02.01.2026</span>",
+   "akt": "PK steht seit 24.06., MT fehlt. <b>NO024 klären</b> (wie 358/379)."
+  },
+  {
+   "id": 383,
+   "typ": "E_2025",
+   "ber": "26_1.3",
+   "pk": null,
+   "bstat": "Passstück geliefert",
+   "kl": "warn2",
+   "ps": "Batch <b>011</b> · best. 15.07.<span class=\"sub\" style=\"color:#a51d21\"><b>⚠ NOCH NICHT DA – Anlieferung Di 11.08. abends</b></span><span class=\"sub\">bis dahin kann nichts davon verbaut werden</span><span class=\"len\">S1 2497 · S2 311 · S3 2707 D · S4 2310</span>",
+   "st": "<b>27</b> / Pos. 6<span class=\"sub\">am Berg 02.01.2026</span>",
+   "akt": "Im Tal vormontiert (13.07.). Falsche Höhen (Rev. A8/A9) – alte Passstücke aus Batch 2/3 passen nicht mehr, Ersatz kommt mit Batch 11."
+  },
+  {
+   "id": 422,
+   "typ": "B_2025",
+   "ber": "26_1.3",
+   "pk": "09.07.2026",
+   "bstat": "Primärkonstruktion montiert",
+   "kl": "go",
+   "ps": "Batch 3 · 01.05.2026<span class=\"sub\">laut Nalpi geliefert</span>",
+   "st": "<b>37</b> / Pos. 6<span class=\"sub\">am 01.07. nicht als geliefert erfasst</span>",
+   "akt": "Kein Vorkommnis – es fehlt nur der Modulträger. <b>Stapel 37 bei CKW prüfen</b> (war am 01.07. weder bestellt noch geliefert)."
+  },
+  {
+   "id": 1620,
+   "typ": "B_2025",
+   "ber": "26_1.3",
+   "pk": "27.07.2026",
+   "bstat": "Primärkonstruktion montiert",
+   "kl": "go",
+   "ps": "Batch 3 · 01.05.2026<span class=\"sub\">laut Nalpi geliefert</span>",
+   "st": "<b>37</b> / Pos. 7<span class=\"sub\">am 01.07. nicht als geliefert erfasst</span>",
+   "akt": "Kein Vorkommnis – nur Modulträger aus Stapel 37 fehlt (Lieferstand prüfen)."
+  },
+  {
+   "id": 1623,
+   "typ": "E_2025",
+   "ber": "26_1.3",
+   "pk": "27.07.2026",
+   "bstat": "Primärkonstruktion montiert",
+   "kl": "go",
+   "ps": "Batch 3 · 01.05.2026<span class=\"sub\">laut Nalpi geliefert</span>",
+   "st": "<b>37</b> / Pos. 8<span class=\"sub\">am 01.07. nicht als geliefert erfasst</span>",
+   "akt": "Kein Vorkommnis. Im Tal vormontiert (13.07.). Modulträger aus Stapel 37 – Lieferstand prüfen."
+  },
+  {
+   "id": 2157,
+   "typ": "B_2025",
+   "ber": "26_1.2",
+   "pk": "09.07.2026",
+   "bstat": "Primärkonstruktion montiert",
+   "kl": "warn2",
+   "ps": "Batch 2 · 24.04.2026<span class=\"sub\">kein Ersatz nötig – kürzen</span>",
+   "st": "<b>33</b> / Pos. 2<span class=\"sub\">am Berg 11.05.2026</span>",
+   "akt": "<b>S2 auf 1177 mm kürzen (−446), S3 auf 1551 mm kürzen (−226)</b> – auf der Baustelle, dann MT setzen (Borner 22.07.)."
+  }
+ ]
+}

@@ -34,9 +34,14 @@
   .lang button:last-child{ border-right:none; }
   .lang button.on{ background:var(--rot); color:#fff; }
 
-  .tabs{ display:flex; background:#fff; border-bottom:1px solid var(--line); position:sticky; top:52px; z-index:9; }
-  .tabs button{ flex:1; border:none; background:none; padding:12px 6px; font-size:13.5px; font-weight:800;
+  /* sechs Reiter passen nicht auf eine Handy-Zeile -> zwei Zeilen zu dritt,
+     lieber etwas hoeher als ein Reiter, den niemand findet */
+  .tabs{ display:flex; flex-wrap:wrap; background:#fff; border-bottom:1px solid var(--line);
+        position:sticky; top:52px; z-index:9; }
+  .tabs button{ flex:1 1 33.33%; max-width:33.34%; border:none; background:none;
+        padding:11px 2px; font-size:12px; font-weight:800; white-space:nowrap;
         color:var(--mut); cursor:pointer; border-bottom:3px solid transparent; }
+  @media(min-width:620px){ .tabs button{ flex:1 1 auto; max-width:none; } }
   .tabs button.on{ color:var(--rot); border-bottom-color:var(--rot); }
 
   main{ max-width:720px; margin:0 auto; padding:12px 12px 80px; }
@@ -222,6 +227,8 @@
   <button id="t2" onclick="tab(2)"><span data-i18n="tab_fortschritt">🏗 Fortschritt</span></button>
   <button id="t3" onclick="tab(3)"><span data-i18n="tab_tabellen">📋 Tabellen</span></button>
   <button id="t4" onclick="tab(4)"><span data-i18n="tab_auftrag">🗺 Karten</span></button>
+  <button id="t5" onclick="tab(5)"><span data-i18n="tab_anweisung">📋 Anweisungen</span></button>
+  <button id="t6" onclick="tab(6)"><span data-i18n="tab_weg">♻️ Weg?</span></button>
 </div>
 
 <main>
@@ -388,6 +395,27 @@
     </div>
     <div id="kBoxen"></div>
   </section>
+
+  <!-- Arbeitsanweisungen + Rückmeldung – gemeinsamer Stand mit Stahlbau und
+       Team Verschrauben (assets/js/nalp-anweisungen.js) -->
+  <section id="s5" style="display:none">
+    <div class="box" style="border-left-color:var(--blue)">
+      <h2 data-i18n="anw_titel">📋 Arbeitsanweisungen</h2>
+      <div class="sub" data-i18n="anw_sub">Was an einzelnen Konstruktionen zusätzlich zu tun ist –
+        und was ihr zurückmeldet: erledigt, geht nicht oder eine Frage.</div>
+    </div>
+    <div id="anwListe"></div>
+  </section>
+
+  <!-- Darf das weg? Entsorgung / Rueckgabe Sursee - Logik in assets/js/nalp-entsorgung.js -->
+  <section id="s6" style="display:none">
+    <div class="box" style="border-left-color:var(--gruen)">
+      <h2 data-i18n="weg_titel">♻️ Darf das weg?</h2>
+      <div class="sub" data-i18n="weg_sub">Bevor etwas auf den Lastwagen oder in den Schrott geht:
+        hier nachschauen. Was nicht ausdrücklich überzählig ist, bleibt liegen.</div>
+    </div>
+    <div id="wegBox"></div>
+  </section>
 </main>
 
 <div id="ev"><div class="dlg">
@@ -421,12 +449,19 @@
 <script src="assets/js/nalp-protokoll.js"></script>
 <script src="assets/js/leaflet/leaflet.js"></script>
 <script src="assets/js/nalp-passstueck-daten.js"></script>
+<script src="assets/js/nalp-anweisungen.js"></script>
+<script src="assets/js/nalp-entsorgung.js"></script>
 <script>
 'use strict';
 /* ══════════ Sprachen DE / EN / PL ══════════
    Übersetzungen erstellt und gegengeprüft (Bau-Fachsprache, Handy-tauglich). */
 var I18N={
  de:{
+  tab_weg:'♻️ Weg?', weg_titel:'♻️ Darf das weg?',
+  weg_sub:'Bevor etwas auf den Lastwagen oder in den Schrott geht: hier nachschauen. Was nicht ausdrücklich überzählig ist, bleibt liegen.',
+  tab_anweisung:'📋 Anweisungen', anw_titel:'📋 Arbeitsanweisungen',
+  anw_sub:'Was an einzelnen Konstruktionen zusätzlich zu tun ist – und was ihr zurückmeldet: erledigt, geht nicht oder eine Frage.',
+  anw_kein_netz:'Kein Netz – einmal mit Empfang öffnen.',
   lbl_bp:'Bohrpunkt (1–12)', ph_bp:'z.B. 10 – neu zweistellig!',
   lbl_mid:'Mauchle-ID (optional)', ph_mid:'z.B. 24027-1153', th_bp:'BP',
   btn_protokoll:'🗒 Änderungsprotokoll', edit_titel:'Eintrag bearbeiten',
@@ -510,6 +545,11 @@ var I18N={
   offline_hinweis:'Offline – zeigt nur Einträge von diesem Handy'
  },
  en:{
+  tab_weg:'♻️ Scrap?', weg_titel:'♻️ Can this go?',
+  weg_sub:'Before anything goes on the truck or into the skip: check here. Anything not clearly surplus stays where it is.',
+  tab_anweisung:'📋 Instructions', anw_titel:'📋 Work instructions',
+  anw_sub:'What has to be done in addition on single structures – and what you report back: done, not possible or a question.',
+  anw_kein_netz:'No connection – open once with reception.',
   lbl_bp:'Drill point (1–12)', ph_bp:'e.g. 10 – now two digits!',
   lbl_mid:'Mauchle ID (optional)', ph_mid:'e.g. 24027-1153', th_bp:'DP',
   btn_protokoll:'🗒 Change log', edit_titel:'Edit entry',
@@ -593,6 +633,11 @@ var I18N={
   offline_hinweis:'Offline – only entries from this phone'
  },
  pl:{
+  tab_weg:'♻️ Złom?', weg_titel:'♻️ Czy to może iść?',
+  weg_sub:'Zanim coś trafi na ciężarówkę albo na złom: sprawdź tutaj. Co nie jest wyraźnie zbędne, zostaje na miejscu.',
+  tab_anweisung:'📋 Instrukcje', anw_titel:'📋 Instrukcje robocze',
+  anw_sub:'Co dodatkowo trzeba zrobić przy poszczególnych konstrukcjach – i co zgłaszacie: zrobione, nie da się albo pytanie.',
+  anw_kein_netz:'Brak zasięgu – otwórz raz z zasięgiem.',
   lbl_bp:'Punkt wiercenia (1–12)', ph_bp:'np. 10 – teraz dwucyfrowy!',
   lbl_mid:'Nr Mauchle (opcjonalnie)', ph_mid:'np. 24027-1153', th_bp:'PW',
   btn_protokoll:'🗒 Rejestr zmian', edit_titel:'Edytuj wpis',
@@ -702,6 +747,8 @@ function setLang(l){
     b.classList.toggle('on', b.getAttribute('data-lang')===l);
   });
   if(window.NALP_GATE_SUB!==undefined){ /* Gate bleibt mehrsprachig */ }
+  if(window.NalpAnw) NalpAnw.sprache(l);
+  if(window.NalpEntsorgung) NalpEntsorgung.sprache(l);
   renderTab(); netzMalen();
 }
 
@@ -725,13 +772,44 @@ function setVon(v){ try{ localStorage.setItem(LS_VON,v||''); }catch(e){} }
 function klapp(id){ $(id).classList.toggle('zu'); }
 
 function tab(n){
-  [1,2,3,4].forEach(function(i){
+  [1,2,3,4,5,6].forEach(function(i){
     $('s'+i).style.display = i===n?'':'none';
     $('t'+i).classList.toggle('on', i===n);
   });
   if(n!==1 && typeof scannerZu==='function' && scanLaeuft) scannerZu();  // Kamera nie im Hintergrund lassen
   if(n===3) laden(false);
   if(n===4) kartenLaden(false);
+  if(n===5) anwMalen();
+  if(n===6) wegMalen();
+  try{ history.replaceState(null,'', n===1?location.pathname:('#'+['','stuetze','fortschritt','tabellen','karten','anweisungen','weg'][n])); }catch(e){}
+}
+/* Direktlink, z.B. vormontage.html#anweisungen */
+(function(){
+  var h=(location.hash||'').replace('#','');
+  var n={stuetze:1,fortschritt:2,tabellen:3,karten:4,anweisungen:5,weg:6}[h];
+  if(n) window.addEventListener('load', function(){ tab(n); });
+})();
+
+/* Arbeitsanweisungen: Anzeige und Rückmeldung kommen aus nalp-anweisungen.js,
+   damit Vormontage, Stahlbau und Team Verschrauben denselben Stand haben. */
+function anwMalen(){
+  var ziel=$('anwListe');
+  if(!window.NalpAnw){ ziel.innerHTML='<div class="box">nalp-anweisungen.js fehlt.</div>'; return; }
+  NalpAnw.sprache(lang);
+  if(!NalpAnw.daten.geladen){
+    ziel.innerHTML='<div class="box">\u2026</div>';
+    NalpAnw.laden().then(function(){ NalpAnw.liste('anwListe'); })
+      .catch(function(){ ziel.innerHTML='<div class="box">'+T('anw_kein_netz')+'</div>'; });
+    return;
+  }
+  NalpAnw.liste('anwListe');
+}
+/* Reiter «Weg?» - Entsorgung/Rueckgabe, Logik in assets/js/nalp-entsorgung.js */
+function wegMalen(){
+  var ziel=$('wegBox');
+  if(!window.NalpEntsorgung){ ziel.innerHTML='<div class="box">nalp-entsorgung.js fehlt.</div>'; return; }
+  NalpEntsorgung.sprache(lang);
+  if(!ziel.getAttribute('data-auf')){ ziel.setAttribute('data-auf','1'); NalpEntsorgung.start(ziel); }
 }
 /* Seite weg (Anruf, App-Wechsel, Bildschirm aus) -> Kamera freigeben, sonst
    laeuft sie weiter und frisst Akku. */

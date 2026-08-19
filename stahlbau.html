@@ -6,6 +6,7 @@
 <title>NalpSolar · Stahlbau – Schrauben & Drehmomente</title>
 <meta name="theme-color" content="#0b1826">
 <script src="assets/js/nalp-gate.js"></script>
+<script src="assets/js/nalp-anweisungen.js"></script>
 <!-- Montage-Erfassung entfernt 27.07.2026: laeuft offiziell in Nalpi (Dennis) -->
 <style>
   :root{
@@ -16,6 +17,12 @@
   html,body{margin:0;}
   body{background:var(--bg);color:var(--txt);font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;line-height:1.45;}
   .wrap{max-width:820px;margin:0 auto;padding:0 14px 60px;}
+
+  /* Meldeknopf in der PZ2025-Tabelle */
+  .pzMeld{margin-top:5px;border:1px solid var(--line);background:#fff;border-radius:6px;
+          padding:5px 10px;font:700 12px Arial,sans-serif;color:var(--txt);cursor:pointer;
+          white-space:nowrap;}
+  .pzMeld:active{background:#eef1f5;}
 
   /* Kopf */
   .top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
@@ -358,12 +365,13 @@
         <th>Modulträger · Stapel</th>
         <th>Pfahlkopf / Gewinde</th>
         <th>Mängel</th>
-        <th>ok</th>
+        <th>Stand / Rückmeldung</th>
       </tr></thead>
       <tbody id="pzBody"></tbody>
     </table>
   </div>
-  <div class="pzHint">Tabelle seitlich wischen · Häkchen «ok» wird geräteübergreifend gespeichert.</div>
+  <div class="pzHint">Tabelle seitlich wischen · <b>✎</b> = rückmelden (erledigt / geht nicht / Frage).
+    Die Rückmeldung steht sofort auch im Team Verschrauben und in der Vormontage.</div>
 
   <div class="src" style="margin-top:14px;border-top:0;padding-top:0">
     <b>Quellen:</b> Baustatus, Typ, Bereich, Montagedaten = Nalpi-Export <b>10.08.2026</b>
@@ -769,110 +777,19 @@ function srBild(){
           Buehler 06.08., Dossier Falsche_Hoehen_PZ2025.
    Nichts hier ist geschaetzt - unbelegte Felder stehen als "offen".
    ═══════════════════════════════════════════════════════════════ */
-var G1 = 'Falsche Höhen (Rev. A8/A9) – alte Passstücke aus Batch 2/3 passen nicht mehr, Ersatz kommt mit Batch 11.';
-var B11 = 'Batch <b>011</b> · best. 15.07.'
-        + '<span class="sub" style="color:#a51d21"><b>⚠ NOCH NICHT DA – Anlieferung Di 11.08. abends</b></span>'
-        + '<span class="sub">bis dahin kann nichts davon verbaut werden</span>';
-var PZ = [
- {id:326, typ:'E_2025', ber:'26_1.2', pk:null, bstat:'Passstück geliefert', kl:'stop',
-  ps:B11+'<span class="len">S1 2093 · S2 669 · S3 1116 · S4 2262</span>',
-  st:'<b class="rot">neuer 5er-Stapel</b><span class="sub">Nr. offen (bisher 33/Pos. 8)</span>',
-  akt:'<b class="rot">Modulträger kaputt</b> → neuer MT im neuen 5er-Stapel (mit 380 + 3 Tischen aus 2.2). Stapel-Nr. nicht bestätigt, Rückfrage CKW 06.08. offen. '+G1},
+/* Die Liste selbst liegt seit 19.08.2026 in uploads/pz2025.json – sie wird
+   auch vom Team Verschrauben und von der Vormontage gelesen (nalp-anweisungen.js).
+   Frueher stand sie hier fest im Seitencode; zwei Kopien waeren zwei Wahrheiten. */
+var PZ = [];
+var PZ_STAND = '';
 
- {id:327, typ:'E_2025', ber:'26_1.2', pk:'29.07.2026', bstat:'Primärkonstruktion montiert', kl:'warn2',
-  ps:B11+'<span class="len">S1 2363 · S2 1885 · S3 1787 · S4 2945</span>',
-  st:'<b>34</b> / Pos. 4<span class="sub">am Berg 12.05.2026</span>',
-  akt:'PK steht, nur Modulträger fehlt. '+G1},
-
- {id:342, typ:'E_2025', ber:'26_1.3', pk:null, bstat:'Passstück geliefert', kl:'warn2',
-  ps:B11+'<span class="len">S1 2278 · S2 466 · S3 290 · S4 2388</span>',
-  st:'<b>27</b> / Pos. 10<span class="sub">am Berg 02.01.2026</span>',
-  akt:G1},
-
- {id:357, typ:'E_2025', ber:'26_1.2', pk:'06.07.2026', bstat:'Primärkonstruktion montiert', kl:'stop',
-  ps:'Batch 2 · <b class="rot">S2/S3 neu: Batch 013</b><span class="sub">best. 27.07. · Liefertermin 24.08.2026</span><span class="len">S2 2203 · S3 2279</span>',
-  st:'<b>34</b> / Pos. 6<span class="sub">am Berg 12.05.2026</span>',
-  akt:'<b class="rot">Fehlerhafte Pfähle S2 + S3</b> (Borner 22.07.). Erst montieren, wenn die neuen Stücke da sind – laut Terminplan erst <b>24.08.</b>'},
-
- {id:358, typ:'E_2025', ber:'26_1.3', pk:'09.07.2026', bstat:'Primärkonstruktion montiert', kl:'warn2',
-  ps:'Batch 3 · 01.05.2026<span class="sub">laut Nalpi geliefert</span>',
-  st:'<b>26</b> / Pos. 9<span class="sub">am Berg 01.01.2026</span>',
-  akt:'PK steht, MT fehlt. <b>NO024 klären:</b> Rückbau offeriert, ILF lässt «vorerst bestehen» – Widerspruch offen.'},
-
- {id:359, typ:'E_2025', ber:'26_1.3', pk:null, bstat:'Passstück geliefert', kl:'warn2',
-  ps:B11+'<span class="len">S1 2032 · S2 2570 D · S3 598 · S4 2398</span>',
-  st:'<b>26</b> / Pos. 10<span class="sub">am Berg 01.01.2026</span>',
-  akt:'Im Tal vormontiert (13.07.). '+G1},
-
- {id:361, typ:'E_2025', ber:'26_1.3', pk:null, bstat:'Passstück geliefert', kl:'warn2',
-  ps:B11+'<span class="len">S1 2547 · S2 2402 D · S3 2653 D · S4 2640</span>',
-  st:'<b>27</b> / Pos. 9<span class="sub">am Berg 02.01.2026</span>',
-  akt:'Im Tal vormontiert (13.07.). '+G1},
-
- {id:362, typ:'E_2025', ber:'26_1.3', pk:null, bstat:'Passstück bestellt', kl:'stop',
-  ps:B11+'<span class="len">S1 2593 · S2 2646 D · S3 2269 D · S4 2395</span>',
-  st:'<b>27</b> / Pos. 8<span class="sub">am Berg 02.01.2026</span>',
-  akt:'<b class="rot">Einziger noch auf «Passstück bestellt»</b> – Lieferstand prüfen, bevor eine Kolonne hochfährt. Im Tal vormontiert (13.07.). '+G1},
-
- {id:379, typ:'B_2025', ber:'26_1.3', pk:'09.07.2026', bstat:'Primärkonstruktion montiert', kl:'warn2',
-  ps:'Batch 3 · 01.05.2026<span class="sub">laut Nalpi geliefert</span>',
-  st:'<b>26</b> / Pos. 7<span class="sub">am Berg 01.01.2026</span>',
-  akt:'PK steht, MT fehlt. <b>NO024 klären</b> (wie 358/382).'},
-
- {id:380, typ:'E_2025', ber:'26_1.3', pk:'20.10.2025', bstat:'Primärkonstruktion montiert', kl:'stop',
-  ps:'keine Position in Batch 1–10<span class="sub">Konstruktion 2025 gestellt</span>',
-  st:'<b class="rot">neuer 5er-Stapel</b><span class="sub">Nr. offen (bisher 24/Pos. 6)</span>',
-  akt:'<b class="rot">Modulträger kaputt</b> → neuer MT im neuen 5er-Stapel. Am 01.07. noch als «MT montiert» erfasst, jetzt zurück auf PK. Stapel-Nr. offen (Rückfrage CKW 06.08.).'},
-
- {id:381, typ:'E_2025', ber:'26_1.3', pk:null, bstat:'Passstück geliefert', kl:'warn2',
-  ps:B11+'<span class="len">S1 2431 · S2 174 · S3 331 · S4 2682</span>',
-  st:'<b>26</b> / Pos. 8<span class="sub">am Berg 01.01.2026</span>',
-  akt:G1},
-
- {id:382, typ:'E_2025', ber:'26_1.3', pk:'24.06.2026', bstat:'Primärkonstruktion montiert', kl:'warn2',
-  ps:'Batch 3 · 01.05.2026<span class="sub">montiert</span>',
-  st:'<b>27</b> / Pos. 7<span class="sub">am Berg 02.01.2026</span>',
-  akt:'PK steht seit 24.06., MT fehlt. <b>NO024 klären</b> (wie 358/379).'},
-
- {id:383, typ:'E_2025', ber:'26_1.3', pk:null, bstat:'Passstück geliefert', kl:'warn2',
-  ps:B11+'<span class="len">S1 2497 · S2 311 · S3 2707 D · S4 2310</span>',
-  st:'<b>27</b> / Pos. 6<span class="sub">am Berg 02.01.2026</span>',
-  akt:'Im Tal vormontiert (13.07.). '+G1},
-
- {id:422, typ:'B_2025', ber:'26_1.3', pk:'09.07.2026', bstat:'Primärkonstruktion montiert', kl:'go',
-  ps:'Batch 3 · 01.05.2026<span class="sub">laut Nalpi geliefert</span>',
-  st:'<b>37</b> / Pos. 6<span class="sub">am 01.07. nicht als geliefert erfasst</span>',
-  akt:'Kein Vorkommnis – es fehlt nur der Modulträger. <b>Stapel 37 bei CKW prüfen</b> (war am 01.07. weder bestellt noch geliefert).'},
-
- {id:1620, typ:'B_2025', ber:'26_1.3', pk:'27.07.2026', bstat:'Primärkonstruktion montiert', kl:'go',
-  ps:'Batch 3 · 01.05.2026<span class="sub">laut Nalpi geliefert</span>',
-  st:'<b>37</b> / Pos. 7<span class="sub">am 01.07. nicht als geliefert erfasst</span>',
-  akt:'Kein Vorkommnis – nur Modulträger aus Stapel 37 fehlt (Lieferstand prüfen).'},
-
- {id:1623, typ:'E_2025', ber:'26_1.3', pk:'27.07.2026', bstat:'Primärkonstruktion montiert', kl:'go',
-  ps:'Batch 3 · 01.05.2026<span class="sub">laut Nalpi geliefert</span>',
-  st:'<b>37</b> / Pos. 8<span class="sub">am 01.07. nicht als geliefert erfasst</span>',
-  akt:'Kein Vorkommnis. Im Tal vormontiert (13.07.). Modulträger aus Stapel 37 – Lieferstand prüfen.'},
-
- {id:2157, typ:'B_2025', ber:'26_1.2', pk:'09.07.2026', bstat:'Primärkonstruktion montiert', kl:'warn2',
-  ps:'Batch 2 · 24.04.2026<span class="sub">kein Ersatz nötig – kürzen</span>',
-  st:'<b>33</b> / Pos. 2<span class="sub">am Berg 11.05.2026</span>',
-  akt:'<b>S2 auf 1177 mm kürzen (−446), S3 auf 1551 mm kürzen (−226)</b> – auf der Baustelle, dann MT setzen (Borner 22.07.).'}
-];
-
-var PZ_LS='nalp_pz2025_done_v1';
-var PZ_DB='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app';
-var pzDone={}; try{ pzDone=JSON.parse(localStorage.getItem(PZ_LS)||'{}'); }catch(e){}
 var pzAktiv='alle';
 
-function pzSaveLocal(){ try{ localStorage.setItem(PZ_LS, JSON.stringify(pzDone)); }catch(e){} }
-
-function pzToggle(id, an){
-  if(an) pzDone[id]=true; else delete pzDone[id];
-  pzSaveLocal(); pzRender();
-  try{ fetch(PZ_DB+'/erfassung/pz2025_status/'+id+'.json',
-        {method: an?'PUT':'DELETE', body: an?'true':undefined}).catch(function(){}); }catch(e){}
-}
+/* Stand eines Tisches = juengste Rueckmeldung (nalp-anweisungen.js).
+   Das alte Haekchen aus erfassung/pz2025_status wird dort mitgelesen und als
+   «abgehakt, ohne Name» ausgewiesen – es wird nicht zu einer Meldung umgedeutet. */
+function pzStand(id){ return window.NalpAnw ? NalpAnw.stand(id) : null; }
+function pzFertig(id){ var s=pzStand(id); return !!(s && s.status==='ok'); }
 
 function pzFilter(f){
   pzAktiv=f;
@@ -890,7 +807,7 @@ function pzRender(){
   });
   var h='';
   liste.forEach(function(t){
-    var done=!!pzDone[t.id];
+    var done=pzFertig(t.id);
     /* Der Nalpi-Baustatus wird bei den Batch-11-Tischen NICHT als Wahrheit
        angezeigt: dort steht «Passstück geliefert», gemeint sind aber die alten
        Stücke aus Batch 2/3. Deshalb durchgestrichen mit Klarstellung. */
@@ -914,23 +831,27 @@ function pzRender(){
       + '<td>'+t.st+'</td>'
       + '<td>'+kopf+'</td>'
       + '<td>'+mgFuerTisch(t.id)+'</td>'
-      + '<td class="mid"><input type="checkbox" '+(done?'checked':'')
-      +   ' onchange="pzToggle('+t.id+',this.checked)"></td>'
+      + '<td>'+(window.NalpAnw?NalpAnw.chip(t.id):'')
+      +   '<br><button class="pzMeld" onclick="NalpAnw.melden(\''+t.id+'\')">✎ rückmelden</button></td>'
       + '</tr>';
   });
   document.getElementById('pzBody').innerHTML=h;
-  var offen=PZ.filter(function(t){ return !pzDone[t.id]; }).length;
+  var offen=PZ.filter(function(t){ return !pzFertig(t.id); }).length;
   document.getElementById('pzCnt').textContent=liste.length+' angezeigt · '+offen+' von '+PZ.length+' offen';
 }
 
-/* Firebase beim Laden fuehrend (geraeteuebergreifend), localStorage = Offline-Cache */
+/* Liste + Rueckmeldungen laden. Beides ueber nalp-anweisungen.js, damit
+   Stahlbau, Team Verschrauben und Vormontage denselben Stand zeigen. */
+var PZ_IDS={};
+function pzIdsBauen(){ PZ_IDS={}; PZ.forEach(function(t){ PZ_IDS[t.id]=1; }); }
 (function(){
-  pzRender();
-  try{
-    fetch(PZ_DB+'/erfassung/pz2025_status.json').then(function(r){ return r.json(); }).then(function(d){
-      if(d && typeof d==='object'){ pzDone={}; for(var k in d){ if(d[k]) pzDone[k]=true; } pzSaveLocal(); pzRender(); }
-    }).catch(function(){});
-  }catch(e){}
+  window.nalpAnwGeaendert = function(){ pzRender(); };
+  var l1 = fetch('uploads/pz2025.json',{cache:'no-store'}).then(function(r){ return r.json(); })
+    .then(function(d){ PZ=(d&&d.tische)||[]; PZ_STAND=(d&&d.stand)||''; pzIdsBauen(); })
+    .catch(function(){ document.getElementById('pzBody').innerHTML=
+        '<tr><td colspan="9">Liste konnte nicht geladen werden \u2013 einmal mit Internet \u00f6ffnen.</td></tr>'; });
+  var l2 = window.NalpAnw ? NalpAnw.laden().catch(function(){}) : Promise.resolve();
+  Promise.all([l1,l2]).then(function(){ pzRender(); });
 })();
 
 /* ═══════════════════════════════════════════════════════════════
@@ -942,7 +863,7 @@ function pzRender(){
    ═══════════════════════════════════════════════════════════════ */
 var MG_API='https://api.buildtrack.ch/api/v1/maengel/changes?since=0&limit=2000';
 var MG=[], mgQuelle='', mgAktiv='pz';
-var PZ_IDS={}; PZ.forEach(function(t){ PZ_IDS[t.id]=1; });
+/* PZ_IDS wird gebaut, sobald uploads/pz2025.json da ist – siehe pzIdsBauen(). */
 
 /* Mängel je Tisch für die Tabelle oben.
    Achtung: pzRender() laeuft schon vor dem ersten Maengel-Abruf – dann ist MG

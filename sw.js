@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v138';
+var CACHE = 'nalpsolar-v139';
 var PRECACHE = [
   './index.html',
   './protokoll.html',
@@ -34,6 +34,9 @@ var PRECACHE = [
   './assets/js/nalp-terrain.js',
   './passstueck.html',
   './assets/js/nalp-passstueck-daten.js',
+  // «Darf das weg?» im Reiter Vormontage - muss offline im Tal laufen
+  './assets/js/nalp-entsorgung.js',
+  './uploads/entsorgung_regeln.json',
   './assets/js/nalp-passstueck-abz.js',
   './stellen.html',
   './erfassungen.html',
