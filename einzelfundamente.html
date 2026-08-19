@@ -1,0 +1,701 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>NalpSolar · Einzelfundamente prüfen</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#ffffff">
+<meta name="robots" content="noindex,nofollow">
+<script>
+  window.NALP_GATE_CODE  = '8813';
+  window.NALP_GATE_KEY   = 'nalp_admin_unlock_v1';
+  window.NALP_GATE_TITEL = 'Einzelfundamente';
+  window.NALP_GATE_SUB   = 'Nur für Victor · Code = Losnummer';
+</script>
+<script src="assets/js/nalp-gate.js"></script>
+<link rel="stylesheet" href="assets/js/leaflet/leaflet.css">
+<script src="assets/js/leaflet/leaflet.js"></script>
+<!--
+  Kontrollrunde Einzelfundamente  (Auftrag Victor 19.08.2026)
+  ===========================================================
+  Zweck: die Einzelfundamente einmal selbst ablaufen, je Fundament festhalten
+         (1) gibt es das Fundament dort wirklich und
+         (2) wie hoch liegt die Oberkante – gemessen mit dem Topcon-GPS.
+
+  Warum: die Liste steht an drei Stellen und die drei sind sich nicht einig
+         (Nalpi-Flag EINZELFUNDAMENT, Nachtrag NO026, Natur). Und die Höhe fehlt:
+         Nalpi trägt bei diesen Punkten das kopierte SOLL als IST ein. Bei
+         1078_S1 waren es 610 mm zu viel (Totalstation Kristjan, 18.08.2026) –
+         die Stütze muss um genau dieses Mass gekürzt werden. Darum rechnet die
+         Seite bei jeder Eingabe gleich mit:
+
+             Zielanschlusshöhe = SOLL_H + bestellte Passstücklänge
+             Kürzung           = gemessen − SOLL_H
+             neue Länge        = Zielanschlusshöhe − gemessen
+
+  Daten:  uploads/einzelfundamente.json   (Tools\Einzelfundamente_Bauen.py,
+          Live-Spiegel api.buildtrack.ch + pfaehle.json + NO026-Liste)
+  Erfassung: Firebase RTDB  erfassung/einzelfundamente/<Punkt-Id>
+             = { vorhanden, hoehe, notiz, von, ts, geraet }
+             Ohne Netz gehen die Meldungen in localStorage und später automatisch raus.
+
+  ACHTUNG Höhenbezug: eingetragen wird die LANDESHÖHE (LV95/LN02), so wie das
+  Topcon sie nach Geoidkorrektur anzeigt. Eine ellipsoidische GPS-Höhe liegt hier
+  rund 51 m höher – siehe den Befund zu den 280 Punkten mit WGS84-Absteckzeile
+  (18.08.2026). Plausibilitätsgrenze unten: mehr als 3 m Abweichung vom SOLL wird
+  angemeckert, das ist dann fast immer ein Bezugs- oder Tippfehler.
+-->
+<style>
+  :root { color-scheme: light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
+          --gruen:#1e9e5a; --gelb:#e0a800; --grau:#8a8e94; --blau:#1565c0; --bg:#f2f3f5; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; height:100%; }
+  body { font-family:Arial,"Helvetica Neue",sans-serif; color:var(--ink); background:var(--bg);
+         display:flex; flex-direction:column; overflow:hidden; }
+
+  .topbar { background:#fff; border-bottom:4px solid var(--rot); padding:8px 12px;
+            display:flex; align-items:center; gap:10px; flex:0 0 auto; }
+  .topbar img { height:22px; display:block; }
+  .topbar .ttl { font-size:15px; font-weight:900; }
+  .topbar .netz { margin-left:auto; font-size:11px; font-weight:700; color:var(--gruen); white-space:nowrap; }
+  .topbar .netz.off { color:var(--rot); }
+  .topbar a.zur { color:var(--mut); text-decoration:none; font-size:18px; }
+
+  .reiter { background:#fff; border-bottom:1px solid var(--line); display:flex; flex:0 0 auto; }
+  .reiter button { flex:1; border:none; background:none; cursor:pointer; padding:9px 4px 7px;
+                   font:800 12.5px Arial,sans-serif; color:var(--mut); border-bottom:3px solid transparent; }
+  .reiter button.an { color:var(--rot); border-bottom-color:var(--rot); }
+
+  main { flex:1; position:relative; overflow:hidden; }
+  section { position:absolute; inset:0; display:none; overflow:auto; -webkit-overflow-scrolling:touch; }
+  section.an { display:block; }
+  .wrap { max-width:760px; margin:0 auto; padding:10px 10px 100px; }
+
+  .box { background:#fff; border:1px solid var(--line); border-left:5px solid var(--rot);
+         border-radius:6px; padding:11px 12px; margin-bottom:10px; box-shadow:0 1px 4px rgba(20,25,32,.07); }
+  .box.plain { border-left-color:#c9ccd2; }
+  .box h2 { font-size:12.5px; margin:0 0 8px; text-transform:uppercase; letter-spacing:.04em; color:var(--mut); }
+  .zeile { display:flex; justify-content:space-between; gap:10px; font-size:13px; padding:2px 0; }
+  .zeile b { font-variant-numeric:tabular-nums; }
+  .mut { color:var(--mut); }
+  .klein { font-size:11.5px; color:var(--mut); line-height:1.45; }
+
+  .fort { display:flex; align-items:baseline; gap:8px; }
+  .fort .gross { font-size:30px; font-weight:900; line-height:1; }
+  .balken { height:8px; border-radius:6px; background:#e7e9ec; overflow:hidden; margin-top:8px; }
+  .balken i { display:block; height:100%; background:var(--gruen); }
+
+  input, textarea, select { font:inherit; color:inherit; }
+  .feld { width:100%; padding:10px; border:1.5px solid #c9ccd2; border-radius:6px; font-size:15px; background:#fff; }
+  .feld:focus { outline:none; border-color:var(--blau); }
+  .hoehe { font-size:22px; font-weight:800; text-align:center; font-variant-numeric:tabular-nums; }
+
+  .knopf { border:none; border-radius:6px; padding:11px 14px; font:800 14px Arial,sans-serif;
+           cursor:pointer; color:#fff; background:var(--rot); }
+  .knopf.grau { background:#6c727a; }
+  .knopf.gruen { background:var(--gruen); }
+  .knopf.weiss { background:#fff; color:var(--ink); border:1.5px solid #c9ccd2; }
+  .knopf:disabled { opacity:.45; }
+  .knopfreihe { display:flex; gap:8px; flex-wrap:wrap; }
+  .knopfreihe .knopf { flex:1 1 auto; }
+
+  /* ── Punktkarte in der Runde ── */
+  .pkt { background:#fff; border:1px solid var(--line); border-left:5px solid var(--grau);
+         border-radius:6px; margin-bottom:9px; overflow:hidden; }
+  .pkt.aktiv { border-left-color:var(--rot); box-shadow:0 2px 10px rgba(215,38,34,.18); }
+  .pkt.fertig { border-left-color:var(--gruen); }
+  .pkt.keins { border-left-color:var(--blau); }
+  .pkt > .kopf { display:flex; align-items:center; gap:9px; padding:10px 11px; cursor:pointer; }
+  .pkt .rang { width:27px; height:27px; flex:0 0 auto; border-radius:50%; background:var(--ink); color:#fff;
+               font:800 12.5px/27px Arial,sans-serif; text-align:center; }
+  .pkt.fertig .rang { background:var(--gruen); }
+  .pkt.keins  .rang { background:var(--blau); }
+  .pkt .idz { font-size:15px; font-weight:900; }
+  .pkt .meta { font-size:11.5px; color:var(--mut); margin-top:1px; }
+  .pkt .rechts { margin-left:auto; text-align:right; font-size:11.5px; color:var(--mut); white-space:nowrap; }
+  .pkt .rechts .ent { font-size:14px; font-weight:800; color:var(--ink); }
+  .pkt > .rumpf { display:none; padding:0 11px 12px; border-top:1px solid var(--line); }
+  .pkt.offen > .rumpf { display:block; }
+
+  .badge { display:inline-block; font:800 10.5px Arial,sans-serif; padding:2px 7px; border-radius:20px;
+           background:#eef0f3; color:var(--mut); margin-left:5px; vertical-align:1px; }
+  .badge.nalpi { background:#fdeaea; color:#a01c19; }
+  .badge.no026 { background:#e8f1fd; color:#14498f; }
+  .badge.beide { background:#e8f5ec; color:#12703f; }
+
+  .rechner { background:#f7f8fa; border:1px solid var(--line); border-radius:6px; padding:9px 10px;
+             margin-top:9px; font-size:13px; }
+  .rechner .gr { font-size:17px; font-weight:900; }
+  .warn { background:#fff6e6; border-color:#f0d296; color:#7a4b00; }
+  .schlecht { background:#fdeaea; border-color:#f0b6b4; color:#8d1a17; }
+
+  #karte { position:absolute; inset:0; }
+  .klegende { position:absolute; left:8px; bottom:8px; z-index:500; background:rgba(255,255,255,.93);
+              border-radius:5px; padding:6px 9px; font-size:11px; line-height:1.7; }
+  .klegende i { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:5px; }
+  .kschalt { position:absolute; right:8px; top:8px; z-index:500; display:flex; flex-direction:column; gap:6px; }
+  .kschalt button { border:1px solid #c9ccd2; background:rgba(255,255,255,.94); border-radius:7px;
+                    padding:8px 10px; font:800 12px Arial,sans-serif; cursor:pointer; color:var(--ink); }
+  .kschalt button.an { background:var(--ink); color:#fff; border-color:var(--ink); }
+  .rmark { font:800 11px/20px Arial,sans-serif; text-align:center; color:#fff; border-radius:50%;
+           width:22px; height:22px; box-shadow:0 1px 3px rgba(0,0,0,.4); }
+
+  table.erg { width:100%; border-collapse:collapse; font-size:12.5px; }
+  table.erg th, table.erg td { border-bottom:1px solid var(--line); padding:6px 4px; text-align:left; }
+  table.erg th { font-size:11px; text-transform:uppercase; color:var(--mut); }
+  table.erg td.z { text-align:right; font-variant-numeric:tabular-nums; }
+
+  #toast { position:fixed; left:50%; bottom:22px; transform:translateX(-50%) translateY(90px);
+           background:#1a1a1a; color:#fff; padding:11px 17px; border-radius:24px; font-size:13.5px;
+           font-weight:700; z-index:9000; transition:transform .22s; max-width:92vw; text-align:center; }
+  #toast.on { transform:translateX(-50%) translateY(0); }
+  #toast.err { background:#a01c19; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="zur" href="admin.html" title="Zurück zum Admin">‹</a>
+  <img src="assets/img/strabag-logo.png" alt="STRABAG">
+  <div class="ttl">Einzelfundamente</div>
+  <div class="netz" id="netz">online</div>
+</div>
+
+<div class="reiter">
+  <button id="tRunde" class="an" onclick="reiter('runde')">Runde</button>
+  <button id="tKarte" onclick="reiter('karte')">Karte</button>
+  <button id="tErg"   onclick="reiter('erg')">Ergebnis</button>
+</div>
+
+<main>
+  <!-- ── RUNDE ───────────────────────────────────────────────────────── -->
+  <section id="sRunde" class="an">
+    <div class="wrap">
+      <div class="box">
+        <h2>Kontrollrunde</h2>
+        <div class="fort"><div class="gross" id="fZahl">0/0</div><div class="mut" id="fText">geprüft</div></div>
+        <div class="balken"><i id="fBalken" style="width:0"></i></div>
+        <div class="zeile" style="margin-top:9px"><span class="mut">Route</span><b id="rInfo">–</b></div>
+        <div class="zeile"><span class="mut">Nächster offener Punkt</span><b id="rNaechst">–</b></div>
+        <div style="margin-top:9px">
+          <input class="feld" id="von" placeholder="Wer misst? (Name, wird gespeichert)" autocomplete="off">
+        </div>
+        <div class="knopfreihe" style="margin-top:9px">
+          <button class="knopf weiss" onclick="abMir()">Reihenfolge ab meinem Standort</button>
+          <button class="knopf weiss" id="bFolge" onclick="folgeZurueck()" style="display:none">Zurücksetzen</button>
+        </div>
+        <div class="klein" style="margin-top:8px">
+          Höhe = <b>Landeshöhe LV95/LN02</b> wie das Topcon sie anzeigt. Eine ellipsoidische
+          GPS-Höhe liegt hier rund 51 m höher – die wäre falsch.
+        </div>
+      </div>
+
+      <div class="box plain">
+        <h2>Was zu prüfen ist</h2>
+        <div class="klein" id="quellText">–</div>
+      </div>
+
+      <div id="liste"></div>
+    </div>
+  </section>
+
+  <!-- ── KARTE ───────────────────────────────────────────────────────── -->
+  <section id="sKarte">
+    <div id="karte"></div>
+    <div class="kschalt">
+      <button id="kAlle" onclick="alleUm()">alle 2025er</button>
+      <button onclick="zuMir()">📍 zu mir</button>
+      <button onclick="passen()">⤢ Route</button>
+    </div>
+    <div class="klegende">
+      <div><i style="background:#8a8e94"></i>offen</div>
+      <div><i style="background:#1e9e5a"></i>Fundament + Höhe</div>
+      <div><i style="background:#1565c0"></i>kein Fundament</div>
+      <div><i style="background:#e0a800"></i>2025er (nicht in der Runde)</div>
+    </div>
+  </section>
+
+  <!-- ── ERGEBNIS ────────────────────────────────────────────────────── -->
+  <section id="sErg">
+    <div class="wrap">
+      <div class="box">
+        <h2>Kürzungen aus den Messungen</h2>
+        <div id="ergKurz" class="klein">Noch keine Höhe eingetragen.</div>
+      </div>
+      <div class="box plain">
+        <h2>Alle Eintragungen</h2>
+        <div style="overflow-x:auto"><table class="erg" id="ergTab"></table></div>
+        <div class="knopfreihe" style="margin-top:11px">
+          <button class="knopf weiss" onclick="kopieren()">Als Text kopieren</button>
+          <button class="knopf weiss" onclick="ladeAlles(true)">Neu laden</button>
+        </div>
+      </div>
+      <div class="box plain">
+        <h2>Datenstand</h2>
+        <div class="klein" id="stand">–</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="toast"></div>
+
+<script>
+/* ── Konstanten ──────────────────────────────────────────────────────── */
+var RTDB   = 'https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app/erfassung';
+var PFAD   = 'einzelfundamente';
+var LS_VON = 'nalp_ef_von_v1';
+var LS_PEND= 'nalp_ef_pending_v1';
+var LS_FOLGE='nalp_ef_folge_v1';
+var TOL_M  = 3.0;          /* mehr Abweichung als das ist fast immer ein Bezugsfehler */
+
+var DATEN = null, MESS = {}, karte = null, ebene = null,
+    gps = null, gpsMark = null, marker = {}, zeigeAlle = false, aktiv = null,
+    eigeneFolge = null, routenSatz = null;
+
+/* ── Kleinkram ───────────────────────────────────────────────────────── */
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function toast(t,err){ var e=$('toast'); e.textContent=t; e.className='on'+(err?' err':'');
+  clearTimeout(toast._t); toast._t=setTimeout(function(){ e.className=''; }, 2600); }
+function netzAn(){ return navigator.onLine !== false; }
+function nz(v,d){ return (v===null||v===undefined||v==='') ? (d===undefined?'–':d) : v; }
+function fix(v,n){ return (v===null||v===undefined) ? '–' : Number(v).toFixed(n===undefined?3:n); }
+
+function reiter(w, stumm){
+  ['runde','karte','erg'].forEach(function(n){
+    $('s'+n.charAt(0).toUpperCase()+n.slice(1)).classList.toggle('an', n===w);
+  });
+  $('tRunde').classList.toggle('an', w==='runde');
+  $('tKarte').classList.toggle('an', w==='karte');
+  $('tErg').classList.toggle('an', w==='erg');
+  if(w==='karte'){ if(!karte) karteAufbauen(); setTimeout(function(){ karte.invalidateSize(); }, 60); }
+  if(w==='erg') ergMalen();
+  /* Reiter in der Adresse mitfuehren: #karte laesst sich verlinken und der
+     Zurueck-Knopf des Handys springt zwischen den Reitern statt aus der Seite. */
+  if(!stumm && location.hash !== '#'+w){ try{ history.replaceState(null,'','#'+w); }catch(e){} }
+}
+function reiterAusHash(){
+  var w = (location.hash||'').replace('#','');
+  reiter(['runde','karte','erg'].indexOf(w) >= 0 ? w : 'runde', true);
+}
+window.addEventListener('hashchange', reiterAusHash);
+
+/* ── Offline-Warteschlange ───────────────────────────────────────────── */
+function pendLesen(){ try{ return JSON.parse(localStorage.getItem(LS_PEND)||'[]'); }catch(e){ return []; } }
+function pendSchreiben(a){ try{ localStorage.setItem(LS_PEND, JSON.stringify(a.slice(-400))); }catch(e){} netzMalen(); }
+function netzMalen(){
+  var n = pendLesen().length, e = $('netz');
+  e.className = 'netz' + (netzAn() ? '' : ' off');
+  e.textContent = (netzAn() ? 'online' : 'offline') + (n ? ' · ' + n + ' offen' : '');
+}
+function pendSenden(){
+  if(!netzAn()) return;
+  var a = pendLesen(); if(!a.length) return;
+  var rest = [];
+  (function next(i){
+    if(i >= a.length){ pendSchreiben(rest); if(!rest.length) toast('Gespeicherte Meldungen sind raus'); return; }
+    fetch(RTDB+'/'+PFAD+'/'+encodeURIComponent(a[i].id)+'.json',
+      {method:'PUT', body:JSON.stringify(a[i].rec)})
+      .then(function(r){ if(!r.ok) rest.push(a[i]); })
+      .catch(function(){ rest.push(a[i]); })
+      .then(function(){ next(i+1); });
+  })(0);
+}
+window.addEventListener('online', function(){ netzMalen(); pendSenden(); });
+window.addEventListener('offline', netzMalen);
+
+/* ── Laden ───────────────────────────────────────────────────────────── */
+function ladeAlles(neu){
+  return fetch('uploads/einzelfundamente.json', {cache: neu ? 'reload' : 'default'})
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      DATEN = j;
+      return fetch(RTDB+'/'+PFAD+'.json', {cache:'no-store'})
+        .then(function(r){ return r.ok ? r.json() : null; })
+        .catch(function(){ return null; });
+    })
+    .then(function(m){
+      MESS = m || {};
+      try{ var f = JSON.parse(localStorage.getItem(LS_FOLGE)||'null');
+           if(f && f.length === DATEN.route.punkte.length) eigeneFolge = f; }catch(e){}
+      pendLesen().forEach(function(p){ MESS[p.id] = p.rec; });   /* offline zuerst */
+      listeMalen(); kopfMalen(); if(karte) karteNeu();
+      $('stand').innerHTML = 'Datenstand ' + esc(DATEN.stand) + '<br>' + esc(DATEN.quelle);
+      netzMalen(); pendSenden();
+    })
+    .catch(function(e){ toast('Daten konnten nicht geladen werden', true); });
+}
+
+function routePunkte(){
+  if(!DATEN) return [];
+  var m = {}; DATEN.punkte.forEach(function(p){ m[p.id]=p; });
+  var ids = eigeneFolge || DATEN.route.punkte;
+  var r = ids.map(function(id){ return m[id]; }).filter(Boolean);
+  r.forEach(function(p,i){ p.rang = i+1; });
+  return r;
+}
+
+/* Reihenfolge ab der eigenen Position: Nearest Neighbour auf Gehzeit, gleiche
+   Rechnung wie im Bauskript (4 km/h, 400 Hm/h auf, 800 Hm/h ab). Offene Punkte
+   zuerst, erledigte hinten dran – sonst laeuft man zu Fundamenten, die schon
+   abgehakt sind. */
+function etappeSek(a, b){
+  var s = distM([a.lat,a.lon],[b.lat,b.lon]) / (4000/3600);
+  if(a.soll_h!=null && b.soll_h!=null){
+    var dh = b.soll_h - a.soll_h;
+    s += dh > 0 ? dh/(400/3600) : -dh/(800/3600);
+  }
+  return s;
+}
+function abMir(){
+  if(!gps){ toast('Noch keine GPS-Position', true); return; }
+  var offen = DATEN.punkte.filter(function(p){ return imRoutensatz(p) && !MESS[p.id]; });
+  var fertig = DATEN.punkte.filter(function(p){ return imRoutensatz(p) && MESS[p.id]; });
+  var pos = {lat:gps.lat, lon:gps.lon, soll_h:null}, folge = [];
+  while(offen.length){
+    var b = 0;
+    for(var i=1;i<offen.length;i++) if(etappeSek(pos,offen[i]) < etappeSek(pos,offen[b])) b = i;
+    folge.push(offen[b].id); pos = offen[b]; offen.splice(b,1);
+  }
+  eigeneFolge = folge.concat(fertig.map(function(p){ return p.id; }));
+  try{ localStorage.setItem(LS_FOLGE, JSON.stringify(eigeneFolge)); }catch(e){}
+  aktiv = eigeneFolge[0] || null;
+  listeMalen(); kopfMalen(); if(karte) karteNeu();
+  toast('Reihenfolge ab deinem Standort');
+}
+function folgeZurueck(){
+  eigeneFolge = null;
+  try{ localStorage.removeItem(LS_FOLGE); }catch(e){}
+  listeMalen(); kopfMalen(); if(karte) karteNeu();
+  toast('Ursprüngliche Reihenfolge');
+}
+function imRoutensatz(p){
+  if(!routenSatz){ routenSatz = {}; DATEN.route.punkte.forEach(function(id){ routenSatz[id]=1; }); }
+  return !!routenSatz[p.id];
+}
+function andere(){
+  var inRoute = {}; DATEN.route.punkte.forEach(function(id){ inRoute[id]=1; });
+  return DATEN.punkte.filter(function(p){ return !inRoute[p.id]; });
+}
+
+/* ── Rechnen ─────────────────────────────────────────────────────────── */
+function ziel(p){ return (p.soll_h!=null && p.passstueck!=null) ? p.soll_h + p.passstueck/1000 : null; }
+function rechnung(p, hoehe){
+  if(hoehe==null || p.soll_h==null) return null;
+  var diff = (hoehe - p.soll_h) * 1000, z = ziel(p);
+  return { diff: diff, ziel: z, neu: (z!=null ? (z - hoehe)*1000 : null) };
+}
+
+/* ── Runde: Kopf ─────────────────────────────────────────────────────── */
+function kopfMalen(){
+  var r = routePunkte();
+  var fertig = r.filter(function(p){ return MESS[p.id]; }).length;
+  $('fZahl').textContent = fertig + '/' + r.length;
+  $('fText').textContent = 'Fundamente abgehakt';
+  $('fBalken').style.width = (r.length ? (100*fertig/r.length) : 0) + '%';
+  $('rInfo').textContent = DATEN.route.meter + ' m · ' + DATEN.route.steigung_m
+                         + ' Hm · ~' + DATEN.route.gehzeit_min + ' Min'
+                         + (eigeneFolge ? ' (ab deinem Standort)' : ' ab ' + DATEN.route.start_id);
+  var off = r.filter(function(p){ return !MESS[p.id]; })[0];
+  $('rNaechst').textContent = off ? ('Nr. ' + off.rang + ' · ' + off.id) : 'alle erledigt';
+  $('bFolge').style.display = eigeneFolge ? '' : 'none';
+
+  var z = DATEN.zaehler;
+  $('quellText').innerHTML =
+      '<b>' + z.route + ' Fundamente</b> auf der Runde (Aufstelljahr 2026 und alles, was noch nie geprüft wurde). '
+    + 'Insgesamt bekannt: ' + z.gesamt + '.<br>'
+    + '<span class="badge nalpi">nur Nalpi</span> ' + z.nur_nalpi + ' Punkte tragen das Flag <i>EINZELFUNDAMENT</i>, '
+    + 'stehen aber <b>nicht</b> im Nachtrag NO026 – gibt es dort wirklich ein Fundament?<br>'
+    + '<span class="badge no026">nur NO026</span> ' + z.nur_no026 + ' Punkte stehen im Nachtrag, haben in Nalpi <b>kein</b> Flag.<br>'
+    + '<span class="badge beide">beide</span> ' + z.beide + ' Punkte sind in beiden Quellen.<br>'
+    + 'Bei <b>' + z.ist_kopiert + '</b> Punkten ist die Ist-Höhe in Nalpi nur das kopierte Soll – dort gibt es gar keine Messung.';
+}
+
+/* ── Runde: Liste ────────────────────────────────────────────────────── */
+function listeMalen(){
+  var r = routePunkte(), h = '';
+  r.forEach(function(p){ h += pktHtml(p); });
+  $('liste').innerHTML = h;
+  var off = r.filter(function(p){ return !MESS[p.id]; })[0];
+  if(off && !aktiv) aktiv = off.id;
+  if(aktiv){
+    var el = $('p_'+aktiv);
+    if(el){ el.classList.add('aktiv','offen'); }
+  }
+  entfMalen();
+}
+
+function pktHtml(p){
+  var m = MESS[p.id] || null;
+  var kl = m ? (m.vorhanden === false ? 'keins' : 'fertig') : '';
+  var qb = '<span class="badge ' + p.quelle + '">' + (p.quelle==='beide' ? 'beide'
+           : p.quelle==='nalpi' ? 'nur Nalpi' : 'nur NO026') + '</span>';
+  var re = m ? rechnung(p, m.hoehe) : null;
+  return ''
+  + '<div class="pkt ' + kl + '" id="p_' + p.id + '">'
+  +   '<div class="kopf" onclick="auf(\'' + p.id + '\')">'
+  +     '<div class="rang">' + p.rang + '</div>'
+  +     '<div><div class="idz">' + esc(p.id) + ' <span class="mut" style="font-weight:400">Typ '
+  +       esc(nz(p.typ)) + '</span>' + qb + '</div>'
+  +       '<div class="meta">' + esc(nz(p.phase,'ohne Bauphase')) + ' · Soll ' + fix(p.soll_h)
+  +         ' · ' + esc(nz(p.status,'ohne Status')) + '</div></div>'
+  +     '<div class="rechts"><div class="ent" id="e_' + p.id + '">–</div>'
+  +       (m ? (m.vorhanden === false ? 'kein Fundament'
+             : (m.hoehe!=null ? fix(m.hoehe) + ' m' : 'ohne Höhe')) : 'offen') + '</div>'
+  +   '</div>'
+  +   '<div class="rumpf">'
+  +     '<div class="zeile"><span class="mut">Soll Oberkante Fundament</span><b>' + fix(p.soll_h) + '</b></div>'
+  +     '<div class="zeile"><span class="mut">Passstück bestellt</span><b>'
+  +        (p.passstueck!=null ? p.passstueck + ' mm' : 'keines erfasst')
+  +        (p.ps_batch ? ' <span class="mut" style="font-weight:400">Batch ' + esc(p.ps_batch) + '</span>' : '') + '</b></div>'
+  +     '<div class="zeile"><span class="mut">Ziel Anschlusshöhe</span><b>' + fix(ziel(p)) + '</b></div>'
+  +     (p.ist_kopiert ? '<div class="klein" style="margin:4px 0 0">In Nalpi ist die Ist-Höhe nur das '
+  +        'kopierte Soll – dort steht keine Messung.</div>' : '')
+  +     '<div class="knopfreihe" style="margin-top:10px">'
+  +       '<button class="knopf weiss" onclick="keins(\'' + p.id + '\')">Kein Fundament hier</button>'
+  +     '</div>'
+  +     '<div style="margin-top:9px">'
+  +       '<input class="feld hoehe" id="h_' + p.id + '" inputmode="decimal" placeholder="Höhe m ü.M."'
+  +         ' value="' + (m && m.hoehe!=null ? m.hoehe : '') + '" oninput="vorschau(\'' + p.id + '\')">'
+  +     '</div>'
+  +     '<div id="r_' + p.id + '">' + (re ? rechnerHtml(p, re) : '') + '</div>'
+  +     '<div style="margin-top:9px">'
+  +       '<input class="feld" id="n_' + p.id + '" placeholder="Bemerkung (freiwillig)"'
+  +         ' value="' + esc(m && m.notiz ? m.notiz : '') + '">'
+  +     '</div>'
+  +     '<div class="knopfreihe" style="margin-top:9px">'
+  +       '<button class="knopf gruen" onclick="speichern(\'' + p.id + '\')">Speichern</button>'
+  +       '<button class="knopf grau" onclick="naechster(\'' + p.id + '\')">Weiter</button>'
+  +     '</div>'
+  +     (m ? '<div class="klein" style="margin-top:7px">Erfasst ' + esc(m.von||'?') + ' · '
+  +          esc((m.ts||'').replace('T',' ').slice(0,16)) + '</div>' : '')
+  +   '</div>'
+  + '</div>';
+}
+
+function rechnerHtml(p, re){
+  var kl = '', txt = '';
+  if(Math.abs(re.diff) > TOL_M*1000){
+    kl = ' schlecht';
+    txt = '<div class="klein" style="color:inherit"><b>' + (re.diff/1000).toFixed(2) + ' m</b> Abweichung – '
+        + 'das ist mehr als ' + TOL_M + ' m. Bitte Höhenbezug prüfen: eine ellipsoidische GPS-Höhe '
+        + 'liegt hier rund 51 m über der Landeshöhe.</div>';
+  } else if(Math.abs(re.diff) > 300){ kl = ' warn'; }
+  var s = '<div class="rechner' + kl + '">'
+        + '<div class="zeile"><span>gemessen − Soll</span><span class="gr">'
+        + (re.diff>0?'+':'') + Math.round(re.diff) + ' mm</span></div>';
+  if(re.neu != null){
+    s += '<div class="zeile"><span>Passstück ' + p.passstueck + ' mm kürzen auf</span><span class="gr">'
+      +  Math.round(re.neu) + ' mm</span></div>'
+      +  '<div class="klein">Kürzung ' + Math.round(p.passstueck - re.neu) + ' mm · Ziel '
+      +  fix(re.ziel) + ' m ü.M. Nivellierschicht und Verguss nach NO026 kommen davon noch weg.</div>';
+  } else {
+    s += '<div class="klein">Für diesen Punkt ist kein Passstück erfasst – Kürzung kann ich nicht rechnen.</div>';
+  }
+  return s + txt + '</div>';
+}
+
+function vorschau(id){
+  var p = punkt(id), v = parseFloat(String($('h_'+id).value).replace(',','.'));
+  $('r_'+id).innerHTML = isFinite(v) ? rechnerHtml(p, rechnung(p, v)) : '';
+}
+function punkt(id){ var f=null; DATEN.punkte.forEach(function(p){ if(p.id===id) f=p; }); return f; }
+
+function auf(id){
+  var el = $('p_'+id); if(!el) return;
+  var war = el.classList.contains('offen');
+  document.querySelectorAll('.pkt.offen').forEach(function(e){ e.classList.remove('offen'); });
+  document.querySelectorAll('.pkt.aktiv').forEach(function(e){ e.classList.remove('aktiv'); });
+  if(!war){ el.classList.add('offen','aktiv'); aktiv = id;
+            el.scrollIntoView({behavior:'smooth', block:'center'}); }
+  else aktiv = null;
+  if(karte) karteNeu();
+}
+
+/* ── Speichern ───────────────────────────────────────────────────────── */
+function rec(vorhanden, hoehe, notiz){
+  return { vorhanden: vorhanden, hoehe: hoehe, notiz: notiz||'',
+           von: ($('von').value||'').trim() || 'unbekannt',
+           ts: new Date().toISOString(), geraet: 'Topcon GPS' };
+}
+function ablegen(id, r){
+  MESS[id] = r;
+  var senden = function(){
+    return fetch(RTDB+'/'+PFAD+'/'+encodeURIComponent(id)+'.json', {method:'PUT', body:JSON.stringify(r)})
+      .then(function(res){ return res.ok; });
+  };
+  if(!netzAn()){
+    var a = pendLesen(); a.push({id:id, rec:r}); pendSchreiben(a);
+    toast('Offline gespeichert – geht später automatisch raus');
+  } else {
+    senden().then(function(ok){
+      if(!ok){ var a=pendLesen(); a.push({id:id, rec:r}); pendSchreiben(a); toast('Gemerkt, Server antwortet nicht', true); }
+      else toast('Gespeichert');
+    }).catch(function(){
+      var a=pendLesen(); a.push({id:id, rec:r}); pendSchreiben(a); toast('Gemerkt, kein Netz');
+    });
+  }
+  listeMalen(); kopfMalen(); if(karte) karteNeu();
+}
+function speichern(id){
+  var p = punkt(id), roh = String($('h_'+id).value).replace(',','.').trim(),
+      v = roh==='' ? null : parseFloat(roh);
+  if(roh!=='' && !isFinite(v)){ toast('Höhe ist keine Zahl', true); return; }
+  if(v!=null && (v < 1900 || v > 2100)){
+    toast('Höhe ausserhalb 1900–2100 m – bitte prüfen', true); return;
+  }
+  ablegen(id, rec(true, v, $('n_'+id).value));
+  naechster(id);
+}
+function keins(id){
+  ablegen(id, rec(false, null, $('n_'+id) ? $('n_'+id).value : ''));
+  naechster(id);
+}
+function naechster(id){
+  var r = routePunkte(), i = r.findIndex(function(p){ return p.id===id; });
+  var next = r.slice(i+1).filter(function(p){ return !MESS[p.id]; })[0]
+          || r.filter(function(p){ return !MESS[p.id]; })[0];
+  if(next) auf(next.id); else { aktiv=null; toast('Runde vollständig'); }
+}
+
+/* ── GPS: Entfernung und Richtung ────────────────────────────────────── */
+function distM(a, b){
+  var la = (a[0]+b[0])/2 * Math.PI/180;
+  var dx = (b[1]-a[1]) * Math.cos(la) * 111320, dy = (b[0]-a[0]) * 110540;
+  return Math.sqrt(dx*dx + dy*dy);
+}
+function pfeil(von, nach){
+  var dy = nach[0]-von[0], dx = (nach[1]-von[1]) * Math.cos(von[0]*Math.PI/180);
+  var w = (Math.atan2(dx, dy) * 180/Math.PI + 360) % 360;
+  return ['↑ N','↗ NO','→ O','↘ SO','↓ S','↙ SW','← W','↖ NW'][Math.round(w/45) % 8];
+}
+function entfMalen(){
+  if(!DATEN) return;
+  routePunkte().forEach(function(p){
+    var e = $('e_'+p.id); if(!e) return;
+    if(!gps){ e.textContent = '–'; return; }
+    var d = distM([gps.lat, gps.lon], [p.lat, p.lon]);
+    e.textContent = (d < 1000 ? Math.round(d) + ' m' : (d/1000).toFixed(1) + ' km')
+                  + ' ' + pfeil([gps.lat, gps.lon], [p.lat, p.lon]);
+  });
+}
+function gpsStarten(){
+  if(!navigator.geolocation) return;
+  navigator.geolocation.watchPosition(function(p){
+    gps = {lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
+    entfMalen();
+    if(karte){
+      if(gpsMark) gpsMark.setLatLng([gps.lat, gps.lon]);
+      else gpsMark = L.circleMarker([gps.lat, gps.lon],
+        {radius:7, color:'#fff', weight:2, fillColor:'#1565c0', fillOpacity:1}).addTo(karte);
+    }
+  }, function(){}, {enableHighAccuracy:true, maximumAge:4000, timeout:20000});
+}
+
+/* ── Karte ───────────────────────────────────────────────────────────── */
+function farbe(p){
+  var m = MESS[p.id];
+  if(!m) return p.rang ? '#8a8e94' : '#e0a800';
+  return m.vorhanden === false ? '#1565c0' : '#1e9e5a';
+}
+function karteAufbauen(){
+  karte = L.map('karte', {zoomControl:true, attributionControl:false, tap:true});
+  L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg',
+    {maxZoom:22, maxNativeZoom:19}).addTo(karte);
+  ebene = L.layerGroup().addTo(karte);
+  karteNeu(); passen(); gpsStarten();
+}
+function karteNeu(){
+  if(!ebene) return;
+  ebene.clearLayers(); marker = {};
+  var pts = routePunkte().concat(zeigeAlle ? andere() : []);
+  var weg = routePunkte().map(function(p){ return [p.lat, p.lon]; });
+  L.polyline(weg, {color:'#D72622', weight:3, opacity:.75, dashArray:'6,5'}).addTo(ebene);
+
+  pts.forEach(function(p){
+    var f = farbe(p), nr = p.rang || '';
+    var m = L.marker([p.lat, p.lon], {icon: L.divIcon({className:'', iconSize:[22,22],
+      html:'<div class="rmark" style="background:' + f + (p.id===aktiv ? ';outline:3px solid #D72622' : '') + '">'
+           + nr + '</div>'})}).addTo(ebene);
+    m.on('click', function(){ reiter('runde'); auf(p.id); });
+    m.bindTooltip(p.id + ' · Soll ' + fix(p.soll_h), {direction:'top'});
+    marker[p.id] = m;
+  });
+}
+function passen(){
+  if(!karte) return;
+  var b = routePunkte().map(function(p){ return [p.lat, p.lon]; });
+  if(b.length) karte.fitBounds(L.latLngBounds(b).pad(0.12));
+}
+function zuMir(){
+  if(!gps){ toast('Noch keine GPS-Position', true); return; }
+  karte.setView([gps.lat, gps.lon], 19);
+}
+function alleUm(){
+  zeigeAlle = !zeigeAlle;
+  $('kAlle').classList.toggle('an', zeigeAlle);
+  karteNeu();
+}
+
+/* ── Ergebnis ────────────────────────────────────────────────────────── */
+function ergMalen(){
+  if(!DATEN) return;
+  var r = routePunkte().concat(andere());
+  var kurz = [], zeilen = '';
+  r.forEach(function(p){
+    var m = MESS[p.id]; if(!m) return;
+    var re = rechnung(p, m.hoehe);
+    if(re && re.neu != null && Math.abs(re.diff) >= 20) kurz.push({p:p, re:re, m:m});
+    zeilen += '<tr><td>' + esc(p.id) + '</td><td>' + esc(nz(p.typ)) + '</td>'
+           + '<td class="z">' + fix(p.soll_h) + '</td>'
+           + '<td class="z">' + (m.vorhanden===false ? '—' : fix(m.hoehe)) + '</td>'
+           + '<td class="z">' + (re ? (re.diff>0?'+':'') + Math.round(re.diff) : '') + '</td>'
+           + '<td>' + (m.vorhanden===false ? 'kein Fundament' : 'vorhanden') + '</td>'
+           + '<td>' + esc(m.notiz||'') + '</td></tr>';
+  });
+  $('ergTab').innerHTML = '<tr><th>Punkt</th><th>Typ</th><th>Soll</th><th>gemessen</th>'
+    + '<th>Diff mm</th><th>Befund</th><th>Bemerkung</th></tr>'
+    + (zeilen || '<tr><td colspan="7" class="mut">noch nichts erfasst</td></tr>');
+
+  if(!kurz.length){ $('ergKurz').textContent = 'Noch keine Höhe eingetragen, die eine Kürzung ergibt.'; return; }
+  var h = '<table class="erg"><tr><th>Punkt</th><th>Passstück</th><th>neu</th><th>Kürzung</th></tr>';
+  kurz.forEach(function(k){
+    h += '<tr><td>' + esc(k.p.id) + '</td><td class="z">' + k.p.passstueck + ' mm</td>'
+      +  '<td class="z"><b>' + Math.round(k.re.neu) + ' mm</b></td>'
+      +  '<td class="z">' + Math.round(k.p.passstueck - k.re.neu) + ' mm</td></tr>';
+  });
+  $('ergKurz').innerHTML = h + '</table>'
+    + '<div class="klein" style="margin-top:7px">Ziel ist die Anschlusshöhe, mit der das Passstück '
+    + 'bestellt wurde (Soll + bestellte Länge). Nivellierschicht und Verguss nach NO026 noch abziehen.</div>';
+}
+
+function kopieren(){
+  var r = routePunkte().concat(andere()), z = ['Einzelfundamente – Kontrollrunde ' + new Date().toLocaleDateString('de-CH'),
+    'Punkt;Typ;Soll;gemessen;Diff mm;Befund;Passstueck;neu mm;Bemerkung'];
+  r.forEach(function(p){
+    var m = MESS[p.id]; if(!m) return;
+    var re = rechnung(p, m.hoehe);
+    z.push([p.id, nz(p.typ,''), fix(p.soll_h), (m.vorhanden===false?'':fix(m.hoehe)),
+            (re?Math.round(re.diff):''), (m.vorhanden===false?'kein Fundament':'vorhanden'),
+            nz(p.passstueck,''), (re&&re.neu!=null?Math.round(re.neu):''), (m.notiz||'')].join(';'));
+  });
+  var t = z.join('\n');
+  if(navigator.clipboard) navigator.clipboard.writeText(t).then(function(){ toast('In die Zwischenablage kopiert'); },
+    function(){ toast('Kopieren ging nicht', true); });
+  else toast('Kopieren ging nicht', true);
+}
+
+/* ── Start ───────────────────────────────────────────────────────────── */
+try{ $('von').value = localStorage.getItem(LS_VON) || ''; }catch(e){}
+$('von').addEventListener('change', function(){
+  try{ localStorage.setItem(LS_VON, $('von').value.trim()); }catch(e){}
+});
+netzMalen();
+ladeAlles().then(function(){ gpsStarten(); reiterAusHash(); });
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
+</script>
+</body>
+</html>
