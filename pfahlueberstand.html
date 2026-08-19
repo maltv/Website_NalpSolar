@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NalpSolar · Pfahlüberstand</title>
+<meta name="theme-color" content="#ffffff">
+<script>
+  window.NALP_GATE_CODE  = '6460';
+  window.NALP_GATE_KEY   = 'nalp_portal_unlock_v1';
+  window.NALP_GATE_TITEL = 'Pfahlüberstand';
+  window.NALP_GATE_SUB   = 'Code eingeben / Enter code / Wpisz kod';
+</script>
+<script src="assets/js/nalp-gate.js"></script>
+<style>
+  :root{ color-scheme:light; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8; --bg:#eef0f3; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body{ margin:0; background:var(--bg); min-height:100vh; color:var(--ink);
+        font-family:Arial,"Helvetica Neue",sans-serif; }
+  header{ background:#fff; border-bottom:1px solid var(--line); padding:10px 14px;
+          position:sticky; top:0; z-index:20; }
+  h1{ margin:0; font-size:17px; font-weight:800; letter-spacing:.2px; }
+  .sub{ color:var(--mut); font-size:12px; margin-top:2px; }
+  main{ padding:12px 14px 40px; max-width:1100px; margin:0 auto; }
+  .foot{ margin-top:22px; font-size:12px; color:var(--mut); }
+  .foot a{ color:#1565c0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Pfahlüberstand über Urgelände</h1>
+  <div class="sub">Welche Pfähle ragen mehr als 15 cm heraus – Arbeitsliste fürs Eindecken</div>
+</header>
+
+<main>
+  <!-- Inhalt kommt aus assets/js/nalp-ueberstand.js, damit die Karte hier und im
+       Admin-Reiter «Überstand» dieselbe ist und nicht auseinanderlaufen kann. -->
+  <div id="uebWurzel"></div>
+
+  <div class="foot"><a href="index.html">← zurück zum Portal</a> ·
+    Neubau der Daten: <code>PFAHLUEBERSTAND.bat</code></div>
+</main>
+
+<script src="assets/js/nalp-ueberstand.js"></script>
+<script>
+  NalpUeberstand.start(document.getElementById('uebWurzel'));
+</script>
+</body>
+</html>
