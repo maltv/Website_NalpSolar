@@ -155,6 +155,8 @@ var CSS = ''
 +'.ez .ezmod button{flex:1;border:1.5px solid #d7dade;background:#fff;color:#1a1a1a;font:inherit;'
  +'font-size:15px;font-weight:800;padding:13px 6px;border-radius:12px;cursor:pointer;}'
 +'.ez .ezmod button.on{background:#1a1a1a;border-color:#1a1a1a;color:#fff;}'
++'.ez .ezmerk{background:#0f1b2a;color:#fff;border-radius:12px;padding:13px 15px;'
+ +'font-size:15.5px;font-weight:800;line-height:1.35;margin-bottom:14px;}'
 +'.ez label.ezl{display:block;font-size:14px;font-weight:800;margin:2px 0 6px;}'
 +'.ez .ezhelp{font-size:12.5px;color:#63676d;margin:6px 0 12px;line-height:1.35;}'
 +'.ez input.ezin{width:100%;font:inherit;font-size:22px;font-weight:800;letter-spacing:.5px;'
@@ -404,7 +406,9 @@ function ergPs(e){
 function malenNt(){
   var b=ZIEL.querySelector('#ezBody');
   var teile=(REG&&REG.normteile)||[];
-  var s='<label class="ezl">'+h(t('nt_frage'))+'</label><div class="ezwahl" id="ezT">';
+  var s='';
+  if(REG&&REG.merksatz) s+='<div class="ezmerk">'+h(txt(REG.merksatz))+'</div>';
+  s+='<label class="ezl">'+h(t('nt_frage'))+'</label><div class="ezwahl" id="ezT">';
   for(var i=0;i<teile.length;i++){
     s+='<button data-i="'+i+'" class="'+(nTeil===i?'on':'')+'">'+h(txt(teile[i]))
       +'<small>'+h(txt(teile[i],'hilfe'))+'</small></button>';

@@ -4,10 +4,30 @@
   "toleranz_mm": 2,
   "warn_mm": 20,
   "aktionen": {
-    "behalten": { "farbe": "gruen", "de": "BLEIBT HIER", "en": "KEEP", "pl": "ZOSTAJE" },
-    "sursee": { "farbe": "blau", "de": "ZURÜCK NACH SURSEE", "en": "BACK TO SURSEE", "pl": "ZWROT DO SURSEE" },
-    "entsorgen": { "farbe": "rot", "de": "DARF ENTSORGT WERDEN", "en": "MAY BE SCRAPPED", "pl": "MOŻNA ZŁOMOWAĆ" },
-    "fragen": { "farbe": "gelb", "de": "STEHEN LASSEN – MELDEN", "en": "LEAVE IT – REPORT", "pl": "ZOSTAW – ZGŁOŚ" }
+    "behalten": {
+      "farbe": "gruen",
+      "de": "BLEIBT HIER",
+      "en": "KEEP",
+      "pl": "ZOSTAJE"
+    },
+    "sursee": {
+      "farbe": "blau",
+      "de": "ZURÜCK NACH SURSEE",
+      "en": "BACK TO SURSEE",
+      "pl": "ZWROT DO SURSEE"
+    },
+    "entsorgen": {
+      "farbe": "rot",
+      "de": "DARF ENTSORGT WERDEN",
+      "en": "MAY BE SCRAPPED",
+      "pl": "MOŻNA ZŁOMOWAĆ"
+    },
+    "fragen": {
+      "farbe": "gelb",
+      "de": "STEHEN LASSEN – MELDEN",
+      "en": "LEAVE IT – REPORT",
+      "pl": "ZOSTAW – ZGŁOŚ"
+    }
   },
   "passstueck": {
     "gueltig": {
@@ -44,26 +64,19 @@
       "de": "Normstütze TAL (Fixstütze)",
       "en": "Standard post VALLEY (fixed)",
       "pl": "Podpora standardowa DOLINA",
-      "hilfe_de": "Gerade Stütze am Talfuss, ohne Mauchle-Etikett mit Länge. Gibt es nur aus Serie 2025.",
-      "hilfe_en": "Straight post at the valley foot, no Mauchle length label. Series 2025 only.",
-      "hilfe_pl": "Prosta podpora u podstawy od doliny, bez etykiety z długością. Tylko seria 2025.",
+      "hilfe_de": "Gerade Stütze am Talfuss, ohne Mauchle-Etikett mit Länge (Serie 2025).",
+      "hilfe_en": "Straight post at the valley foot, no Mauchle length label (series 2025).",
+      "hilfe_pl": "Prosta podpora u podstawy od doliny, bez etykiety z długością (seria 2025).",
       "serien": {
-        "2025": {
+        "alle": {
           "aktion": "sursee",
-          "de": "Alle Normstützen Tal gehen zurück nach Sursee zu Mauchle – NICHT entsorgen. Sortieren macht Mauchle, nicht wir.",
-          "en": "All valley standard posts go back to Mauchle in Sursee – do NOT scrap. Mauchle sorts them, not us.",
-          "pl": "Wszystkie podpory dolinowe wracają do Mauchle w Sursee – NIE złomować. Sortuje Mauchle, nie my.",
-          "quelle": "V. Malt 19.08.2026 (Anweisung); ILF B. Rüde 08.05.2026 «Verwendung ehemalige Normstützen Tal (Fixstütze)» + Freigabe/Transportauftrag C. Schmuckle 11.05.2026 an J. Mäder (erste Rücklieferung mit Schuoler)",
-          "hinweis_de": "ILF 08.05.2026: Typ B wird bei Mauchle auf Mass gekürzt und wiederverwendet, Typ A/D/E laut ILF nicht wirtschaftlich verwertbar. Die Trennung macht Mauchle – im Tal nicht selbst aussortieren.",
-          "hinweis_en": "ILF 08.05.2026: type B is shortened and reused at Mauchle, types A/D/E are not economical to reuse. Mauchle decides – do not sort here.",
-          "hinweis_pl": "ILF 08.05.2026: typ B jest skracany i używany ponownie u Mauchle, typy A/D/E nieopłacalne. Decyduje Mauchle – nie sortować tutaj."
-        },
-        "2026": {
-          "aktion": "fragen",
-          "de": "Normstützen Tal gibt es in der Serie 2026 nicht (Talstütze ist passgenau). Bitte melden – vermutlich ein Passstück ohne Etikett.",
-          "en": "There are no valley standard posts in series 2026 (valley post is made to measure). Please report – probably a fitting piece without a label.",
-          "pl": "W serii 2026 nie ma podpór dolinowych (podpora na wymiar). Zgłoś – prawdopodobnie element bez etykiety.",
-          "quelle": "Koo-Liste Blatt «Auswertung» (ILF): 0 Normstützen talseitig ab Serie 2026"
+          "de": "Geht IMMER zurück nach Sursee zu Mauchle – egal welcher Typ, egal welche Serie. Normstützen Tal werden nicht mehr gebaut und nirgends mehr gebraucht. Nicht entsorgen und nicht selber aussortieren.",
+          "en": "ALWAYS goes back to Mauchle in Sursee – any type, any series. Valley standard posts are no longer built and no longer needed anywhere. Do not scrap and do not sort them here.",
+          "pl": "ZAWSZE wraca do Mauchle w Sursee – każdy typ, każda seria. Podpory dolinowe nie są już produkowane ani nigdzie potrzebne. Nie złomować i nie sortować tutaj.",
+          "quelle": "Anweisung V. Malt 19.08.2026 («Normstützen Tal gehen immer weg, die gibt es nicht mehr»); ILF B. Rüde 08.05.2026 «Verwendung ehemalige Normstützen Tal (Fixstütze)» + Freigabe/Transportauftrag C. Schmuckle 11.05.2026 an J. Mäder; ab Serie 2026 ist die Talstütze passgenau (Koo-Liste Blatt «Auswertung»)",
+          "hinweis_de": "Bei Mauchle werden die Typ B auf Mass gekürzt und wiederverwendet, A/D/E verschrottet (ILF 08.05.2026). Das entscheidet Mauchle – im Tal geht alles auf denselben Lastwagen.",
+          "hinweis_en": "At Mauchle the type B posts are shortened and reused, A/D/E are scrapped (ILF 08.05.2026). Mauchle decides – here everything goes on the same truck.",
+          "hinweis_pl": "U Mauchle typ B jest skracany i używany ponownie, A/D/E na złom (ILF 08.05.2026). Decyduje Mauchle – tutaj wszystko idzie na tę samą ciężarówkę."
         }
       }
     },
@@ -76,19 +89,12 @@
       "hilfe_en": "Lower standard part of the inclined mountain post, 2 per table.",
       "hilfe_pl": "Dolna część pochyłej podpory górskiej, 2 sztuki na stół.",
       "serien": {
-        "2025": {
+        "alle": {
           "aktion": "behalten",
-          "de": "Wird gebraucht – besonders Typ D für die Baupiste. Bleibt hier.",
-          "en": "Still needed – type D especially for the access road tables. Stays here.",
-          "pl": "Jeszcze potrzebne – zwłaszcza typ D dla drogi budowlanej. Zostaje.",
-          "quelle": "V. Malt an J. Mäder 14.08.2026 «Standardstützen Berg Typ D der 2025er Serie für die Baupiste dringend»; Normteile-Bilanz 05.08.2026 (2025er-Bedarf via Rückbau decken)"
-        },
-        "2026": {
-          "aktion": "behalten",
-          "de": "Laufendes Material 2026. Bleibt hier.",
-          "en": "Current 2026 material. Stays here.",
-          "pl": "Bieżący materiał 2026. Zostaje.",
-          "quelle": "Bauprogramm 03.08.2026: PK-Montage 2026 läuft"
+          "de": "Bleibt IMMER hier – 2025 wie 2026. Wird bis zum letzten Tisch gebraucht, nie entsorgen und nie zurückschicken.",
+          "en": "ALWAYS stays here – 2025 and 2026 alike. Needed until the last table is up; never scrap, never send back.",
+          "pl": "ZAWSZE zostaje tutaj – zarówno 2025, jak i 2026. Potrzebne do ostatniego stołu; nigdy nie złomować i nie odsyłać.",
+          "quelle": "Anweisung V. Malt 19.08.2026 («Normstützen Berg bleiben immer hier»); V. Malt an J. Mäder 14.08.2026 (Typ D Serie 2025 dringend für die Baupiste); Normteile-Bilanz 05.08.2026"
         }
       }
     },
@@ -101,19 +107,12 @@
       "hilfe_en": "1 per table, lies across the two mountain posts.",
       "hilfe_pl": "1 na stół, leży w poprzek dwóch podpór górskich.",
       "serien": {
-        "2025": {
+        "alle": {
           "aktion": "behalten",
-          "de": "Wird noch gebraucht: 17 Restkonstruktionen aus 2025 sind offen (13× Typ E, 4× Typ B), dazu die Baupiste.",
-          "en": "Still needed: 17 tables from 2025 are still open (13× type E, 4× type B), plus the access road.",
-          "pl": "Jeszcze potrzebne: 17 konstrukcji z 2025 otwartych (13× typ E, 4× typ B) plus droga budowlana.",
-          "quelle": "uploads/pz2025.json (Stand 10.08.2026, Nalpi-Export)"
-        },
-        "2026": {
-          "aktion": "behalten",
-          "de": "Laufendes Material 2026 – im Tal fehlen Quertraversen sogar. Bleibt hier.",
-          "en": "Current 2026 material – cross beams are actually short here. Stays.",
-          "pl": "Bieżący materiał 2026 – trawers wręcz brakuje. Zostaje.",
-          "quelle": "Normteile-Bilanz 05.08.2026 (Bestellungen\\20260805_Normteile_Bilanz_Rest2026.md): QT/KT fehlen im Tal auf breiter Front"
+          "de": "Bleibt hier – auch die 2025er. Alle behalten, bis der letzte 2025er Tisch gestellt ist.",
+          "en": "Stays here – including the 2025 ones. Keep them all until the last 2025 table is erected.",
+          "pl": "Zostaje tutaj – także te z 2025. Zachować wszystkie, aż stanie ostatni stół z 2025.",
+          "quelle": "Anweisung V. Malt 19.08.2026 («vorerst alle behalten, bis der letzte Tisch gestellt ist»); offene 2025er Konstruktionen: uploads/pz2025.json (Stand 10.08.2026); Normteile-Bilanz 05.08.2026 (QT/KT fehlen im Tal ohnehin)"
         }
       }
     },
@@ -126,19 +125,12 @@
       "hilfe_en": "One per valley post (S1 and S4).",
       "hilfe_pl": "Po jednym na podporę dolinową (S1 i S4).",
       "serien": {
-        "2025": {
+        "alle": {
           "aktion": "behalten",
-          "de": "Wird noch gebraucht: 17 Restkonstruktionen aus 2025 sind offen (13× Typ E, 4× Typ B), dazu die Baupiste.",
-          "en": "Still needed: 17 tables from 2025 are still open (13× type E, 4× type B), plus the access road.",
-          "pl": "Jeszcze potrzebne: 17 konstrukcji z 2025 otwartych (13× typ E, 4× typ B) plus droga budowlana.",
-          "quelle": "uploads/pz2025.json (Stand 10.08.2026, Nalpi-Export)"
-        },
-        "2026": {
-          "aktion": "behalten",
-          "de": "Laufendes Material 2026 – Knieträger fehlen im Tal sogar. Bleibt hier.",
-          "en": "Current 2026 material – knee beams are actually short here. Stays.",
-          "pl": "Bieżący materiał 2026 – wsporniki wręcz brakuje. Zostaje.",
-          "quelle": "Normteile-Bilanz 05.08.2026: D_2026 KT −57/−57, B_2026 0 KT S-1 bei 78 offenen Tischen"
+          "de": "Bleibt hier – auch die 2025er. Alle behalten, bis der letzte 2025er Tisch gestellt ist.",
+          "en": "Stays here – including the 2025 ones. Keep them all until the last 2025 table is erected.",
+          "pl": "Zostaje tutaj – także te z 2025. Zachować wszystkie, aż stanie ostatni stół z 2025.",
+          "quelle": "Anweisung V. Malt 19.08.2026 («vorerst alle behalten, bis der letzte Tisch gestellt ist»); offene 2025er Konstruktionen: uploads/pz2025.json (Stand 10.08.2026); Normteile-Bilanz 05.08.2026 (QT/KT fehlen im Tal ohnehin)"
         }
       }
     },
@@ -183,5 +175,10 @@
     "en": "...",
     "pl": "...",
     "quelle": "Mail/Beschluss mit Datum"
+  },
+  "merksatz": {
+    "de": "Kurz: Normstütze TAL geht immer weg. Alles andere bleibt hier.",
+    "en": "In short: the VALLEY standard post always goes. Everything else stays.",
+    "pl": "Krótko: podpora DOLINOWA zawsze odjeżdża. Reszta zostaje."
   }
 }
