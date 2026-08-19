@@ -6,7 +6,9 @@
 <title>Admin · NalpSolar</title>
 <meta name="robots" content="noindex,nofollow">
 <!-- Admin-Werkzeuge (nur Victor), Reiter:
-       Übersicht   – Aufgabenliste + Links auf die anderen Admin-Seiten
+       Übersicht   – Links auf die anderen Admin-Seiten. Die Aufgabenliste wurde am
+                     19.08.2026 auf Wunsch Victors ENTFERNT – Master ist und bleibt
+                     Dashboard\aufgaben.md im KI-Projekt. NICHT neu aufbauen.
                      (darunter seit 18.08.2026 Bestellungen & offene Punkte sowie
                      Bohrbagger-Verschiebungen, verschiebungen.html + uploads/verschiebungen.json,
                      gebaut mit Tools\Bohrbagger_Verschiebungen_Bauen.py)
@@ -91,29 +93,12 @@
   #saveMsg { font-size:13px; font-weight:700; margin-left:10px; }
   .foot { text-align:center; font-size:11.5px; color:var(--mut); padding:10px 0 30px; }
   .foot a { color:var(--rot); font-weight:700; }
-  /* Aufgabenliste */
+  /* Filterkoepfe der Listen (Stoerungen, Mails, Regie) */
   .knopf.mini { padding:6px 11px; font-size:12.5px; margin:0; }
   .knopf.mini.an { background:var(--rot); color:#fff; }
   .aufkopf { display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
   .aufkopf input[type=search] { flex:1; min-width:130px; padding:7px 9px; font-size:14px;
         border:1px solid #c9ccd2; border-radius:5px; }
-  .aufliste { list-style:none; margin:0; padding:0; max-height:60vh; overflow-y:auto;
-        border-top:1px solid var(--line); }
-  .aufliste li { border-bottom:1px solid var(--line); padding:8px 2px; display:flex; gap:9px;
-        align-items:flex-start; font-size:13.5px; line-height:1.45; }
-  .aufliste li.leer { color:var(--mut); justify-content:center; padding:16px; }
-  .aufliste input[type=checkbox] { width:19px; height:19px; margin:1px 0 0; flex:0 0 19px; }
-  .aufliste .tt { flex:1; min-width:0; cursor:pointer; }
-  .aufliste .tt b { font-weight:700; }
-  .aufliste li.fertig .tt { text-decoration:line-through; color:var(--mut); }
-  .aufliste .frist { display:inline-block; background:#eef0f2; color:var(--mut); font-size:11px;
-        font-weight:700; border-radius:9px; padding:1px 7px; margin-left:6px; white-space:nowrap; }
-  .aufliste .frist.rot { background:var(--rot); color:#fff; }
-  .aufliste .mehr { display:none; margin-top:5px; font-size:12.5px; color:var(--mut); }
-  .aufliste li.offen_detail .mehr { display:block; }
-  .aufneu { display:flex; gap:6px; margin-top:10px; }
-  .aufneu input { flex:1; padding:8px 9px; font-size:14px; border:1px solid #c9ccd2; border-radius:5px; }
-  .aufneu .knopf { margin:0; padding:8px 16px; font-size:17px; font-weight:900; }
 
   /* ── Kennzahlen-Kacheln ─────────────────────────────────── */
   .kacheln { display:grid; grid-template-columns:repeat(auto-fit,minmax(122px,1fr)); gap:9px; margin-bottom:12px; }
@@ -224,6 +209,18 @@
   .schrSum td.n { text-align:right; font-weight:900; font-variant-numeric:tabular-nums; }
 
   /* ── Material-Bilanz ────────────────────────────────────── */
+  /* Unter-Navigation: klebt unter der Reiterleiste, ein Blatt je Materialteil */
+  .matNav { display:flex; gap:0; overflow-x:auto; background:#1a1a1a; position:sticky; top:43px;
+        z-index:499; -webkit-overflow-scrolling:touch; }
+  .matNav button { flex:1 0 auto; border:none; background:none; cursor:pointer; color:#b9bec5;
+        font:700 12.5px Arial; padding:9px 13px 8px; border-bottom:3px solid transparent;
+        white-space:nowrap; }
+  .matNav button.on { color:#fff; border-bottom-color:var(--rot); background:#26292e; }
+  .matNav button i { font-style:normal; display:inline-block; min-width:15px; height:15px;
+        line-height:15px; border-radius:8px; font-size:10px; font-weight:900; margin-left:5px;
+        padding:0 4px; background:var(--rot); color:#fff; }
+  .matNav button i.o { background:var(--orange); } .matNav button i.g { background:#5d6167; }
+  .matKopf { font-size:12px; color:var(--mut); margin:-4px 0 10px; }
   .matKacheln { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:4px; }
   .matKachel { flex:1 1 78px; border-radius:6px; padding:9px 10px; color:#fff; }
   .matKachel .n { font-size:26px; font-weight:900; line-height:1.05; }
@@ -278,26 +275,6 @@
      ══════════════════════════════════════════════════════════════ -->
 <div class="tab an" id="tab-uebersicht"><div class="wrap">
 
-  <div class="card auf">
-    <h2>Aufgaben <span id="aufZahl" style="font-weight:400;color:var(--mut);font-size:13px"></span></h2>
-    <div class="sub">Dieselbe Liste wie <b>Dashboard\aufgaben.md</b> im KI-Projekt. Hier abhaken,
-      der nächste Abgleich (<code>Tools\Aufgaben_Sync.py</code>) trägt es dort nach – und umgekehrt.
-      Auf den Titel tippen zeigt den ganzen Eintrag.</div>
-
-    <div class="aufkopf">
-      <input type="search" id="aufSuche" placeholder="suchen …">
-      <button class="knopf mini" data-f="offen">offen</button>
-      <button class="knopf mini" data-f="frist">mit Frist</button>
-      <button class="knopf mini" data-f="alle">alle</button>
-    </div>
-
-    <ul id="aufListe" class="aufliste"><li class="leer">lade …</li></ul>
-
-    <div class="aufneu">
-      <input type="text" id="aufNeuText" placeholder="neue Aufgabe …">
-      <button class="knopf rot" id="aufNeu">+</button>
-    </div>
-  </div>
 
   <div class="card">
     <h2>Störungsjournal · Stunden aus Änderungen</h2>
@@ -604,55 +581,18 @@
      aus Bestellungen\materialregister.json + Nalpi-Stand + Bauprogramm.
      Reine Anzeige – gepflegt wird das Register in der Datei, nicht hier.
      ══════════════════════════════════════════════════════════════ -->
-<div class="tab" id="tab-material"><div class="wrap">
+<div class="tab" id="tab-material">
 
-  <div class="card">
-    <h2>Materialbilanz &ndash; wo läuft uns was aus?</h2>
-    <div class="sub" id="matStand">lade …</div>
-    <div class="matKacheln" id="matKacheln"></div>
-    <div class="legende">
-      <b>Verbaut</b> = aus dem Nalpi-Stand gerechnet (Pfähle im Boden bzw. Tische mit montierter
-      Primärkonstruktion), nicht gezählt. <b>Lager</b> = Zählung wenn vorhanden, sonst
-      geliefert&nbsp;&minus;&nbsp;verbaut. <b>Bedarf</b> = alles, was das Bauprogramm vom 03.08.2026
-      noch für 2026 vorsieht.
-      <span class="ap a-rot"></span>reicht auch mit den offenen Bestellungen nicht
-      <span class="ap a-orange"></span>Lager reicht nicht, offene Bestellung würde decken
-      <span class="ap a-gruen"></span>gedeckt
-      <span class="ap a-grau"></span>Bestand nicht erhoben
-    </div>
+  <!-- Unter-Navigation: Übersicht + je ein Blatt pro Materialteil -->
+  <div class="matNav" id="matNav"></div>
+
+  <div class="wrap">
+    <div id="matInhalt"><div class="card"><div class="sub">lade …</div></div></div>
+    <div class="foot"><a href="index.html">← zurück zum Portal</a> ·
+      Register: <code>Bestellungen\materialregister.json</code> ·
+      Neubau: <code>MATERIAL_BILANZ.bat</code></div>
   </div>
-
-  <div class="card">
-    <h2>Zeitachse &ndash; was zuerst weh tut</h2>
-    <div class="sub">Bereiche in der Reihenfolge des Bauprogramms, kumulierter Bedarf gegen das
-      Lager gerechnet. Genannt ist der <b>erste Bereich, bei dem der Bestand nicht mehr reicht</b>.</div>
-    <div id="matEngpass">lade …</div>
-  </div>
-
-  <div class="card">
-    <h2>Bilanz je Artikel</h2>
-    <div class="sub">Zeile antippen &rarr; Bestellungen, Lieferscheine und Quellen.</div>
-    <div class="chips" id="matFilter" style="margin-bottom:10px"></div>
-    <table class="mat" id="matTab"></table>
-  </div>
-
-  <div class="card">
-    <h2>Lieferscheine, die fehlen</h2>
-    <div class="sub">Alles, was als geliefert verbucht ist, aber keinen sauberen Beleg hat &ndash;
-      plus was angekündigt, aber noch nicht eingetroffen ist.</div>
-    <div id="matLuecken">lade …</div>
-  </div>
-
-  <div class="card">
-    <h2>Fehlmengen aus Teillieferungen</h2>
-    <div class="sub">Geliefert wurde weniger als bestellt, ohne dass es je nachkam.</div>
-    <div id="matFehl">lade …</div>
-  </div>
-
-  <div class="foot"><a href="index.html">← zurück zum Portal</a> ·
-    Register: <code>Bestellungen\materialregister.json</code> ·
-    Neubau: <code>MATERIAL_BILANZ.bat</code></div>
-</div></div>
+</div>
 
 <!-- ══════════════════════════════════════════════════════════════
      REITER 6 – FÖHN
@@ -752,7 +692,7 @@ Array.prototype.forEach.call(document.querySelectorAll('#reiter button'),functio
     Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(t){
       t.classList.toggle('an',t.id==='tab-'+ziel); });
     window.scrollTo(0,0);
-    try { location.hash=ziel; } catch(e){}
+    try { location.hash=(ziel==='material'?'material/'+matBlatt:ziel); } catch(e){}
     if(ziel==='foehn') foehnStarten();
     if(ziel==='schrauben') schrStarten();
     if(ziel==='anweisungen') anwStarten();
@@ -763,7 +703,14 @@ function reiterOeffnen(name){
   var b=document.querySelector('#reiter button[data-tab="'+name+'"]');
   if(b) b.click();
 }
-if(location.hash){ reiterOeffnen(location.hash.replace('#','')); }
+/* #material/pfaehle öffnet direkt das Blatt – so lässt sich ein Teil verlinken.
+   Der Wunsch landet auf window, weil var matBlatt weiter unten deklariert wird
+   und die Zuweisung dort sonst wieder auf 'uebersicht' zurückfiele. */
+if(location.hash){
+  var teile=location.hash.replace('#','').split('/');
+  if(teile[0]==='material' && teile[1]) window.matBlattStart=teile[1];
+  reiterOeffnen(teile[0]);
+}
 
 /* ══ Spracheingabe (Chrome/Edge; auf dem Handy am besten Chrome) ══ */
 (function(){
@@ -1224,92 +1171,6 @@ function ladeRegie(){
 }
 
 /* ══════════════════════════════════════════════════════════════
-   REITER 1 – Aufgabenliste (Gegenstueck: Tools\Aufgaben_Sync.py)
-   ══════════════════════════════════════════════════════════════ */
-var DBA=RTDB+'/aufgaben';
-var aufDaten={}, aufFilter='offen';
-
-function fristISO(f){ var t=/^(\d{2})\.(\d{2})\.(\d{4})$/.exec(f||''); return t?(t[3]+'-'+t[2]+'-'+t[1]):''; }
-
-function aufZeichnen(){
-  var such=($('aufSuche').value||'').toLowerCase();
-  var keys=Object.keys(aufDaten).filter(function(k){ return aufDaten[k] && aufDaten[k].titel; });
-  var offen=keys.filter(function(k){ return !aufDaten[k].erledigt; }).length;
-  $('aufZahl').textContent='· '+offen+' offen von '+keys.length;
-
-  keys=keys.filter(function(k){
-    var a=aufDaten[k];
-    if(aufFilter==='offen' && a.erledigt) return false;
-    if(aufFilter==='frist' && (!a.frist || a.erledigt)) return false;
-    if(such && ((a.titel||'')+' '+(a.text||'')).toLowerCase().indexOf(such)<0) return false;
-    return true;
-  });
-  keys.sort(function(x,y){
-    var a=aufDaten[x], b=aufDaten[y];
-    var fa=fristISO(a.frist), fb=fristISO(b.frist);
-    if(fa&&!fb) return -1; if(fb&&!fa) return 1;
-    if(fa&&fb&&fa!==fb) return fa<fb?-1:1;
-    return (a.nr||0)-(b.nr||0);
-  });
-
-  if(!keys.length){ $('aufListe').innerHTML='<li class="leer">nichts gefunden</li>'; return; }
-  var h='';
-  keys.forEach(function(k){
-    var a=aufDaten[k], f=fristISO(a.frist), spaet=f&&f<heuteISO();
-    h+='<li data-k="'+k+'"'+(a.erledigt?' class="fertig"':'')+'>'+
-       '<input type="checkbox"'+(a.erledigt?' checked':'')+'>'+
-       '<div class="tt"><b>'+esc(a.titel)+'</b>'+
-       (a.frist?'<span class="frist'+(spaet?' rot':'')+'">bis '+esc(a.frist)+'</span>':'')+
-       '<div class="mehr">'+esc(a.text||'').slice(0,900)+
-       (a.quelle?'<br><i>Quelle: '+esc(a.quelle)+'</i>':'')+'</div></div></li>';
-  });
-  $('aufListe').innerHTML=h;
-}
-
-function ladeAufgaben(){
-  fetch(DBA+'.json?_='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();})
-  .then(function(d){ aufDaten=d||{}; aufZeichnen(); })
-  .catch(function(){ $('aufListe').innerHTML='<li class="leer">⚠ Aufgaben nicht erreichbar</li>'; });
-}
-
-$('aufListe').addEventListener('click',function(ev){
-  var li=ev.target.closest('li[data-k]'); if(!li) return;
-  var k=li.getAttribute('data-k');
-  if(ev.target.type==='checkbox'){
-    var fertig=ev.target.checked;
-    aufDaten[k].erledigt=fertig;
-    li.classList.toggle('fertig',fertig);
-    fetch(DBA+'/'+k+'.json',{method:'PATCH',body:JSON.stringify(
-      {erledigt:fertig, erledigt_am:fertig?new Date().toLocaleDateString('de-CH'):''})})
-    .then(function(){ aufZeichnen(); })
-    .catch(function(){ alert('Konnte nicht gespeichert werden.'); ev.target.checked=!fertig; });
-  } else {
-    li.classList.toggle('offen_detail');
-  }
-});
-
-Array.prototype.forEach.call(document.querySelectorAll('.aufkopf .knopf[data-f]'),function(b){
-  b.onclick=function(){
-    aufFilter=b.getAttribute('data-f');
-    Array.prototype.forEach.call(document.querySelectorAll('.aufkopf .knopf[data-f]'),function(o){
-      o.classList.toggle('an',o===b); });
-    aufZeichnen();
-  };
-  if(b.getAttribute('data-f')==='offen') b.classList.add('an');
-});
-$('aufSuche').oninput=aufZeichnen;
-
-$('aufNeu').onclick=function(){
-  var t=($('aufNeuText').value||'').trim(); if(!t) return;
-  var k='web'+Date.now();
-  var obj={titel:t, text:'', quelle:'Web-Admin', frist:'', erledigt:false,
-           herkunft:'web', stand:new Date().toLocaleDateString('de-CH'), nr:9999};
-  fetch(DBA+'/'+k+'.json',{method:'PUT',body:JSON.stringify(obj)})
-  .then(function(){ $('aufNeuText').value=''; aufDaten[k]=obj; aufZeichnen(); })
-  .catch(function(){ alert('Konnte nicht gespeichert werden.'); });
-};
-
-/* ══════════════════════════════════════════════════════════════
    REITER 4 – FÖHN (laedt erst beim ersten Oeffnen)
    ══════════════════════════════════════════════════════════════ */
 var STATIONEN=[
@@ -1762,46 +1623,155 @@ function anwLoeschen(id){
    Register in Bestellungen\materialregister.json, neu gerechnet
    mit Tools\Material_Bilanz_Bauen.py (MATERIAL_BILANZ.bat).
    ══════════════════════════════════════════════════════════════ */
-var MAT=null, matGeladen=false, matGr='alle', matOffen={}, matEngAlle=false;
+var MAT=null, matGeladen=false, matOffen={}, matEngAlle={};
+var matBlatt=window.matBlattStart||'uebersicht';   /* siehe Hash-Auswertung oben */
 var MATSTUFE={ rot:'Kritisch – auch die offenen Bestellungen decken das nicht',
   orange:'Knapp – Lager reicht nicht, offene Bestellung würde decken',
   grau:'Bestand nicht erhoben', gruen:'Gedeckt' };
-
+var MATKACHEL={ rot:'kritisch', orange:'knapp', grau:'unbekannt', gruen:'gedeckt' };
 var MATBELEG={ fehlt:['f','kein Lieferschein'], unsigniert:['u','LS nicht unterschrieben'],
   pruefen:['','Beleg da, Mengen nicht ausgewertet'], sammel:['','Sammelposten ohne LS-Aufteilung'],
   avisiert:['','angekündigt, noch nicht da'] };
+var MATBEZUG={ bohren:'hängt am Bohrtermin', stahlbau:'hängt am Stahlbautermin',
+  keiner:'kein Termin im Bauprogramm – Bedarf von Hand gepflegt' };
 
 function matZahl(n,eh){ if(n===null||n===undefined) return '–';
   var s=(n<0?'−':'')+Math.abs(n).toLocaleString('de-CH'); return eh?s+' '+eh:s; }
 
+/* Alles, was zu einem Blatt gehört. 'uebersicht' = alles zusammen. */
+function matTeil(g){
+  var f=function(l){ return g==='uebersicht'?l:l.filter(function(x){ return x.gruppe===g; }); };
+  return { artikel:f(MAT.artikel), engpaesse:f(MAT.engpaesse),
+           luecken:f(MAT.belegluecken), fehl:f(MAT.fehlmengen) };
+}
+function matAmpelZahl(liste){
+  var z={rot:0,orange:0,grau:0,gruen:0};
+  liste.forEach(function(a){ z[a.ampel]++; });
+  return z;
+}
+
 function matStarten(){
   if(matGeladen) return; matGeladen=true;
   fetch('uploads/material.json',{cache:'no-store'}).then(function(r){ return r.json(); })
-    .then(function(j){ MAT=j; matZeichnen(); })
-    .catch(function(){ $('matStand').textContent='material.json konnte nicht geladen werden – '
-      +'einmal MATERIAL_BILANZ.bat laufen lassen.'; });
+    .then(function(j){ MAT=j; matNavZeichnen(); matZeichnen(); })
+    .catch(function(){ $('matInhalt').innerHTML='<div class="card"><div class="sub">'
+      +'material.json konnte nicht geladen werden – einmal MATERIAL_BILANZ.bat laufen lassen.'
+      +'</div></div>'; });
 }
 
+/* ── Unter-Navigation ──────────────────────────────────────── */
+function matNavZeichnen(){
+  var blaetter=[{id:'uebersicht',name:'Übersicht'}].concat(MAT.gruppen);
+  $('matNav').innerHTML=blaetter.map(function(b){
+    var z=matAmpelZahl(matTeil(b.id).artikel);
+    var m=z.rot?'<i>'+z.rot+'</i>':(z.orange?'<i class="o">'+z.orange+'</i>'
+        :(z.grau?'<i class="g">'+z.grau+'</i>':''));
+    return '<button data-mb="'+b.id+'"'+(matBlatt===b.id?' class="on"':'')+'>'
+      +esc(b.name.split(' (')[0].split(' / ')[0])+m+'</button>';
+  }).join('');
+  Array.prototype.forEach.call($('matNav').querySelectorAll('button'),function(b){
+    b.onclick=function(){
+      matBlatt=b.getAttribute('data-mb'); matNavZeichnen(); matZeichnen();
+      window.scrollTo(0,0);
+      try { location.hash='material/'+matBlatt; } catch(e){}
+    };
+  });
+  $('zMat').textContent=matAmpelZahl(MAT.artikel).rot;
+}
+
+/* ── Blatt zeichnen ────────────────────────────────────────── */
 function matZeichnen(){
   if(!MAT) return;
+  var t=matTeil(matBlatt), h='';
+  var g=null;
+  MAT.gruppen.forEach(function(x){ if(x.id===matBlatt) g=x; });
+
+  /* Kopf */
   var s=MAT.stand;
-  $('matStand').innerHTML='Bohrstand '+deDat(s.bohr)+' · Baustand '+deDat(s.bau)
-    +' · Typen '+deDat(s.typen)+' · Bauprogramm '+esc(s.bauprogramm)
-    +' · Register '+deDat(s.register);
+  h+='<div class="card"><h2>'+(g?esc(g.name):'Materialbilanz – wo läuft uns was aus?')+'</h2>'
+    +'<div class="matKopf">'
+    +(g?'Lieferant '+esc(g.lieferant)+' · '+esc(MATBEZUG[g.bezug]||'')+'<br>':'')
+    +'Bohrstand '+deDat(s.bohr)+' · Baustand '+deDat(s.bau)+' · Typen '+deDat(s.typen)
+    +' · Bauprogramm '+esc(s.bauprogramm)+' · Register '+deDat(s.register)+'</div>';
+  var z=matAmpelZahl(t.artikel);
+  h+='<div class="matKacheln">'+['rot','orange','grau','gruen'].map(function(k){
+      return '<div class="matKachel a-'+k+'"><div class="n">'+z[k]+'</div>'
+        +'<div class="t">'+MATKACHEL[k]+'</div></div>'; }).join('')+'</div>';
+  h+='<div class="legende"><b>Verbaut</b> = aus dem Nalpi-Stand gerechnet (Pfähle im Boden bzw. '
+    +'Tische mit montierter Primärkonstruktion), nicht gezählt. <b>Lager</b> = Zählung wenn '
+    +'vorhanden, sonst geliefert&nbsp;&minus;&nbsp;verbaut. <b>Bedarf</b> = alles, was das '
+    +'Bauprogramm vom '+esc(s.bauprogramm)+' noch für 2026 vorsieht.'
+    +'<div style="margin-top:6px">'
+    +'<span class="ap a-rot"></span>reicht auch mit den offenen Bestellungen nicht'
+    +'<span class="ap a-orange"></span>Lager reicht nicht, offene Bestellung würde decken'
+    +'<span class="ap a-gruen"></span>gedeckt'
+    +'<span class="ap a-grau"></span>Bestand nicht erhoben</div></div></div>';
 
-  /* Kacheln */
-  var z={rot:0,orange:0,gruen:0,grau:0};
-  MAT.artikel.forEach(function(a){ z[a.ampel]++; });
-  $('zMat').textContent=z.rot;
-  $('matKacheln').innerHTML=
-    ['rot','orange','grau','gruen'].map(function(k){
-      var t={rot:'kritisch',orange:'knapp',grau:'unbekannt',gruen:'gedeckt'}[k];
-      return '<div class="matKachel a-'+k+'"><div class="n">'+z[k]+'</div><div class="t">'+t+'</div></div>';
-    }).join('');
+  /* Übersicht: Wegweiser je Teil */
+  if(!g){
+    h+='<div class="card"><h2>Die fünf Teile auf einen Blick</h2>'
+      +'<div class="sub">Antippen öffnet das Blatt mit Bilanz, Lieferscheinen und Quellen.</div>'
+      +'<table class="mat"><tr><th>Teil</th><th>Artikel</th><th>kritisch</th><th>knapp</th>'
+      +'<th>nächster Engpass</th></tr>';
+    MAT.gruppen.forEach(function(x){
+      var tt=matTeil(x.id), zz=matAmpelZahl(tt.artikel), e=tt.engpaesse[0];
+      h+='<tr data-mb2="'+esc(x.id)+'"><td><b>'+esc(x.name)+'</b><br>'
+        +'<small style="color:var(--mut);font-weight:400">'+esc(x.lieferant)+'</small></td>'
+        +'<td>'+tt.artikel.length+'</td>'
+        +'<td style="color:'+(zz.rot?'var(--rot)':'var(--mut)')+';font-weight:900">'+zz.rot+'</td>'
+        +'<td style="color:'+(zz.orange?'var(--orange)':'var(--mut)')+';font-weight:900">'
+        +zz.orange+'</td>'
+        +'<td>'+(e?(e.vergangen?'<b style="color:var(--rot)">JETZT</b>':deDat(e.datum))
+                  +'<br><small style="color:var(--mut)">'+esc(e.bereich)+'</small>':'–')+'</td></tr>';
+    });
+    h+='</table></div>';
+  }
 
-  /* Zeitachse – die ersten 12 offen, der Rest auf Knopfdruck */
-  var e=MAT.engpaesse;
-  function engBlock(x){
+  /* Zeitachse */
+  h+='<div class="card"><h2>Zeitachse – was zuerst weh tut</h2>'
+    +'<div class="sub">Bereiche in der Reihenfolge des Bauprogramms, kumulierter Bedarf gegen das '
+    +'Lager gerechnet. Genannt ist der <b>erste Bereich, bei dem der Bestand nicht mehr reicht</b>.'
+    +'</div><div id="matEngpass"></div></div>';
+
+  /* Bilanz */
+  h+='<div class="card"><h2>Bilanz je Artikel</h2>'
+    +'<div class="sub">Zeile antippen &rarr; Bestellungen, Lieferscheine und Quellen.</div>'
+    +'<table class="mat" id="matTab"></table></div>';
+
+  /* Belege */
+  h+='<div class="card"><h2>Lieferscheine, die fehlen</h2>'
+    +'<div class="sub">Alles, was als geliefert verbucht ist, aber keinen sauberen Beleg hat – '
+    +'plus was angekündigt, aber noch nicht eingetroffen ist.</div>'
+    +(t.luecken.length?t.luecken.map(function(l){
+        var w=MATBELEG[l.art]||['',l.art];
+        return '<div class="matLuecke"><span class="w '+w[0]+'">'+esc(w[1])+'</span>'
+          +deDat(l.datum)+' · <b>'+esc(l.name)+'</b> · '+matZahl(l.menge)+' · '+esc(l.ls)
+          +'<br><span style="color:var(--mut)">'+esc(l.quelle)+'</span></div>';
+      }).join(''):'<div class="sub">Keine.</div>')+'</div>';
+
+  if(t.fehl.length || !g){
+    h+='<div class="card"><h2>Fehlmengen aus Teillieferungen</h2>'
+      +'<div class="sub">Geliefert wurde weniger als bestellt, ohne dass es je nachkam.</div>'
+      +(t.fehl.length?t.fehl.map(function(f){
+          return '<div class="matLuecke"><span class="w f">'+matZahl(-f.menge)+'</span>'
+            +'<b>'+esc(f.bezeichnung)+'</b> · Stand '+deDat(f.stand)
+            +'<br><span style="color:var(--mut)">'+esc(f.quelle)+'</span></div>';
+        }).join(''):'<div class="sub">Keine.</div>')+'</div>';
+  }
+
+  $('matInhalt').innerHTML=h;
+  Array.prototype.forEach.call(document.querySelectorAll('tr[data-mb2]'),function(tr){
+    tr.style.cursor='pointer';
+    tr.onclick=function(){
+      matBlatt=tr.getAttribute('data-mb2'); matNavZeichnen(); matZeichnen(); window.scrollTo(0,0);
+    };
+  });
+  matEngZeichnen(t.engpaesse);
+  matTabelle(t.artikel, !g);
+}
+
+function matEngZeichnen(e){
+  function block(x){
     return '<div class="matEng'+(x.ampel==='orange'?' o':'')+'">'
       +'<span class="wann">'+(x.vergangen?'JETZT':deDat(x.datum))+'</span> · '+esc(x.bereich)
       +' &ndash; <b>'+esc(x.name)+'</b>: es fehlen <b>'+matZahl(x.fehlt,x.einheit)+'</b>'
@@ -1811,47 +1781,17 @@ function matZeichnen(){
       +(x.gedeckt?' Offene Bestellung würde reichen – Lieferung einfordern.'
                  :' Auch die offenen Bestellungen decken das nicht.')+'</span></div>';
   }
-  if(!e.length){ $('matEngpass').innerHTML='<div class="sub">Kein Bereich räumt das Lager leer.</div>'; }
-  else {
-    var m=matEngAlle?e.length:Math.min(12,e.length);
-    $('matEngpass').innerHTML=e.slice(0,m).map(engBlock).join('')
-      +(e.length>12?'<button class="btn ghost" id="matMehr" style="margin-top:6px">'
-         +(matEngAlle?'weniger zeigen':'+ '+(e.length-12)+' weitere bis Ende 2026')+'</button>':'');
-    if($('matMehr')) $('matMehr').onclick=function(){ matEngAlle=!matEngAlle; matZeichnen(); };
-  }
-
-  /* Filter-Chips */
-  var gr=[{id:'alle',name:'Alle'}].concat(MAT.gruppen);
-  $('matFilter').innerHTML=gr.map(function(g){
-    var n=g.id==='alle'?MAT.artikel.length:MAT.artikel.filter(function(a){ return a.gruppe===g.id; }).length;
-    var r=MAT.artikel.filter(function(a){ return (g.id==='alle'||a.gruppe===g.id) && a.ampel==='rot'; }).length;
-    return '<button data-mg="'+g.id+'"'+(matGr===g.id?' class="on"':'')+'>'+esc(g.name)
-      +' <small>'+n+(r?' · '+r+' rot':'')+'</small></button>';
-  }).join('');
-  Array.prototype.forEach.call($('matFilter').querySelectorAll('button'),function(b){
-    b.onclick=function(){ matGr=b.getAttribute('data-mg'); matZeichnen(); };
-  });
-
-  matTabelle();
-
-  /* Beleglücken */
-  $('matLuecken').innerHTML = MAT.belegluecken.length ? MAT.belegluecken.map(function(l){
-    var w=MATBELEG[l.art]||['',l.art];
-    return '<div class="matLuecke"><span class="w '+w[0]+'">'+esc(w[1])+'</span>'
-      +deDat(l.datum)+' · <b>'+esc(l.name)+'</b> · '+matZahl(l.menge)
-      +' · '+esc(l.ls)+'<br><span style="color:var(--mut)">'+esc(l.quelle)+'</span></div>';
-  }).join('') : '<div class="sub">Keine.</div>';
-
-  /* Fehlmengen */
-  $('matFehl').innerHTML = MAT.fehlmengen.length ? MAT.fehlmengen.map(function(f){
-    return '<div class="matLuecke"><span class="w f">'+matZahl(-f.menge)+'</span>'
-      +'<b>'+esc(f.bezeichnung)+'</b> · Stand '+deDat(f.stand)
-      +'<br><span style="color:var(--mut)">'+esc(f.quelle)+'</span></div>';
-  }).join('') : '<div class="sub">Keine.</div>';
+  if(!e.length){ $('matEngpass').innerHTML='<div class="sub">Kein Bereich räumt das Lager leer.</div>';
+    return; }
+  var alle=!!matEngAlle[matBlatt], m=alle?e.length:Math.min(12,e.length);
+  $('matEngpass').innerHTML=e.slice(0,m).map(block).join('')
+    +(e.length>12?'<button class="btn ghost" id="matMehr" style="margin-top:6px">'
+       +(alle?'weniger zeigen':'+ '+(e.length-12)+' weitere bis Ende 2026')+'</button>':'');
+  if($('matMehr')) $('matMehr').onclick=function(){
+    matEngAlle[matBlatt]=!alle; matEngZeichnen(e); };
 }
 
-function matTabelle(){
-  var liste=MAT.artikel.filter(function(a){ return matGr==='alle'||a.gruppe===matGr; });
+function matTabelle(liste, mitGruppe){
   var namen={}; MAT.gruppen.forEach(function(g){ namen[g.id]=g.name+' · '+g.lieferant; });
   var h='<tr><th>Artikel</th><th>verbaut</th><th>gelief.</th><th>Lager</th>'
        +'<th>best. offen</th><th>Bedarf 26</th><th>Bilanz</th></tr>', letzte='';
@@ -1863,8 +1803,8 @@ function matTabelle(){
     }
     var bil=a.bilanz_mit_bestellung;
     h+='<tr data-ma="'+esc(a.id)+'">'
-      +'<td>'+esc(a.name)+'<br><small style="color:var(--mut);font-weight:400">'
-      +esc(namen[a.gruppe]||a.gruppe)+'</small></td>'
+      +'<td>'+esc(a.name)+(mitGruppe?'<br><small style="color:var(--mut);font-weight:400">'
+            +esc(namen[a.gruppe]||a.gruppe)+'</small>':'')+'</td>'
       +'<td>'+matZahl(a.verbaut)+(a.verbaut_max&&a.verbaut_max!==a.verbaut
             ?'<span style="color:var(--mut)">…'+matZahl(a.verbaut_max)+'</span>':'')+'</td>'
       /* keine Liefer-Zeile im Register = nichts erfasst, nicht "null geliefert" */
@@ -1880,7 +1820,8 @@ function matTabelle(){
   $('matTab').innerHTML=h;
   Array.prototype.forEach.call($('matTab').querySelectorAll('tr[data-ma]'),function(tr){
     tr.querySelector('td').onclick=function(){
-      var id=tr.getAttribute('data-ma'); matOffen[id]=!matOffen[id]; matTabelle();
+      var id=tr.getAttribute('data-ma'); matOffen[id]=!matOffen[id];
+      matTabelle(liste, mitGruppe);
     };
   });
 }
@@ -1921,7 +1862,6 @@ function matDetail(a){
 
 /* ══ Start ══════════════════════════════════════════════════ */
 matStarten();
-ladeAufgaben();   setInterval(ladeAufgaben,3*60*1000);
 ladeStoerungen(); ladeStundenjournal();
 ladeRegie();      setInterval(ladeRegie,2*60*1000);
 </script>
