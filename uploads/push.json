@@ -1,0 +1,5 @@
+{
+  "vapid": "BLdPUn77HF__3H7DcZHJ2qafhPhSeZWKMlw4EPt6-jX4TzYmtdhoLMBV0zVcX18Ujn6mR0aHta0iOkdHgZaVJbc",
+  "zweck": "Web-Push-Anmeldung der Baustellen-Website (Normteil-Engpass im Tal)",
+  "hinweis": "Nur der oeffentliche Schluessel. Versand: Tools\\Push_Senden.py"
+}

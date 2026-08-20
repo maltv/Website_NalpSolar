@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v140';
+var CACHE = 'nalpsolar-v141';
 var PRECACHE = [
   './index.html',
   './protokoll.html',
@@ -34,6 +34,10 @@ var PRECACHE = [
   './assets/js/nalp-terrain.js',
   './passstueck.html',
   './assets/js/nalp-passstueck-daten.js',
+  // Laufende Normteil-Inventur im Tal - muss offline laufen
+  './assets/js/nalp-lager.js',
+  './uploads/material.json',
+  './uploads/push.json',
   './assets/js/nalp-passstueck-abz.js',
   './stellen.html',
   './erfassungen.html',
@@ -170,3 +174,40 @@ self.addEventListener('fetch', function(e) {
   );
 });
 
+
+/* ─────────── Meldung aufs Handy (Web Push) ───────────
+   Der Push selbst traegt keinen Text - er weckt nur den Service Worker.
+   Was gemeldet wird, steht in der Datenbank unter erfassung/nt_warnung und
+   wird von Tools\Normteile_Wache.py geschrieben. So entsteht der Meldetext
+   an genau einer Stelle. */
+var NALP_DB = 'https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app';
+
+self.addEventListener('push', function(e) {
+  e.waitUntil(
+    fetch(NALP_DB + '/erfassung/nt_warnung.json', { cache: 'no-store' })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .catch(function() { return null; })
+      .then(function(w) {
+        var titel = (w && w.titel) || 'NalpSolar';
+        var text = (w && w.text) || 'Neue Meldung von der Baustelle.';
+        return self.registration.showNotification(titel, {
+          body: text,
+          icon: './assets/img/strabag-logo.png',
+          tag: (w && w.thema) || 'nalp',
+          renotify: true,
+          data: { url: (w && w.url) || './vormontage.html#lager' }
+        });
+      })
+  );
+});
+
+self.addEventListener('notificationclick', function(e) {
+  e.notification.close();
+  var ziel = (e.notification.data && e.notification.data.url) || './vormontage.html#lager';
+  e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(li) {
+    for (var i = 0; i < li.length; i++) {
+      if (li[i].url.indexOf('vormontage') > -1 && 'focus' in li[i]) return li[i].focus();
+    }
+    return clients.openWindow(ziel);
+  }));
+});

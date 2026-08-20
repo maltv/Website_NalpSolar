@@ -34,10 +34,13 @@
   .lang button:last-child{ border-right:none; }
   .lang button.on{ background:var(--rot); color:#fff; }
 
-  .tabs{ display:flex; background:#fff; border-bottom:1px solid var(--line); position:sticky; top:52px; z-index:9; }
-  .tabs button{ flex:1; border:none; background:none; padding:12px 3px; font-size:12.5px; font-weight:800;
-        white-space:nowrap;
+  /* sechs Reiter passen nicht nebeneinander auf ein Handy -> zwei Zeilen zu dritt */
+  .tabs{ display:flex; flex-wrap:wrap; background:#fff; border-bottom:1px solid var(--line);
+        position:sticky; top:52px; z-index:9; }
+  .tabs button{ flex:1 1 33.33%; max-width:33.34%; border:none; background:none;
+        padding:11px 2px; font-size:12px; font-weight:800; white-space:nowrap;
         color:var(--mut); cursor:pointer; border-bottom:3px solid transparent; }
+  @media(min-width:620px){ .tabs button{ flex:1 1 auto; max-width:none; } }
   .tabs button.on{ color:var(--rot); border-bottom-color:var(--rot); }
 
   main{ max-width:720px; margin:0 auto; padding:12px 12px 80px; }
@@ -224,6 +227,7 @@
   <button id="t3" onclick="tab(3)"><span data-i18n="tab_tabellen">📋 Tabellen</span></button>
   <button id="t4" onclick="tab(4)"><span data-i18n="tab_auftrag">🗺 Karten</span></button>
   <button id="t5" onclick="tab(5)"><span data-i18n="tab_anweisung">📋 Anweisungen</span></button>
+  <button id="t6" onclick="tab(6)"><span data-i18n="tab_lager">📦 Lager</span></button>
 </div>
 
 <main>
@@ -290,6 +294,9 @@
         <label class="fl" data-i18n="lbl_profil">Profil (optional)</label>
         <input id="f_profil" data-i18n-ph="ph_profil" placeholder="z.B. RRK 180x6.0">
       </details>
+
+      <!-- Nur beim Hochtransport: was geht mit? (nalp-lager.js) -->
+      <div id="mitBox" style="display:none"></div>
 
       <label class="fl" data-i18n="lbl_bem">Bemerkung (optional)</label>
       <textarea id="f_bem" data-i18n-ph="ph_bem" placeholder="z.B. Etikett unleserlich, Kratzer …"></textarea>
@@ -382,6 +389,7 @@
         <span><i class="fl b"></i><span data-i18n="leg_berg">auf dem Berg</span></span>
       </div>
       <div class="kLeg" style="margin-top:5px">
+        <span data-i18n="leg_eng" style="display:block;margin-bottom:4px;color:#D72622;font-weight:700">⚠️ rot gestrichelt = Normteil fehlt, Tisch nicht vormontierbar</span>
         <span data-i18n="leg_typ">Typ hinter der ID – Farbe wie die Normteile:</span>
         <span><i class="tk A">A</i></span><span><i class="tk B">B</i></span><span><i class="tk C">C</i></span>
         <span><i class="tk D">D</i></span><span><i class="tk E">E</i></span>
@@ -402,6 +410,15 @@
     <div id="anwListe"></div>
   </section>
 
+  <!-- Laufende Normteil-Inventur im Tal - Logik in assets/js/nalp-lager.js -->
+  <section id="s6" style="display:none">
+    <div class="box" style="border-left-color:var(--gruen)">
+      <h2 data-i18n="lager_titel">📦 Lager Tal</h2>
+      <div class="sub" data-i18n="lager_sub">Was liegt noch da? Gezähltes und Lieferungen hier
+        eintragen – was vormontiert wird, zieht sich selber ab.</div>
+    </div>
+    <div id="lagerBox"></div>
+  </section>
 </main>
 
 <div id="ev"><div class="dlg">
@@ -436,12 +453,25 @@
 <script src="assets/js/leaflet/leaflet.js"></script>
 <script src="assets/js/nalp-passstueck-daten.js"></script>
 <script src="assets/js/nalp-anweisungen.js"></script>
+<script src="assets/js/nalp-lager.js"></script>
+<script>
+/* Service Worker auch hier registrieren: die Equipe kommt per QR direkt auf
+   diese Seite, nicht ueber das Portal - ohne Registrierung gibt es weder
+   Offline-Betrieb noch Meldungen aufs Handy. */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  });
+}
+</script>
 <script>
 'use strict';
 /* ══════════ Sprachen DE / EN / PL ══════════
    Übersetzungen erstellt und gegengeprüft (Bau-Fachsprache, Handy-tauglich). */
 var I18N={
  de:{
+  tab_lager:'📦 Lager', lager_titel:'📦 Lager Tal',
+  lager_sub:'Was liegt noch da? Gezähltes und Lieferungen hier eintragen – was vormontiert wird, zieht sich selber ab.',
   tab_anweisung:'📋 Anweisungen', anw_titel:'📋 Arbeitsanweisungen',
   anw_sub:'Was an einzelnen Konstruktionen zusätzlich zu tun ist – und was ihr zurückmeldet: erledigt, geht nicht oder eine Frage.',
   anw_kein_netz:'Kein Netz – einmal mit Empfang öffnen.',
@@ -454,6 +484,7 @@ var I18N={
   k_sub:'Je Bohrpunkt: Passstück erfasst? Je Tischfläche: vormontiert oder schon auf dem Berg?',
   leg_ps:'Passstück erfasst', leg_ps_offen:'Passstück fehlt',
   leg_offen:'offen', leg_vormontiert:'vormontiert', leg_berg:'auf dem Berg',
+  eng_karte:'Es fehlt im Tal', leg_eng:'⚠️ rot gestrichelt = Normteil fehlt, Tisch nicht vormontierbar',
   leg_typ:'Typ hinter der ID – Farbe wie die Normteile:',
   typ_abw:'Auf dem Etikett steht Typ {e} – laut Planung ist es ein anderer Typ. Prüfen.',
   karte_stand:'{e}/{g} Passstücke · {v} vormontiert · {b} auf dem Berg',
@@ -528,6 +559,8 @@ var I18N={
   offline_hinweis:'Offline – zeigt nur Einträge von diesem Handy'
  },
  en:{
+  tab_lager:'📦 Store', lager_titel:'📦 Valley store',
+  lager_sub:'What is still there? Enter counts and deliveries here – pre-assembly deducts itself.',
   tab_anweisung:'📋 Instructions', anw_titel:'📋 Work instructions',
   anw_sub:'What has to be done in addition on single structures – and what you report back: done, not possible or a question.',
   anw_kein_netz:'No connection – open once with reception.',
@@ -540,6 +573,7 @@ var I18N={
   k_sub:'Per drill point: fitting piece saved? Per table area: pre-assembled or already on the mountain?',
   leg_ps:'fitting piece saved', leg_ps_offen:'fitting piece missing',
   leg_offen:'open', leg_vormontiert:'pre-assembled', leg_berg:'sent up the mountain',
+  eng_karte:'Missing in the valley', leg_eng:'⚠️ dashed red = standard part missing, table cannot be pre-assembled',
   leg_typ:'Type after the ID – same colours as the standard parts:',
   typ_abw:'The label says type {e} – the plan says a different type. Please check.',
   karte_stand:'{e}/{g} fitting pieces · {v} pre-assembled · {b} on the mountain',
@@ -614,6 +648,8 @@ var I18N={
   offline_hinweis:'Offline – only entries from this phone'
  },
  pl:{
+  tab_lager:'📦 Magazyn', lager_titel:'📦 Magazyn w dolinie',
+  lager_sub:'Co jeszcze leży? Wpisz tu liczenia i dostawy – montaż wstępny odlicza się sam.',
   tab_anweisung:'📋 Instrukcje', anw_titel:'📋 Instrukcje robocze',
   anw_sub:'Co dodatkowo trzeba zrobić przy poszczególnych konstrukcjach – i co zgłaszacie: zrobione, nie da się albo pytanie.',
   anw_kein_netz:'Brak zasięgu – otwórz raz z zasięgiem.',
@@ -626,6 +662,7 @@ var I18N={
   k_sub:'Każdy punkt: podpora zapisana? Powierzchnia stołu: zmontowany czy już na górze?',
   leg_ps:'podpora zapisana', leg_ps_offen:'brak podpory',
   leg_offen:'otwarte', leg_vormontiert:'wstępnie zmontowane', leg_berg:'wysłane w góry',
+  eng_karte:'Brakuje w dolinie', leg_eng:'⚠️ czerwona przerywana = brak części, stołu nie można zmontować',
   leg_typ:'Typ za numerem ID – kolory jak na elementach standardowych:',
   typ_abw:'Na etykiecie jest typ {e} – według planu to inny typ. Sprawdź.',
   karte_stand:'Podpory: {e}/{g} · zmontowane: {v} · na górze: {b}',
@@ -727,6 +764,7 @@ function setLang(l){
   });
   if(window.NALP_GATE_SUB!==undefined){ /* Gate bleibt mehrsprachig */ }
   if(window.NalpAnw) NalpAnw.sprache(l);
+  if(window.NalpLager) NalpLager.sprache(l);
   renderTab(); netzMalen();
 }
 
@@ -750,7 +788,7 @@ function setVon(v){ try{ localStorage.setItem(LS_VON,v||''); }catch(e){} }
 function klapp(id){ $(id).classList.toggle('zu'); }
 
 function tab(n){
-  [1,2,3,4,5].forEach(function(i){
+  [1,2,3,4,5,6].forEach(function(i){
     $('s'+i).style.display = i===n?'':'none';
     $('t'+i).classList.toggle('on', i===n);
   });
@@ -758,12 +796,13 @@ function tab(n){
   if(n===3) laden(false);
   if(n===4) kartenLaden(false);
   if(n===5) anwMalen();
-  try{ history.replaceState(null,'', n===1?location.pathname:('#'+['','stuetze','fortschritt','tabellen','karten','anweisungen'][n])); }catch(e){}
+  if(n===6) lagerMalen();
+  try{ history.replaceState(null,'', n===1?location.pathname:('#'+['','stuetze','fortschritt','tabellen','karten','anweisungen','lager'][n])); }catch(e){}
 }
 /* Direktlink, z.B. vormontage.html#anweisungen */
 (function(){
   var h=(location.hash||'').replace('#','');
-  var n={stuetze:1,fortschritt:2,tabellen:3,karten:4,anweisungen:5}[h];
+  var n={stuetze:1,fortschritt:2,tabellen:3,karten:4,anweisungen:5,lager:6}[h];
   if(n) window.addEventListener('load', function(){ tab(n); });
 })();
 
@@ -780,6 +819,14 @@ function anwMalen(){
     return;
   }
   NalpAnw.liste('anwListe');
+}
+/* Reiter «Lager» - laufende Normteil-Inventur, Logik in assets/js/nalp-lager.js */
+function lagerMalen(){
+  var ziel=$('lagerBox');
+  if(!window.NalpLager){ ziel.innerHTML='<div class="box">nalp-lager.js fehlt.</div>'; return; }
+  NalpLager.sprache(lang);
+  if(!ziel.getAttribute('data-auf')){ ziel.setAttribute('data-auf','1'); NalpLager.start(ziel); }
+  else NalpLager.neuLaden();
 }
 /* Seite weg (Anruf, App-Wechsel, Bildschirm aus) -> Kamera freigeben, sonst
    laeuft sie weiter und frisst Akku. */
@@ -1296,10 +1343,24 @@ function speichernStuetze(){
 
 function setArt(a){
   art=(art===a)?null:a;
+  mitZeigen();
   $('artV').style.background = art==='vormontiert'?'var(--blau)':'#fff';
   $('artV').style.color = art==='vormontiert'?'#fff':'var(--ink)';
   $('artB').style.background = art==='berg'?'var(--gruen)':'#fff';
   $('artB').style.color = art==='berg'?'#fff':'var(--ink)';
+}
+/* Beim Melden «auf den Berg» erscheint die Liste der Teile, die mitgehen.
+   Nur was dort steht, wird vom Lager abgezogen (Entscheid Victor 20.08.2026). */
+function mitZeigen(){
+  var box=$('mitBox');
+  if(art==='berg' && window.NalpLager){
+    box.style.display='';
+    NalpLager.sprache(lang);
+    NalpLager.mitFormular(box);
+  } else {
+    box.style.display='none'; box.innerHTML='';
+    if(window.NalpLager) NalpLager.mitLeeren();
+  }
 }
 function speichernFortschritt(){
   var ids=$('p_id').value.split(/[,;\s]+/).map(function(x){return x.trim();}).filter(Boolean);
@@ -1318,6 +1379,7 @@ function speichernFortschritt(){
   }
   Promise.all(recs.map(function(r){ return apiPost(P_FO,r); })).then(function(keys){
     if(keys.some(function(k){ return !k; })) throw 0;
+    if(art==='berg' && window.NalpLager) NalpLager.mitSpeichern(ids, von).then(function(){ mitZeigen(); });
     fertig(); toast(T('ok_ids',{n:ids.length})); laden(false);
   }).catch(function(){
     recs.forEach(function(r){ pendAdd(P_FO,r); }); fertig(); toast(T('err_kein_empfang'),true);
@@ -1748,8 +1810,32 @@ function kHinweis(lbl){
   if(!h) return null;
   return { ids:h.ids||[], txt:h[lang]||h.de };
 }
+/* ---------- Engpaesse aus dem Lager (nalp-lager.js) ----------
+   Ein Tisch laesst sich nicht vormontieren, wenn eines seiner Normteile
+   ausgegangen ist. Solche Tische werden auf der Karte rot gestrichelt und
+   im Label mit ausgerufen, damit die Equipe gar nicht erst hinlaeuft. */
+var ENG={};                              // 'B|2026' -> [Teilname, ...]
+function engpassLaden(fertig){
+  if(!window.NalpLager){ fertig(); return; }
+  NalpLager.laden().then(function(){
+    ENG={};
+    NalpLager.engpaesse().forEach(function(e){
+      var a=e.artikel, k=a.typ+'|'+(a.serie||'*');
+      (ENG[k]=ENG[k]||[]).push(a.name+' ('+e.bestand+')');
+    });
+    fertig();
+  }).catch(fertig);
+}
+function engFuer(tid){                   // Liste der fehlenden Teile fuer diesen Tisch
+  var voll=typVoll(tid), t=typBase(tid);
+  if(!t) return null;
+  var serie=(String(voll).split('_')[1]||'');
+  var li=(ENG[t+'|'+serie]||[]).concat(ENG[t+'|*']||[]);
+  return li.length?li:null;
+}
 function kartenLaden(manuell){
   kartenMalen();                         // Karten sofort bauen - Status kommt nach
+  engpassLaden(function(){ kartenMalen(); engMalen(); });
   laden(manuell);                        // frische Daten -> renderTab -> kartenMalen
   if(manuell) toast(T('ok_aktualisiert'));
 }
@@ -1884,15 +1970,18 @@ function kMapBauen(wrap,lbl){
     var srt=pk.slice().sort(function(a,b){
       return Math.atan2(a.N-mN,a.E-mE)-Math.atan2(b.N-mN,b.E-mE); });
     var mrk=hw && hw.ids.indexOf(String(tid))>=0;      // im Hinweis genannt
+    var eng=engFuer(tid);                              // Normteil fehlt
     var poly=L.polygon(srt.map(function(p){ return [p.N,p.E]; }),
-      mrk ? { color:'#1565c0', weight:2.6, opacity:1, dashArray:'6 4', fillColor:'#c9ccd2', fillOpacity:.38 }
-          : { color:'#fff', weight:1.2, opacity:.9, fillColor:'#c9ccd2', fillOpacity:.38 }).addTo(m);
+      eng ? { color:'#D72622', weight:2.6, opacity:1, dashArray:'3 3', fillColor:'#c9ccd2', fillOpacity:.38 }
+      : mrk ? { color:'#1565c0', weight:2.6, opacity:1, dashArray:'6 4', fillColor:'#c9ccd2', fillOpacity:.38 }
+            : { color:'#fff', weight:1.2, opacity:.9, fillColor:'#c9ccd2', fillOpacity:.38 }).addTo(m);
+    if(eng) poly.bindPopup('<b>'+tid+'</b><br>'+T('eng_karte')+':<br>'+eng.join('<br>'));
     flaechen[tid]=poly;
     // Beschriftung fest auf den Tisch-Mittelpunkt (nicht an das Polygon gebunden).
     // "622-B": Typ immer dran, unabhaengig davon, ob die Passstuecke schon
     // erfasst sind - der Typ hilft beim Suchen, der Stand steht in der Farbe.
     L.tooltip({permanent:true, direction:'center', className:'kLbl', opacity:1})
-      .setLatLng([mN,mE]).setContent(String(tid)+'-'+typChip(tid)+(mrk?' ⏳':'')).addTo(m);
+      .setLatLng([mN,mE]).setContent(String(tid)+'-'+typChip(tid)+(mrk?' ⏳':'')+(eng?' ⚠️':'')).addTo(m);
     pk.forEach(function(p){
       punkte[p.key]=L.circleMarker([p.N,p.E],
         { radius:3.2, weight:1.1, color:'#fff', opacity:.95, fillColor:'#e4e7eb', fillOpacity:1 }).addTo(m);
@@ -1924,6 +2013,19 @@ function kStatusMalen(){
     });
     var el=$('kz_'+lbl.replace('+','_'));
     if(el) el.textContent=T('karte_stand',{e:e,g:M.nGesamt,v:nv,b:nb});
+  });
+  engMalen();
+}
+/* Tische, denen im Tal ein Normteil fehlt, rot stricheln */
+function engMalen(){
+  Object.keys(kMaps).forEach(function(lbl){
+    var M=kMaps[lbl];
+    Object.keys(M.flaechen).forEach(function(tid){
+      var e=engFuer(tid);
+      if(!e) return;
+      M.flaechen[tid].setStyle({ color:'#D72622', weight:2.6, opacity:1, dashArray:'3 3' });
+      M.flaechen[tid].bindPopup('<b>'+tid+'</b><br>'+T('eng_karte')+':<br>'+e.join('<br>'));
+    });
   });
 }
 
