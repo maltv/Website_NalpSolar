@@ -47,22 +47,58 @@ var TEILE=[
   hde:'talseitig bei S1', hen:'valley side at S1', hpl:'od doliny przy S1'},
  {id:'kt4', jeTisch:1, wann:'vormontage', de:'Knieträger S-4', en:'Knee beam S-4', pl:'Wspornik S-4',
   hde:'talseitig bei S4', hen:'valley side at S4', hpl:'od doliny przy S4'},
- {id:'nsb', jeTisch:2, wann:'vormontage', de:'Normstütze Berg', en:'Standard post mountain', pl:'Podpora górska',
-  hde:'2 Stück je Tisch', hen:'2 per table', hpl:'2 sztuki na stół'},
- {id:'qt',  jeTisch:1, wann:'berg', de:'Quertraverse', en:'Cross beam', pl:'Trawersa poprzeczna',
-  hde:'geht erst mit auf den Berg', hen:'leaves only with the transport up', hpl:'idzie dopiero na górę'},
- {id:'nst', jeTisch:0, wann:'rueck', de:'Normstütze Tal', en:'Standard post valley', pl:'Podpora dolinowa',
-  hde:'geht zurück nach Sursee', hen:'goes back to Sursee', pl_h:'', hpl:'wraca do Sursee'}
+ {id:'nsb', jeTisch:2, wann:'vormontage', de:'Normstütze Berg', en:'Standard post mountain', pl:'Podpora górska'},
+ {id:'qt',  jeTisch:1, wann:'berg', de:'Quertraverse', en:'Cross beam', pl:'Trawersa poprzeczna'},
+ {id:'nst', jeTisch:0, wann:'rueck', de:'Normstütze Tal', en:'Standard post valley', pl:'Podpora dolinowa'}
 ];
 /* Normstützen Tal gibt es nur aus der Serie 2025 (ab 2026 ist die Talstütze
    passgenau) – Typen gemäss ILF-Mail 08.05.2026. */
 var NST_TYPEN=['A','B','D','E'];
 var FARBE={A:'#1565c0', B:'#D72622', C:'#8b929b', D:'#1e9e5a', E:'#e0a800'};
 
+/* ─────────────── Skizze: wo sitzt das Teil? ───────────────
+   Schematische Ansicht einer Primaerkonstruktion von schraeg vorne:
+   vorne die beiden Talstuetzen (S1/S4), hinten die hoeheren Bergstuetzen
+   (S2/S3), darueber die Modulflaeche. Kein Massbild - nur zum Wiedererkennen. */
+function skizze(teil, gross){
+  var b=gross?190:112, hh=gross?125:74;
+  /* Am Hang stehen die Talstuetzen S1/S4 auf dem tieferen Gelaende und sind
+     deshalb die langen; S2/S3 bergseitig sind kurz. */
+  var A=[46,106], B=[150,106];          // Fusspunkte Tal (vorne, tief)
+  var C=[80,76],  D=[186,76];           // Fusspunkte Berg (hinten, hoeher)
+  var A2=[46,48], B2=[150,48];          // Kopf Talstuetze
+  var C2=[80,40], D2=[186,40];          // Kopf Bergstuetze
+  function li(p,q,farbe,dick){ return '<line x1="'+p[0]+'" y1="'+p[1]+'" x2="'+q[0]+'" y2="'+q[1]
+    +'" stroke="'+farbe+'" stroke-width="'+dick+'" stroke-linecap="round"/>'; }
+  var g='#c3c8ce', r='#D72622';
+  function f(id){ return teil===id?r:g; }
+  function w(id){ return teil===id?4.2:2; }
+  var svg='<svg viewBox="0 0 210 120" width="'+b+'" height="'+hh+'" aria-hidden="true">'
+   +'<line x1="18" y1="114" x2="202" y2="66" stroke="#dfe3e8" stroke-width="2" stroke-dasharray="4 4"/>'
+   +'<polygon points="'+A2+' '+B2+' '+D2+' '+C2+'" fill="#eef1f5" stroke="#c3c8ce" stroke-width="1.4"/>'
+   +li(A,A2,f('nst'),w('nst'))+li(B,B2,f('nst'),w('nst'))
+   +li(C,C2,f('nsb'),w('nsb'))+li(D,D2,f('nsb'),w('nsb'))
+   +li(C2,D2,f('qt'),w('qt'))
+   +li([A2[0],A2[1]+20],[A2[0]+19,A2[1]+2],f('kt1'),w('kt1'))
+   +li([B2[0],B2[1]+20],[B2[0]+19,B2[1]+2],f('kt4'),w('kt4'))
+   +'<text x="38" y="118" font-size="11" font-weight="700" fill="#63676d">S1</text>'
+   +'<text x="142" y="118" font-size="11" font-weight="700" fill="#63676d">S4</text>'
+   +'<text x="70" y="72" font-size="11" font-weight="700" fill="#63676d">S2</text>'
+   +'<text x="190" y="72" font-size="11" font-weight="700" fill="#63676d">S3</text>'
+   +'</svg>';
+  return svg;
+}
+
 /* ─────────────── Texte ─────────────── */
 var T={
  de:{ titel:'📦 Lager Tal', bestand:'Bestand', erfassen:'Erfassen',
   frage_art:'Was machst du?',
+  korr_titel:'Bestand ändern', korr_neu:'Neuer Bestand', korr_grund:'Warum? (optional)',
+  korr_ok:'Bestand gesetzt: {n}', korr_abbr:'Abbrechen', korr_hilfe:'Zahl eintragen und speichern – der alte Wert bleibt im Protokoll stehen.',
+  prot_titel:'Protokoll', prot_leer:'Noch keine Buchung.', prot_auto:'Vormontage (automatisch)',
+  prot_zaehlung:'gezählt', prot_zugang:'geliefert', prot_abgang:'weggegangen', prot_korrektur:'geändert',
+  reset_titel:'Bestand ist zurückgesetzt', reset_text:'{n} Positionen sind noch nicht gezählt. Zählen und eintragen – erst dann rechnet das Lager mit.',
+  antippen:'antippen zum Ändern',
   negativ:'Mehr verbraucht als gezählt – bitte neu zählen.',
   gerechnet:'Gerechnet wären es {n} Stk – Abweichung ist normal, deine Zählung gilt.',
   art_zaehlung:'📋 Gezählt', art_zugang:'📥 Geliefert', art_abgang:'📤 Weggegangen',
@@ -86,6 +122,12 @@ var T={
   push_ok:'Meldung eingeschaltet.', push_nein:'Ohne Erlaubnis geht keine Meldung.' },
  en:{ titel:'📦 Valley store', bestand:'Stock', erfassen:'Record',
   frage_art:'What are you doing?',
+  korr_titel:'Change stock', korr_neu:'New stock', korr_grund:'Why? (optional)',
+  korr_ok:'Stock set to {n}', korr_abbr:'Cancel', korr_hilfe:'Enter the number and save – the old value stays in the log.',
+  prot_titel:'Log', prot_leer:'No entry yet.', prot_auto:'Pre-assembly (automatic)',
+  prot_zaehlung:'counted', prot_zugang:'delivered', prot_abgang:'taken away', prot_korrektur:'changed',
+  reset_titel:'Stock has been reset', reset_text:'{n} positions have not been counted yet. Count them and enter the number – only then the store can calculate.',
+  antippen:'tap to change',
   negativ:'More used than counted – please count again.',
   gerechnet:'The calculation says {n} pcs – a difference is normal, your count wins.',
   art_zaehlung:'📋 Counted', art_zugang:'📥 Delivered', art_abgang:'📤 Taken away',
@@ -109,6 +151,12 @@ var T={
   push_ok:'Alert switched on.', push_nein:'Without permission there is no alert.' },
  pl:{ titel:'📦 Magazyn w dolinie', bestand:'Stan', erfassen:'Zapisz',
   frage_art:'Co robisz?',
+  korr_titel:'Zmień stan', korr_neu:'Nowy stan', korr_grund:'Dlaczego? (opcjonalnie)',
+  korr_ok:'Stan ustawiony: {n}', korr_abbr:'Anuluj', korr_hilfe:'Wpisz liczbę i zapisz – stara wartość zostaje w dzienniku.',
+  prot_titel:'Dziennik', prot_leer:'Brak wpisów.', prot_auto:'Montaż wstępny (automatycznie)',
+  prot_zaehlung:'policzono', prot_zugang:'dostawa', prot_abgang:'wydano', prot_korrektur:'zmieniono',
+  reset_titel:'Stan został wyzerowany', reset_text:'{n} pozycji nie zostało jeszcze policzonych. Policz i wpisz – dopiero wtedy magazyn liczy.',
+  antippen:'dotknij, aby zmienić',
   negativ:'Zużyto więcej niż policzono – policz ponownie.',
   gerechnet:'Wyliczenie mówi {n} szt – różnica jest normalna, liczy się Twój wynik.',
   art_zaehlung:'📋 Policzone', art_zugang:'📥 Dostawa', art_abgang:'📤 Wydane',
@@ -173,6 +221,21 @@ var CSS=''
 +'.lg .lgw button.on{border-color:#1a1a1a;border-width:2.5px;background:#f3f5f7;}'
 +'.lg .lgw button small{display:block;font-weight:600;font-size:11.5px;color:#63676d;margin-top:2px;}'
 +'.lg .lgw.typ button{flex:1 1 18%;text-align:center;font-size:17px;font-weight:900;padding:14px 4px;}'
++'.lg .lgw.teil button{display:flex;align-items:center;gap:9px;flex:1 1 100%;text-align:left;}'
++'.lg .lgw.teil button svg{flex:none;}'
++'.lg .lgw.teil button span{font-size:15px;font-weight:800;}'
++'.lg .lgskizze{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #e3e5e8;'
+ +'border-radius:12px;padding:10px 12px;margin-top:12px;}'
++'.lg .lgskizze b{display:block;font-size:15px;font-weight:800;}'
++'.lg .lgskizze span{display:block;font-size:13px;color:#63676d;margin-top:2px;}'
++'.lg .lgz{cursor:pointer;}'
++'.lg .lgreset{background:#1565c0;color:#fff;border-radius:12px;padding:13px 15px;margin-bottom:12px;'
+ +'font-size:14.5px;line-height:1.4;}'
++'.lg .lgreset b{display:block;font-size:16px;font-weight:900;margin-bottom:3px;}'
++'.lg .lgprot{margin-top:12px;border-top:1px solid #e3e5e8;padding-top:10px;}'
++'.lg .lgprot div{font-size:13px;color:#3d444c;padding:4px 0;border-bottom:1px solid #f0f1f3;}'
++'.lg .lgprot div b{font-weight:800;}'
++'.lg .lgprot .auto{color:#63676d;}'
 +'.lg .lgzahl{display:flex;align-items:center;gap:10px;margin-top:4px;}'
 +'.lg .lgzahl button{width:60px;height:60px;border-radius:14px;border:1.5px solid #d7dade;'
  +'background:#fff;font:inherit;font-size:28px;font-weight:900;cursor:pointer;}'
@@ -277,17 +340,14 @@ function bestand(a){
   var erg={ artikel:a, basis:null, basisText:'', seit:0, zugang:0, abgang:0, auto:0, bestand:null };
   var z=null;
   INV.forEach(function(e){
-    if(e.artikel!==a.id || e.art!=='zaehlung') return;
+    if(e.artikel!==a.id || (e.art!=='zaehlung' && e.art!=='korrektur')) return;
     if(!z || (+e.ts||0)>(+z.ts||0)) z=e;
   });
   if(z){ erg.basis=+z.anzahl||0; erg.seit=+z.ts||0;
          erg.basisText=(z.datum||'')+(z.von?' · '+z.von:''); }
-  else if(a.lager!=null){
-    erg.basis=a.lager;
-    var d=(a.lagerQuelle||'').match(/(\d{4})-(\d{2})-(\d{2})/);
-    erg.seit=d?Date.parse(d[0]+'T23:59:59'):0;
-    erg.basisText=a.lagerQuelle||'';
-  } else return erg;                                    // nie gezählt
+  else return erg;      // Bestand am 20.08.2026 zurueckgesetzt (Entscheid Victor):
+                        // Basis ist einzig eine Zaehlung im Feld, nicht mehr die
+                        // Inventur aus material.json. Bis dahin: «noch nie gezählt».
 
   INV.forEach(function(e){
     if(e.artikel!==a.id || (+e.ts||0)<=erg.seit) return;
@@ -420,6 +480,9 @@ function malen(){
 
 function malenBestand(){
   var b=ZIEL.querySelector('#lgBody'), s='';
+  var offen=0;
+  artikel().forEach(function(a){ if(bestand(a).bestand==null) offen++; });
+  if(offen) s+='<div class="lgreset"><b>'+h(t('reset_titel'))+'</b>'+h(t('reset_text',{n:offen}))+'</div>';
   var eng=engpaesse();
   if(eng.length){
     s+='<div class="lgeng">'+h(t('eng_titel'))+'<br>';
@@ -428,7 +491,7 @@ function malenBestand(){
         +h(t(x.reicht===1?'reicht1':(x.reicht===0?'reicht0':'reicht'),{n:x.reicht}))+'<br>';
     });
     s+='</div>';
-  } else s+='<div class="lgok">'+h(t('eng_keiner'))+'</div>';
+  } else if(!offen) s+='<div class="lgok">'+h(t('eng_keiner'))+'</div>';
 
   s+='<button class="lgpush" id="lgPush">'+h(t('push_an'))+'</button>';
 
@@ -437,7 +500,6 @@ function malenBestand(){
     if(!li.length) return;
     li.sort(function(x,y){ return (x.typ+x.serie)<(y.typ+y.serie)?-1:1; });
     s+='<h3 class="lgh">'+h(tt(def))+'</h3>';
-    if(def.id==='nst') s+='<div class="lghint" style="margin:-3px 0 7px">'+h(t('zurueck'))+'</div>';
     li.forEach(function(a){
       var e=bestand(a), amp=ampel(a,e), r=reicht(a,e.bestand);
       var unter=[];
@@ -447,7 +509,7 @@ function malenBestand(){
         if(!a.rueck && r!==null) unter.push(t(r===1?'reicht1':(r===0?'reicht0':'reicht'),{n:r}));
         if(a.bedarf) unter.push(t('bedarf',{n:a.bedarf}));
       }
-      s+='<div class="lgz '+amp+'">'
+      s+='<div class="lgz '+amp+'" data-a="'+a.id+'">'
        +'<span class="pkt'+(a.serie==='2026'?' n26':'')+'" style="background:'+(FARBE[a.typ]||'#999')+'"></span>'
        +'<span class="lgt"><b>'+h(a.typ+(a.serie?' · '+a.serie:' · '+t('beide')))+'</b>'
        +'<span>'+h(unter.join(' · '))+'</span></span>'
@@ -460,6 +522,7 @@ function malenBestand(){
   b.innerHTML=s;
   var p=b.querySelector('#lgPush'); if(p) p.onclick=function(){ pushAn(p); };
   pushStand(p);
+  klick(b,'.lgz[data-a]',function(el){ korrigieren(el.getAttribute('data-a')); });
 }
 
 function malenErfassen(){
@@ -472,10 +535,11 @@ function malenErfassen(){
   });
   s+='</div>';
 
-  s+='<label class="lgl">'+h(t('frage_teil'))+'</label><div class="lgw" id="lgT">';
+  s+='<label class="lgl">'+h(t('frage_teil'))+'</label><div class="lgw teil" id="lgT">';
   TEILE.forEach(function(d){
-    s+='<button data-t="'+d.id+'" class="'+(eTeil===d.id?'on':'')+'">'+h(tt(d))
-      +'<small>'+h(tt(d,'h'))+'</small></button>';
+    s+='<button data-t="'+d.id+'" class="'+(eTeil===d.id?'on':'')+'">'
+      +skizze(d.id,false)+'<span>'+h(tt(d))+'</span>'
+      +(tt(d,'h')?'<small>'+h(tt(d,'h'))+'</small>':'')+'</button>';
   });
   s+='</div>';
 
@@ -489,18 +553,21 @@ function malenErfassen(){
     s+='</div><div class="lghint">'+h(t('farbhilfe'))+'</div>';
   }
   if(eTeil&&eTyp){
+    /* Jahr immer zeigen, auch wenn es nur eines gibt - sonst weiss niemand,
+       auf welche Serie er gerade bucht (Rueckmeldung Victor 20.08.2026). */
     var ser=serienFuer(eTeil,eTyp);
-    if(ser.length>1){
-      s+='<label class="lgl">'+h(t('frage_serie'))+'</label><div class="lgw" id="lgSe">';
-      ser.forEach(function(se){
-        s+='<button data-se="'+se+'" class="'+(eSerie===se?'on':'')+'">'
-          +h(se===''?t('beide'):se)+'</button>';
-      });
-      s+='</div>';
-    } else if(eSerie===null) eSerie=ser[0];
+    if(ser.length===1 && eSerie===null) eSerie=ser[0];
+    s+='<label class="lgl">'+h(t('frage_serie'))+'</label><div class="lgw" id="lgSe">';
+    ser.forEach(function(se){
+      s+='<button data-se="'+se+'" class="'+(eSerie===se?'on':'')+'">'
+        +h(se===''?t('beide'):se)+'</button>';
+    });
+    s+='</div>';
   }
   if(eTeil&&eTyp&&eSerie!==null){
     var aSel=artikelId(eTeil,eTyp,eSerie), eSel=aSel?bestand(aSel):null;
+    s+='<div class="lgskizze">'+skizze(eTeil,true)+'<div><b>'+h(tt(teilDef(eTeil)))+'</b><span>'
+     +h(eTyp+' · '+(eSerie||t('beide')))+'</span></div></div>';
     s+='<label class="lgl">'+h(t('frage_anzahl'))+'</label>'
      +'<div class="lgzahl"><button id="lgM">−</button>'
      +'<input id="lgN" type="number" inputmode="numeric" value="'+eAnzahl+'">'
@@ -584,6 +651,71 @@ function meldung(txt){
    +'-apple-system,Arial,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.3);max-width:90%;';
   d.textContent=txt; document.body.appendChild(d);
   setTimeout(function(){ d.remove(); },3200);
+}
+
+/* ─────────────── Bestand von Hand aendern ───────────────
+   Zeile im Bestand antippen: neue Zahl setzen (z.B. nach dem Nachzaehlen oder
+   wenn eine Buchung falsch war). Der alte Wert bleibt im Protokoll stehen -
+   nichts wird ueberschrieben, es kommt eine Buchung dazu. */
+function korrigieren(id){
+  var a=null; artikel().forEach(function(x){ if(x.id===id) a=x; });
+  if(!a) return;
+  var e=bestand(a), def=teilDef(a.teil);
+  var alt=document.getElementById('lgKorr'); if(alt) alt.remove();
+  var d=document.createElement('div');
+  d.id='lgKorr';
+  d.style.cssText='position:fixed;inset:0;z-index:80;background:rgba(10,20,32,.55);'
+   +'display:flex;align-items:flex-end;justify-content:center;';
+  d.innerHTML='<div style="background:#eef1f5;width:100%;max-width:620px;border-radius:16px 16px 0 0;'
+   +'padding:16px 14px calc(18px + env(safe-area-inset-bottom));max-height:92vh;overflow:auto">'
+   +'<div class="lgskizze" style="margin-top:0">'+skizze(a.teil,true)
+   +'<div><b>'+h(tt(def))+'</b><span>'+h(a.typ+' · '+(a.serie||t('beide')))+'</span></div></div>'
+   +'<label class="lgl">'+h(t('korr_neu'))+'</label>'
+   +'<input class="lgin" id="kNeu" type="number" inputmode="numeric" value="'
+   +(e.bestand==null?'':e.bestand)+'">'
+   +'<div class="lghint">'+h(t('korr_hilfe'))+'</div>'
+   +'<label class="lgl">'+h(t('korr_grund'))+'</label>'
+   +'<input class="lgin" id="kGrund" type="text">'
+   +'<label class="lgl">'+h(t('name'))+'</label>'
+   +'<input class="lgin" id="kVon" type="text" value="'+h(vonLesen())+'">'
+   +'<button class="lgbtn" id="kOk">'+h(t('speichern'))+'</button>'
+   +'<button class="lgbtn grau" id="kAb" style="margin-top:8px">'+h(t('korr_abbr'))+'</button>'
+   +'<div class="lgprot"><label class="lgl" style="margin-top:2px">'+h(t('prot_titel'))+'</label>'
+   +protokoll(a)+'</div></div>';
+  d.className='lg';
+  document.body.appendChild(d);
+  d.onclick=function(ev){ if(ev.target===d) d.remove(); };
+  d.querySelector('#kAb').onclick=function(){ d.remove(); };
+  d.querySelector('#kOk').onclick=function(){
+    var n=d.querySelector('#kNeu').value, von=(d.querySelector('#kVon').value||'').trim();
+    if(n===''||isNaN(+n)){ alert(t('fehlt_teil')); return; }
+    if(!von){ alert(t('fehlt_name')); return; }
+    try{ localStorage.setItem(LS_VON,von); }catch(x){}
+    var rec={ art:'korrektur', artikel:a.id, teil:a.teil, typ:a.typ, serie:a.serie,
+              anzahl:Math.round(+n), grund:(d.querySelector('#kGrund').value||'').trim(),
+              vorher:(e.bestand==null?null:e.bestand),
+              von:von, datum:heute(), ts:Date.now(), quelle:'korrektur' };
+    INV.push(JSON.parse(JSON.stringify(rec)));
+    senden(rec,null).catch(function(){ Q.add({rec:rec,foto:null}); })
+      .then(function(){ d.remove(); meldung(t('korr_ok',{n:Math.round(+n)})); malen(); });
+  };
+}
+function protokoll(a){
+  var li=INV.filter(function(e){ return e.artikel===a.id; })
+    .sort(function(x,y){ return (+y.ts||0)-(+x.ts||0); }).slice(0,12);
+  var e=bestand(a), s='';
+  if(e.auto) s+='<div class="auto">'+h(t('prot_auto'))+': −'+e.auto+' '+h(t('stueck'))+'</div>';
+  if(!li.length && !e.auto) return '<div class="auto">'+h(t('prot_leer'))+'</div>';
+  li.forEach(function(x){
+    var wie=t('prot_'+(x.art||'zaehlung'));
+    var zahl=(x.art==='zugang'?'+':(x.art==='abgang'?'−':''))+x.anzahl;
+    s+='<div><b>'+h(zahl)+' '+h(t('stueck'))+'</b> · '+h(wie)+' · '+h(x.datum||'')
+      +(x.von?' · '+h(x.von):'')
+      +(x.vorher!=null?' <span class="auto">('+x.vorher+' → '+x.anzahl+')</span>':'')
+      +(x.grund?' <span class="auto">'+h(x.grund)+'</span>':'')
+      +(x.tische?' <span class="auto">'+h(x.tische)+'</span>':'')+'</div>';
+  });
+  return s;
 }
 
 /* ─────────────── Zusatzteile beim Bergtransport ─────────────── */
