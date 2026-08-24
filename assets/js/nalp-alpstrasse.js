@@ -1,4 +1,4 @@
-/* ═══════════════════════════════════════════════════════════════════
+﻿/* ═══════════════════════════════════════════════════════════════════
    Alpstrasse (Betonfahrbahn) + Schacht D1 im 3D-Viewer
    ═══════════════════════════════════════════════════════════════════
    Zeigt das Strassenmodell von François Borner (LandXML aus Civil 3D,
@@ -28,7 +28,18 @@ window.NalpAlpstrasse = (function () {
   'use strict';
 
   var BASIS = 'uploads/alpstrasse/';
-  var gruppe = null, meta = null, marken = [], anSt = true;
+  var gruppe = null, meta = null;
+
+  // Schilder getrennt halten: auf dem Handy sind zehn Stationsmarken plus
+  // vier D1-Schilder auf einmal unlesbar. Stufen: 'alle' | 'd1' | 'keine'.
+  var markenSta = [], markenD1 = [];
+  var SCHMAL = (typeof window !== 'undefined' && window.innerWidth < 760);
+  var stufe = SCHMAL ? 'd1' : 'alle';
+
+  // Auf dem Handy müssen die Schilder kurz sein, sonst laufen sie aus dem
+  // Bild und decken sich gegenseitig zu. Die Langfassung steht in der
+  // Infokarte – auf dem Schild nur das, was man am Modell braucht.
+  function kurz(lang, knapp) { return SCHMAL ? knapp : lang; }
 
   /* ── Hilfen ────────────────────────────────────────────────────── */
   function bin(url, Typ) {
@@ -166,11 +177,12 @@ window.NalpAlpstrasse = (function () {
         new THREE.MeshBasicMaterial({ color: 0xff2d2d }));
       st.position.set(e[0].x, e[0].y + h / 2, e[0].z);
       g.add(st);
-      var l = schild(THREE, 'Pkt ' + e[1].nr + ' · ' + e[1].H.toFixed(3) +
-        ' m ü.M.', 'lbl-d1');
+      var l = schild(THREE, kurz(
+        'Pkt ' + e[1].nr + ' · ' + e[1].H.toFixed(3) + ' m ü.M.',
+        e[1].nr + ' · ' + e[1].H.toFixed(3)), 'lbl-d1');
       l.position.set(e[0].x, e[0].y + h + 0.3, e[0].z);
       g.add(l);
-      marken.push(l);
+      markenD1.push(l);
     });
 
     // Gefällepfeil: wohin das Wasser auf der Platte läuft. Borner
@@ -182,20 +194,27 @@ window.NalpAlpstrasse = (function () {
       var abwaerts = rechts.clone().multiplyScalar(d1.quergefaelle > 0 ? -1 : 1);
       g.add(new THREE.ArrowHelper(abwaerts, mitte.clone().setY(mitte.y + 0.4),
         3.0, 0x2ea6ff, 0.7, 0.45));
-      var lg = schild(THREE, 'Quergefälle ' +
-        Math.abs(d1.quergefaelle).toFixed(1) + ' % → ' + d1.faellt_nach +
-        ' · Entwässerungsöffnungen dort neu bohren', 'lbl-d1');
+      // Kurz halten – der ganze Satz («Entwässerungsöffnungen dort neu
+      // bohren») steht in der Infokarte. Lange Schilder decken am Modell
+      // nur die Nachbarschilder zu.
+      var lg = schild(THREE, 'Gefälle ' +
+        Math.abs(d1.quergefaelle).toFixed(0) + ' % → ' + d1.faellt_nach,
+        'lbl-d1');
+      // Das Gefälleschild fällt in derselben Richtung wie Punkt 7 – darum
+      // weit raus UND unter die Fahrbahnebene, sonst kleben die beiden
+      // aufeinander. Punktschilder sitzen auf 1.6 m und 3.0 m, der
+      // Schachtname auf 4.4 m, dieses hier auf −1.0 m.
       lg.position.copy(mitte.clone()
-        .add(abwaerts.clone().multiplyScalar(4.2)).setY(mitte.y + 0.6));
+        .add(abwaerts.clone().multiplyScalar(7.0)).setY(mitte.y - 1.0));
       g.add(lg);
-      marken.push(lg);
+      markenD1.push(lg);
     }
 
-    var lb = schild(THREE, 'Schacht D1 · innen 3.00 × 1.00 m · Sohle −1.50 m · ' +
-      'Höhen = OK Betonplatte', 'lbl-d1');
+    var lb = schild(THREE, kurz('Schacht D1 · Sohle −1.50 m', 'Schacht D1'),
+      'lbl-d1');
     lb.position.set(mitte.x, mitte.y + 4.4, mitte.z);
     g.add(lb);
-    marken.push(lb);
+    markenD1.push(lb);
     return g;
   }
 
@@ -230,18 +249,19 @@ window.NalpAlpstrasse = (function () {
         new THREE.MeshBasicMaterial({ color: 0xffd400 }));
       stab.position.set(v.x, v.y + 0.7, v.z);
       g.add(stab);
-      var l = schild(THREE, 'km ' + (sta / 1000).toFixed(3) + ' · ' +
-        hoehe.toFixed(2) + ' m ü.M.', 'lbl-sta');
+      var l = schild(THREE, kurz(
+        'km ' + (sta / 1000).toFixed(3) + ' · ' + hoehe.toFixed(2) + ' m ü.M.',
+        (sta / 1000).toFixed(3) + ' · ' + hoehe.toFixed(0)), 'lbl-sta');
       l.position.set(v.x, v.y + 1.7, v.z);
       g.add(l);
-      marken.push(l);
+      markenSta.push(l);
     }
     return g;
   }
 
   /* ── Laden ─────────────────────────────────────────────────────── */
   function laden(THREE, scene, o) {
-    marken = [];
+    markenSta = []; markenD1 = [];
     return fetch(BASIS + 'alpstrasse.meta.json', { cache: 'no-store' })
       .then(function (r) {
         if (!r.ok) throw new Error('alpstrasse.meta.json ' + r.status);
@@ -284,23 +304,36 @@ window.NalpAlpstrasse = (function () {
         gruppe.add(schacht(THREE, o, meta.schacht_d1,
           meta.gradiente && meta.gradiente.laengsneigung_prozent));
 
-        marken.forEach(function (l) { l.visible = anSt; });
         scene.add(gruppe);
+        schilderAuffrischen();
         return { gruppe: gruppe, meta: meta };
       });
   }
 
-  /* ── Steuerung ─────────────────────────────────────────────────── */
+  /* ── Steuerung ─────────────────────────────────────────────────────
+     CSS2DRenderer schaut nur auf object.visible des Schildes selbst und
+     NICHT auf die Eltern - ein unsichtbares gruppe hilft also nichts.
+     Darum werden die Schilder hier immer von Hand mitgeschaltet.       */
+  function schilderAuffrischen() {
+    var an = !!gruppe && gruppe.visible;
+    markenSta.forEach(function (l) { l.visible = an && stufe === 'alle'; });
+    markenD1.forEach(function (l) { l.visible = an && stufe !== 'keine'; });
+  }
+
   function sichtbar(an) {
     if (gruppe) gruppe.visible = an;
-    marken.forEach(function (l) { l.visible = an && anSt; });
+    schilderAuffrischen();
     return !!gruppe && gruppe.visible;
   }
 
-  function schilderAn(an) {
-    anSt = an;
-    if (gruppe && gruppe.visible) marken.forEach(function (l) { l.visible = an; });
+  /* Nächste Beschriftungsstufe: alle -> nur D1 -> keine -> alle */
+  function schilderWeiter() {
+    stufe = stufe === 'alle' ? 'd1' : (stufe === 'd1' ? 'keine' : 'alle');
+    schilderAuffrischen();
+    return stufe;
   }
+
+  function schilderStufe() { return stufe; }
 
   function teilSichtbar(name, an) {
     if (!gruppe) return;
@@ -330,16 +363,28 @@ window.NalpAlpstrasse = (function () {
         Math.abs(d.quergefaelle || 0).toFixed(1) + ' % nach ' + d.faellt_nach +
         ' → Entwässerungsöffnungen dort neu bohren');
     }
-    z.push('<i>Quelle: ' + (meta.quelle || '') + '</i>');
+    z.push('<i>Quelle: LandXML F. Borner, Modellstand ' +
+      (meta.stand || '?').slice(0, 10) + '</i>');
     return z.join('<br>');
+  }
+
+  /* Eine Zeile für die eingeklappte Karte auf dem Handy */
+  function kurzHtml() {
+    if (!meta) return 'Alpstrasse';
+    var g = meta.gradiente || {}, p = meta.platte || {};
+    return (meta.achse ? meta.achse.laenge.toFixed(0) : '?') + ' m · ' +
+      (g.laengsneigung_prozent || '?') + ' % · Platte ' +
+      ((p.dicke_m || 0) * 100).toFixed(0) + ' cm · Schacht D1';
   }
 
   return {
     laden: laden,
     sichtbar: sichtbar,
-    schilderAn: schilderAn,
+    schilderWeiter: schilderWeiter,
+    schilderStufe: schilderStufe,
     teilSichtbar: teilSichtbar,
     infoHtml: infoHtml,
+    kurzHtml: kurzHtml,
     meta: function () { return meta; },
     gruppe: function () { return gruppe; }
   };

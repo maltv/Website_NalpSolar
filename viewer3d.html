@@ -142,23 +142,47 @@ html, body { width:100%; height:100%; overflow:hidden; background:#0d1117;
 }
 #leitPanel.show { display:block; }
 
-/* ── Alpstrasse (Betonfahrbahn + Schacht D1) ─────────────── */
+/* ── Alpstrasse (Betonfahrbahn + Schacht D1) ───────────────
+   Auf dem Handy muss die Karte klein bleiben und darf die Sicht auf
+   das Modell nicht zustellen. Sie ist darum EINKLAPPBAR: der Kopf
+   bleibt als schmaler Balken stehen, der Rest fährt ein. Das ✕ bzw.
+   der Balken schliesst NUR die Karte – das 3D-Modell bleibt immer
+   stehen (Victor 24.08.2026). Ausgeschaltet wird die Ebene einzig
+   über den Knopf im Menü «Ebenen». */
 #alpPanel {
   display:none; position:fixed; right:10px; top:54px; z-index:110;
-  min-width:230px; max-width:min(340px,calc(100vw - 20px));
+  width:300px; max-width:calc(100vw - 20px);
+  max-height:calc(100vh - 130px); overflow:auto;
   background:rgba(5,10,20,.9); border:1px solid rgba(255,220,80,.45);
-  border-radius:10px; padding:8px 10px; font-size:11.5px; line-height:1.45;
+  border-radius:10px; padding:7px 9px; font-size:11.5px; line-height:1.42;
   backdrop-filter:blur(8px); box-shadow:0 6px 22px rgba(0,0,0,.45);
 }
 #alpPanel.show { display:block; }
-#alpPanel .lp-body i { color:rgba(255,255,255,.45); font-size:10px; }
+#alpPanel .lp-head { cursor:pointer; margin-bottom:4px; font-size:12px; }
+#alpPanel .lp-body i { color:rgba(255,255,255,.45); font-size:9.5px; }
+#alpKurz { display:none; color:rgba(255,255,255,.6); font-size:10.5px; }
+/* eingeklappt: nur der Kopf plus eine Kurzzeile */
+#alpPanel.zu { max-height:none; overflow:visible; }
+#alpPanel.zu #alpBody, #alpPanel.zu .alp-sw { display:none; }
+#alpPanel.zu #alpKurz { display:block; }
+#alpPanel .lp-x { transition:transform .15s; }
+#alpPanel.zu .lp-x { transform:rotate(-90deg); }
 .alp-sw { display:flex; gap:5px; margin-top:7px; flex-wrap:wrap; }
 .alp-sw button {
   background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18);
-  color:rgba(255,255,255,.75); border-radius:14px; padding:3px 9px;
-  font-size:10.5px; cursor:pointer; font-family:inherit;
+  color:rgba(255,255,255,.75); border-radius:14px; padding:5px 10px;
+  font-size:11px; cursor:pointer; font-family:inherit;
 }
 .alp-sw button.on { background:#ffd400; border-color:#ffd400; color:#111; font-weight:800; }
+@media (max-width:760px){
+  /* Handy: unter die Werkzeugleiste, NICHT nach unten – dort sitzt die
+     Legende, und zwei Kästen übereinander sind unbrauchbar. */
+  #alpPanel { top:auto; bottom:auto; right:8px; left:8px; width:auto;
+              max-height:40vh; font-size:11px; }
+  .alp-sw button { padding:7px 12px; font-size:11.5px; }
+  /* Schilder im Modell schmal halten, sonst laufen sie aus dem Bild */
+  .lbl-d1, .lbl-sta { max-width:44vw; white-space:normal; font-size:9.5px; }
+}
 .lp-head { display:flex; align-items:center; gap:7px; font-weight:800; margin-bottom:5px; }
 .lp-dot { width:11px; height:11px; border-radius:3px; flex-shrink:0; background:#29cc73; }
 .lp-x {
@@ -538,17 +562,18 @@ body.ar-mode { background:transparent!important; }
 
 <!-- Alpstrasse: Kennzahlen + Teilebenen -->
 <div id="alpPanel">
-  <div class="lp-head">
+  <div class="lp-head" onclick="alpKarteAufZu()">
     <span class="lp-dot" style="background:#d6d9de"></span>
     <span>Alpstrasse – Betonfahrbahn</span>
     <span style="flex:1"></span>
-    <button class="lp-x" onclick="toggleAlpstrasse()" title="Ebene ausschalten">✕</button>
+    <button class="lp-x" title="Karte auf/zu – das Modell bleibt stehen">▾</button>
   </div>
+  <div id="alpKurz"></div>
   <div class="lp-body" id="alpBody"></div>
   <div class="alp-sw">
     <button id="alpBPlatte" class="on" onclick="alpTeil('platte',this)">Betonplatte</button>
     <button id="alpBPlanum" class="on" onclick="alpTeil('planum',this)">Planum (UK)</button>
-    <button id="alpBSchild" class="on" onclick="alpSchilder(this)">Beschriftung</button>
+    <button id="alpBSchild" onclick="alpSchilder()">Beschriftung</button>
     <button onclick="alpHinfliegen()">↗ Hinfliegen</button>
   </div>
 </div>
@@ -5091,7 +5116,8 @@ window.toggleAlpstrasse=function(){
     alpAn=!alpAn;
     NalpAlpstrasse.sichtbar(alpAn);
     if(btn) btn.classList.toggle('active',alpAn);
-    if(panel) panel.classList.toggle('show',alpAn);
+    // Karte folgt der Ebene: Ebene aus = Karte weg, Ebene ein = Karte wieder da
+    if(panel){ panel.classList.toggle('show',alpAn); if(alpAn) alpPanelSetzen(); }
     return;
   }
   if(alpLaedt) return;
@@ -5102,7 +5128,16 @@ window.toggleAlpstrasse=function(){
     if(btn){ btn.textContent='🛣 Alpstrasse + Schacht D1'; btn.classList.add('active'); }
     var body=document.getElementById('alpBody');
     if(body) body.innerHTML=NalpAlpstrasse.infoHtml();
-    if(panel) panel.classList.add('show');
+    var kurz=document.getElementById('alpKurz');
+    if(kurz) kurz.textContent=NalpAlpstrasse.kurzHtml();
+    if(panel){
+      panel.classList.add('show');
+      // Auf dem Handy startet die Karte eingeklappt – sonst deckt sie
+      // genau das zu, was man anschauen will (Victor 24.08.2026).
+      panel.classList.toggle('zu', window.innerWidth<760);
+      alpPanelSetzen();
+    }
+    alpSchildKnopf();
     alpHinfliegen();
   }).catch(function(e){
     alpLaedt=false;
@@ -5111,35 +5146,73 @@ window.toggleAlpstrasse=function(){
     flashMsg('⚠ Alpstrasse: '+e.message);
   });
 };
+/* Karte auf/zu – schaltet NUR die Karte, nie das Modell. */
+window.alpKarteAufZu=function(){
+  var p=document.getElementById('alpPanel');
+  if(p) p.classList.toggle('zu');
+};
+/* Auf dem Handy bricht die Werkzeugleiste je nach Breite auf zwei Zeilen um.
+   Die Karte wird darum an der GEMESSENEN Unterkante ausgerichtet statt an
+   einem geratenen Wert – sonst klebt sie entweder unter der Leiste oder
+   verdeckt sie. */
+function alpPanelSetzen(){
+  var p=document.getElementById('alpPanel'); if(!p) return;
+  if(window.innerWidth>=760){ p.style.top=''; return; }
+  var tb=document.getElementById('toolbar');
+  p.style.top=((tb?tb.getBoundingClientRect().bottom:60)+8)+'px';
+}
+window.addEventListener('resize',function(){ if(alpAn) alpPanelSetzen(); });
 window.alpTeil=function(name,b){
   if(!alpGeladen) return;
   var an=!b.classList.contains('on');
   b.classList.toggle('on',an);
   NalpAlpstrasse.teilSichtbar(name,an);
 };
-window.alpSchilder=function(b){
+/* Beschriftung in Stufen: alle Schilder → nur Schacht D1 → keine.
+   Auf dem Handy sind alle 14 Schilder gleichzeitig unlesbar, darum
+   startet es dort bei «nur D1». */
+var ALP_SCHILD_TEXT={alle:'Beschriftung: alle', d1:'Beschriftung: nur D1',
+                     keine:'Beschriftung: aus'};
+function alpSchildKnopf(){
+  var b=document.getElementById('alpBSchild'); if(!b||!alpGeladen) return;
+  var s=NalpAlpstrasse.schilderStufe();
+  b.textContent=ALP_SCHILD_TEXT[s]||'Beschriftung';
+  b.classList.toggle('on', s!=='keine');
+}
+window.alpSchilder=function(){
   if(!alpGeladen) return;
-  var an=!b.classList.contains('on');
-  b.classList.toggle('on',an);
-  NalpAlpstrasse.schilderAn(an);
+  NalpAlpstrasse.schilderWeiter();
+  alpSchildKnopf();
 };
 window.alpHinfliegen=function(){
   if(!alpGeladen) return;
   var m=NalpAlpstrasse.meta(); if(!m) return;
-  // Ziel: Schacht D1, sonst Mitte der Achse
+  // Ziel: MITTE des Schachts D1 (nicht Punkt 6 – sonst sitzt der Schacht
+  // aus der Bildmitte heraus und die Schilder laufen am Rand raus),
+  // sonst Mitte der Achse
   var E,N,H;
-  if(m.schacht_d1&&m.schacht_d1.punkte&&m.schacht_d1.punkte.length){
-    var p=m.schacht_d1.punkte[0]; E=p.E; N=p.N; H=p.H;
+  if(m.schacht_d1&&m.schacht_d1.punkte&&m.schacht_d1.punkte.length>=2){
+    var a=m.schacht_d1.punkte[0], b=m.schacht_d1.punkte[1];
+    E=(a.E+b.E)/2; N=(a.N+b.N)/2; H=(a.H+b.H)/2;
   } else {
     var pts=m.achse.punkte, q=pts[Math.floor(pts.length/2)];
     E=q[0]; N=q[1]; H=q[2];
   }
   if(arActive) stopAR();
   var t=new THREE.Vector3(E-OE, H-OZ, -(N-ON));
-  controls.target.copy(t);
-  camera.position.set(t.x+26, t.y+20, t.z+26);
-  controls.update();
-  flyDone=true;
+  // Auf dem Handy näher ran – bei 40 m Abstand ist der Schacht ein Punkt,
+  // aber nicht zu nah, sonst laufen die Schilder aus dem Bild.
+  var d=window.innerWidth<760 ? 18 : 26;
+  function stellen(){
+    controls.target.copy(t);
+    camera.position.set(t.x+d, t.y+d*0.78, t.z+d);
+    controls.update();
+  }
+  // OrbitControls läuft mit enableDamping: ein einzelnes update() lässt
+  // einen Rest-Versatz aus der Einflug-Animation stehen (gemessen 45 px
+  // neben der Mitte). Zweiter Durchgang im nächsten Bild zentriert sauber.
+  stellen(); flyDone=true;
+  requestAnimationFrame(function(){ stellen(); });
 };
 
 var SLOT_BTN={leitungen:'btnLeit',erdung:'btnErdung'};
