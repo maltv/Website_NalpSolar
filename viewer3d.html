@@ -99,6 +99,8 @@ html, body { width:100%; height:100%; overflow:hidden; background:#0d1117;
 .lbl-stahl.pk { background:rgba(11,95,255,.92); border-color:#0b5fff; color:#fff; }
 .lbl-tisch { background:rgba(255,220,0,.85); color:#111; border-color:#ffd700; font-size:9px; padding:1px 4px;
              transition:opacity .25s linear; will-change:opacity; }
+.lbl-d1  { background:rgba(215,38,34,.92); border-color:#ff6b6b; color:#fff; font-size:10.5px; font-weight:800; }
+.lbl-sta { background:rgba(20,22,26,.85); border-color:#ffd400; color:#ffe066; font-size:9.5px; padding:1px 5px; }
 .lbl-status { font-size:10px; font-weight:800; padding:1px 5px;
              box-shadow:0 0 0 1px rgba(0,0,0,.35), 0 2px 7px rgba(0,0,0,.45); }
 
@@ -139,6 +141,24 @@ html, body { width:100%; height:100%; overflow:hidden; background:#0d1117;
   backdrop-filter:blur(8px); box-shadow:0 6px 22px rgba(0,0,0,.45);
 }
 #leitPanel.show { display:block; }
+
+/* ── Alpstrasse (Betonfahrbahn + Schacht D1) ─────────────── */
+#alpPanel {
+  display:none; position:fixed; right:10px; top:54px; z-index:110;
+  min-width:230px; max-width:min(340px,calc(100vw - 20px));
+  background:rgba(5,10,20,.9); border:1px solid rgba(255,220,80,.45);
+  border-radius:10px; padding:8px 10px; font-size:11.5px; line-height:1.45;
+  backdrop-filter:blur(8px); box-shadow:0 6px 22px rgba(0,0,0,.45);
+}
+#alpPanel.show { display:block; }
+#alpPanel .lp-body i { color:rgba(255,255,255,.45); font-size:10px; }
+.alp-sw { display:flex; gap:5px; margin-top:7px; flex-wrap:wrap; }
+.alp-sw button {
+  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18);
+  color:rgba(255,255,255,.75); border-radius:14px; padding:3px 9px;
+  font-size:10.5px; cursor:pointer; font-family:inherit;
+}
+.alp-sw button.on { background:#ffd400; border-color:#ffd400; color:#111; font-weight:800; }
 .lp-head { display:flex; align-items:center; gap:7px; font-weight:800; margin-bottom:5px; }
 .lp-dot { width:11px; height:11px; border-radius:3px; flex-shrink:0; background:#29cc73; }
 .lp-x {
@@ -450,6 +470,7 @@ body.ar-mode { background:transparent!important; }
   <button class="tb-btn active" id="btnLeit"    onclick="toggleLayer('leitungen')">🟩 Werkleitungen PZ1–PZ3</button>
   <button class="tb-btn active" id="btnErdung"  onclick="toggleLayer('erdung')">🟠 Erdung</button>
   <button class="tb-btn active" id="btnTische"  onclick="toggleTische()">🟨 Modultische</button>
+  <button class="tb-btn" id="btnAlp" onclick="toggleAlpstrasse()">🛣 Alpstrasse + Schacht D1</button>
 </div>
 
 <div id="menuMore" class="tb-menu">
@@ -513,6 +534,23 @@ body.ar-mode { background:transparent!important; }
     <button class="lp-x" onclick="leitAuswahlLoesen()" title="Auswahl aufheben">✕</button>
   </div>
   <div class="lp-body" id="lpBody"></div>
+</div>
+
+<!-- Alpstrasse: Kennzahlen + Teilebenen -->
+<div id="alpPanel">
+  <div class="lp-head">
+    <span class="lp-dot" style="background:#d6d9de"></span>
+    <span>Alpstrasse – Betonfahrbahn</span>
+    <span style="flex:1"></span>
+    <button class="lp-x" onclick="toggleAlpstrasse()" title="Ebene ausschalten">✕</button>
+  </div>
+  <div class="lp-body" id="alpBody"></div>
+  <div class="alp-sw">
+    <button id="alpBPlatte" class="on" onclick="alpTeil('platte',this)">Betonplatte</button>
+    <button id="alpBPlanum" class="on" onclick="alpTeil('planum',this)">Planum (UK)</button>
+    <button id="alpBSchild" class="on" onclick="alpSchilder(this)">Beschriftung</button>
+    <button onclick="alpHinfliegen()">↗ Hinfliegen</button>
+  </div>
 </div>
 
 <div id="orbitHint">📍 Orbit-Punkt gesetzt</div>
@@ -654,6 +692,7 @@ body.ar-mode { background:transparent!important; }
 <script src="assets/js/three/three.min.js"></script>
 <script src="assets/js/three/OrbitControls.js"></script>
 <script src="assets/js/three/CSS2DRenderer.js"></script>
+<script src="assets/js/nalp-alpstrasse.js"></script>
 <script>
 'use strict';
 var GAME_APP=document.documentElement.className.indexOf('game-app')>=0;   // reine Spiel-App (?game=1)
@@ -5035,6 +5074,74 @@ window.toggleSat=function(){
   }
   document.getElementById('btnSat').classList.toggle('active',satOn);
 };
+/* ═══════════════════════════════════════════════════════════
+   ALPSTRASSE (Betonfahrbahn) + SCHACHT D1
+   Modell von François Borner (LandXML, Mail 24.08.2026). Wird erst
+   beim ersten Klick geladen – die Strasse ist ein Sonderthema und
+   soll den Start der Karte nicht bremsen. Geometrie und Beschriftung
+   stecken in assets/js/nalp-alpstrasse.js.
+═══════════════════════════════════════════════════════════ */
+var alpAn=false, alpGeladen=false, alpLaedt=false;
+window.toggleAlpstrasse=function(){
+  var btn=document.getElementById('btnAlp');
+  var panel=document.getElementById('alpPanel');
+  if(!window.NalpAlpstrasse){ flashMsg('⚠ Alpstrassen-Baustein fehlt'); return; }
+
+  if(alpGeladen){
+    alpAn=!alpAn;
+    NalpAlpstrasse.sichtbar(alpAn);
+    if(btn) btn.classList.toggle('active',alpAn);
+    if(panel) panel.classList.toggle('show',alpAn);
+    return;
+  }
+  if(alpLaedt) return;
+  alpLaedt=true;
+  if(btn) btn.textContent='🛣 lädt …';
+  NalpAlpstrasse.laden(THREE,scene,{OE:OE,ON:ON,OZ:OZ}).then(function(){
+    alpGeladen=true; alpLaedt=false; alpAn=true;
+    if(btn){ btn.textContent='🛣 Alpstrasse + Schacht D1'; btn.classList.add('active'); }
+    var body=document.getElementById('alpBody');
+    if(body) body.innerHTML=NalpAlpstrasse.infoHtml();
+    if(panel) panel.classList.add('show');
+    alpHinfliegen();
+  }).catch(function(e){
+    alpLaedt=false;
+    if(btn) btn.textContent='🛣 Alpstrasse + Schacht D1';
+    console.error('Alpstrasse',e);
+    flashMsg('⚠ Alpstrasse: '+e.message);
+  });
+};
+window.alpTeil=function(name,b){
+  if(!alpGeladen) return;
+  var an=!b.classList.contains('on');
+  b.classList.toggle('on',an);
+  NalpAlpstrasse.teilSichtbar(name,an);
+};
+window.alpSchilder=function(b){
+  if(!alpGeladen) return;
+  var an=!b.classList.contains('on');
+  b.classList.toggle('on',an);
+  NalpAlpstrasse.schilderAn(an);
+};
+window.alpHinfliegen=function(){
+  if(!alpGeladen) return;
+  var m=NalpAlpstrasse.meta(); if(!m) return;
+  // Ziel: Schacht D1, sonst Mitte der Achse
+  var E,N,H;
+  if(m.schacht_d1&&m.schacht_d1.punkte&&m.schacht_d1.punkte.length){
+    var p=m.schacht_d1.punkte[0]; E=p.E; N=p.N; H=p.H;
+  } else {
+    var pts=m.achse.punkte, q=pts[Math.floor(pts.length/2)];
+    E=q[0]; N=q[1]; H=q[2];
+  }
+  if(arActive) stopAR();
+  var t=new THREE.Vector3(E-OE, H-OZ, -(N-ON));
+  controls.target.copy(t);
+  camera.position.set(t.x+26, t.y+20, t.z+26);
+  controls.update();
+  flyDone=true;
+};
+
 var SLOT_BTN={leitungen:'btnLeit',erdung:'btnErdung'};
 window.toggleLayer=function(slot){
   var m=layers[slot]; if(!m) return;
@@ -5647,6 +5754,9 @@ async function init(){
         var fld=document.getElementById('tischSearch');
         if(fld){ fld.value=mt[1]; setTimeout(searchTisch,300); }
       }
+      // viewer3d.html#alpstrasse = Strassenmodell gleich einschalten
+      if(/alpstrasse|alpstrase|d1/i.test(location.hash))
+        setTimeout(function(){ try{ toggleAlpstrasse(); }catch(e){} }, 600);
     }catch(e){ console.warn('hash',e); }
     try{ menziPlan(); standorteTick(); setInterval(standorteTick,60000); }catch(e){ console.warn('menzi',e); }
     // Umgebung: Vegetation, Kletterer, Pneukran-Strasse, Wetter
