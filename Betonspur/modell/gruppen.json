@@ -1,16 +1,20 @@
 {
  "rahmen": [
   0,
-  96
+  408
  ],
  "trichter": [
-  96,
-  144
+  408,
+  456
  ],
  "traeger": [
-  144,
-  192
+  456,
+  516
+ ],
+ "ballast": [
+  516,
+  528
  ],
  "einheit": "cm",
- "quelle": "Neuaufbau 18.08.2026, vollflaechig 300 cm (Plan ILF A1)"
+ "quelle": "Stand 25.08.2026: vollflaechig 300 cm (Plan ILF A1), Ballast = Legostein 180x60x60, Sollbruchstelle Ringschraube M20"
 }

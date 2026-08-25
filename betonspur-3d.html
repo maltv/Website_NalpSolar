@@ -58,6 +58,7 @@
   <div class="laden" id="laden">Modell wird geladen …</div>
   <div class="werkzeug">
     <button class="btn" id="bKeil">Trichter durchsichtig</button>
+    <button class="btn" id="bStein">Ballaststein</button>
     <button class="btn" id="bMasse">Bemassung</button>
     <button class="btn" id="bText">Beschriftung</button>
     <button class="btn" id="bKanten">Kanten</button>
@@ -77,16 +78,26 @@
 <script src="assets/js/three/CSS2DRenderer.js"></script>
 <script>
 'use strict';
-/* Betonspurfertiger als 3D-Modell, Fassung VOLLFLAECHIG (18.08.2026).
+/* Betonspurfertiger als 3D-Modell, Fassung VOLLFLAECHIG (Stand 25.08.2026).
    Form nach Victors Tinkercad-Entwurf, aber: keine inneren Kufen und kein Teilerkeil mehr -
    stattdessen Quertraeger, die oben auf den beiden aeusseren Kufen aufliegen. Lichte Weite
    300 cm = Betonbreite nach Ausfuehrungsplan ILF NalpSolar_51_PL_0419 A1 vom 30.07.2026.
+   NEU 25.08.2026 aus der Besprechung mit der Werkstatt vom 24.08.:
+     - Ballast ist jetzt ein BETONLEGOSTEIN 180 x 60 x 60 = 1555 kg (Angebot Admir), er liegt
+       auf einer Aufnahmeplatte mit vier Eckwinkeln zwischen zwei Quertraegern. Der alte
+       Ballastriegel (294 x 47 x 24) war viel zu klein - der Auftrieb unter der Abziehplatte
+       ist mit der Verbreiterung auf 300 cm auf 3.36 m2 gewachsen.
+     - Die SOLLBRUCHSTELLE ist eine Ringschraube DIN 580 M20 in der Zugkette (reisst bei rund
+       71 kN; Betriebszug 28 kN bergab, der Cat 315 zieht bis 120 kN).
+     - Fuenf statt vier Quertraeger: die letzten zwei tragen den Ballaststein.
+   Das Modell wird NICHT hier gepflegt, sondern in Betonspurfertiger/stl/modell_vollflaechig.py
+   und von dort in diesen Ordner gespiegelt.
    Der STL-Parser steht hier direkt drin - so braucht es keinen zusaetzlichen Loader. */
 
 var STL = 'Betonspur/modell/betonspurfertiger.stl';
 var GRUPPEN = 'Betonspur/modell/gruppen.json';   // Dreiecksbereiche je Baugruppe
 
-var renderer, szene, kamera, ctrl, geraet, trichter, keil, kanten, matTrichter,
+var renderer, szene, kamera, ctrl, geraet, trichter, keil, stein, kanten, matTrichter,
     startZiel, startPos, labelRenderer, gMasse, gText;
 
 function stlLesen(puffer) {
@@ -172,8 +183,8 @@ function bemassungBauen() {
   G.add(mass([-172, -66, 16], [-172, -66, 28], '12 Laengstraeger', [0, 5, 0]));
   G.add(mass([-172, -66, 28], [-172, -66, 40], '12 Quertraeger', [0, 5, 0]));
   // Bauteilbereiche in Laengsrichtung
-  [[-60, 113, 'Trichter 173'], [154, 266, 'Abziehplatte 112'], [266, 399, '133 Arbeitsraum'],
-   [399, 446, 'Ballast 47']].forEach(function (m) {
+  [[-60, 113, 'Trichter 173'], [154, 266, 'Abziehplatte 112'], [266, 369, '103 Arbeitsraum'],
+   [375, 435, 'Ballaststein 60']].forEach(function (m) {
     G.add(mass([-172, m[0], 44], [-172, m[1], 44], m[2], [5, 0, 0]));
   });
   zeigen(G, false);
@@ -188,7 +199,8 @@ function beschriftungBauen() {
    ['D  QUERTRAEGER liegt oben auf', 'keil', 0, 124, 44],
    ['E  Betontrichter', 'pos', 0, 20, 148],
    ['F  Abziehplatte, zieht auf 16 cm ab', 'pos', 0, 210, 26],
-   ['G  Ballast', 'pos', 0, 422, 54],
+   ['G  Ballaststein 180 x 60 x 60 - 1555 kg', 'pos', 0, 405, 108],
+   ['J  Ringschraube M20 = Sollbruchstelle, reisst bei 71 kN', 'keil', 0, -95, 30],
    ['H  Anhaengung', 'pos', 0, -80, 46],
    ['BETON 300 BREIT - DURCHGEHEND', '', 0, 480, 2],
    ['hier laeuft nichts mehr', '', 0, 330, 2],
@@ -204,6 +216,8 @@ function aufbauen(daten, gr) {
   var gGeraet   = geometrie(daten.pos, daten.nor, gr.rahmen[0], gr.rahmen[1]);
   var gTrichter = geometrie(daten.pos, daten.nor, gr.trichter[0], gr.trichter[1]);
   var gKeil     = geometrie(daten.pos, daten.nor, gr.traeger[0], gr.traeger[1]);
+  // Ballaststein erst seit 25.08.2026 im Modell - aeltere gruppen.json haben ihn nicht
+  var gStein    = gr.ballast ? geometrie(daten.pos, daten.nor, gr.ballast[0], gr.ballast[1]) : null;
   gGeraet.computeBoundingBox();
 
   // Modell so verschieben, dass es mittig und mit der Unterkante auf 0 steht
@@ -219,9 +233,13 @@ function aufbauen(daten, gr) {
                                               flatShading: true, transparent: true, opacity: 1.0,
                                               side: THREE.DoubleSide });
 
+  var matStein  = new THREE.MeshPhongMaterial({ color: 0xb9b2a4, specular: 0x2a2825, shininess: 6,
+                                                flatShading: true });
+
   geraet   = new THREE.Mesh(gGeraet, matGeraet);
   trichter = new THREE.Mesh(gTrichter, matTrichter);
   keil     = new THREE.Mesh(gKeil, matKeil);
+  stein    = gStein ? new THREE.Mesh(gStein, matStein) : null;
 
   kanten = new THREE.LineSegments(
     new THREE.EdgesGeometry(gGeraet, 25),
@@ -237,6 +255,7 @@ function aufbauen(daten, gr) {
 
   var verschoben = new THREE.Group();
   verschoben.add(geraet); verschoben.add(trichter); verschoben.add(keil);
+  if (stein) verschoben.add(stein);
   verschoben.add(kanten); verschoben.add(gMasse); verschoben.add(gText);
   verschoben.position.copy(verschieb);
 
@@ -302,6 +321,12 @@ function start() {
     matTrichter.needsUpdate = true;
     this.classList.toggle('an', durchsichtig);
     this.textContent = durchsichtig ? 'Trichter zu' : 'Trichter durchsichtig';
+  });
+  document.getElementById('bStein').addEventListener('click', function () {
+    if (!stein) return;
+    stein.visible = !stein.visible;
+    this.classList.toggle('an', !stein.visible);
+    this.textContent = stein.visible ? 'Ballaststein' : 'Ballaststein aus';
   });
   document.getElementById('bKanten').addEventListener('click', function () {
     if (!kanten) return;
