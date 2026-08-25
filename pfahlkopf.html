@@ -125,6 +125,17 @@
   .liste div.z b{ min-width:74px; }
   .liste div.z span{ flex:1; color:var(--mut); }
   .liste div.z button{ border:none; background:none; color:var(--fehlt); font-size:16px; cursor:pointer; padding:2px 6px; }
+  /* -- Kopfplatten-Plaene: ein A4-Blatt je Typ (25.08.2026) -- */
+  .plaene{ display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-top:9px; }
+  .plaene a{ display:flex; flex-direction:column; gap:3px; padding:13px 11px; background:#fff;
+        border:1px solid var(--line); border-radius:10px; text-decoration:none; color:var(--ink); }
+  .plaene a b{ font-size:15px; }
+  .plaene a span{ font-size:11.5px; color:var(--mut); }
+  .plaene a.j25{ border-left:5px solid var(--blau); }
+  .plaene a.j26{ border-left:5px solid var(--gruen); }
+  .plaene a.alle{ grid-column:1/-1; border-left:5px solid var(--rot); }
+  .plaene .kopfz{ grid-column:1/-1; font-size:11px; font-weight:800; text-transform:uppercase;
+        letter-spacing:.04em; color:var(--mut); margin-top:4px; }
   .hint{ font-size:11.5px; color:var(--mut); line-height:1.5; margin-top:8px; }
 
   #toast{ position:fixed; left:50%; bottom:18px; transform:translate(-50%,26px); opacity:0;
@@ -307,6 +318,25 @@
 
 <!-- ══════════ 4 · MASSE ══════════ -->
 <section id="s4" style="display:none">
+  <div class="box">
+    <h2>Kopfplatten-Pläne – ein Blatt je Typ</h2>
+    <div class="plaene">
+      <div class="kopfz">Serie 2025 &middot; rechteckig, 4 Flügelbleche</div>
+      <a class="j25" href="kopfplatten/Kopfplatte_2025_TypA.pdf" target="_blank" rel="noopener"><b>Typ A</b><span>280&times;290&times;20 mm &middot; Muffe &Oslash;114,3</span></a>
+      <a class="j25" href="kopfplatten/Kopfplatte_2025_TypB1.pdf" target="_blank" rel="noopener"><b>Typ B1</b><span>280&times;290&times;20 mm &middot; Muffe &Oslash;114,3</span></a>
+      <a class="j25" href="kopfplatten/Kopfplatte_2025_TypB2.pdf" target="_blank" rel="noopener"><b>Typ B2</b><span>280&times;320&times;20 mm &middot; Muffe &Oslash;114,3</span></a>
+      <a class="j25" href="kopfplatten/Kopfplatte_2025_TypCD.pdf" target="_blank" rel="noopener"><b>Typ C und D</b><span>320&times;350&times;25 mm &middot; Muffe &Oslash;139,7</span></a>
+      <a class="j25" href="kopfplatten/Kopfplatte_2025_TypE.pdf" target="_blank" rel="noopener"><b>Typ E</b><span>350&times;370&times;30 mm &middot; Muffe &Oslash;139,7</span></a>
+      <div class="kopfz">Serie 2026 &middot; quadratisch, keine Flügelbleche</div>
+      <a class="j26" href="kopfplatten/Kopfplatte_2026_TypAB.pdf" target="_blank" rel="noopener"><b>Typ A und B</b><span>300&times;300&times;20 mm &middot; Muffe &Oslash;114,3</span></a>
+      <a class="j26" href="kopfplatten/Kopfplatte_2026_TypCD.pdf" target="_blank" rel="noopener"><b>Typ C und D</b><span>320&times;320&times;25 mm &middot; Muffe &Oslash;139,7</span></a>
+      <a class="j26" href="kopfplatten/Kopfplatte_2026_TypE.pdf" target="_blank" rel="noopener"><b>Typ E</b><span>340&times;340&times;30 mm &middot; Muffe &Oslash;139,7</span></a>
+      <a class="alle" href="kopfplatten/Kopfplatten_A4_alle.pdf" target="_blank" rel="noopener"><b>Alle 8 Blätter in einem PDF</b><span>A4 · zum Ausdrucken und Laminieren</span></a>
+      <a class="alle" href="kopfplatten/Kopfplatten_Uebersicht_A3.pdf" target="_blank" rel="noopener"><b>Übersichtsplan A3</b><span>alle Varianten nebeneinander + Masstabelle</span></a>
+    </div>
+    <div class="hint">Jedes Blatt zeigt die Kopfplatte massstäblich mit Lochbild, Massen und Gewinde-Erkennung. Masse aus den ILF-Typenplänen PL_0278 A3 (Serie 2025) und PL_0289 A1 (Serie 2026) – keine Ausführungspläne, bei Abweichung gilt der Originalplan.<br>Merkregel: <b>quadratisch ohne Flügelbleche = 2026</b>, <b>rechteckig mit 4 Flügelblechen = 2025</b>. Einmal mit Empfang öffnen, danach liegen die Pläne offline auf dem Gerät.</div>
+  </div>
+
   <div class="box">
     <h2>Pfahlkopf erkennen – Masse je Typ</h2>
     <table class="t">
