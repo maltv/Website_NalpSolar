@@ -517,6 +517,7 @@ var I18N={
   hint_mehrere:'Mehrere auf einmal: IDs mit Komma trennen (z.B. 995, 996, 997)',
   chk_uebernommen:'{id}-{s} · {l} mm eingesetzt – Name prüfen und speichern',
   chk_erfasst_schon:'{id}-{s} ist schon erfasst – nochmals erfassen?',
+  chk_nachbestellt:'{id}-{s} ist eine Nachbestellung (Batch {b}) – bitte JETZT nochmals erfassen',
   mehr_titel:'Weitere Angaben (nur wenn nötig)',
   soll_ok:'✔ Stimmt mit der Bestellung überein (Batch {b})',
   soll_abw:'⚠ Bestellt sind {l} mm (Batch {b}) – Länge nachmessen!',
@@ -536,6 +537,7 @@ var I18N={
   d_tische:'Tische: {n}',
   th_lieferung:'Lieferung', th_batch:'Batch', th_erfasst:'Erfasst',
   badge_komplett:'✔ komplett geliefert', badge_offen:'{n} fehlt', batch_fehlt:'Fehlt:',
+  batch_nach:'⟳ = diese Stütze wurde früher schon einmal erfasst und in diesem Batch NEU bestellt – beim Abladen trotzdem kontrollieren.',
   ph_suche:'Suchen (ID, Länge, Name) …', btn_csv:'⬇ CSV / Excel',
   th_id:'ID', th_st:'St.', th_laenge:'Länge', th_typ:'Typ', th_wer:'Wer', th_wann:'Wann', th_status:'Status',
   badge_wartet:'wartet', badge_berg:'⛰ Auf dem Berg', badge_vormontiert:'🔧 vormontiert',
@@ -607,6 +609,7 @@ var I18N={
   s3_titel1:'🏷 Saved posts', s3_titel2:'🏗 Progress',
   chk_uebernommen:'{id}-{s} · {l} mm filled in – check the name and save',
   chk_erfasst_schon:'{id}-{s} is already saved – save it again?',
+  chk_nachbestellt:'{id}-{s} is a re-order (batch {b}) – please save it again NOW',
   mehr_titel:'More details (only if needed)',
   soll_ok:'✔ Matches the order (batch {b})',
   soll_abw:'⚠ Ordered length is {l} mm (batch {b}) – measure again!',
@@ -625,6 +628,7 @@ var I18N={
   d_tische:'Tables: {n}',
   th_lieferung:'Delivery', th_batch:'Batch', th_erfasst:'Saved',
   badge_komplett:'✔ fully delivered', badge_offen:'{n} missing', batch_fehlt:'Missing:',
+  batch_nach:'⟳ = this post was recorded once before and re-ordered in this batch – still check it when unloading.',
   ph_suche:'Search (ID, length, name) …', btn_csv:'⬇ CSV / Excel',
   th_id:'ID', th_st:'S1–S4', th_laenge:'Length', th_typ:'Type', th_wer:'Who', th_wann:'When', th_status:'Status',
   badge_wartet:'waiting', badge_berg:'⛰ Sent up', badge_vormontiert:'🔧 pre-assembled',
@@ -697,6 +701,7 @@ var I18N={
   s3_titel0:'🧾 Partie zamówień – dostarczone?',
   chk_uebernommen:'{id}-{s} · {l} mm wpisane – sprawdź imię i zapisz',
   chk_erfasst_schon:'{id}-{s} jest już zapisane – zapisać ponownie?',
+  chk_nachbestellt:'{id}-{s} to zamówienie ponowne (partia {b}) – zapisz je TERAZ jeszcze raz',
   mehr_titel:'Więcej danych (tylko w razie potrzeby)',
   soll_ok:'✔ Zgodne z zamówieniem (partia {b})',
   soll_abw:'⚠ Zamówiono {l} mm (partia {b}) – zmierz jeszcze raz!',
@@ -714,6 +719,7 @@ var I18N={
   d_tische:'Stoły: {n}',
   th_lieferung:'Dostawa', th_batch:'Partia', th_erfasst:'Zapisane',
   badge_komplett:'✔ dostarczona w całości', badge_offen:'brakuje: {n}', batch_fehlt:'Brakuje:',
+  batch_nach:'⟳ = ta podpora była już raz zapisana i zamówiona ponownie w tej partii – mimo to sprawdź przy rozładunku.',
   ph_suche:'Szukaj (ID, długość, imię i nazwisko) …', btn_csv:'⬇ CSV / Excel',
   th_id:'ID', th_st:'Pod.', th_laenge:'Długość', th_typ:'Typ', th_wer:'Kto', th_wann:'Kiedy', th_status:'Status',
   badge_wartet:'czeka', badge_berg:'⛰ Na górze', badge_vormontiert:'🔧 zmontowana',
@@ -1187,8 +1193,10 @@ function scanTreffer(k, bild){
   $('scanStatus').className='ok';
   $('scanStatus').textContent=T('scan_treffer',{id:k.id,s:k.s,l:k.l});
   try{ if(navigator.vibrate) navigator.vibrate(120); }catch(e){}
-  var da=psErfasst();
-  if(da[k.id+'-'+k.s]) toast(T('chk_erfasst_schon',{id:k.id,s:k.s}),true);
+  var da=psErfasstDatum(), key=normId(k.id)+'-'+k.s, soll=sollIndex()[key];
+  if(da[key] && soll && !batchGeliefert(da,key,batchSchwelle(soll.batch)))
+    toast(T('chk_nachbestellt',{id:k.id,s:k.s,b:soll.batch}),true);
+  else if(da[key]) toast(T('chk_erfasst_schon',{id:k.id,s:k.s}),true);
   else toast(T('chk_uebernommen',{id:k.id,s:k.s,l:k.l}));
   sollPruefen();
   scannerZu();
@@ -1524,7 +1532,7 @@ var batchAuf={};
    18.06. "Lieferung Batch 5"  ·  6: Maeder 07.07. "kommt diesen Mittwoch"
    8 Ist: Victor 30.07. (komplett vor Ort)  ·  9/11/12/13: Bucheli 30.07. 10:52
    Batch 10: laut F. Borner / Bucheli 30.07. gibt es keinen eigenen Batch 10.
-   11-15: Liefertermin aus der jeweiligen Bestell-xlsx (Zeile 1); Batch 11 laut
+   11-16: Liefertermin aus der jeweiligen Bestell-xlsx (Zeile 1); Batch 11 laut
    Bauleitung 11.08.2026 abends auf dem Platz (Bestellung sagte 06.08.). */
 var LIEFERUNG={
   1:{soll:'2026-05-18'},
@@ -1539,7 +1547,8 @@ var LIEFERUNG={
   12:{soll:'2026-08-17'},
   13:{soll:'2026-08-24'},
   14:{soll:'2026-09-01'},
-  15:{soll:'2026-09-07'}
+  15:{soll:'2026-09-07'},
+  16:{soll:'2026-09-14'}
 };
 function lieferText(b, voll){
   var l=LIEFERUNG[b];
@@ -1555,6 +1564,40 @@ function lieferText(b, voll){
   return '<span style="color:var(--mut);font-size:11px">'+esc(l.hinweis||'–')+'</span>';
 }
 function normId(x){ var s=String(x==null?'':x).trim(); return /^\d+$/.test(s)?String(parseInt(s,10)):s; }
+
+/* ---------- Wann zaehlt eine Erfassung als Lieferung DIESES Batches? --------
+   Bestellung und Erfassung kennen nur Tisch+Stuetze, nicht das einzelne Stueck.
+   Ohne Schranke gilt eine Position darum als geliefert, sobald sie IRGENDWANN
+   einmal erfasst wurde - auch wenn dieselbe Stuetze spaeter neu bestellt wurde
+   (Ersatz, verlorenes Teil, falsche Laenge). Genau diese Nachbestellungen
+   wuerden beim Abladen nie kontrolliert und gingen vergessen (Fall 372-S2 und
+   2104-S4 in Batch 13: am 30.07. erfasst, in Batch 13 vom 27.07. neu bestellt).
+   Schwelle = Liefertermin des Batches, mindestens aber sein Bestelldatum. */
+var BATCH_BEST=null;
+function batchBestellt(){                  // Batch -> fruehestes Bestelldatum
+  if(BATCH_BEST) return BATCH_BEST;
+  BATCH_BEST={};
+  ((window.NALP_PS_DATEN&&window.NALP_PS_DATEN.bestellungen)||[]).forEach(function(o){
+    if(o[6]!==1 || !o[4]) return;
+    if(!BATCH_BEST[o[3]] || o[4]<BATCH_BEST[o[3]]) BATCH_BEST[o[3]]=o[4];
+  });
+  return BATCH_BEST;
+}
+function batchSchwelle(b){
+  var l=LIEFERUNG[b], lf=(l&&(l.ist||l.soll))||'', bd=batchBestellt()[b]||'';
+  return lf>bd?lf:bd;                      // ohne beides: keine Schranke
+}
+function psErfasstDatum(){                 // key -> juengstes Erfassungsdatum
+  var da={};
+  alleStuetzen().forEach(function(r){
+    var k=normId(r.tischId)+'-'+String(r.stuetze||'').trim().toUpperCase(), t=dTag(r)||heute();
+    if(!da[k] || t>da[k]) da[k]=t;
+  });
+  return da;
+}
+function batchGeliefert(da,k,schwelle){    // fuer DIESEN Batch angekommen?
+  return !!(da[k] && (!schwelle || da[k]>=schwelle));
+}
 function batchPositionen(){
   var best=(window.NALP_PS_DATEN&&window.NALP_PS_DATEN.bestellungen)||[];
   var map={};
@@ -1572,14 +1615,14 @@ function renderBatches(){
     .filter(function(b){ return b>=8; })   // 1-7 sind laengst verbaut
     .sort(function(a,b){return a-b;});
   if(!bs.length){ el.innerHTML=''; return; }
-  var da={};
-  alleStuetzen().forEach(function(r){
-    da[normId(r.tischId)+'-'+String(r.stuetze||'').trim().toUpperCase()]=true;
-  });
+  var da=psErfasstDatum();
   var h='<tr><th>'+T('th_batch')+'</th><th>'+T('th_lieferung')+'</th><th>'+T('th_erfasst')+'</th><th></th><th>'+T('th_status')+'</th></tr>';
   bs.forEach(function(b){
-    var keys=Object.keys(map[b]), n=keys.length;
-    var fehlt=keys.filter(function(k){ return !da[k]; });
+    var keys=Object.keys(map[b]), n=keys.length, schw=batchSchwelle(b);
+    var fehlt=keys.filter(function(k){ return !batchGeliefert(da,k,schw); });
+    // fehlt, war aber frueher schon einmal erfasst = Nachbestellung derselben
+    // Stuetze. Die faellt sonst durch jede Kontrolle - darum eigens ausweisen.
+    var nach=fehlt.filter(function(k){ return !!da[k]; });
     var ok=n-fehlt.length, voll=!fehlt.length, pz=Math.round(ok/n*100);
     h+='<tr style="cursor:pointer" onclick="batchToggle('+b+')">'
       +'<td><b>'+b+'</b></td>'
@@ -1594,7 +1637,12 @@ function renderBatches(){
         return (Number(px[0])-Number(py[0])) || (px[1]<py[1]?-1:1);
       });
       h+='<tr><td></td><td colspan="4" style="font-size:12px;color:var(--mut);line-height:1.6">'
-        +T('batch_fehlt')+' '+fehlt.join(', ')+'</td></tr>';
+        +T('batch_fehlt')+' '
+        +fehlt.map(function(k){
+            return da[k] ? '<b style="color:var(--rot)">'+k+' ⟳</b>' : k;
+          }).join(', ')
+        +(nach.length?'<div style="margin-top:5px;color:var(--rot)">'+T('batch_nach')+'</div>':'')
+        +'</td></tr>';
     }
   });
   el.innerHTML=h;
@@ -1621,13 +1669,16 @@ function sollIndex(){
    heute faellig) ist und noch offene Positionen hat. Am Abladetag steht damit
    sowohl in der Checkliste als auch bei den Karten das Richtige zuoberst. */
 function aktuellerBatch(){
-  var map=batchPositionen(), da=psErfasst(), heuteS=heute();
+  var map=batchPositionen(), da=psErfasstDatum(), heuteS=heute();
   // Nur nummerierte Batches: die Sonderbestellung 'RES' (Reserve-Passstuecke)
   // hat keine Batchnummer - ohne diesen Filter wird map[NaN] gelesen, die
   // Funktion wirft und die Karten werden gar nicht erst gebaut.
   var bs=Object.keys(map).map(Number).filter(function(b){ return !isNaN(b); })
                          .sort(function(a,b){ return a-b; });
-  var offen=bs.filter(function(b){ return Object.keys(map[b]).some(function(k){ return !da[k]; }); });
+  var offen=bs.filter(function(b){
+    var schw=batchSchwelle(b);
+    return Object.keys(map[b]).some(function(k){ return !batchGeliefert(da,k,schw); });
+  });
   var geliefert=offen.filter(function(b){
     var l=LIEFERUNG[b]; return l && (l.ist || (l.soll && l.soll<=heuteS));
   });
@@ -1844,16 +1895,10 @@ function kartenGruppen(){                // Batch 9 + 10 zusammen
   Object.keys(map).forEach(function(b){
     var lbl=(b==='9'||b==='10')?'9+10':String(b);
     g[lbl]=g[lbl]||{};
-    Object.keys(map[b]).forEach(function(k){ g[lbl][k]=true; });
+    Object.keys(map[b]).forEach(function(k){ g[lbl][k]=b; });   // Wert = Batch
+                                             // (Karte 9+10 mischt zwei Batches)
   });
   return g;
-}
-function psErfasst(){                    // erfasste Passstuecke je tisch-stuetze
-  var da={};
-  alleStuetzen().forEach(function(r){
-    da[normId(r.tischId)+'-'+String(r.stuetze||'').trim().toUpperCase()]=true;
-  });
-  return da;
 }
 var kGrp={};                             // Batchgruppe -> Positionsschluessel
 var kMaps={};                            // lbl -> {map, flaechen, punkte, nGesamt}
@@ -1996,12 +2041,21 @@ function kMapBauen(wrap,lbl){
   kMaps[lbl]={map:m, flaechen:flaechen, punkte:punkte, nGesamt:keys.length};
 }
 function kStatusMalen(){
-  var st=akStatus(), da=psErfasst();
+  var st=akStatus(), da=psErfasstDatum();
   Object.keys(kMaps).forEach(function(lbl){
-    var M=kMaps[lbl], e=0, nv=0, nb=0;
+    var M=kMaps[lbl], e=0, nv=0, nb=0, grp=kGrp[lbl]||{};
     Object.keys(M.punkte).forEach(function(k){
-      var er=!!da[k]; if(er) e++;
-      M.punkte[k].setStyle({ fillColor: er?'#1565c0':'#e4e7eb' });
+      var er=batchGeliefert(da,k,batchSchwelle(grp[k])); if(er) e++;
+      // orange + groesser = Position war frueher schon einmal erfasst, das
+      // Stueck DIESES Batches (Nachbestellung) fehlt aber noch. Grau waere
+      // richtig, faellt aber zwischen 100 grauen Punkten niemandem auf.
+      var nach=!er && !!da[k];
+      M.punkte[k].setStyle({ fillColor: er?'#1565c0':(nach?'#e08a00':'#e4e7eb'),
+                             radius: nach?4.8:3.2, weight: nach?1.6:1.1 });
+      if(nach && !M.punkte[k]._nachTip){
+        M.punkte[k]._nachTip=true;
+        M.punkte[k].bindPopup('<b>'+k+'</b><br>'+T('batch_nach'));
+      }
     });
     Object.keys(M.flaechen).forEach(function(tid){
       var zu=st[tid];
