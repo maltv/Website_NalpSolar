@@ -251,6 +251,40 @@
   .matLuecke .w { display:inline-block; font-size:10.5px; font-weight:800; color:#fff; background:#8a8e94;
         border-radius:10px; padding:1px 7px; margin-right:6px; }
   .matLuecke .w.f { background:var(--rot); } .matLuecke .w.u { background:var(--orange); }
+
+  /* ── Einkäufer ──────────────────────────────────────────────
+     Karten statt Tabelle: die Seite wird am Handy gelesen (390 px),
+     eine 7-spaltige Tabelle wäre dort unlesbar. */
+  .einkZahlen { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  .einkZahl { flex:1 1 auto; min-width:96px; background:#fff; border:1px solid var(--line);
+        border-radius:6px; padding:9px 11px; text-align:center; }
+  .einkZahl b { display:block; font-size:23px; line-height:1.15; font-variant-numeric:tabular-nums; }
+  .einkZahl span { font-size:10.5px; color:var(--mut); font-weight:700;
+        text-transform:uppercase; letter-spacing:.03em; }
+  .einkZahl.rot b { color:var(--rot); } .einkZahl.blau b { color:var(--blau); }
+  .einkZahl.orange b { color:var(--orange); }
+  .einkFilter { display:flex; gap:6px; overflow-x:auto; padding-bottom:10px; margin-bottom:4px; }
+  .einkFilter button { flex:0 0 auto; border:1px solid var(--line); background:#fff; cursor:pointer;
+        font:700 12px Arial; color:var(--mut); padding:6px 12px; border-radius:14px; white-space:nowrap; }
+  .einkFilter button.on { background:var(--rot); border-color:var(--rot); color:#fff; }
+  .einkPos { background:#fff; border:1px solid var(--line); border-left:5px solid #8a8e94;
+        border-radius:6px; padding:11px 13px; margin-bottom:10px; box-shadow:0 1px 4px rgba(20,25,32,.07); }
+  .einkPos.rot { border-left-color:var(--rot); } .einkPos.blau { border-left-color:var(--blau); }
+  .einkPos.orange { border-left-color:var(--orange); } .einkPos.gruen { border-left-color:var(--gruen); }
+  .einkPos .was { font-size:13.5px; font-weight:700; line-height:1.45; }
+  .einkPos .wer { font-size:12px; color:var(--mut); margin-top:3px; line-height:1.5; }
+  .einkPos .wer b { color:var(--ink); }
+  .einkZeile { display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; font-size:12px; }
+  .einkZeile div { background:#f6f7f9; border-radius:4px; padding:4px 9px; white-space:nowrap; }
+  .einkZeile div i { font-style:normal; color:var(--mut); font-size:10.5px;
+        text-transform:uppercase; letter-spacing:.03em; margin-right:4px; }
+  .einkStat { display:inline-block; padding:2px 9px; border-radius:11px; font-size:11px;
+        font-weight:700; color:#fff; background:#8a8e94; }
+  .einkStat.rot { background:var(--rot); } .einkStat.blau { background:var(--blau); }
+  .einkStat.orange { background:var(--orange); } .einkStat.gruen { background:var(--gruen); }
+  .einkBem { font-size:12px; color:var(--ink); background:#fffaf2; border-left:3px solid var(--orange);
+        padding:6px 9px; border-radius:0 4px 4px 0; margin-top:8px; line-height:1.5; }
+  .einkQ { font-size:10.5px; color:var(--mut); margin-top:7px; line-height:1.45; }
 </style>
 </head>
 <body>
@@ -265,6 +299,7 @@
   <button data-tab="stoerungen">Störungen<span class="zahl" id="zStoer">–</span></button>
   <button data-tab="regie">Regie<span class="zahl" id="zRegie">–</span></button>
   <button data-tab="material">Material<span class="zahl" id="zMat">–</span></button>
+  <button data-tab="einkauf">Einkäufer<span class="zahl" id="zEink">–</span></button>
   <button data-tab="schrauben">Schrauben<span class="zahl" id="zSchr">–</span></button>
   <button data-tab="anweisungen">Anweisungen<span class="zahl" id="zAnw">–</span></button>
   <button data-tab="foehn">Föhn</button>
@@ -616,6 +651,22 @@
 </div>
 
 <!-- ══════════════════════════════════════════════════════════════
+     REITER – EINKÄUFER (was ist wo für wen bestellt, Termin, Preis)
+     Daten: uploads/einkauf.json, gebaut von Tools\Einkauf_Bauen.py aus
+     Bestellungen\einkaufsregister.json. Reine Anzeige – gepflegt wird
+     das Register in der Datei, nicht hier (gleich wie Material).
+     Zweck: sehen, wo man nachhaken muss. Darum steht Rot/Blau/Orange oben.
+     ══════════════════════════════════════════════════════════════ -->
+<div class="tab" id="tab-einkauf"><div class="wrap">
+  <div id="einkKopf"></div>
+  <div class="einkFilter" id="einkFilter"></div>
+  <div id="einkListe"><div class="card"><div class="sub">lade …</div></div></div>
+  <div class="foot"><a href="index.html">← zurück zum Portal</a> ·
+    Register: <code>Bestellungen\einkaufsregister.json</code> ·
+    Neubau: <code>EINKAUF.bat</code></div>
+</div></div>
+
+<!-- ══════════════════════════════════════════════════════════════
      REITER 6 – FÖHN
      ══════════════════════════════════════════════════════════════ -->
 <div class="tab" id="tab-foehn"><div class="wrap">
@@ -718,6 +769,7 @@ Array.prototype.forEach.call(document.querySelectorAll('#reiter button'),functio
     if(ziel==='schrauben') schrStarten();
     if(ziel==='anweisungen') anwStarten();
     if(ziel==='material') matStarten();
+    if(ziel==='einkauf') einkStarten();
   };
 });
 function reiterOeffnen(name){
@@ -1957,8 +2009,99 @@ function matDetail(a){
   return h;
 }
 
+/* ══════════════════════════════════════════════════════════════
+   EINKÄUFER – was ist wo für wen bestellt, wann kommt es, was kostet es
+   Daten: uploads/einkauf.json (Tools\Einkauf_Bauen.py aus
+   Bestellungen\einkaufsregister.json). Reine Anzeige, nichts wird hier
+   geschrieben – geändert wird im Register, dann EINKAUF.bat.
+   ══════════════════════════════════════════════════════════════ */
+var EINK=null, einkGeladen=false, einkFilter='dran';
+
+function einkStarten(){
+  if(einkGeladen) return; einkGeladen=true;
+  fetch('uploads/einkauf.json?_='+Date.now(),{cache:'no-store'})
+    .then(function(r){ return r.json(); })
+    .then(function(j){ EINK=j; einkKopfZeichnen(); einkFilterZeichnen(); einkZeichnen(); })
+    .catch(function(){ $('einkListe').innerHTML='<div class="card"><div class="sub">'
+      +'einkauf.json konnte nicht geladen werden – einmal EINKAUF.bat laufen lassen.'
+      +'</div></div>'; });
+}
+
+function einkChf(n){
+  if(typeof n!=='number') return '–';
+  return "CHF "+n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,"'");
+}
+
+function einkKopfZeichnen(){
+  var s=EINK.summen;
+  $('einkKopf').innerHTML=
+    '<div class="einkZahlen">'
+    +'<div class="einkZahl rot"><b>'+s.ueberfaellig+'</b><span>überfällig</span></div>'
+    +'<div class="einkZahl blau"><b>'+s.abholbereit+'</b><span>abholbereit</span></div>'
+    +'<div class="einkZahl orange"><b>'+s.nachhaken+'</b><span>nachhaken</span></div>'
+    +'<div class="einkZahl"><b>'+s.offen+'</b><span>offen</span></div>'
+    +'</div>'
+    +'<div class="card"><h2>Einkäufer</h2><div class="sub">'
+    +'Bekannte Summe der offenen Bestellungen: <b>'+einkChf(s.summe_offen_chf)+'</b> – '
+    +'bei '+s.ohne_preis+' Bestellungen ist der Preis noch nicht bestätigt, die fehlen darin. '
+    +'Stand '+deDat(EINK.stand)+', gebaut '+esc(EINK.gebaut_am)+'. '
+    +'Gepflegt wird <code>Bestellungen\\einkaufsregister.json</code>, danach <code>EINKAUF.bat</code>.'
+    +'</div></div>';
+  /* Zähler im Reiter: was wirklich Arbeit macht (überfällig + abholbereit + nachhaken) */
+  $('zEink').textContent=(s.ueberfaellig+s.abholbereit+s.nachhaken);
+}
+
+function einkFilterZeichnen(){
+  var f=[{id:'dran',name:'Dran bleiben'},{id:'alle',name:'Alle'}];
+  EINK.lieferanten.forEach(function(l){
+    f.push({id:'L:'+l, name:l.split(' (')[0].replace(/ AG$| GmbH$/,'')});
+  });
+  $('einkFilter').innerHTML=f.map(function(x){
+    return '<button data-ef="'+esc(x.id)+'"'+(einkFilter===x.id?' class="on"':'')+'>'
+      +esc(x.name)+'</button>';
+  }).join('');
+  Array.prototype.forEach.call($('einkFilter').querySelectorAll('button'),function(b){
+    b.onclick=function(){ einkFilter=b.getAttribute('data-ef');
+      einkFilterZeichnen(); einkZeichnen(); };
+  });
+}
+
+function einkZeichnen(){
+  var liste=EINK.bestellungen.filter(function(b){
+    if(einkFilter==='alle') return true;
+    if(einkFilter==='dran') return b.ampel==='rot'||b.ampel==='blau'||b.ampel==='orange';
+    if(einkFilter.indexOf('L:')===0) return b.lieferant===einkFilter.slice(2);
+    return true;
+  });
+  if(!liste.length){
+    $('einkListe').innerHTML='<div class="card"><div class="sub">Hier ist gerade nichts offen.</div></div>';
+    return;
+  }
+  $('einkListe').innerHTML=liste.map(function(b){
+    var z='<div class="einkZeile">';
+    z+='<div><i>Termin</i>'+(b.termin?deDat(b.termin):'offen')
+      +(b.termin_art&&b.termin_art!=='offen'?' <i>('+esc(b.termin_art)+')</i>':'')+'</div>';
+    z+='<div><i>Preis</i>'+einkChf(b.preis)
+      +(b.preis_art==='rund'?' <i>(rund)</i>':'')+'</div>';
+    if(b.bestellt_am) z+='<div><i>bestellt</i>'+deDat(b.bestellt_am)+'</div>';
+    if(b.beleg) z+='<div><i>Beleg</i>'+esc(b.beleg)+'</div>';
+    z+='</div>';
+    return '<div class="einkPos '+b.ampel+'">'
+      +'<div class="was">'+esc(b.was)+'</div>'
+      +'<div class="wer">für <b>'+esc(b.fuer)+'</b> · bei <b>'+esc(b.lieferant)+'</b>'
+      +(b.wo?' · '+esc(b.wo):'')+'</div>'
+      +'<div style="margin-top:8px"><span class="einkStat '+b.ampel+'">'+esc(b.ampeltext)+'</span> '
+      +'<span class="einkQ" style="margin:0 0 0 6px">'+esc(b.status)+'</span></div>'
+      +z
+      +(b.bemerkung?'<div class="einkBem">'+esc(b.bemerkung)+'</div>':'')
+      +'<div class="einkQ">Quelle: '+esc(b.quelle)+'</div>'
+      +'</div>';
+  }).join('');
+}
+
 /* ══ Start ══════════════════════════════════════════════════ */
 matStarten();
+einkStarten();
 ladeStoerungen(); ladeStundenjournal();
 ladeRegie();      setInterval(ladeRegie,2*60*1000);
 </script>
