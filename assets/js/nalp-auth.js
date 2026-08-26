@@ -24,7 +24,11 @@
 (function () {
   'use strict';
 
-  var API_KEY = 'HIER-WEB-API-SCHLUESSEL-EINTRAGEN';
+  /* Web-API-Schluessel der App «NalpSolar Lieferscheine» (angelegt 21.08.2026).
+     Der Schluessel DARF oeffentlich sein - er benennt nur das Projekt. Der Schutz
+     kommt aus den Datenbankregeln, die auf eine feste Namensliste von Konten
+     pruefen (siehe Firebase_Regeln\database.rules.json im Projektordner). */
+  var API_KEY = 'AIzaSyBHzmY4VG1_1x-zSyt0Oq0yqG-ycuohSNc';
   var TITEL = String(window.NALP_AUTH_TITEL || 'Baustellen-Portal');
   var LS_KEY = 'nalp_auth_v1';
 

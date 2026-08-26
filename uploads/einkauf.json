@@ -1,6 +1,6 @@
 {
- "stand": "2026-08-25",
- "gebaut_am": "2026-08-25 14:49",
+ "stand": "2026-08-26",
+ "gebaut_am": "2026-08-26 11:23",
  "quelle": "Bestellungen/einkaufsregister.json",
  "bestellungen": [
   {
@@ -18,10 +18,10 @@
    "beleg": "",
    "bemerkung": "Nicht an Lager, Beschaffung ca. 1 Woche ab 17.08. - also KW 35.",
    "quelle": "Bestellungen/20260814_Bestellliste_Stahlbau.md (Stand 17.08.)",
-   "tage_seit_bestellung": 8,
-   "tage_bis_termin": -1,
+   "tage_seit_bestellung": 9,
+   "tage_bis_termin": -2,
    "ampel": "rot",
-   "ampeltext": "überfällig seit 1 Tagen"
+   "ampeltext": "überfällig seit 2 Tagen"
   },
   {
    "id": "20260730-aw-gewindelehren",
@@ -38,8 +38,8 @@
    "beleg": "AB 260779082",
    "bemerkung": "Am 12.08. noch nicht abgeholt. ACHTUNG: die 7 Messschieber aus der Ergaenzungsmail vom 30.07. 13:16 stehen NICHT auf der AB.",
    "quelle": "Memory gewindelehren-arthur-weber; AB-PDF 30.07.2026",
-   "tage_seit_bestellung": 26,
-   "tage_bis_termin": -14,
+   "tage_seit_bestellung": 27,
+   "tage_bis_termin": -15,
    "ampel": "blau",
    "ampeltext": "liegt bereit - abholen"
   },
@@ -58,8 +58,8 @@
    "beleg": "AB 260822419",
    "bemerkung": "",
    "quelle": "Memory gewindelehren-arthur-weber",
-   "tage_seit_bestellung": 14,
-   "tage_bis_termin": -13,
+   "tage_seit_bestellung": 15,
+   "tage_bis_termin": -14,
    "ampel": "blau",
    "ampeltext": "liegt bereit - abholen"
   },
@@ -78,8 +78,8 @@
    "beleg": "",
    "bemerkung": "Liegen seit Mo 17.08. in Disentis zur Abholung bereit.",
    "quelle": "Bestellungen/20260814_Bestellliste_Stahlbau.md (Stand 17.08.)",
-   "tage_seit_bestellung": 11,
-   "tage_bis_termin": -8,
+   "tage_seit_bestellung": 12,
+   "tage_bis_termin": -9,
    "ampel": "blau",
    "ampeltext": "liegt bereit - abholen"
   },
@@ -98,7 +98,7 @@
    "beleg": "AB 260831507",
    "bemerkung": "",
    "quelle": "Bestellungen/20260814_Bestellliste_Stahlbau.md (Stand 17.08.)",
-   "tage_seit_bestellung": 12,
+   "tage_seit_bestellung": 13,
    "tage_bis_termin": null,
    "ampel": "blau",
    "ampeltext": "liegt bereit - abholen"
@@ -118,10 +118,10 @@
    "beleg": "Bestellung c1028005",
    "bemerkung": "ca. 7 Werktage ab 17.08. Rechnung an R. Ziegler weitergeleitet.",
    "quelle": "Bestellungen/20260814_Bestellliste_Stahlbau.md (Stand 17.08.)",
-   "tage_seit_bestellung": 8,
-   "tage_bis_termin": 1,
+   "tage_seit_bestellung": 9,
+   "tage_bis_termin": 0,
    "ampel": "orange",
-   "ampeltext": "morgen fällig"
+   "ampeltext": "heute fällig"
   },
   {
    "id": "20260825-aw-werkzeug-zurrgurte",
@@ -138,10 +138,30 @@
    "beleg": "",
    "bemerkung": "Listenpreis rund 2700, mit AW-Rabatt 20-33 % rund 2000. Was morgen bereitliegt, wird in Schattdorf abgeholt. SpanSet verlangt - AW fuehrt im Shop nur ARTOOL/Carl Stahl.",
    "quelle": "Bestellungen/20260825_Bestellung_ArthurWeber_Werkzeug_Zurrgurte.md",
-   "tage_seit_bestellung": 0,
-   "tage_bis_termin": 1,
+   "tage_seit_bestellung": 1,
+   "tage_bis_termin": 0,
    "ampel": "orange",
-   "ampeltext": "morgen fällig"
+   "ampeltext": "heute fällig"
+  },
+  {
+   "id": "20260811-hebetech-hebebaender",
+   "was": "6 Stk Hebeband Xpert 1 t, 10 m (Art. 09383-1000)",
+   "fuer": "Stahlbau / Montage (Nachbestellung wie Maerz)",
+   "lieferant": "Hebetech AG (Ch. Igrek)",
+   "wo": "STRABAG Disentis, Via Plaun da Diras 8",
+   "bestellt_am": "2026-08-11",
+   "termin": null,
+   "termin_art": "offen",
+   "preis": null,
+   "preis_art": "offen",
+   "status": "bestellt",
+   "beleg": "Vorlieferung Auftrag 420-72432",
+   "bemerkung": "Kein Liefertermin bestaetigt - nachhaken.",
+   "quelle": "Mail 11.08.2026 10:58 an christian.igrek@hbt-ag.ch",
+   "tage_seit_bestellung": 15,
+   "tage_bis_termin": null,
+   "ampel": "orange",
+   "ampeltext": "kein Termin, 15 Tage her - nachhaken"
   },
   {
    "id": "20260812-barit-ksr60",
@@ -158,14 +178,14 @@
    "beleg": "",
    "bemerkung": "Termin sollte Bene bestaetigen - steht aus.",
    "quelle": "Bestellungen/20260812_KSR60_Bestellung_Barit.md",
-   "tage_seit_bestellung": 13,
+   "tage_seit_bestellung": 14,
    "tage_bis_termin": null,
    "ampel": "orange",
-   "ampeltext": "kein Termin, 13 Tage her - nachhaken"
+   "ampeltext": "kein Termin, 14 Tage her - nachhaken"
   },
   {
    "id": "20260814-berner-handschuhe",
-   "was": "75 Paar Schweisserhandschuhe (Art. 23814), je 25 in Gr. 8/9/10",
+   "was": "75 Paar Schweisserhandschuhe (Art. 23814, je 25 in Gr. 8/9/10), 16 Baueimer Premium, 3 Toolbox leer, 8 Transport-Stapelboxen, 2 Moertelkuebel gross, 1 Tasche fuer Radschrauben",
    "fuer": "Stahlbau (Schweisser)",
    "lieferant": "Berner AG",
    "wo": "IP Tal 1, Tujetsch",
@@ -177,11 +197,11 @@
    "status": "bestellt",
    "beleg": "",
    "bemerkung": "Berner hat weder AB noch Liefertermin geschickt - nachhaken.",
-   "quelle": "Bestellungen/20260814_Bestellliste_Stahlbau.md (Stand 17.08.)",
-   "tage_seit_bestellung": 11,
+   "quelle": "Mail 14.08.2026 17:33 an info@berner-ag.ch",
+   "tage_seit_bestellung": 12,
    "tage_bis_termin": null,
    "ampel": "orange",
-   "ampeltext": "kein Termin, 11 Tage her - nachhaken"
+   "ampeltext": "kein Termin, 12 Tage her - nachhaken"
   },
   {
    "id": "20260817-hebetech-anschlagmittel",
@@ -198,10 +218,10 @@
    "beleg": "AB 420-76888",
    "bemerkung": "",
    "quelle": "Bestellungen/20260814_Bestellliste_Stahlbau.md (Stand 17.08.)",
-   "tage_seit_bestellung": 8,
+   "tage_seit_bestellung": 9,
    "tage_bis_termin": null,
    "ampel": "orange",
-   "ampeltext": "kein Termin, 8 Tage her - nachhaken"
+   "ampeltext": "kein Termin, 9 Tage her - nachhaken"
   },
   {
    "id": "20260817-berner-augenspuelstation",
@@ -218,10 +238,30 @@
    "beleg": "",
    "bemerkung": "Keine AB, kein Liefertermin - nachhaken.",
    "quelle": "Bestellungen/20260814_Bestellliste_Stahlbau.md (Stand 17.08.)",
-   "tage_seit_bestellung": 8,
+   "tage_seit_bestellung": 9,
    "tage_bis_termin": null,
    "ampel": "orange",
-   "ampeltext": "kein Termin, 8 Tage her - nachhaken"
+   "ampeltext": "kein Termin, 9 Tage her - nachhaken"
+  },
+  {
+   "id": "20260817-debrunner-stahlprofile",
+   "was": "3 Stangen Winkel L 45x45x5, 2 Stangen L 100x100x10, 2 Stangen U-Profil 35/40/35 (S235, je 6 m) + U-Profil 40x40",
+   "fuer": "Werkstatt Tal / Betonspurfertiger",
+   "lieferant": "Debrunner Acifer AG (G. Casale)",
+   "wo": "IP Tal 1, Tujetsch",
+   "bestellt_am": "2026-08-17",
+   "termin": null,
+   "termin_art": "offen",
+   "preis": null,
+   "preis_art": "offen",
+   "status": "bestellt",
+   "beleg": "Angebot 1251391617",
+   "bemerkung": "Bestellung am 17.08. 09:56 ausgeloest, U-Profil 40x40 am 17.08. 13:45 dazu. Liefertermin nie bestaetigt - nachhaken. Offen war noch, ob 35/40/35 Innen- oder Aussenmasse sind.",
+   "quelle": "Mails 14.08.2026 18:30 + 17.08.2026 09:56/13:45 an sales_gr@d-a.ch",
+   "tage_seit_bestellung": 9,
+   "tage_bis_termin": null,
+   "ampel": "orange",
+   "ampeltext": "kein Termin, 9 Tage her - nachhaken"
   },
   {
    "id": "20260814-aw-werkzeug-stahlbau",
@@ -238,10 +278,10 @@
    "beleg": "AB 260835008",
    "bemerkung": "Winkelschleifer + Zwingen erst ca. 28.08., Rest war schon in KW 34 da. Offerte Drehmomentschluessel 730DR fehlt bis heute.",
    "quelle": "Bestellungen/20260814_Bestellliste_Stahlbau.md (Stand 17.08.)",
-   "tage_seit_bestellung": 11,
-   "tage_bis_termin": 3,
+   "tage_seit_bestellung": 12,
+   "tage_bis_termin": 2,
    "ampel": "grau",
-   "ampeltext": "in 3 Tagen"
+   "ampeltext": "in 2 Tagen"
   },
   {
    "id": "20260825-barit-aluleiter",
@@ -258,10 +298,10 @@
    "beleg": "",
    "bemerkung": "Bene hat am 19.08. Modelle geschickt, die Auswahl blieb liegen; Freigabe 2x12 am 25.08. nachgereicht. Lieferfrist lt. Bene 3-5 Arbeitstage.",
    "quelle": "Mail 25.08.2026 an Benedict.Albin@bmsuisse.ch; Bestellungen/20260819_Aluleiter_Bestellung_Barit.md",
-   "tage_seit_bestellung": 0,
-   "tage_bis_termin": 7,
+   "tage_seit_bestellung": 1,
+   "tage_bis_termin": 6,
    "ampel": "grau",
-   "ampeltext": "in 7 Tagen"
+   "ampeltext": "in 6 Tagen"
   },
   {
    "id": "20260824-haberkorn-traegerklemmen",
@@ -278,10 +318,10 @@
    "beleg": "Angebot 037875",
    "bemerkung": "Widerspruch Termin: am 20.08. hiess es lagernd, im Angebot 4 Wochen - Bestaetigung verlangt. SPERRE: einsetzen erst nach Aufnahme ins SiKo PSAgA durch S. Gaeumann.",
    "quelle": "Arbeitssicherheit/260819_Traegerklemmen_HEA/20260824_Vergabe_Traegerklemmen.md",
-   "tage_seit_bestellung": 1,
-   "tage_bis_termin": 27,
+   "tage_seit_bestellung": 2,
+   "tage_bis_termin": 26,
    "ampel": "grau",
-   "ampeltext": "in 27 Tagen"
+   "ampeltext": "in 26 Tagen"
   },
   {
    "id": "20260824-berner-gehoerschutz",
@@ -298,7 +338,7 @@
    "beleg": "",
    "bemerkung": "ACHTUNG doppelt gesendet am 24.08. - bei Wareneingang auf doppelte Lieferung achten.",
    "quelle": "Bestellungen/20260824_Gehoerschutz_Bestellung_Berner.md",
-   "tage_seit_bestellung": 1,
+   "tage_seit_bestellung": 2,
    "tage_bis_termin": null,
    "ampel": "grau",
    "ampeltext": "läuft"
@@ -318,7 +358,27 @@
    "beleg": "",
    "bemerkung": "",
    "quelle": "Mail 25.08.2026 08:48 an info@arthurweber.ch",
-   "tage_seit_bestellung": 0,
+   "tage_seit_bestellung": 1,
+   "tage_bis_termin": null,
+   "ampel": "grau",
+   "ampeltext": "läuft"
+  },
+  {
+   "id": "20260825-schweisshelm-freigabe",
+   "was": "1 Stk Optrel sphereX quattro mit Geblaese e3000X (TH3) inkl. Tragtasche, 1 Partikelfilter, 1 Vorfilter, 1 Pack Vorsatzscheiben",
+   "fuer": "Stahlbau (MAG-Schweissen 400 A)",
+   "lieferant": "Arthur Weber AG",
+   "wo": "IP Tal 1, Tujetsch",
+   "bestellt_am": "2026-08-25",
+   "termin": null,
+   "termin_art": "offen",
+   "preis": 1840.3,
+   "preis_art": "fix",
+   "status": "bestellt",
+   "beleg": "Offerte 26079714",
+   "bemerkung": "Freigabe Admir 25.08. 08:23, Bestellung raus 25.08. 09:06. Helm und Verbrauchsmaterial auf ZWEI getrennte Rechnungen verlangt. Liefertermin ist noch nicht bestaetigt.",
+   "quelle": "Mail 25.08.2026 09:06 an info@arthurweber.ch (Offerte 26079714)",
+   "tage_seit_bestellung": 1,
    "tage_bis_termin": null,
    "ampel": "grau",
    "ampeltext": "läuft"
@@ -344,43 +404,106 @@
    "ampeltext": "angefragt, noch nicht bestellt"
   },
   {
-   "id": "20260825-schweisshelm-freigabe",
-   "was": "1 Schweisshelm-Set mit Frischluftgeblaese (PAPR, TH3) + 2 Ersatzfilter",
-   "fuer": "Stahlbau (MAG-Schweissen 400 A)",
-   "lieferant": "noch offen (Arthur Weber / Linde Gas)",
-   "wo": "IP Tal 1, Tujetsch",
+   "id": "20260825-js-maganlage-miete",
+   "was": "MAG-Schweissanlage Kemppi X5 Pulse 400 zur Miete, 8 Wochen",
+   "fuer": "Fertigstellung Betonspurfertiger (NICHT Stahlbau am Berg)",
+   "lieferant": "JS Schweisstechnik AG (O. Pozzy)",
+   "wo": "Werkstatt Tal",
    "bestellt_am": null,
    "termin": null,
    "termin_art": "offen",
-   "preis": 1840.3,
+   "preis": 2760.0,
    "preis_art": "fix",
    "status": "angefragt",
-   "beleg": "",
-   "bemerkung": "NOCH NICHT BESTELLT - Freigabe bei Admir Jasarevic angefragt am 25.08. 07:57 (CHF 1840.30 netto).",
-   "quelle": "Mail 25.08.2026 07:57 an Admir Jasarevic; Bestellungen/20260821_Schweisshelm_Gasflaschen_Traegerklemmen.md",
+   "beleg": "Offerte 590491 (gueltig bis 23.09.2026)",
+   "bemerkung": "NOCH NICHT BESTELLT - Freigabe und Kostenstelle bei Admir/Francois angefragt (25.08. 13:15). Entscheid Victor: NICHT ueber NalpSolar buchen. Miete statt Kauf (12'574 netto, Break-even erst bei rund 10 Monaten). Noch auszuhandeln: volle Anrechnung der Miete bei spaeterem Kauf (Vertrag gibt nur 70 %), Ruecktransport fehlt in der Offerte.",
+   "quelle": "Mail 25.08.2026 13:15 an Admir Jasarevic/Francois Borner; Bestellungen/20260825_JS_Schweisstechnik_Miete_KemppiX5_Pruefung.md",
    "tage_seit_bestellung": null,
    "tage_bis_termin": null,
    "ampel": "grau",
    "ampeltext": "angefragt, noch nicht bestellt"
+  },
+  {
+   "id": "20260818-aw-impact-seile",
+   "was": "2 Impact-Verlaengerung 1/2 Zoll 250 mm, 2+2 Impact-Nuesse 1/2 Zoll SW 17/19 lang 78 mm (STARCH 15.S313), 2 Statikseile PETZL AXIS One 11 mm 30 m",
+   "fuer": "Stahlbau (Schlagschrauber) + Montage",
+   "lieferant": "Arthur Weber AG",
+   "wo": "Abholung Schattdorf",
+   "bestellt_am": "2026-08-18",
+   "termin": "2026-08-19",
+   "termin_art": "zugesagt",
+   "preis": null,
+   "preis_art": "offen",
+   "status": "geliefert",
+   "beleg": "",
+   "bemerkung": "In Schattdorf abgeholt (Meldung Victor 25.08.2026). Damit sind die Impact-Verlaengerungen 1/2 Zoll 250 mm auf der Baustelle - die verchromten Hand-Verlaengerungen aus der Bestellung vom 25.08. sind zusaetzlich und gehoeren NICHT an den Schlagschrauber.",
+   "quelle": "Mail 18.08.2026 16:06 an info@arthurweber.ch",
+   "tage_seit_bestellung": 8,
+   "tage_bis_termin": -7,
+   "ampel": "gruen",
+   "ampeltext": "geliefert"
+  },
+  {
+   "id": "20260817-magnetbohrmaschine",
+   "was": "1 Magnetbohrmaschine (Kernbohrer noch offen)",
+   "fuer": "Marco, Werkstatt Tal",
+   "lieferant": "Debrunner Acifer AG",
+   "wo": "IP Tal 1, Tujetsch",
+   "bestellt_am": "2026-08-17",
+   "termin": "2026-08-25",
+   "termin_art": "zugesagt",
+   "preis": null,
+   "preis_art": "offen",
+   "status": "geliefert",
+   "beleg": "",
+   "bemerkung": "Angekommen (Meldung Victor 25.08.2026). Direkt zu Marco in die Werkstatt Tal. OFFEN bleiben die Kernbohrer - die muessen lang genug sein, um durch die Pfetten durchzubohren (Anfrage Hasler).",
+   "quelle": "Meldung Victor 25.08.2026; Dashboard/aufgaben.md",
+   "tage_seit_bestellung": 9,
+   "tage_bis_termin": -1,
+   "ampel": "gruen",
+   "ampeltext": "geliefert"
+  },
+  {
+   "id": "20260821-gasflaschen",
+   "was": "1 Flasche Sauerstoff 50 l / 200 bar + 1 Flasche Acetylen 40 l (nur Gas, Garnitur ist da)",
+   "fuer": "Brennschneiden Stahlbau",
+   "lieferant": "Linde Gas Schweiz AG (via BMTI, M. Herger)",
+   "wo": "selbst geholt (BMTI Erstfeld)",
+   "bestellt_am": "2026-08-25",
+   "termin": "2026-08-26",
+   "termin_art": "zugesagt",
+   "preis": null,
+   "preis_art": "offen",
+   "status": "geliefert",
+   "beleg": "Linde Case 11934653",
+   "bemerkung": "GEHOLT am 26.08.2026 (Meldung Victor). Weg lief ueber Mig (BMTI) bei Linde Gas: O2 50 l / 200 bar und Acetylen 40 l, nur Gas. VOR DEM ERSTEN EINSATZ: Acetylenflasche mindestens 12 h STEHEND stehen lassen, wenn sie liegend transportiert wurde - sonst reisst Aceton mit. Rueckschlagsicherungen und Flammensperren der vorhandenen Garnitur auf Ablaufdatum pruefen (ueblich 5-10 Jahre). OFFEN fuer den Betrieb: Tauschpartner in der Surselva und Mietkonditionen (Pauschale statt Tagesmiete) sind noch nicht geklaert.",
+   "quelle": "Meldung Victor 26.08.2026; Mail Mig 25.08.2026 11:01; Antwort 25.08.2026 an maria-josef.herger@strabag.com",
+   "tage_seit_bestellung": 1,
+   "tage_bis_termin": 0,
+   "ampel": "gruen",
+   "ampeltext": "geliefert"
   }
  ],
  "summen": {
-  "anzahl": 18,
-  "offen": 18,
+  "anzahl": 24,
+  "offen": 21,
   "ueberfaellig": 1,
   "abholbereit": 4,
-  "nachhaken": 6,
-  "summe_offen_chf": 5055.45,
-  "ohne_preis": 12
+  "nachhaken": 8,
+  "summe_offen_chf": 7815.45,
+  "ohne_preis": 14
  },
  "lieferanten": [
   "Arthur Weber AG",
   "Barit Baubedarf AG (B. Albin)",
   "Berner AG",
+  "Debrunner Acifer AG",
+  "Debrunner Acifer AG (G. Casale)",
   "Haberkorn AG (E. Murati)",
   "Hebetech AG (Ch. Igrek)",
+  "JS Schweisstechnik AG (O. Pozzy)",
+  "Linde Gas Schweiz AG (via BMTI, M. Herger)",
   "STRABAG BMTI Erstfeld (A. Gasser / Wisi)",
-  "noch offen (Arthur Weber / Linde Gas)",
   "profiwerkzeug24.ch"
  ]
 }

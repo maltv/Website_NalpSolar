@@ -285,6 +285,38 @@
   .einkBem { font-size:12px; color:var(--ink); background:#fffaf2; border-left:3px solid var(--orange);
         padding:6px 9px; border-radius:0 4px 4px 0; margin-top:8px; line-height:1.5; }
   .einkQ { font-size:10.5px; color:var(--mut); margin-top:7px; line-height:1.45; }
+
+  /* ── Bedarf vom Team (Meldungen aus einkauf.html) ───────────
+     Eigene Karten, weil hier geschrieben wird: Status, Notiz, Foto. */
+  .bedPos { background:#fff; border:1px solid var(--line); border-left:5px solid #8a8e94;
+        border-radius:6px; padding:11px 13px; margin-bottom:10px; box-shadow:0 1px 4px rgba(20,25,32,.07); }
+  .bedPos.st-neu { border-left-color:var(--rot); }
+  .bedPos.st-gesehen { border-left-color:var(--orange); }
+  .bedPos.st-bestellt { border-left-color:var(--blau); }
+  .bedPos.st-geliefert { border-left-color:var(--gruen); }
+  .bedPos.st-abgelehnt { border-left-color:#8a8e94; opacity:.7; }
+  .bedPos .was { font-size:13.5px; font-weight:700; line-height:1.45; }
+  .bedPos .wer { font-size:12px; color:var(--mut); margin-top:4px; line-height:1.55; }
+  .bedPos .wer b { color:var(--ink); }
+  .bedChips { margin-top:7px; }
+  .bedChip { display:inline-block; padding:2px 9px; border-radius:11px; font-size:11px;
+        font-weight:700; color:#fff; background:#8a8e94; margin-right:5px; }
+  .bedChip.neu { background:var(--rot); } .bedChip.gesehen { background:var(--orange); }
+  .bedChip.bestellt { background:var(--blau); } .bedChip.geliefert { background:var(--gruen); }
+  .bedChip.d-heute { background:var(--rot); } .bedChip.d-woche { background:var(--orange); }
+  .bedChip.d-egal { background:#6b7078; }
+  .bedFoto { display:flex; gap:7px; flex-wrap:wrap; margin-top:9px; }
+  .bedFoto img { width:104px; height:104px; object-fit:cover; border-radius:5px;
+        border:1px solid var(--line); cursor:pointer; display:block; }
+  .bedFoto img.gross { width:100%; height:auto; }
+  .bedTun { display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; padding-top:9px;
+        border-top:1px solid var(--line); }
+  .bedTun button { border:1px solid var(--line); background:#fff; cursor:pointer;
+        font:700 12px Arial; color:var(--mut); padding:7px 11px; border-radius:5px; }
+  .bedTun button.on { background:var(--rot); border-color:var(--rot); color:#fff; }
+  .bedTun button.weg { color:var(--rot); }
+  .bedNotiz { font-size:12.5px; background:#fffaf2; border-left:3px solid var(--orange);
+        padding:7px 10px; border-radius:0 4px 4px 0; margin-top:9px; line-height:1.5; }
 </style>
 </head>
 <body>
@@ -651,20 +683,42 @@
 </div>
 
 <!-- ══════════════════════════════════════════════════════════════
-     REITER – EINKÄUFER (was ist wo für wen bestellt, Termin, Preis)
-     Daten: uploads/einkauf.json, gebaut von Tools\Einkauf_Bauen.py aus
-     Bestellungen\einkaufsregister.json. Reine Anzeige – gepflegt wird
-     das Register in der Datei, nicht hier (gleich wie Material).
-     Zweck: sehen, wo man nachhaken muss. Darum steht Rot/Blau/Orange oben.
+     REITER – EINKÄUFER  (zwei Blätter über die Unter-Navigation)
+
+     1) Bestellungen – was ist wo für wen bestellt, Termin, Preis.
+        Daten: uploads/einkauf.json, gebaut von Tools\Einkauf_Bauen.py aus
+        Bestellungen\einkaufsregister.json. Reine Anzeige – gepflegt wird
+        das Register in der Datei, nicht hier (gleich wie Material).
+        Zweck: sehen, wo man nachhaken muss. Darum steht Rot/Blau/Orange oben.
+
+     2) Bedarf vom Team – was die Leute über einkauf.html gemeldet haben
+        (RTDB erfassung/einkauf_bedarf, Fotos in erfassung/einkauf_fotos).
+        HIER wird geschrieben: Status, Notiz und Löschen gehen direkt in die
+        RTDB, weil das Team denselben Stand in einkauf.html sieht.
+        Aus einer Meldung wird eine Bestellung, indem man sie mit «📋 Zeile
+        fürs Register» kopiert und in einkaufsregister.json einsetzt – der
+        Master bleibt bewusst die Datei (Entscheid Victor 18.08.2026).
+     Direktlinks: admin.html#einkauf/bestellungen bzw. #einkauf/bedarf
      ══════════════════════════════════════════════════════════════ -->
-<div class="tab" id="tab-einkauf"><div class="wrap">
-  <div id="einkKopf"></div>
-  <div class="einkFilter" id="einkFilter"></div>
-  <div id="einkListe"><div class="card"><div class="sub">lade …</div></div></div>
-  <div class="foot"><a href="index.html">← zurück zum Portal</a> ·
-    Register: <code>Bestellungen\einkaufsregister.json</code> ·
-    Neubau: <code>EINKAUF.bat</code></div>
-</div></div>
+<div class="tab" id="tab-einkauf">
+  <div class="matNav" id="einkNav"></div>
+  <div class="wrap">
+    <div id="einkBlattBest">
+      <div id="einkKopf"></div>
+      <div class="einkFilter" id="einkFilter"></div>
+      <div id="einkListe"><div class="card"><div class="sub">lade …</div></div></div>
+    </div>
+    <div id="einkBlattBed" style="display:none">
+      <div id="bedKopf"></div>
+      <div class="einkFilter" id="bedFilter"></div>
+      <div id="bedListe"><div class="card"><div class="sub">lade …</div></div></div>
+    </div>
+    <div class="foot"><a href="index.html">← zurück zum Portal</a> ·
+      Register: <code>Bestellungen\einkaufsregister.json</code> ·
+      Neubau: <code>EINKAUF.bat</code> ·
+      Meldeseite fürs Team: <a href="einkauf.html">einkauf.html</a></div>
+  </div>
+</div>
 
 <!-- ══════════════════════════════════════════════════════════════
      REITER 6 – FÖHN
@@ -764,7 +818,8 @@ Array.prototype.forEach.call(document.querySelectorAll('#reiter button'),functio
     Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(t){
       t.classList.toggle('an',t.id==='tab-'+ziel); });
     window.scrollTo(0,0);
-    try { location.hash=(ziel==='material'?'material/'+matBlatt:ziel); } catch(e){}
+    try { location.hash=(ziel==='material'?'material/'+matBlatt
+                        :ziel==='einkauf'?'einkauf/'+(einkBlatt||'bestellungen'):ziel); } catch(e){}
     if(ziel==='foehn') foehnStarten();
     if(ziel==='schrauben') schrStarten();
     if(ziel==='anweisungen') anwStarten();
@@ -782,6 +837,7 @@ function reiterOeffnen(name){
 if(location.hash){
   var teile=location.hash.replace('#','').split('/');
   if(teile[0]==='material' && teile[1]) window.matBlattStart=teile[1];
+  if(teile[0]==='einkauf'  && teile[1]) window.einkBlattStart=teile[1];
   reiterOeffnen(teile[0]);
 }
 
@@ -2016,8 +2072,14 @@ function matDetail(a){
    geschrieben – geändert wird im Register, dann EINKAUF.bat.
    ══════════════════════════════════════════════════════════════ */
 var EINK=null, einkGeladen=false, einkFilter='dran';
+/* Blatt 2: Meldungen des Teams aus einkauf.html */
+var BED={}, bedFilter='offen', bedGeladen=false;
+var einkBlatt=(window.einkBlattStart==='bedarf')?'bedarf':'bestellungen';
 
 function einkStarten(){
+  if(!einkBlatt) einkBlatt=(window.einkBlattStart==='bedarf')?'bedarf':'bestellungen';
+  einkNavZeichnen();
+  einkBlattZeigen(einkBlatt);
   if(einkGeladen) return; einkGeladen=true;
   fetch('uploads/einkauf.json?_='+Date.now(),{cache:'no-store'})
     .then(function(r){ return r.json(); })
@@ -2025,6 +2087,28 @@ function einkStarten(){
     .catch(function(){ $('einkListe').innerHTML='<div class="card"><div class="sub">'
       +'einkauf.json konnte nicht geladen werden – einmal EINKAUF.bat laufen lassen.'
       +'</div></div>'; });
+  bedLaden();
+}
+
+/* Unter-Navigation wie beim Material – zwei Blätter, direkt verlinkbar */
+function einkNavZeichnen(){
+  var neu=bedZahl('neu');
+  var dran=EINK?(EINK.summen.ueberfaellig+EINK.summen.abholbereit+EINK.summen.nachhaken):0;
+  var b=[{id:'bestellungen',n:'Bestellungen',z:dran,k:''},
+         {id:'bedarf',n:'Bedarf vom Team',z:neu,k:''}];
+  $('einkNav').innerHTML=b.map(function(x){
+    return '<button data-eb="'+x.id+'"'+(einkBlatt===x.id?' class="on"':'')+'>'+x.n
+      +(x.z?' <i>'+x.z+'</i>':'')+'</button>';
+  }).join('');
+  Array.prototype.forEach.call($('einkNav').querySelectorAll('button'),function(k){
+    k.onclick=function(){ einkBlattZeigen(k.getAttribute('data-eb')); einkNavZeichnen(); };
+  });
+}
+function einkBlattZeigen(id){
+  einkBlatt=(id==='bedarf')?'bedarf':'bestellungen';
+  $('einkBlattBest').style.display=(einkBlatt==='bestellungen')?'':'none';
+  $('einkBlattBed').style.display =(einkBlatt==='bedarf')?'':'none';
+  try { location.hash='einkauf/'+einkBlatt; } catch(e){}
 }
 
 function einkChf(n){
@@ -2047,8 +2131,16 @@ function einkKopfZeichnen(){
     +'Stand '+deDat(EINK.stand)+', gebaut '+esc(EINK.gebaut_am)+'. '
     +'Gepflegt wird <code>Bestellungen\\einkaufsregister.json</code>, danach <code>EINKAUF.bat</code>.'
     +'</div></div>';
-  /* Zähler im Reiter: was wirklich Arbeit macht (überfällig + abholbereit + nachhaken) */
-  $('zEink').textContent=(s.ueberfaellig+s.abholbereit+s.nachhaken);
+  einkZahlSetzen();
+}
+
+/* Zähler im Reiter: was wirklich Arbeit macht – Bestellungen zum Nachhaken
+   (überfällig + abholbereit + nachhaken) plus die noch nicht angeschauten
+   Meldungen des Teams. */
+function einkZahlSetzen(){
+  var dran=EINK?(EINK.summen.ueberfaellig+EINK.summen.abholbereit+EINK.summen.nachhaken):0;
+  $('zEink').textContent=dran+bedZahl('neu');
+  einkNavZeichnen();
 }
 
 function einkFilterZeichnen(){
@@ -2089,7 +2181,9 @@ function einkZeichnen(){
     return '<div class="einkPos '+b.ampel+'">'
       +'<div class="was">'+esc(b.was)+'</div>'
       +'<div class="wer">für <b>'+esc(b.fuer)+'</b> · bei <b>'+esc(b.lieferant)+'</b>'
-      +(b.wo?' · '+esc(b.wo):'')+'</div>'
+      +(b.wo?' · '+esc(b.wo):'')
+      +(b.bestellt_von?'<br>bestellt von <b>'+esc(b.bestellt_von)+'</b>':'')
+      +(b.bedarf_von?' · gemeldet von <b>'+esc(b.bedarf_von)+'</b>':'')+'</div>'
       +'<div style="margin-top:8px"><span class="einkStat '+b.ampel+'">'+esc(b.ampeltext)+'</span> '
       +'<span class="einkQ" style="margin:0 0 0 6px">'+esc(b.status)+'</span></div>'
       +z
@@ -2098,6 +2192,177 @@ function einkZeichnen(){
       +'</div>';
   }).join('');
 }
+
+/* ══════════════════════════════════════════════════════════════
+   EINKÄUFER – Blatt 2: BEDARF VOM TEAM
+   Quelle: RTDB erfassung/einkauf_bedarf (geschrieben von einkauf.html),
+   Fotos getrennt in erfassung/einkauf_fotos – die werden erst beim
+   Antippen geladen, sonst zieht die Liste am Handy mehrere MB.
+   Hier wird ZURÜCKGESCHRIEBEN (Status/Notiz): das Team sieht denselben
+   Stand in einkauf.html und meldet dasselbe nicht dreimal.
+   ══════════════════════════════════════════════════════════════ */
+var BED_STAT=[{id:'neu',n:'neu'},{id:'gesehen',n:'gesehen'},{id:'bestellt',n:'bestellt'},
+              {id:'geliefert',n:'geliefert'},{id:'abgelehnt',n:'nicht bestellt'}];
+var BED_DRING={heute:'heute / morgen',woche:'diese Woche',egal:'kein Stress'};
+
+function bedListe(){
+  return Object.keys(BED||{}).map(function(k){ var b=BED[k]||{}; b._id=k; return b; })
+    .filter(function(b){ return b.was; })
+    .sort(function(a,b){
+      var r={neu:0,gesehen:1,bestellt:2,geliefert:3,abgelehnt:4};
+      var d=(r[a.status||'neu']||0)-(r[b.status||'neu']||0);
+      return d!==0?d:(b.ts||0)-(a.ts||0);
+    });
+}
+function bedZahl(art){
+  return bedListe().filter(function(b){
+    if(art==='neu') return (b.status||'neu')==='neu';
+    if(art==='offen') return ['geliefert','abgelehnt'].indexOf(b.status||'neu')<0;
+    return (b.status||'neu')===art;
+  }).length;
+}
+function bedLaden(){
+  return fetch(RTDB+'/einkauf_bedarf.json?_='+Date.now(),{cache:'no-store'})
+    .then(function(r){ return r.ok?r.json():null; })
+    .then(function(j){ BED=j||{}; bedGeladen=true;
+      bedKopfZeichnen(); bedFilterZeichnen(); bedZeichnen(); einkZahlSetzen(); })
+    .catch(function(){ $('bedListe').innerHTML='<div class="card"><div class="sub">'
+      +'Meldungen konnten nicht geladen werden – Netz prüfen.</div></div>'; });
+}
+function bedKopfZeichnen(){
+  $('bedKopf').innerHTML=
+    '<div class="einkZahlen">'
+    +'<div class="einkZahl rot"><b>'+bedZahl('neu')+'</b><span>neu</span></div>'
+    +'<div class="einkZahl orange"><b>'+bedZahl('gesehen')+'</b><span>gesehen</span></div>'
+    +'<div class="einkZahl blau"><b>'+bedZahl('bestellt')+'</b><span>bestellt</span></div>'
+    +'<div class="einkZahl"><b>'+bedZahl('offen')+'</b><span>offen</span></div>'
+    +'</div>'
+    +'<div class="card"><h2>Bedarf vom Team</h2><div class="sub">'
+    +'Was die Leute über <a href="einkauf.html">einkauf.html</a> gemeldet haben. '
+    +'Status und Notiz gehen sofort zurück aufs Handy des Melders. '
+    +'Wird daraus eine Bestellung: <b>📋 Zeile fürs Register</b> antippen, den Block in '
+    +'<code>Bestellungen\\einkaufsregister.json</code> einsetzen, ergänzen und '
+    +'<code>EINKAUF.bat</code> laufen lassen – dann steht sie im Blatt «Bestellungen».'
+    +'</div></div>';
+}
+function bedFilterZeichnen(){
+  var f=[{id:'offen',n:'Offen'},{id:'neu',n:'Nur neu'},{id:'alle',n:'Alle'},{id:'erledigt',n:'Erledigt'}];
+  $('bedFilter').innerHTML=f.map(function(x){
+    return '<button data-bf="'+x.id+'"'+(bedFilter===x.id?' class="on"':'')+'>'+x.n+'</button>'; }).join('');
+  Array.prototype.forEach.call($('bedFilter').querySelectorAll('button'),function(b){
+    b.onclick=function(){ bedFilter=b.getAttribute('data-bf'); bedFilterZeichnen(); bedZeichnen(); };
+  });
+}
+function bedZeichnen(){
+  var l=bedListe().filter(function(b){
+    var st=b.status||'neu';
+    if(bedFilter==='alle') return true;
+    if(bedFilter==='neu') return st==='neu';
+    if(bedFilter==='erledigt') return st==='geliefert'||st==='abgelehnt';
+    return st!=='geliefert'&&st!=='abgelehnt';
+  });
+  if(!l.length){
+    $('bedListe').innerHTML='<div class="card"><div class="sub">Hier ist gerade nichts.</div></div>';
+    return;
+  }
+  $('bedListe').innerHTML=l.map(function(b){
+    var st=b.status||'neu', id=esc(b._id);
+    var stn=(BED_STAT.filter(function(s){ return s.id===st; })[0]||{n:st}).n;
+    var h='<div class="bedPos st-'+esc(st)+'">';
+    h+='<div class="was">'+esc(b.was)+(b.menge?' <span style="color:#63676d">· '+esc(b.menge)+'</span>':'')+'</div>';
+    h+='<div class="wer">'+deDat(b.datum||'')+' · <b>'+esc(b.von||'?')+'</b> · '+esc(b.team||'')
+      +(b.zweck?'<br>für: '+esc(b.zweck):'')+'</div>';
+    h+='<div class="bedChips"><span class="bedChip '+esc(st)+'">'+esc(stn)+'</span>'
+      +'<span class="bedChip d-'+esc(b.dringend||'egal')+'">'+esc(BED_DRING[b.dringend]||'')+'</span>'
+      +(b.ge_am?'<span class="bedChip" style="background:#eef0f2;color:#63676d">seit '+deDat(b.ge_am)+'</span>':'')
+      +'</div>';
+    if(b.notiz) h+='<div class="bedNotiz"><b>Notiz:</b> '+esc(b.notiz)+'</div>';
+    if(b.fotos) h+='<div class="fotolink" style="display:inline-block;margin-top:9px;font-size:12.5px;'
+      +'font-weight:700;color:var(--rot);cursor:pointer" onclick="bedFotoZeigen(\''+id+'\')">📷 '
+      +(b.anzahl_fotos||Object.keys(b.fotos).length)+' Foto(s) zeigen</div>'
+      +'<div class="bedFoto" id="bf_'+id+'"></div>';
+    h+='<div class="bedTun">'
+      +BED_STAT.map(function(s){
+        return '<button'+(st===s.id?' class="on"':'')+' onclick="bedSetzen(\''+id+'\',\''+s.id+'\')">'
+          +esc(s.n)+'</button>'; }).join('')
+      +'<button onclick="bedNotizSetzen(\''+id+'\')">✎ Notiz</button>'
+      +'<button onclick="bedRegisterZeile(\''+id+'\')">📋 Zeile fürs Register</button>'
+      +'<button class="weg" onclick="bedLoeschen(\''+id+'\')">löschen</button>'
+      +'</div>';
+    return h+'</div>';
+  }).join('');
+}
+function bedFotoZeigen(id){
+  var box=$('bf_'+id); if(!box||box.getAttribute('data-an')==='1') return;
+  box.setAttribute('data-an','1');
+  box.innerHTML='<div class="sub">Fotos werden geladen …</div>';
+  var keys=Object.keys((BED[id]||{}).fotos||{});
+  Promise.all(keys.map(function(fk){
+    return fetch(RTDB+'/einkauf_fotos/'+encodeURIComponent(fk)+'.json',{cache:'no-store'})
+      .then(function(r){ return r.ok?r.json():null; }).catch(function(){ return null; });
+  })).then(function(fs){
+    var h=fs.filter(Boolean).map(function(f){
+      return '<img src="'+f.data+'" alt="" onclick="this.classList.toggle(\'gross\')">'; }).join('');
+    box.innerHTML=h||'<div class="sub">Kein Foto gefunden.</div>';
+  });
+}
+function bedSetzen(id,status){
+  var o={status:status, ge_am:bedHeute(), ge_von:'BL'};
+  fetch(RTDB+'/einkauf_bedarf/'+encodeURIComponent(id)+'.json',
+        {method:'PATCH',body:JSON.stringify(o)})
+    .then(function(r){ if(!r.ok) throw 0;
+      BED[id].status=status; BED[id].ge_am=o.ge_am;
+      bedKopfZeichnen(); bedZeichnen(); einkZahlSetzen(); })
+    .catch(function(){ alert('Konnte nicht gespeichert werden – Netz prüfen.'); });
+}
+function bedNotizSetzen(id){
+  var alt=(BED[id]||{}).notiz||'';
+  var t=prompt('Notiz an den Melder (er sieht sie in einkauf.html):',alt);
+  if(t===null) return;
+  fetch(RTDB+'/einkauf_bedarf/'+encodeURIComponent(id)+'.json',
+        {method:'PATCH',body:JSON.stringify({notiz:t.trim()})})
+    .then(function(r){ if(!r.ok) throw 0; BED[id].notiz=t.trim(); bedZeichnen(); })
+    .catch(function(){ alert('Konnte nicht gespeichert werden – Netz prüfen.'); });
+}
+function bedLoeschen(id){
+  var b=BED[id]||{};
+  if(!confirm('Meldung «'+(b.was||'').slice(0,60)+'» endgültig löschen?\n'
+    +'Für Erledigtes lieber «geliefert» oder «nicht bestellt» setzen – dann bleibt es nachvollziehbar.')) return;
+  var fk=Object.keys(b.fotos||{});
+  Promise.all(fk.map(function(k){
+    return fetch(RTDB+'/einkauf_fotos/'+encodeURIComponent(k)+'.json',{method:'DELETE'}); }))
+    .then(function(){ return fetch(RTDB+'/einkauf_bedarf/'+encodeURIComponent(id)+'.json',{method:'DELETE'}); })
+    .then(function(r){ if(!r.ok) throw 0; delete BED[id];
+      bedKopfZeichnen(); bedZeichnen(); einkZahlSetzen(); })
+    .catch(function(){ alert('Löschen fehlgeschlagen – Netz prüfen.'); });
+}
+/* Fertiger JSON-Block fürs einkaufsregister.json. Bewusst nur Kopieren:
+   Master ist die Datei, nicht das Web (Entscheid Victor 18.08.2026). */
+function bedRegisterZeile(id){
+  var b=BED[id]||{};
+  var d=bedHeute().replace(/-/g,'');
+  var kurz=(b.was||'').toLowerCase().replace(/[^a-zäöü0-9 ]/g,'').split(/\s+/)
+             .filter(Boolean).slice(0,2).join('-').replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue');
+  var o={ id:d+'-lieferant-'+(kurz||'bedarf'),
+          was:(b.menge?b.menge+' ':'')+(b.was||''),
+          fuer:(b.team||'')+(b.zweck?' – '+b.zweck:''),
+          lieferant:'', wo:'', bestellt_am:null, termin:null, termin_art:'offen',
+          preis:null, preis_art:'offen', status:'angefragt', beleg:'',
+          bestellt_von:'', bedarf_von:b.von||'', bedarf_id:id, bemerkung:'',
+          quelle:'Bedarfsmeldung Team (einkauf.html), '+(b.von||'?')+', '+deDat(b.datum||'') };
+  var txt=JSON.stringify(o,null,1).replace(/\n/g,'\n  ');
+  var fertig=function(){ alert('Block ist in der Zwischenablage.\n\n'
+    +'1. in Bestellungen\\einkaufsregister.json einsetzen\n'
+    +'2. Lieferant, Termin und Preis ergänzen (id-Mitte auf den Lieferanten ändern)\n'
+    +'3. EINKAUF.bat laufen lassen'); };
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(fertig,function(){ prompt('Block kopieren:',txt); });
+  } else { prompt('Block kopieren:',txt); }
+}
+/* Eigene Funktion, weil das heuteISO() weiter oben in UTC rechnet - nach 22:00
+   Ortszeit stuende sonst der Folgetag im Feld ge_am. */
+function bedHeute(){ var d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 
 /* ══ Start ══════════════════════════════════════════════════ */
 matStarten();

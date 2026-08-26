@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v144';
+var CACHE = 'nalpsolar-v145';
 var PRECACHE = [
   './index.html',
   './protokoll.html',
@@ -107,7 +107,10 @@ var PRECACHE = [
   // Abhaken und Mangelmeldung wandern dann in die Warteschlange.
   './verschrauben.html',
   './uploads/pfaehle.json',
-  './uploads/tables/bereiche.json'
+  './uploads/tables/bereiche.json',
+  // Einkauf (26.08.2026): Bedarf melden muss am Berg ohne Empfang gehen -
+  // die Meldung samt Foto wartet dann in der IndexedDB-Warteschlange.
+  './einkauf.html'
 ];
 
 self.addEventListener('install', function(e) {
