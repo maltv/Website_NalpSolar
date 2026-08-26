@@ -6,6 +6,12 @@
 <title>Admin · NalpSolar</title>
 <meta name="robots" content="noindex,nofollow">
 <!-- Admin-Werkzeuge (nur Victor), Reiter:
+       Sitzung     – Koordinationssitzung BF/PL fuehren: fester Ablauf mit Zeitansage,
+                     Parkplatz, Pendenzen mit Namen und Datum, Druckansicht als PDF.
+                     Loest OneNote ab (NEU 26.08.2026). Code: assets\js
+alp-sitzung.js,
+                     Daten: RTDB erfassung/sitzungen + erfassung/sitzung_pendenzen,
+                     Anschluss am PC: SITZUNG_PROTOKOLL.bat
        Übersicht   – Links auf die anderen Admin-Seiten. Die Aufgabenliste wurde am
                      19.08.2026 auf Wunsch Victors ENTFERNT – Master ist und bleibt
                      Dashboard\aufgaben.md im KI-Projekt. NICHT neu aufbauen.
@@ -35,6 +41,7 @@
   window.NALP_GATE_SUB   = 'Nur für Victor · Code = Losnummer';
 </script>
 <script src="assets/js/nalp-gate.js"></script>
+<script src="assets/js/nalp-sitzung.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
@@ -328,6 +335,7 @@
 
 <div class="reiter" id="reiter">
   <button data-tab="uebersicht" class="an">Übersicht</button>
+  <button data-tab="sitzung">Sitzung<span class="zahl" id="zSitz">–</span></button>
   <button data-tab="stoerungen">Störungen<span class="zahl" id="zStoer">–</span></button>
   <button data-tab="regie">Regie<span class="zahl" id="zRegie">–</span></button>
   <button data-tab="material">Material<span class="zahl" id="zMat">–</span></button>
@@ -414,6 +422,19 @@
 
   <div class="foot"><a href="index.html">← zurück zum Portal</a></div>
 </div></div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     REITER – KOORDINATIONSSITZUNG   (NEU 26.08.2026, Auftrag Victor)
+     Das Protokoll der Koordinationssitzung BF/PL wird hier geführt,
+     nicht mehr in OneNote. Aufbau nach dem Hoerbuch «Kurze Sitzungen
+     sauber fuehren» (25.08.2026) und dem Ablauf im Serientermin:
+     fester Ablauf mit angesagter Zeit, Parkplatz, kein Punkt ohne Namen
+     und Datum. Der ganze Reiter steckt in assets/js/nalp-sitzung.js
+     (NalpSitzung.start), damit er auch woanders eingehaengt werden kann.
+     Daten: RTDB erfassung/sitzungen + erfassung/sitzung_pendenzen.
+     Direktlinks: admin.html#sitzung/sitzung · #sitzung/pendenzen · #sitzung/archiv
+     ══════════════════════════════════════════════════════════════ -->
+<div class="tab" id="tab-sitzung"></div>
 
 <!-- ══════════════════════════════════════════════════════════════
      REITER 2 – BAUABLAUFSTÖRUNGEN & MEHRKOSTEN
@@ -818,8 +839,13 @@ Array.prototype.forEach.call(document.querySelectorAll('#reiter button'),functio
     Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(t){
       t.classList.toggle('an',t.id==='tab-'+ziel); });
     window.scrollTo(0,0);
-    try { location.hash=(ziel==='material'?'material/'+matBlatt
-                        :ziel==='einkauf'?'einkauf/'+(einkBlatt||'bestellungen'):ziel); } catch(e){}
+    /* Beim Sitzungsreiter setzt der Baustein den Hash selbst – er merkt sich
+       darin, welches Blatt offen ist (#sitzung/pendenzen). */
+    if(ziel!=='sitzung'){
+      try { location.hash=(ziel==='material'?'material/'+matBlatt
+                          :ziel==='einkauf'?'einkauf/'+(einkBlatt||'bestellungen'):ziel); } catch(e){}
+    }
+    if(ziel==='sitzung') sitzStarten();
     if(ziel==='foehn') foehnStarten();
     if(ziel==='schrauben') schrStarten();
     if(ziel==='anweisungen') anwStarten();
@@ -827,6 +853,13 @@ Array.prototype.forEach.call(document.querySelectorAll('#reiter button'),functio
     if(ziel==='einkauf') einkStarten();
   };
 });
+/* Koordinationssitzung – der ganze Reiter liegt in assets/js/nalp-sitzung.js */
+function sitzStarten(){
+  if(window.NalpSitzung) NalpSitzung.start($('tab-sitzung'));
+  else $('tab-sitzung').innerHTML='<div class="wrap"><div class="card"><div class="sub">'
+    +'nalp-sitzung.js konnte nicht geladen werden.</div></div></div>';
+}
+
 function reiterOeffnen(name){
   var b=document.querySelector('#reiter button[data-tab="'+name+'"]');
   if(b) b.click();
@@ -2367,6 +2400,7 @@ function bedHeute(){ var d=new Date();
 /* ══ Start ══════════════════════════════════════════════════ */
 matStarten();
 einkStarten();
+sitzStarten();
 ladeStoerungen(); ladeStundenjournal();
 ladeRegie();      setInterval(ladeRegie,2*60*1000);
 </script>
