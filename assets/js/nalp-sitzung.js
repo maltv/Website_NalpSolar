@@ -51,15 +51,18 @@ var LS_WER = 'nalp_user_name_v1';       /* gleicher Schlüssel wie nalp-protokol
 
 /* ── Die Runde. Wer erforderlich ist, steht im Serientermin
       (bereinigt 25.08.2026: Mike Berndt raus, Kristjan und Nicolas neu). ── */
+/* NUR Namen. Funktionsbezeichnungen standen hier einmal drin, waren aber
+   angenommen und nicht belegt - und im Protokoll stand dann Unsinn (Victor
+   27.08.2026). Wer welche Funktion hat, gehoert nicht ins Anwesenheitsfeld. */
 var RUNDE = [
-  { id:'victor',   name:'Victor Malt',        rolle:'Bauleitung / Leitung',   fest:true },
-  { id:'samuel',   name:'Samuel Decurtins',   rolle:'Polier',                 fest:true },
-  { id:'kristjan', name:'Kristjan Kullamaa',  rolle:'Vermessung / Absteckung',fest:true },
-  { id:'nicolas',  name:'Nicolas Champion',   rolle:'Geowork',                fest:true },
-  { id:'chris',    name:'Christopher Zimmermann', rolle:'Logistik',           fest:true },
-  { id:'przemek',  name:'Przemek Modrak',     rolle:'Verschrauben',           fest:true },
-  { id:'lukas',    name:'Lukas Kälin',        rolle:'Werkleitungen / Erdbau', fest:false },
-  { id:'francois', name:'François Borner',    rolle:'Bauleitung AG-Seite',    fest:false }
+  { id:'victor',   name:'Victor Malt',            fest:true },
+  { id:'samuel',   name:'Samuel Decurtins',       fest:true },
+  { id:'kristjan', name:'Kristjan Kullamaa',      fest:true },
+  { id:'nicolas',  name:'Nicolas Champion',       fest:true },
+  { id:'chris',    name:'Christopher Zimmermann', fest:true },
+  { id:'przemek',  name:'Przemek Modrak',         fest:true },
+  { id:'lukas',    name:'Lukas Kälin',            fest:false },
+  { id:'francois', name:'François Borner',        fest:false }
 ];
 
 /* ── Der feste Ablauf. dauer = Sollzeit in Minuten (Summe 60). ── */
@@ -748,7 +751,7 @@ function kopfBinden(){
 /* Die feste Runde plus alle, die für diese Sitzung dazugekommen sind. */
 function teilnehmer(s){
   return RUNDE.concat((s.extra||[]).map(function(e){
-    return { id:e.id, name:e.name, rolle:e.rolle||'dazugekommen', fest:false, dazu:true }; }));
+    return { id:e.id, name:e.name, fest:false, dazu:true }; }));
 }
 
 function rundeZeichnen(){
@@ -756,11 +759,8 @@ function rundeZeichnen(){
   $('siRunde').innerHTML=teilnehmer(s).map(function(p){
     var st=s.teilnehmer[p.id]||'?';
     var kl=st==='da'?'da':(st==='fehlt'?'fehlt':'');
-    var rolle=(p.rolle && p.rolle!=='dazugekommen'
-        && h(p.name).toLowerCase().indexOf(p.rolle.toLowerCase().split(' ')[0])<0)
-      ? '<i style="font-style:normal;opacity:.62;font-weight:400"> · '+h(p.rolle)+'</i>' : '';
-    return '<span class="si-pers '+kl+'" data-p="'+p.id+'" title="'+h(p.rolle)+'">'
-      +h(p.name)+rolle+(p.dazu?'<b data-pweg="'+p.id+'" title="wieder entfernen"> ✕</b>':'')+'</span>';
+    return '<span class="si-pers '+kl+'" data-p="'+p.id+'">'
+      +h(p.name)+(p.dazu?'<b data-pweg="'+p.id+'" title="wieder entfernen"> ✕</b>':'')+'</span>';
   }).join('')
   +'<button class="si-kn mini" id="siPersonPlus">+ Person</button>';
 
@@ -1719,13 +1719,7 @@ function protokollHtml(s){
     +'<div class="wann">NalpSolar B8-13 · '+wochentag(s.datum)+' '+deDat(s.datum)+' · '
       +h(s.zeit)+' Uhr · '+h(s.ort)+' · Protokoll: '+h(s.protokoll)+'</div></div>';
 
-  function mitRolle(p){
-    var n=h(p.name);
-    if(!p.rolle || p.rolle==='dazugekommen') return n;
-    /* Steht die Funktion schon im Namen («Michele (Polier)»), nicht doppeln. */
-    if(n.toLowerCase().indexOf(p.rolle.toLowerCase().split(' ')[0])>-1) return n;
-    return n+' <span style="color:#666">('+h(p.rolle)+')</span>';
-  }
+  function mitRolle(p){ return h(p.name); }
   o+='<table><tr><td style="width:14%;background:#f7f8f9"><b>Anwesend</b></td><td>'
     +(da.length? da.map(mitRolle).join(' · ') : '<span class="leer">–</span>')
     +(s.gaeste?' · '+h(s.gaeste):'')+'</td></tr>'
