@@ -122,8 +122,6 @@ var LIVE=null;           /* live gerechnete Zahlen (Fallback + Vergleich) */
 var TIMER={ box:null, start:0, tick:null };
 var speicherWartet=null, netzOk=true;
 var pendFilter='offen', archivWahl=null;
-var LEIST=null;            /* uploads/tables/leistung.json – Wochenleistung je Gewerk */
-var leistAnsicht='bohr';   /* bohr | stahlbau */
 var PERSONAL={};           /* erfassung/sitzung_personal – geführte Einträge */
 var MANNSCHAFT=null;       /* aus der digitalen Anwesenheitsliste gelesen */
 var BILDER={};             /* sitzungDatum -> { bildId: {b,box,text,ts} } */
@@ -323,6 +321,9 @@ var CSS=[
 '.si-gross{position:fixed;inset:0;z-index:9000;background:rgba(10,14,19,.9);display:flex;',
 '  align-items:center;justify-content:center;padding:16px;cursor:zoom-out}',
 '.si-gross img{max-width:100%;max-height:100%;border-radius:6px}',
+'.si-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:9500;',
+'  background:#14181d;color:#fff;font:700 13.5px Arial;padding:11px 18px;border-radius:22px;',
+'  box-shadow:0 4px 18px rgba(0,0,0,.3)}',
 
 /* ── Personal ───────────────────────────────────────────── */
 '.si-pkarte{background:#fff;border:1px solid #e3e5e8;border-left:5px solid #1a5fb4;border-radius:6px;',
@@ -370,12 +371,11 @@ function laden(){
     datei('uploads/tables/baustand.json'),
     datei('uploads/tables/bohrstand.json'),
     hole(P_VM),
-    datei('uploads/tables/leistung.json'),
     hole(P_PERS)
   ]).then(function(a){
     SITZUNGEN=a[0]||{}; PUEBER=a[1]||{};
     LIVE=zahlenRechnen(a[2],a[3],a[4]);
-    LEIST=a[5]; PERSONAL=a[6]||{};
+    PERSONAL=a[5]||{};
     offeneUebernehmen();
     if(!AKTIV) AKTIV=jungsteOffene()||naechsterTermin();
     zeichnen();
@@ -694,7 +694,7 @@ function sitzungBlatt(){
   $('siInhalt').innerHTML=html;
   kopfBinden(); rundeZeichnen(); redenZeichnen(); boxenZeichnen();
   parkZeichnen(); pendZeichnen(); abgleichBinden(); uhrZeichnen(); fussZeichnen();
-  plotZeichnen(); plotBinden(); nalpiBinden();
+  nalpiBinden(); einfuegenBinden();
 
   $('siLob').oninput=function(){ s.lob=this.value; merken(); };
   $('siDruck').onclick=drucken;
@@ -848,128 +848,11 @@ function nalpiBlock(s){
 }
 
 function leistungsBlock(s){
-  var kopf=nalpiBlock(s);
-  if(!LEIST || !LEIST.wochen || !LEIST.wochen.length)
-    return kopf + zahlenKlein(s);
-
-  var o=kopf+'<div class="si-leist">'
-    +'<div class="si-leist-kopf">'
-      +'<b>Wochenleistung</b>'
-      +'<span class="si-um">'
-        +'<button class="si-kn mini'+(leistAnsicht==='bohr'?' rot':'')+'" data-la="bohr">Bohrkette</button>'
-        +'<button class="si-kn mini'+(leistAnsicht==='stahlbau'?' rot':'')+'" data-la="stahlbau">Stahlbau</button>'
-      +'</span>'
-      +'<span class="si-stand">Stand '+h(deDat(LEIST.stand||''))+'</span>'
-    +'</div>'
-    +'<canvas id="siPlot"></canvas>'
-    +'<div class="si-legende" id="siLegende"></div>'
-    +rueckstandBlock()
-    +'</div>';
-  return o + zahlenKlein(s);
-}
-
-/* Rückstand je Bereich – die Zahl, die in der Sitzung wehtut. */
-function rueckstandBlock(){
-  var r=LEIST.rueckstand||{};
-  var teile=[];
-  [['injektion','gebohrt, nicht injiziert'],['vermessung','gebohrt, nicht vermessen']]
-  .forEach(function(x){
-    var d=r[x[0]]; if(!d || !d.gesamt) return;
-    var max=Math.max.apply(null,d.bereiche.map(function(b){ return b.offen; }));
-    teile.push('<div class="si-rueck"><b>'+d.gesamt.toLocaleString('de-CH')+'</b> '+x[1]
-      +'<div class="si-rbal">'+d.bereiche.map(function(b){
-        return '<div><span class="n">'+h(b.bereich)+'</span>'
-          +'<span class="s"><i style="width:'+Math.round(b.offen/max*100)+'%"></i></span>'
-          +'<span class="z">'+b.offen+'</span></div>'; }).join('')+'</div></div>');
-  });
-  return teile.length? '<div class="si-rueckwrap">'+teile.join('')+'</div>' : '';
-}
-
-/* Gesamtzahlen bleiben – aber klein, als Fussnote unter der Leistung. */
-function zahlenKlein(s){
-  var z=s.zahlen||LIVE; if(!z) return '';
-  var t=[];
-  if(z.bohr) t.push('gebohrt <b>'+z.bohr.gebohrt.toLocaleString('de-CH')+'</b> von '
-    +z.bohr.total.toLocaleString('de-CH'),
-    'injiziert <b>'+z.bohr.injiziert.toLocaleString('de-CH')+'</b>');
-  if(z.tische) t.push('Primärkonstruktion <b>'+z.tische.pk+'</b>',
-    'Modulträger <b>'+z.tische.mt+'</b>',
-    'vormontiert <b>'+(z.vormontiert||0)+'</b>',
-    'verschraubt <b>'+z.tische.verschraubt+'</b>');
-  return '<div class="si-hin" style="margin-bottom:12px">'
-    +'<b>Gesamtstand</b> (Nalpi '+h(deDat(z.stand||''))+'): '+t.join(' · ')
-    +'<br>Zahlen werden vorgelesen, nicht diskutiert – wer eine anzweifelt, macht daraus eine Pendenz.</div>';
-}
-
-/* Gruppierte Balken je Kalenderwoche, Werte über den Balken. */
-function plotZeichnen(){
-  var c=$('siPlot'); if(!c || !LEIST || !LEIST.wochen) return;
-  var serien = leistAnsicht==='bohr'
-    ? [['abgesteckt','abgesteckt','#3a86e0'],['gebohrt','gebohrt','#f08a24'],
-       ['vermessen','vermessen','#a55ee0'],['injiziert','injiziert','#2e9e46']]
-    : [['pk','Primärkonstruktion','#D72622'],['mt','Modulträger','#1a5fb4'],
-       ['verschraubt','verschraubt','#8a5a00']];
-  var wochen=LEIST.wochen;
-  var dpr=window.devicePixelRatio||1;
-  var breite=c.parentNode.clientWidth-2;
-  if(breite<220) breite=220;
-  var hoehe=Math.max(190, Math.min(300, Math.round(breite*0.42)));
-  c.style.width=breite+'px'; c.style.height=hoehe+'px';
-  c.width=Math.round(breite*dpr); c.height=Math.round(hoehe*dpr);
-  var g=c.getContext && c.getContext('2d');
-  if(!g) return;                       /* kein Canvas – die Sitzung läuft trotzdem */
-  g.setTransform(dpr,0,0,dpr,0,0);
-  g.clearRect(0,0,breite,hoehe);
-
-  var links=34, rechts=6, oben=16, unten=26;
-  var pb=breite-links-rechts, ph=hoehe-oben-unten;
-  var max=1;
-  wochen.forEach(function(w){ serien.forEach(function(se){ if(w[se[0]]>max) max=w[se[0]]; }); });
-  var stufe=Math.pow(10,Math.floor(Math.log(max)/Math.LN10));
-  var schritt=Math.ceil(max/4/stufe)*stufe; if(!schritt) schritt=1;
-  var deckel=Math.ceil(max/schritt)*schritt;
-
-  /* Gitter */
-  g.strokeStyle='#e3e5e8'; g.fillStyle='#9aa0a6';
-  g.font='10px Arial'; g.textAlign='right'; g.textBaseline='middle'; g.lineWidth=1;
-  for(var v=0; v<=deckel; v+=schritt){
-    var y=oben+ph-(v/deckel)*ph;
-    g.beginPath(); g.moveTo(links,y+.5); g.lineTo(breite-rechts,y+.5); g.stroke();
-    g.fillText(String(v), links-5, y);
-  }
-
-  var gruppe=pb/wochen.length, luft=gruppe*0.18;
-  var bw=(gruppe-luft)/serien.length;
-  g.textAlign='center';
-  wochen.forEach(function(w,i){
-    var x0=links+i*gruppe+luft/2;
-    serien.forEach(function(se,j){
-      var wert=w[se[0]]||0;
-      var bh=(wert/deckel)*ph;
-      var x=x0+j*bw, y=oben+ph-bh;
-      g.fillStyle=se[2];
-      if(w.laufend) g.globalAlpha=0.62;      /* laufende Woche ist noch nicht fertig */
-      g.fillRect(x, y, Math.max(1,bw-1.5), bh);
-      g.globalAlpha=1;
-      if(wert>0 && bw>13){
-        g.fillStyle='#5b6068'; g.font='9px Arial'; g.textBaseline='bottom';
-        g.fillText(String(wert), x+(bw-1.5)/2, y-1);
-      }
-    });
-    g.fillStyle=w.laufend?'#D72622':'#5b6068';
-    g.font=(w.laufend?'bold ':'')+'10.5px Arial'; g.textBaseline='top';
-    g.fillText('KW'+w.kw, x0+(gruppe-luft)/2, oben+ph+6);
-  });
-
-  /* Achse */
-  g.strokeStyle='#c9ccd2'; g.beginPath();
-  g.moveTo(links,oben+ph+.5); g.lineTo(breite-rechts,oben+ph+.5); g.stroke();
-
-  var l=$('siLegende');
-  if(l) l.innerHTML=serien.map(function(se){
-      return '<span><i style="background:'+se[2]+'"></i>'+h(se[1])+'</span>'; }).join('')
-    + '<span class="si-legnote">blasse Balken = laufende Woche (noch nicht fertig) · '
-    + 'Quelle: Nalpi ' + h(deDat(LEIST.stand||'')) + '</span>';
+  /* Nur die Nalpi-Uebersicht. Eigene Plots und eigene Gesamtzahlen sind am 27.08.2026
+     auf Victors Ansage geflogen: «ich will nicht jedesmal neue plots vorallem wenn die
+     zahlen nicht uebereinstimmen». In der Sitzung wird der Nalpi-Stand besprochen und
+     nicht ein zweiter, danebengerechneter. */
+  return nalpiBlock(s);
 }
 
 function nalpiBinden(){
@@ -978,34 +861,6 @@ function nalpiBinden(){
   bilderBinden();   /* Vergroessern, Bemerkung, Entfernen */
 }
 
-function plotBinden(){
-  Array.prototype.forEach.call(document.querySelectorAll('[data-la]'),function(b){
-    b.onclick=function(){
-      leistAnsicht=b.getAttribute('data-la');
-      Array.prototype.forEach.call(document.querySelectorAll('[data-la]'),function(o){
-        o.classList.toggle('rot', o===b); });
-      plotZeichnen();
-    };
-  });
-  /* Bei Drehung/Grössenänderung neu zeichnen – sonst ist der Plot am Handy
-     nach dem Kippen abgeschnitten. */
-  if(!plotBinden.hoert){
-    plotBinden.hoert=true;
-    window.addEventListener('resize',function(){
-      clearTimeout(plotBinden.wart);
-      plotBinden.wart=setTimeout(function(){ if($('siPlot')) plotZeichnen(); },180);
-    });
-  }
-}
-
-/* Plot als Bild – so kommt er ins Protokoll und in die PDF. */
-function plotBild(){
-  var c=$('siPlot');
-  if(!c || !c.width) return null;
-  try { return c.toDataURL('image/png'); } catch(e){ return null; }
-}
-
-/* ── Abgleich zur letzten Sitzung ── */
 function abgleichBlock(s){
   var offen=offenePendenzenVor(s.datum);
   if(!offen.length) return '';
@@ -1099,6 +954,62 @@ function boxenZeichnen(){
    jedem Speichern komplett neu durch die Leitung gehen.
    ═══════════════════════════════════════════════════════════ */
 var BILD_KANTE=1400, BILD_GUETE=0.72;
+
+/* Strg+V: Screenshot direkt aus der Zwischenablage. Auf der Baustelle zaehlt
+   jeder Handgriff - Win+Umschalt+S, dann hier Strg+V, fertig. Ziel ist die Box,
+   in der gerade der Cursor steht; sonst die Nalpi-Uebersicht. */
+function einfuegenBinden(){
+  if(einfuegenBinden.hoert) return;
+  einfuegenBinden.hoert=true;
+  document.addEventListener('paste', function(ev){
+    if(BLATT!=='sitzung' || !sitz()) return;
+    if(!ZIEL || !ZIEL.classList || !ZIEL.classList.contains('an')) return;
+    var d=ev.clipboardData || window.clipboardData;
+    if(!d) return;
+    var dateien=[];
+    var st=d.items;
+    if(st){
+      for(var i=0;i<st.length;i++){
+        if(st[i].kind==='file' && /^image\//.test(st[i].type)){
+          var f=st[i].getAsFile();
+          if(f) dateien.push(f);
+        }
+      }
+    }
+    if(!dateien.length && d.files){
+      for(var j=0;j<d.files.length;j++){
+        if(/^image\//.test(d.files[j].type)) dateien.push(d.files[j]);
+      }
+    }
+    if(!dateien.length) return;          /* normaler Text – nicht stoeren */
+    ev.preventDefault();
+    var ziel=einfuegeZiel();
+    dateien.forEach(function(f){ bildAufnehmen(f, ziel); });
+    einfuegeMelden(dateien.length, ziel);
+  });
+}
+
+/* Wo landet das Eingefuegte? Wo der Cursor steht - sonst bei der Nalpi-Uebersicht. */
+function einfuegeZiel(){
+  var a=document.activeElement;
+  if(a && a.getAttribute){
+    var b=a.getAttribute('data-txt');
+    if(b) return b;
+    var kasten=a.closest && a.closest('.si-box');
+    if(kasten && kasten.getAttribute('data-box')) return kasten.getAttribute('data-box');
+  }
+  return 'zahlen';
+}
+
+function einfuegeMelden(anzahl, boxId){
+  var b=ABLAUF.filter(function(x){ return x.id===boxId; })[0];
+  var wohin=(boxId==='zahlen')?'zur Nalpi-Übersicht':('zu «'+((b&&b.titel)||boxId)+'»');
+  var m=document.createElement('div');
+  m.className='si-toast';
+  m.textContent=(anzahl>1?anzahl+' Bilder ':'Bild ')+wohin+' eingefügt';
+  document.body.appendChild(m);
+  setTimeout(function(){ if(m.parentNode) m.parentNode.removeChild(m); }, 2600);
+}
 
 function bildWaehlen(boxId){
   var e=document.createElement('input');
@@ -1422,7 +1333,6 @@ function abschliessen(){
       +'Erledigung. Trotzdem abschliessen?\n\nIm Hörbuch steht: was auf dem Parkplatz landet, '
       +'darf nicht verschwinden – sonst vertraut die Runde ihm nicht mehr.')) return;
   if(TIMER.box) timerStopp();
-  plotEinfrieren(s);          /* Leistungsbild festhalten – es gehört ins Protokoll */
   s.status='abgeschlossen'; s.abgeschlossen=Date.now();
   merken(); spiegeln(); zeichnen();
   $('siFertigMsg').textContent='Abgeschlossen. Jetzt Druckansicht öffnen und als PDF an den '
@@ -1751,7 +1661,6 @@ function drucken(datum){
   if(!w){ alert('Der Browser hat das Fenster blockiert – Popups für diese Seite erlauben.'); return; }
   w.document.write('<!doctype html><meta charset="utf-8"><title>Protokoll wird gebaut …</title>'
     +'<body style="font:14px Arial;padding:24px;color:#444">Protokoll wird gebaut …</body>');
-  plotEinfrieren(s);
   bilderLaden(tag).then(function(){
     w.document.open();
     w.document.write(protokollHtml(s));
@@ -1759,33 +1668,10 @@ function drucken(datum){
   });
 }
 
-/* Der Plot lebt als Canvas – fürs Protokoll (und fürs PDF am PC) wird er
-   als Bild in den Sitzungssatz gelegt. Nur wenn er gerade gezeichnet ist;
-   beim Druck aus dem Archiv bleibt der eingefrorene Stand von damals. */
-function plotEinfrieren(s){
-  if(s!==sitz()) return;
-  var bild=plotBild();
-  if(!bild) return;
-  s.plot=bild;
-  s.plotNote=(leistAnsicht==='bohr'?'Bohrkette':'Stahlbau')
-    +' · Wochenleistung je Kalenderwoche, Quelle Nalpi '+deDat((LEIST&&LEIST.stand)||'')
-    +' · blasse Balken = laufende Woche';
-  if(LEIST && LEIST.rueckstand){
-    s.rueckstand=[];
-    [['injektion','gebohrt, nicht injiziert'],['vermessung','gebohrt, nicht vermessen']]
-    .forEach(function(x){
-      var d=LEIST.rueckstand[x[0]];
-      if(d && d.gesamt) s.rueckstand.push({ name:x[1], gesamt:d.gesamt, bereiche:d.bereiche });
-    });
-  }
-  merken();
-}
-
 function protokollHtml(s){
   var alleP=teilnehmer(s);
   var da=alleP.filter(function(p){ return (s.teilnehmer||{})[p.id]==='da'; });
   var weg=alleP.filter(function(p){ return (s.teilnehmer||{})[p.id]==='fehlt'; });
-  var z=s.zahlen||LIVE||{};
   var reden=(s.reden||[]).filter(function(x){ return x && x.trim(); });
   var offenVor=offenePendenzenVor(s.datum);
 
@@ -1850,40 +1736,6 @@ function protokollHtml(s){
       if(!quelle) return '';
       return '<img class="plot" src="'+quelle+'" alt="Nalpi-Übersicht">'
         +(b.text?'<div class="bu">'+h(b.text)+'</div>':''); }).join('');
-  }
-
-  /* Leistung – das Wochenbild aus unseren eigenen Daten. */
-  if(s.plot){
-    o+='<h2>Wochenleistung</h2>'
-      +'<img class="plot" src="'+s.plot+'" alt="Wochenleistung">'
-      +(s.plotNote?'<div class="bu">'+h(s.plotNote)+'</div>':'');
-  }
-  if(s.rueckstand && s.rueckstand.length){
-    o+='<table><tr><th>Rückstand</th><th>Bereiche</th><th style="width:15%">offen</th></tr>'
-      +s.rueckstand.map(function(r){
-        return '<tr class="rot"><td><b>'+h(r.name)+'</b></td><td>'
-          +r.bereiche.map(function(b){ return h(b.bereich)+' ('+b.offen+')'; }).join(' · ')
-          +'</td><td><b>'+r.gesamt+'</b></td></tr>'; }).join('')+'</table>';
-  }
-
-  /* Zahlen */
-  if(z.bohr||z.tische){
-    o+='<h2>Gesamtstand</h2><div class="kach">';
-    if(z.bohr) o+='<div><b>'+z.bohr.gebohrt.toLocaleString('de-CH')+'</b><span>GEBOHRT VON '
-        +z.bohr.total.toLocaleString('de-CH')+'</span></div>'
-      +'<div><b>'+z.bohr.injiziert.toLocaleString('de-CH')+'</b><span>INJIZIERT</span></div>'
-      +'<div><b>'+z.bohr.offenInj.toLocaleString('de-CH')+'</b><span>GEBOHRT, NICHT INJIZIERT</span></div>'
-      +'<div><b>'+z.bohr.offenVerm.toLocaleString('de-CH')+'</b><span>GEBOHRT, NICHT VERMESSEN</span></div>';
-    if(z.tische) o+='<div><b>'+z.tische.pk+'</b><span>PRIMÄRKONSTRUKTION</span></div>'
-      +'<div><b>'+z.tische.mt+'</b><span>MODULTRÄGER</span></div>'
-      +'<div><b>'+(z.vormontiert||0)+'</b><span>VORMONTIERT</span></div>'
-      +'<div><b>'+z.tische.verschraubt+'</b><span>VERSCHRAUBT</span></div>';
-    o+='</div>';
-    if(z.woche) o+='<table><tr><th>Zeitraum</th><th>Primärkonstruktion</th><th>Modulträger</th>'
-      +'<th>Verschraubt</th></tr><tr><td>KW'+z.woche.kw+' (laufend)</td><td>'+z.woche.pk+'</td>'
-      +'<td>'+z.woche.mt+'</td><td>'+(z.woche.vs||0)+'</td></tr>'
-      +'<tr><td>KW'+z.woche.kwVor+'</td><td>'+z.woche.vorPk+'</td><td>'+z.woche.vorMt+'</td>'
-      +'<td>–</td></tr></table>';
   }
 
   /* Abgleich */
@@ -1958,8 +1810,7 @@ function protokollHtml(s){
   if(s.lob && s.lob.trim()) o+='<div class="lob"><b>Was gut läuft</b><br>'
     +'<span class="txt">'+h(s.lob.trim())+'</span></div>';
 
-  o+='<div class="q"><b>Datenstand:</b> Nalpi-Automatik '+deDat((z&&z.stand)||'')
-    +' · Vormontage, Verschrauben und Lager aus der Website-Datenbank.<br>'
+  o+='<div class="q"><b>Zahlen:</b> Stand aus Nalpi, wie in der Sitzung aufgelegt.<br>'
     +'<b>Nächste Sitzung:</b> '+wochentag(naechsterTerminNach(s.datum))+' '
     +deDat(naechsterTerminNach(s.datum))+', '+h(s.zeit)+' Uhr, '+h(s.ort)+'.<br>'
     +'Geführt im Admin-Werkzeug der Baustellen-Website · '
@@ -2049,15 +1900,14 @@ function alsTextKopieren(){
    und Druckausgabe ohne Browser erzeugen lassen: Tools\Sitzung_Protokoll.py
    rendert das Protokoll ueber Node mit genau diesem Code. So gibt es nur EINE
    Stelle, an der das Protokoll formatiert wird. */
-function daten(sitzungen, ueberlagerung, bilder, personal, leistung){
+function daten(sitzungen, ueberlagerung, bilder, personal){
   if(sitzungen) SITZUNGEN=sitzungen;
   if(ueberlagerung) PUEBER=ueberlagerung;
   if(bilder) BILDER=bilder;
   if(personal) PERSONAL=personal;
-  if(leistung) LEIST=leistung;
 }
 return { start:start, druck:drucken, zahlenAus:zahlenRechnen, protokollHtml:protokollHtml,
          daten:daten, ablauf:ABLAUF, runde:RUNDE,
          /* fuer den Browsertest: Tools\Sitzung_Bildtest.html */
-         bildVerkleinern:bildVerkleinern, plotZeichnen:plotZeichnen };
+         bildVerkleinern:bildVerkleinern };
 })();
