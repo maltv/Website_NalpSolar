@@ -438,7 +438,7 @@ function zahlenRechnen(baustand, bohrstand, vm){
     /* summe zählt je Stufe; wer injiziert ist, war vorher gebohrt –
        deshalb von hinten aufsummieren. */
     var s=bohrstand.summe;
-    var inj=s['Injiziert']||0, ver=inj+(s['Vermessen']||0), geb=ver+(s['Gebohrt']||0);
+    var inj=s['Injiziert']||0, ver=inj+(s['Pfähle fixiert']||s['Vermessen']||0), geb=ver+(s['Gebohrt']||0);
     var abg=geb+(s['Abgesteckt']||0), tot=abg+(s['Geplant']||0);
     z.bohr={ total:tot, abgesteckt:abg, gebohrt:geb, vermessen:ver, injiziert:inj,
              offenInj:geb-inj, offenVerm:geb-ver };

@@ -19,6 +19,12 @@
  * zurück nach Sursee; hier werden sie nur gezählt, damit die Menge für den
  * Rücklieferschein bekannt ist.
  *
+ * Ganz oben im Blatt «Bestand» steht die Uebersicht «Wie viele Tische kannst du
+ * noch stellen?» (Auftrag Victor 27.08.2026): je Typ und Serie das Minimum ueber
+ * die vier Teile eines Satzes (1 KT S-1 + 1 KT S-4 + 2 Normstuetzen Berg +
+ * 1 Quertraverse). Das knappste Teil bestimmt die Zahl; bauteilgleiche Artikel
+ * ohne Serie (z.B. Quertraverse B) zaehlen in der Gesamtsumme nur einmal.
+ *
  * Einbau:  NalpLager.start(div) · NalpLager.sprache('de'|'en'|'pl')
  *          NalpLager.mitFormular(div) / .mitSpeichern(...)  – Zusatzteile beim Bergtransport
  *          NalpLager.engpaesse()  – für Karte und Warnung
@@ -115,6 +121,15 @@ var T={
   zurueck:'Geht komplett zurück nach Sursee – nur zählen, nicht verbauen.',
   laden:'Lade Bestand …', fehler:'Daten liessen sich nicht laden.',
   eng_titel:'⚠️ Engpass', eng_keiner:'Kein Engpass – alle Teile reichen für die nächsten Tische.',
+  ue_titel:'Tische kannst du noch stellen', ue_titel1:'Tisch kannst du noch stellen', ue_mit:'mit dem, was im Tal am Lager liegt',
+  ue_offen_n:'Bei {n} Typen fehlt eine Zählung – die sind hier nicht mitgerechnet.',
+  ue_offen_1:'Bei 1 Typ fehlt eine Zählung – der ist hier nicht mitgerechnet.',
+  ue_zuerst:'{t} geht zuerst aus', ue_nichtgez:'nicht gezählt: {t}',
+  ue_von_offen:'von {n} noch offenen', ue_reicht_alle:'reicht für alle {n} offenen',
+  ue_kein_bedarf:'kein Bedarf mehr 2026', ue_leer:'Noch nichts gezählt – zuerst zählen.',
+  ue_hilfe:'Je Tisch 1 × S-1, 1 × S-4, 2 × Normstütze Berg, 1 × Quertraverse. Es zählt das knappste Teil. Bauteilgleiche Traversen (2025 = 2026) sind nur einmal gerechnet.',
+  ue_det:'Was ein Tisch braucht', ue_det_je:'{n} × je Tisch', ue_zu:'Schliessen',
+  ue_pool:'ein Stapel für 2025 + 2026',
   mit_titel:'Was geht mit hoch?', mit_hilfe:'Nur was hier steht, geht vom Lager ab. Quertraversen immer eintragen.',
   mit_zeile:'+ Teil hinzufügen', mit_keine:'nichts ausser der Konstruktion',
   anzahl:'Anzahl', entfernen:'entfernen', warnung_wenig:'Nur noch {n} {t} am Lager.',
@@ -144,6 +159,15 @@ var T={
   zurueck:'Goes back to Sursee completely – only count it, do not install.',
   laden:'Loading stock …', fehler:'Could not load the data.',
   eng_titel:'⚠️ Short', eng_keiner:'No shortage – every part covers the next tables.',
+  ue_titel:'tables can still be built', ue_titel1:'table can still be built', ue_mit:'with what is in the valley store',
+  ue_offen_n:'{n} types are not fully counted – they are not included here.',
+  ue_offen_1:'1 type is not fully counted – it is not included here.',
+  ue_zuerst:'{t} runs out first', ue_nichtgez:'not counted: {t}',
+  ue_von_offen:'of {n} still open', ue_reicht_alle:'covers all {n} open ones',
+  ue_kein_bedarf:'no demand left in 2026', ue_leer:'Nothing counted yet – count first.',
+  ue_hilfe:'Per table 1 × S-1, 1 × S-4, 2 × standard post mountain, 1 × cross beam. The scarcest part counts. Identical cross beams (2025 = 2026) are counted once.',
+  ue_det:'What one table needs', ue_det_je:'{n} × per table', ue_zu:'Close',
+  ue_pool:'one stack for 2025 + 2026',
   mit_titel:'What goes up with it?', mit_hilfe:'Only what is listed here leaves the store. Always enter cross beams.',
   mit_zeile:'+ add part', mit_keine:'nothing but the structure',
   anzahl:'Quantity', entfernen:'remove', warnung_wenig:'Only {n} {t} left in the store.',
@@ -173,6 +197,15 @@ var T={
   zurueck:'Wraca w całości do Sursee – tylko policzyć, nie montować.',
   laden:'Wczytywanie stanu …', fehler:'Nie udało się wczytać danych.',
   eng_titel:'⚠️ Brakuje', eng_keiner:'Brak niedoborów – wszystkiego starcza na kolejne stoły.',
+  ue_titel:'stołów można jeszcze postawić', ue_titel1:'stół można jeszcze postawić', ue_mit:'z tego, co leży w magazynie w dolinie',
+  ue_offen_n:'{n} typów nie jest w pełni policzonych – nie ma ich w tej liczbie.',
+  ue_offen_1:'1 typ nie jest w pełni policzony – nie ma go w tej liczbie.',
+  ue_zuerst:'{t} skończy się pierwszy', ue_nichtgez:'nie policzono: {t}',
+  ue_von_offen:'z {n} pozostałych', ue_reicht_alle:'starczy na wszystkie {n}',
+  ue_kein_bedarf:'brak potrzeb w 2026', ue_leer:'Nic jeszcze nie policzono – najpierw policz.',
+  ue_hilfe:'Na stół 1 × S-1, 1 × S-4, 2 × podpora górska, 1 × trawersa. Liczy się najmniejszy stan. Identyczne trawersy (2025 = 2026) liczone są raz.',
+  ue_det:'Czego potrzeba na stół', ue_det_je:'{n} × na stół', ue_zu:'Zamknij',
+  ue_pool:'wspólny stos 2025 + 2026',
   mit_titel:'Co jedzie na górę?', mit_hilfe:'Z magazynu schodzi tylko to, co tu wpiszesz. Trawersy zawsze wpisuj.',
   mit_zeile:'+ dodaj część', mit_keine:'nic oprócz konstrukcji',
   anzahl:'Ilość', entfernen:'usuń', warnung_wenig:'Zostało tylko {n} {t}.',
@@ -263,6 +296,27 @@ var CSS=''
 +'.lg .lgpush{width:100%;border:1.5px solid #1565c0;background:#fff;color:#1565c0;font:inherit;'
  +'font-size:15px;font-weight:800;padding:13px;border-radius:12px;margin-top:10px;cursor:pointer;}'
 +'.lg .lgpush.an{background:#1565c0;color:#fff;}'
++'.lg .lgue{background:#17293b;color:#fff;border-radius:14px;padding:14px 14px 12px;margin-bottom:12px;}'
++'.lg .lgue .kopf{display:flex;align-items:center;gap:12px;}'
++'.lg .lgue .kopf .gr{font-size:42px;font-weight:900;line-height:1;letter-spacing:-1px;}'
++'.lg .lgue .kopf .tx{flex:1;min-width:0;font-size:13px;line-height:1.3;color:#c7d2de;}'
++'.lg .lgue .kopf .tx b{display:block;font-size:15px;font-weight:800;color:#fff;margin-bottom:2px;}'
++'.lg .lgue .hinw{background:rgba(255,255,255,.10);border-radius:9px;padding:8px 10px;margin-top:10px;'
+ +'font-size:12.5px;font-weight:700;color:#ffd98a;line-height:1.35;}'
++'.lg .lgueg{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:11px;}'
++'.lg .lgk{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.14);border-radius:11px;'
+ +'padding:9px 10px;text-align:left;color:#fff;font:inherit;cursor:pointer;display:block;width:100%;}'
++'.lg .lgk .kk{display:flex;align-items:center;gap:6px;}'
++'.lg .lgk .kk b{font-size:13.5px;font-weight:800;}'
++'.lg .lgk .kk .pkt{width:12px;height:12px;border-radius:50%;flex:none;position:relative;}'
++'.lg .lgk em{display:block;font-style:normal;font-size:30px;font-weight:900;line-height:1.05;margin:2px 0 1px;}'
++'.lg .lgk small{display:block;font-size:11.5px;line-height:1.3;color:#c7d2de;}'
++'.lg .lgk.rot em{color:#ff7a70;} .lg .lgk.rot{border-color:#ff7a70;}'
++'.lg .lgk.gelb em{color:#ffcc5c;}'
++'.lg .lgk.gruen em{color:#5fd68f;}'
++'.lg .lgk.grau em{color:#9aa6b4;}'
++'.lg .lgueh{font-size:11.5px;color:#93a3b5;line-height:1.35;margin-top:10px;}'
++'.lg .lgsatz .lgz{cursor:default;}'
 +'.lg .lgstand{font-size:11.5px;color:#63676d;text-align:center;margin-top:16px;}';
 
 function stil(){ if(document.getElementById('lgStil')) return;
@@ -396,6 +450,152 @@ function engpaesse(){
   return li;
 }
 
+
+/* ─────────────── Wie viele Tische lassen sich noch stellen? ───────────────
+   Auftrag Victor 27.08.2026: nicht nur der Bestand je Teil, sondern die Zahl,
+   die auf der Baustelle zaehlt – wie viele komplette Saetze liegen noch im Tal.
+   Ein Satz = 1 Knietraeger S-1 + 1 S-4 + 2 Normstuetzen Berg + 1 Quertraverse
+   im Typ und in der Serie des Tischs (jeTisch in TEILE, ILF-Stueckliste).
+   Das knappste Teil bestimmt die Zahl; fehlt zu einem Teil die Zaehlung, wird
+   nichts geschaetzt – das Fach bleibt offen. */
+var SATZ_TEILE=['kt1','kt4','nsb','qt'];
+
+function saetze(){
+  var li=artikel(), serien={}, fach={}, reihe=[];
+  /* Welche Serien gibt es je Typ? Nur serienreine Artikel geben das vor -
+     bauteilgleiche (Serie '') gehoeren in beide. */
+  li.forEach(function(a){ if(a.rueck||a.serie==='') return;
+    (serien[a.typ]=serien[a.typ]||{})[a.serie]=1; });
+  function holen(typ,serie){
+    var k=typ+'|'+serie;
+    if(!fach[k]){ fach[k]={key:k, typ:typ, serie:serie, teile:{}, tische:null,
+                           eng:null, offen:null, fehlt:[]}; reihe.push(fach[k]); }
+    return fach[k];
+  }
+  li.forEach(function(a){
+    var def=teilDef(a.teil);
+    if(a.rueck||!def||!def.jeTisch) return;              // Normstuetze Tal geht zurueck
+    var ser=(a.serie!=='')?[a.serie]:Object.keys(serien[a.typ]||{});
+    if(!ser.length) ser=[''];
+    ser.forEach(function(se){ holen(a.typ,se).teile[a.teil]=a; });
+  });
+  reihe.forEach(function(f){
+    SATZ_TEILE.forEach(function(tid){
+      var def=teilDef(tid), a=f.teile[tid];
+      if(!a){ f.fehlt.push(tid); f.teile[tid]=null; return; }
+      var e=bestand(a), n=(e.bestand==null?null:Math.floor(e.bestand/def.jeTisch));
+      f.teile[tid]={artikel:a, bestand:e.bestand, tische:n};
+      if(n==null){ f.fehlt.push(tid); return; }
+      if(f.tische==null || n<f.tische){ f.tische=n; f.eng=tid; }
+    });
+    if(f.fehlt.length){ f.tische=null; f.eng=null; }      // nichts schaetzen
+    /* Wie viele Tische stehen 2026 ueberhaupt noch an? Aus material.json, aber
+       nur aus einem serienreinen Teil - beim gepoolten steht der Bedarf beider
+       Serien zusammen und wuerde die Zahl verdoppeln. */
+    SATZ_TEILE.forEach(function(tid){
+      if(f.offen!=null) return;
+      var x=f.teile[tid], a=x&&x.artikel;
+      if(!a||a.serie===''||a.bedarf==null) return;
+      f.offen=Math.round(a.bedarf/teilDef(tid).jeTisch);
+    });
+  });
+  reihe.sort(function(x,y){
+    if((x.tische==null)!==(y.tische==null)) return x.tische==null?1:-1;
+    if(x.tische!=null&&x.tische!==y.tische) return x.tische-y.tische;
+    return (x.typ+x.serie)<(y.typ+y.serie)?-1:1;
+  });
+  return reihe;
+}
+
+/* Summe ueber alle Faecher. Ein bauteilgleicher Artikel ohne Serie (Quertraverse B)
+   liegt fuer beide Serien im selben Stapel - er darf nur einmal gezaehlt werden. */
+function satzGesamt(reihe){
+  var summe=0, offen=0, pool={};
+  reihe.forEach(function(f){
+    if(f.tische==null){ offen++; return; }
+    summe+=f.tische;
+    SATZ_TEILE.forEach(function(tid){
+      var x=f.teile[tid];
+      if(!x||!x.artikel||x.artikel.serie!==''||x.tische==null) return;
+      var p=pool[x.artikel.id]||(pool[x.artikel.id]={kap:x.tische, braucht:0});
+      p.braucht+=f.tische;
+    });
+  });
+  for(var id in pool) if(pool[id].braucht>pool[id].kap) summe-=(pool[id].braucht-pool[id].kap);
+  return { tische:Math.max(0,summe), offen:offen };
+}
+
+function satzAmpel(f){
+  if(f.tische==null) return 'grau';
+  if(!f.offen) return 'gruen';                    // fuer diesen Typ steht nichts mehr an
+  if(f.tische<ENG_TISCHE) return 'rot';
+  return f.tische<f.offen?'gelb':'gruen';
+}
+function teilName(tid){ var d=teilDef(tid); return d?tt(d):tid; }
+
+function uebersicht(){
+  var reihe=saetze(), g=satzGesamt(reihe), gez=reihe.length-g.offen;
+  var s='<div class="lgue"><div class="kopf"><span class="gr">'
+   +(gez?g.tische:'–')+'</span><span class="tx"><b>'
+   +h(t(gez&&g.tische===1?'ue_titel1':'ue_titel'))+'</b>'+h(t('ue_mit'))+'</span></div>';
+  if(!gez) s+='<div class="hinw">'+h(t('ue_leer'))+'</div>';
+  else if(g.offen) s+='<div class="hinw">'+h(t(g.offen===1?'ue_offen_1':'ue_offen_n',{n:g.offen}))+'</div>';
+  s+='<div class="lgueg">';
+  reihe.forEach(function(f){
+    var z1, z2;
+    if(f.tische==null) z1=t('ue_nichtgez',{t:f.fehlt.map(teilName).join(', ')});
+    else z1=f.eng?t('ue_zuerst',{t:teilName(f.eng)}):'';
+    if(!f.offen) z2=t('ue_kein_bedarf');
+    else if(f.tische!=null&&f.tische>=f.offen) z2=t('ue_reicht_alle',{n:f.offen});
+    else z2=t('ue_von_offen',{n:f.offen});
+    s+='<button class="lgk '+satzAmpel(f)+'" data-k="'+h(f.key)+'">'
+     +'<span class="kk"><span class="pkt'+(f.serie==='2026'?' n26':'')+'" style="background:'
+     +(FARBE[f.typ]||'#999')+'"></span><b>'+h(f.typ+(f.serie?' · '+f.serie:''))+'</b></span>'
+     +'<em>'+(f.tische==null?'?':f.tische)+'</em>'
+     +'<small>'+h(z1)+(z1&&z2?'<br>':'')+h(z2)+'</small></button>';
+  });
+  s+='</div><div class="lgueh">'+h(t('ue_hilfe'))+'</div></div>';
+  return s;
+}
+
+/* Kachel antippen: woran haengt die Zahl? Alle vier Teile mit ihrem Bestand. */
+function satzDetail(key){
+  var f=null; saetze().forEach(function(x){ if(x.key===key) f=x; });
+  if(!f) return;
+  var alt=document.getElementById('lgSatz'); if(alt) alt.remove();
+  var d=document.createElement('div');
+  d.id='lgSatz'; d.className='lg lgsatz';
+  d.style.cssText='position:fixed;inset:0;z-index:80;background:rgba(10,20,32,.55);'
+   +'display:flex;align-items:flex-end;justify-content:center;';
+  var kopfZahl=(f.tische==null)?'?':f.tische;
+  var kopfText=(f.tische==null)?t('ungezaehlt')
+    :t(f.tische===1?'reicht1':(f.tische===0?'reicht0':'reicht'),{n:f.tische});
+  var innen='<div class="lgskizze" style="margin-top:0">'
+   +'<span style="width:26px;height:26px;border-radius:50%;flex:none;background:'
+   +(FARBE[f.typ]||'#999')+'"></span>'
+   +'<div><b>'+h(f.typ+(f.serie?' · '+f.serie:''))+' – '+h(kopfZahl)+'</b>'
+   +'<span>'+h(kopfText)+'</span></div></div>'
+   +'<label class="lgl">'+h(t('ue_det'))+'</label>';
+  SATZ_TEILE.forEach(function(tid){
+    var x=f.teile[tid], def=teilDef(tid);
+    var unter=t('ue_det_je',{n:def.jeTisch}), zahl='–';
+    if(x&&x.bestand!=null){ zahl=x.bestand;
+      unter+=' · '+t(x.tische===1?'reicht1':(x.tische===0?'reicht0':'reicht'),{n:x.tische}); }
+    else unter+=' · '+t('ungezaehlt');
+    if(x&&x.artikel&&x.artikel.serie==='') unter+=' · '+t('ue_pool');   // gepoolter Stapel
+    innen+='<div class="lgz'+(tid===f.eng?' rot':'')+'"><span class="lgt"><b>'+h(tt(def))+'</b>'
+     +'<span>'+h(unter)+'</span></span><span class="lgn">'+zahl
+     +'<small>'+h(t('stueck'))+'</small></span></div>';
+  });
+  innen+='<button class="lgbtn grau" id="lgSatzZu">'+h(t('ue_zu'))+'</button>';
+  d.innerHTML='<div style="background:#eef1f5;width:100%;max-width:620px;border-radius:16px 16px 0 0;'
+   +'padding:16px 14px calc(18px + env(safe-area-inset-bottom));max-height:92vh;overflow:auto">'
+   +innen+'</div>';
+  document.body.appendChild(d);
+  d.onclick=function(ev){ if(ev.target===d) d.remove(); };
+  d.querySelector('#lgSatzZu').onclick=function(){ d.remove(); };
+}
+
 /* ─────────────── Warteschlange (IndexedDB, weil Fotos gross sind) ─────────────── */
 var Q=(function(){
   var kann=!!window.indexedDB, dbP=null;
@@ -480,6 +680,7 @@ function malen(){
 
 function malenBestand(){
   var b=ZIEL.querySelector('#lgBody'), s='';
+  s+=uebersicht();                   // ganz oben: wie viele Tische liegen noch da
   var offen=0;
   artikel().forEach(function(a){ if(bestand(a).bestand==null) offen++; });
   if(offen) s+='<div class="lgreset"><b>'+h(t('reset_titel'))+'</b>'+h(t('reset_text',{n:offen}))+'</div>';
@@ -522,6 +723,7 @@ function malenBestand(){
   b.innerHTML=s;
   var p=b.querySelector('#lgPush'); if(p) p.onclick=function(){ pushAn(p); };
   pushStand(p);
+  klick(b,'.lgk[data-k]',function(el){ satzDetail(el.getAttribute('data-k')); });
   klick(b,'.lgz[data-a]',function(el){ korrigieren(el.getAttribute('data-a')); });
 }
 
@@ -841,6 +1043,8 @@ window.NalpLager={
   mitSpeichern:mitSpeichern,
   mitLeeren:function(){ mitZeilen=[]; },
   engpaesse:function(){ return MAT?engpaesse():[]; },
+  saetze:function(){ return MAT?saetze():[]; },
+  satzGesamt:function(){ return MAT?satzGesamt(saetze()):{tische:0,offen:0}; },
   bestandVon:function(id){ var a=null;
     artikel().forEach(function(x){ if(x.id===id) a=x; });
     return a?bestand(a):null; },

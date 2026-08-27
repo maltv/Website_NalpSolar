@@ -292,6 +292,50 @@ alp-sitzung.js,
   .einkBem { font-size:12px; color:var(--ink); background:#fffaf2; border-left:3px solid var(--orange);
         padding:6px 9px; border-radius:0 4px 4px 0; margin-top:8px; line-height:1.5; }
   .einkQ { font-size:10.5px; color:var(--mut); margin-top:7px; line-height:1.45; }
+  /* Eingangsbestätigung: der einzige Ort im Blatt «Bestellungen», an dem
+     geschrieben wird. Knöpfe gross genug für Handschuhe (min. 40 px hoch). */
+  .einkTun { display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; padding-top:9px;
+        border-top:1px solid var(--line); }
+  .einkTun button { border:1px solid var(--line); background:#fff; cursor:pointer;
+        font:700 12.5px Arial; color:var(--mut); padding:10px 13px; border-radius:5px;
+        min-height:40px; }
+  .einkTun button.on { background:var(--gruen); border-color:var(--gruen); color:#fff; }
+  .einkTun button.on.blau { background:var(--blau); border-color:var(--blau); }
+  .einkTun button.on.orange { background:var(--orange); border-color:var(--orange); }
+  .einkTun button.weg { color:var(--mut); }
+  .einkEing { font-size:12.5px; background:#f1f8f2; border-left:3px solid var(--gruen);
+        padding:7px 10px; border-radius:0 4px 4px 0; margin-top:9px; line-height:1.5; }
+  .einkEing b { font-weight:700; }
+  /* ── Lieferzeile ────────────────────────────────────────────
+     Der eine Satz, um den es Victor geht: ist es da, oder auf wann
+     kommt es. Steht darum gross und farbig zuoberst auf der Karte –
+     niemand soll das aus Status, Termin und Ampel zusammenreimen. */
+  .einkLief { margin:9px 0 3px; padding:8px 11px; border-radius:5px;
+        font:800 14px/1.35 Arial; letter-spacing:.01em; }
+  .einkLief span { display:block; font:700 11.5px Arial; opacity:.8; margin-top:2px; }
+  .einkLief.da { background:#e9f5ec; color:#1c6b34; }
+  .einkLief.bereit { background:#e7f0fb; color:#12508f; }
+  .einkLief.teil, .einkLief.heute, .einkLief.offen { background:#fdf1e2; color:#8a4b06; }
+  .einkLief.spaet { background:#fdeaea; color:#a01c1c; }
+  .einkLief.kommt { background:#f2f4f7; color:#2b3138; }
+  .einkLief.storniert { background:#f2f4f7; color:#6b7078; }
+  /* ── Bearbeiten im Web (Auftrag Victor 27.08.2026) ──────────
+     Formular klappt auf der Karte auf. Ein Feld je Zeile: am Handy
+     ist nebeneinander unlesbar, und getippt wird hier mit Handschuh. */
+  .einkForm { margin-top:10px; padding-top:10px; border-top:1px dashed var(--line); }
+  .einkForm .h { font:700 12px Arial; color:var(--mut); margin-bottom:8px;
+        text-transform:uppercase; letter-spacing:.03em; }
+  .einkFeld { margin-bottom:8px; }
+  .einkFeld label { display:block; font:700 11px Arial; color:var(--mut);
+        text-transform:uppercase; letter-spacing:.03em; margin-bottom:3px; }
+  .einkFeld input, .einkFeld select, .einkFeld textarea { width:100%; box-sizing:border-box;
+        border:1px solid var(--line); border-radius:5px; padding:9px 10px;
+        font:400 13.5px Arial; color:var(--ink); background:#fff; min-height:40px; }
+  .einkFeld textarea { min-height:66px; resize:vertical; line-height:1.45; }
+  .einkFeld.geaendert input, .einkFeld.geaendert select, .einkFeld.geaendert textarea {
+        border-color:var(--orange); background:#fffaf2; }
+  .einkAend { font-size:12px; background:#f4f1fb; border-left:3px solid #6b52b5;
+        padding:7px 10px; border-radius:0 4px 4px 0; margin-top:9px; line-height:1.5; }
 
   /* ── Bedarf vom Team (Meldungen aus einkauf.html) ───────────
      Eigene Karten, weil hier geschrieben wird: Status, Notiz, Foto. */
@@ -708,9 +752,21 @@ alp-sitzung.js,
 
      1) Bestellungen – was ist wo für wen bestellt, Termin, Preis.
         Daten: uploads/einkauf.json, gebaut von Tools\Einkauf_Bauen.py aus
-        Bestellungen\einkaufsregister.json. Reine Anzeige – gepflegt wird
-        das Register in der Datei, nicht hier (gleich wie Material).
-        Zweck: sehen, wo man nachhaken muss. Darum steht Rot/Blau/Orange oben.
+        Bestellungen\einkaufsregister.json – das bleibt der Master.
+        Zweck: sehen, ob etwas da ist bzw. auf wann es kommt, und wo man
+        nachhaken muss. Darum steht die LIEFERZEILE gross zuoberst auf jeder
+        Karte und Rot/Blau/Orange darüber.
+        ZWEI Schreibstellen, beide als getrennter RTDB-Knoten NEBEN dem
+        Register (gleiches Muster wie erfassung/sitzung_pendenzen: die Datei
+        wird von Hand bearbeitet, eine Eingabe darin wäre beim nächsten Mal
+        weg). Dauerhaft ins Register wandern beide mit «EINKAUF.bat uebernehmen».
+        a) EINGANGSBESTÄTIGUNG (27.08.2026) – «ist da» / «liegt bereit» /
+           «nur ein Teil» → erfassung/einkauf_eingang/<bestell-id>.
+        b) ÄNDERN (27.08.2026, Auftrag Victor «ich will selber Änderungen
+           vornehmen können») – Knopf «✎ ändern» auf der Karte: Termin,
+           Lieferdatum, Preis, Status, Beleg, Texte
+           → erfassung/einkauf_aenderung/<bestell-id> = {felder,von,am,ts}.
+           Gespeichert wird nur, was vom Registerwert abweicht.
 
      2) Bedarf vom Team – was die Leute über einkauf.html gemeldet haben
         (RTDB erfassung/einkauf_bedarf, Fotos in erfassung/einkauf_fotos).
@@ -2101,10 +2157,23 @@ function matDetail(a){
 /* ══════════════════════════════════════════════════════════════
    EINKÄUFER – was ist wo für wen bestellt, wann kommt es, was kostet es
    Daten: uploads/einkauf.json (Tools\Einkauf_Bauen.py aus
-   Bestellungen\einkaufsregister.json). Reine Anzeige, nichts wird hier
-   geschrieben – geändert wird im Register, dann EINKAUF.bat.
+   Bestellungen\einkaufsregister.json) – das ist der Master.
+   DARÜBER liegt die Eingangsbestätigung aus RTDB erfassung/einkauf_eingang:
+   wer sieht, dass etwas auf der Baustelle ist, tippt es hier an. Nur diese
+   drei Zustände werden geschrieben, alles andere bleibt Datei + EINKAUF.bat.
    ══════════════════════════════════════════════════════════════ */
 var EINK=null, einkGeladen=false, einkFilter='dran';
+/* EINK  = die geladene Datei, bleibt unangetastet (= Registerstand)
+   EINK_L = die gerechnete Liste, die gezeichnet wird. Sie entsteht bei jedem
+   einkOverlay() neu aus der Datei + Änderung + Eingang – so kann nichts
+   «hängen bleiben», wenn jemand eine Änderung zurücknimmt. */
+var EINK_L=[];
+/* Eingangsbestätigungen je Bestell-Id: {status,am,von,notiz,ts} */
+var EING={};
+var EING_STAT=['geliefert','abholbereit','teil'];
+/* Im Web geänderte Felder je Bestell-Id: {felder:{…},von,am,ts} */
+var AEND={};
+var einkFormOffen='';
 /* Blatt 2: Meldungen des Teams aus einkauf.html */
 var BED={}, bedFilter='offen', bedGeladen=false;
 var einkBlatt=(window.einkBlattStart==='bedarf')?'bedarf':'bestellungen';
@@ -2114,13 +2183,57 @@ function einkStarten(){
   einkNavZeichnen();
   einkBlattZeigen(einkBlatt);
   if(einkGeladen) return; einkGeladen=true;
-  fetch('uploads/einkauf.json?_='+Date.now(),{cache:'no-store'})
-    .then(function(r){ return r.json(); })
-    .then(function(j){ EINK=j; einkKopfZeichnen(); einkFilterZeichnen(); einkZeichnen(); })
-    .catch(function(){ $('einkListe').innerHTML='<div class="card"><div class="sub">'
+  Promise.all([
+    fetch('uploads/einkauf.json?_='+Date.now(),{cache:'no-store'})
+      .then(function(r){ return r.json(); }),
+    fetch(RTDB+'/einkauf_eingang.json?_='+Date.now(),{cache:'no-store'})
+      .then(function(r){ return r.ok?r.json():null; })
+      .catch(function(){ return null; }),
+    fetch(RTDB+'/einkauf_aenderung.json?_='+Date.now(),{cache:'no-store'})
+      .then(function(r){ return r.ok?r.json():null; })
+      .catch(function(){ return null; })
+  ]).then(function(a){
+    EINK=a[0]; EING=a[1]||{}; AEND=a[2]||{};
+    einkFilterZeichnen(); einkOverlay();
+  }).catch(function(){ $('einkListe').innerHTML='<div class="card"><div class="sub">'
       +'einkauf.json konnte nicht geladen werden – einmal EINKAUF.bat laufen lassen.'
       +'</div></div>'; });
   bedLaden();
+}
+
+/* Baut die Anzeigeliste neu: Datei → Änderungen → Eingang → Ampel + Lieferzeile.
+   Gleiche Reihenfolge wie in Tools\Einkauf_Bauen.py, damit im Web dasselbe
+   steht wie nach dem nächsten EINKAUF.bat. */
+function einkOverlay(){
+  if(!EINK) return;
+  var heute=einkTag(bedHeute());
+  EINK_L=EINK.bestellungen.map(function(r){
+    var b={}; for(var k in r){ if(r.hasOwnProperty(k)) b[k]=r[k]; }
+    delete b.eingang; delete b.geaendert;
+    return einkBewerten(einkEingAnwenden(einkAendAnwenden(b)),heute);
+  });
+  var rang={rot:0,blau:1,orange:2,grau:3,gruen:4};
+  EINK_L.sort(function(x,y){
+    var d=(rang[x.ampel]||9)-(rang[y.ampel]||9); if(d) return d;
+    return (x.termin||'9999')<(y.termin||'9999')?-1:1;
+  });
+  einkSummenRechnen(); einkKopfZeichnen(); einkZeichnen(); einkZahlSetzen();
+}
+
+/* Die Summen kommen aus der Datei, stimmen aber nicht mehr, sobald jemand
+   etwas bestätigt oder geändert hat – darum hier neu zählen. */
+function einkSummenRechnen(){
+  var l=EINK_L, s=EINK.summen;
+  var offen=l.filter(function(b){ return ['geliefert','storniert'].indexOf(b.status)<0; });
+  s.offen=offen.length;
+  s.ueberfaellig=l.filter(function(b){ return b.ampel==='rot'; }).length;
+  s.abholbereit =l.filter(function(b){ return b.ampel==='blau'; }).length;
+  s.nachhaken   =l.filter(function(b){ return b.ampel==='orange'; }).length;
+  s.geliefert   =l.filter(function(b){ return b.liefer.stufe==='da'; }).length;
+  s.ohne_termin =offen.filter(function(b){ return !b.termin; }).length;
+  s.summe_offen_chf=Math.round(offen.reduce(function(a,b){
+    return a+(typeof b.preis==='number'?b.preis:0); },0)*100)/100;
+  s.ohne_preis=offen.filter(function(b){ return typeof b.preis!=='number'; }).length;
 }
 
 /* Unter-Navigation wie beim Material – zwei Blätter, direkt verlinkbar */
@@ -2156,13 +2269,20 @@ function einkKopfZeichnen(){
     +'<div class="einkZahl rot"><b>'+s.ueberfaellig+'</b><span>überfällig</span></div>'
     +'<div class="einkZahl blau"><b>'+s.abholbereit+'</b><span>abholbereit</span></div>'
     +'<div class="einkZahl orange"><b>'+s.nachhaken+'</b><span>nachhaken</span></div>'
+    +'<div class="einkZahl orange"><b>'+(s.ohne_termin||0)+'</b><span>ohne Termin</span></div>'
     +'<div class="einkZahl"><b>'+s.offen+'</b><span>offen</span></div>'
     +'</div>'
     +'<div class="card"><h2>Einkäufer</h2><div class="sub">'
+    +'Auf jeder Karte steht zuoberst, <b>ob es da ist oder auf wann es kommt</b>. '
+    +(s.ohne_termin?'Bei <b>'+s.ohne_termin+'</b> offenen Bestellungen ist noch kein '
+      +'Liefertermin bekannt – dort nachfragen und den Termin gleich hier eintragen. ':'')
     +'Bekannte Summe der offenen Bestellungen: <b>'+einkChf(s.summe_offen_chf)+'</b> – '
     +'bei '+s.ohne_preis+' Bestellungen ist der Preis noch nicht bestätigt, die fehlen darin. '
-    +'Stand '+deDat(EINK.stand)+', gebaut '+esc(EINK.gebaut_am)+'. '
-    +'Gepflegt wird <code>Bestellungen\\einkaufsregister.json</code>, danach <code>EINKAUF.bat</code>.'
+    +'Stand '+deDat(EINK.stand)+', gebaut '+esc(EINK.gebaut_am)+'.'
+    +'<br><b>Angekommen? «✅ ist da» antippen. Etwas anderes stimmt nicht? «✎ ändern».</b> '
+    +'Beides steht sofort für alle da. Dauerhaft ins Register '
+    +'(<code>Bestellungen\\einkaufsregister.json</code>) kommt es mit '
+    +'<code>EINKAUF.bat uebernehmen</code>.'
     +'</div></div>';
   einkZahlSetzen();
 }
@@ -2192,9 +2312,14 @@ function einkFilterZeichnen(){
 }
 
 function einkZeichnen(){
-  var liste=EINK.bestellungen.filter(function(b){
+  var liste=EINK_L.filter(function(b){
     if(einkFilter==='alle') return true;
-    if(einkFilter==='dran') return b.ampel==='rot'||b.ampel==='blau'||b.ampel==='orange';
+    /* Heute Bestätigtes/Geändertes bleibt bis morgen stehen – sonst verschwindet
+       die Karte im selben Moment, in dem man «ist da» antippt oder speichert.
+       Ein offenes Formular bleibt ohnehin sichtbar. */
+    if(einkFilter==='dran') return b.ampel==='rot'||b.ampel==='blau'||b.ampel==='orange'
+      ||(b.eingang&&b.eingang.am===bedHeute())
+      ||(b.geaendert&&b.geaendert.am===bedHeute())||b.id===einkFormOffen;
     if(einkFilter.indexOf('L:')===0) return b.lieferant===einkFilter.slice(2);
     return true;
   });
@@ -2206,6 +2331,7 @@ function einkZeichnen(){
     var z='<div class="einkZeile">';
     z+='<div><i>Termin</i>'+(b.termin?deDat(b.termin):'offen')
       +(b.termin_art&&b.termin_art!=='offen'?' <i>('+esc(b.termin_art)+')</i>':'')+'</div>';
+    if(b.geliefert_am) z+='<div><i>geliefert</i>'+deDat(b.geliefert_am)+'</div>';
     z+='<div><i>Preis</i>'+einkChf(b.preis)
       +(b.preis_art==='rund'?' <i>(rund)</i>':'')+'</div>';
     if(b.bestellt_am) z+='<div><i>bestellt</i>'+deDat(b.bestellt_am)+'</div>';
@@ -2217,13 +2343,344 @@ function einkZeichnen(){
       +(b.wo?' · '+esc(b.wo):'')
       +(b.bestellt_von?'<br>bestellt von <b>'+esc(b.bestellt_von)+'</b>':'')
       +(b.bedarf_von?' · gemeldet von <b>'+esc(b.bedarf_von)+'</b>':'')+'</div>'
-      +'<div style="margin-top:8px"><span class="einkStat '+b.ampel+'">'+esc(b.ampeltext)+'</span> '
+      +einkLieferBalken(b)
+      +'<div style="margin-top:6px"><span class="einkStat '+b.ampel+'">'+esc(b.ampeltext)+'</span> '
       +'<span class="einkQ" style="margin:0 0 0 6px">'+esc(b.status)+'</span></div>'
       +z
       +(b.bemerkung?'<div class="einkBem">'+esc(b.bemerkung)+'</div>':'')
+      +einkAendBlock(b)
+      +einkEingBlock(b)
+      +einkFormBlock(b)
       +'<div class="einkQ">Quelle: '+esc(b.quelle)+'</div>'
       +'</div>';
   }).join('');
+}
+
+/* Die Lieferzeile – der Satz, um den es geht. */
+function einkLieferBalken(b){
+  var l=b.liefer||{stufe:'offen',text:'',zusatz:''};
+  return '<div class="einkLief '+l.stufe+'">'+esc(l.text)
+    +(l.zusatz?'<span>'+esc(l.zusatz)+'</span>':'')+'</div>';
+}
+
+/* ══════════════════════════════════════════════════════════════
+   AMPEL + LIEFERZEILE – Portierung aus Tools\Einkauf_Bauen.py
+   ACHTUNG: Diese Regel steht an ZWEI Stellen. Sie muss hier sein, weil im
+   Web live geändert wird und die Karte sofort stimmen muss; sie muss in
+   Python sein, weil einkauf.json auch ohne offenes Web gebaut wird.
+   Änderung IMMER in beiden Dateien – gleiche Falle wie die Bestandsformel
+   im Normteil-Lager.
+   ══════════════════════════════════════════════════════════════ */
+var EINK_WT=['So','Mo','Di','Mi','Do','Fr','Sa'];
+var EINK_GRENZE=5;   /* ohne Termin: ab so vielen Tagen "nachhaken" */
+function einkTag(iso){
+  if(!iso||String(iso).length<10) return null;
+  var d=new Date(String(iso).slice(0,10)+'T12:00:00');
+  return isNaN(d.getTime())?null:d;
+}
+function einkWtag(iso){ var d=einkTag(iso); return d?(EINK_WT[d.getDay()]+' '+deDat(iso)):deDat(iso); }
+function einkTage(n){ return n+(n===1?' Tag':' Tagen'); }
+function einkDiff(a,b){ return Math.round((a-b)/86400000); }
+
+function einkLiefer(b,heute){
+  var e=b.eingang||{}, status=(b.status||'').trim();
+  var termin=einkTag(b.termin), art=(b.termin_art||'').trim();
+  var zus=(art&&art!=='offen')?' ('+art+')':'';
+  var gel=b.geliefert_am||e.am||'';
+  if(status==='storniert') return {stufe:'storniert',text:'STORNIERT',zusatz:''};
+  if(e.status==='teil'){
+    var rest='Resttermin offen – nachfragen';
+    if(termin&&einkDiff(termin,heute)<0) rest='Rest überfällig – Termin war '+einkWtag(b.termin);
+    else if(termin) rest='Rest angekündigt auf '+einkWtag(b.termin);
+    return {stufe:'teil',
+      text:e.am?('NUR EIN TEIL DA seit '+einkWtag(e.am)):'NUR EIN TEIL DA',zusatz:rest};
+  }
+  if(e.status==='abholbereit'||status==='abholbereit'){
+    var t=[]; if(b.wo) t.push(b.wo); if(e.am) t.push('bereit seit '+einkWtag(e.am));
+    return {stufe:'bereit',text:'LIEGT BEREIT – noch niemand geholt',zusatz:t.join(' · ')};
+  }
+  if(status==='geliefert'||e.status==='geliefert') return {stufe:'da',
+    text:gel?('GELIEFERT am '+einkWtag(gel)):'GELIEFERT',
+    zusatz:e.von?('bestätigt von '+e.von):''};
+  if(termin&&einkDiff(termin,heute)<0) return {stufe:'spaet',
+    text:'LIEFERUNG WAR AM '+einkWtag(b.termin)+zus,
+    zusatz:'überfällig seit '+einkTage(einkDiff(heute,termin))};
+  if(termin&&einkDiff(termin,heute)===0) return {stufe:'heute',
+    text:'LIEFERUNG HEUTE, '+einkWtag(b.termin),zusatz:(art&&art!=='offen')?art:''};
+  if(termin&&einkDiff(termin,heute)===1) return {stufe:'heute',
+    text:'LIEFERUNG MORGEN, '+einkWtag(b.termin),zusatz:(art&&art!=='offen')?art:''};
+  if(termin) return {stufe:'kommt',text:'LIEFERUNG AM '+einkWtag(b.termin)+zus,
+    zusatz:'in '+einkTage(einkDiff(termin,heute))};
+  if(status==='angefragt') return {stufe:'offen',text:'NOCH KEIN LIEFERTERMIN',
+    zusatz:'erst angefragt, noch nicht bestellt'};
+  var best=einkTag(b.bestellt_am);
+  return {stufe:'offen',text:'LIEFERTERMIN UNBEKANNT – nachfragen',
+    zusatz:best?('bestellt vor '+einkTage(einkDiff(heute,best))):''};
+}
+
+function einkBewerten(b,heute){
+  var status=(b.status||'').trim(), termin=einkTag(b.termin), best=einkTag(b.bestellt_am);
+  var e=b.eingang||{};
+  b.tage_seit_bestellung=best?einkDiff(heute,best):null;
+  b.tage_bis_termin=termin?einkDiff(termin,heute):null;
+  if(e.status==='teil'){ b.ampel='orange';
+    b.ampeltext=e.am?('Teillieferung '+deDat(e.am)+' – Rest offen'):'Teillieferung – Rest offen'; }
+  else if(e.status==='geliefert'){ b.ampel='gruen';
+    b.ampeltext='auf der Baustelle'+(e.am?(' seit '+deDat(e.am)):''); }
+  else if(e.status==='abholbereit'){ b.ampel='blau'; b.ampeltext='liegt bereit – abholen'; }
+  else if(status==='geliefert'){ b.ampel='gruen';
+    b.ampeltext=b.geliefert_am?('geliefert am '+deDat(b.geliefert_am)):'geliefert'; }
+  else if(status==='storniert'){ b.ampel='grau'; b.ampeltext='storniert'; }
+  else if(status==='abholbereit'){ b.ampel='blau'; b.ampeltext='liegt bereit – abholen'; }
+  else if(termin&&einkDiff(termin,heute)<0){ b.ampel='rot';
+    b.ampeltext='überfällig seit '+einkTage(einkDiff(heute,termin)); }
+  else if(termin&&einkDiff(termin,heute)<=1){ b.ampel='orange';
+    b.ampeltext=(einkDiff(termin,heute)===0)?'heute fällig':'morgen fällig'; }
+  else if(!termin&&best&&einkDiff(heute,best)>EINK_GRENZE){ b.ampel='orange';
+    b.ampeltext='kein Termin, '+einkDiff(heute,best)+' Tage her – nachhaken'; }
+  else if(status==='angefragt'){ b.ampel='grau';
+    b.ampeltext=b.bestellt_am?'angefragt':'angefragt, noch nicht bestellt'; }
+  else { b.ampel='grau';
+    b.ampeltext=termin?('in '+einkDiff(termin,heute)+' Tagen'):'läuft'; }
+  b.liefer=einkLiefer(b,heute);
+  return b;
+}
+
+/* ── ÄNDERN IM WEB (Auftrag Victor 27.08.2026) ──────────────────
+   Zweite Schreibstelle im Blatt «Bestellungen»: RTDB
+   erfassung/einkauf_aenderung/<id> = {felder,von,am,ts}. Gespeichert wird
+   NUR, was vom Registerwert abweicht – so bleibt eine spätere Handkorrektur
+   in der Datei an allen anderen Feldern wirksam. Dauerhaft ins Register
+   kommt es mit «EINKAUF.bat uebernehmen»; das räumt den Knoten danach weg.
+   ─────────────────────────────────────────────────────────────── */
+var EINK_AENDFELDER=['was','fuer','lieferant','wo','bestellt_am','bestellt_von','termin',
+  'termin_art','preis','preis_art','status','beleg','geliefert_am','bemerkung'];
+/* Leeres Feld heisst "nicht bekannt", nicht "leerer Text". */
+var EINK_LEER_NULL=['bestellt_am','termin','preis','geliefert_am'];
+var EINK_FELDNAME={was:'Was',fuer:'Für',lieferant:'Lieferant',wo:'Wohin',
+  bestellt_am:'bestellt am',bestellt_von:'bestellt von',termin:'Liefertermin',
+  termin_art:'Terminart',preis:'Preis',preis_art:'Preisart',status:'Status',
+  beleg:'Beleg',geliefert_am:'geliefert am',bemerkung:'Bemerkung'};
+
+function einkWert(feld,wert){
+  if(typeof wert==='string') wert=wert.trim();
+  if(feld==='preis'){
+    if(wert===''||wert===null||wert===undefined) return null;
+    var z=parseFloat(String(wert).replace(',','.'));
+    return isNaN(z)?null:Math.round(z*100)/100;
+  }
+  if((wert===''||wert===null||wert===undefined)&&EINK_LEER_NULL.indexOf(feld)>=0) return null;
+  return (wert===null||wert===undefined)?'':wert;
+}
+function einkRohZeile(id){
+  var t=null;
+  EINK.bestellungen.forEach(function(r){ if(r.id===id) t=r; });
+  return t;
+}
+function einkAendAnwenden(b){
+  var a=AEND[b.id]||{}, f=a.felder||{}, gd=[];
+  EINK_AENDFELDER.forEach(function(feld){
+    if(!f.hasOwnProperty(feld)) return;
+    var neu=einkWert(feld,f[feld]);
+    var alt=(b[feld]===undefined)?null:b[feld];
+    if(neu===alt) return;
+    b[feld]=neu; gd.push(feld);
+  });
+  if(gd.length) b.geaendert={felder:gd,von:a.von||'',am:a.am||'',ts:a.ts||0};
+  return b;
+}
+function einkEingAnwenden(b){
+  var e=EING[b.id]||{};
+  if(EING_STAT.indexOf(e.status)<0) return b;
+  b.eingang={status:e.status,am:e.am||'',von:e.von||'',notiz:e.notiz||''};
+  /* Teillieferung heisst: etwas ist da, der Rest steht aus -> bleibt offen. */
+  b.status=(e.status==='teil')?'bestellt':e.status;
+  if(e.status==='geliefert'&&e.am&&!b.geliefert_am) b.geliefert_am=e.am;
+  return b;
+}
+function einkAendBlock(b){
+  var g=b.geaendert; if(!g) return '';
+  return '<div class="einkAend">✎ Hier im Web geändert'
+    +(g.am?(' am '+deDat(g.am)):'')+(g.von?(' von '+esc(g.von)):'')+': <b>'
+    +g.felder.map(function(f){ return esc(EINK_FELDNAME[f]||f); }).join(', ')+'</b>'
+    +'<br>Steht so noch nicht im Register – <code>EINKAUF.bat uebernehmen</code> '
+    +'trägt es dauerhaft ein.</div>';
+}
+
+/* Ein Feld je Zeile: am Handy ist nebeneinander unlesbar. Reihenfolge nach
+   dem, was am häufigsten geändert wird – Termin und Lieferdatum zuerst. */
+var EINK_FORM=[
+  {f:'termin',n:'Liefertermin – auf wann ist es zugesagt?',t:'datum'},
+  {f:'termin_art',n:'Termin ist',t:'wahl',w:['zugesagt','geschaetzt','offen']},
+  {f:'status',n:'Status',t:'wahl',
+   w:['angefragt','bestellt','bestaetigt','abholbereit','geliefert','storniert']},
+  {f:'geliefert_am',n:'Geliefert am',t:'datum'},
+  {f:'preis',n:'Preis CHF',t:'zahl'},
+  {f:'preis_art',n:'Preis ist',t:'wahl',w:['fix','rund','offen']},
+  {f:'beleg',n:'Beleg / AB-Nr.',t:'text'},
+  {f:'was',n:'Was',t:'text'},
+  {f:'fuer',n:'Für wen / wofür',t:'text'},
+  {f:'lieferant',n:'Lieferant',t:'text'},
+  {f:'wo',n:'Wohin / Abholort',t:'text'},
+  {f:'bestellt_am',n:'Bestellt am',t:'datum'},
+  {f:'bestellt_von',n:'Bestellt von',t:'text'},
+  {f:'bemerkung',n:'Bemerkung',t:'lang'}
+];
+/* Der Wert, der im Formular steht: Register + eigene Web-Änderung, aber OHNE
+   den Eingangs-Overlay. Sonst schriebe ein Speichern den Status «geliefert»,
+   den die Eingangsbestätigung gesetzt hat, als Handänderung fest. */
+function einkFormWert(id,feld){
+  var roh=einkRohZeile(id)||{}, f=(AEND[id]||{}).felder||{};
+  var w=f.hasOwnProperty(feld)?einkWert(feld,f[feld])
+        :((roh[feld]===undefined)?null:roh[feld]);
+  return (w===null||w===undefined)?'':w;
+}
+function einkFormBlock(b){
+  if(einkFormOffen!==b.id) return '';
+  var roh=einkRohZeile(b.id)||{};
+  var h='<div class="einkForm"><div class="h">Ändern – gespeichert wird nur, '
+    +'was du wirklich änderst</div>';
+  EINK_FORM.forEach(function(x){
+    var w=einkFormWert(b.id,x.f);
+    var rw=roh[x.f]; rw=(rw===null||rw===undefined)?'':rw;
+    var an=(String(rw)!==String(w))?' geaendert':'';
+    h+='<div class="einkFeld'+an+'"><label for="ef_'+x.f+'">'+esc(x.n)+'</label>';
+    if(x.t==='wahl'){
+      var opt=x.w.slice();
+      if(w&&opt.indexOf(String(w))<0) opt.push(String(w));
+      h+='<select id="ef_'+x.f+'"><option value="">–</option>'
+        +opt.map(function(o){ return '<option value="'+esc(o)+'"'
+          +(String(w)===o?' selected':'')+'>'+esc(o)+'</option>'; }).join('')+'</select>';
+    } else if(x.t==='lang'){
+      h+='<textarea id="ef_'+x.f+'">'+esc(w)+'</textarea>';
+    } else if(x.t==='datum'){
+      h+='<input id="ef_'+x.f+'" type="date" value="'+esc(String(w).slice(0,10))+'">';
+    } else if(x.t==='zahl'){
+      h+='<input id="ef_'+x.f+'" type="number" step="0.05" inputmode="decimal" '
+        +'value="'+esc(w)+'">';
+    } else {
+      h+='<input id="ef_'+x.f+'" type="text" value="'+esc(w)+'">';
+    }
+    h+='</div>';
+  });
+  return h+'<div class="einkTun" style="border-top:0;padding-top:2px">'
+    +'<button class="on" onclick="einkFormSpeichern(\''+esc(b.id)+'\')">✔ Speichern</button>'
+    +'<button onclick="einkFormZu()">abbrechen</button>'
+    +(AEND[b.id]?('<button class="weg" onclick="einkAendWeg(\''+esc(b.id)
+       +'\')">↩ Änderungen verwerfen</button>'):'')
+    +'</div></div>';
+}
+function einkFormAuf(id){
+  einkFormOffen=(einkFormOffen===id)?'':id;
+  einkZeichnen();
+  if(einkFormOffen){
+    var el=$('ef_termin');
+    if(el&&el.scrollIntoView) el.scrollIntoView({block:'center'});
+  }
+}
+function einkFormZu(){ einkFormOffen=''; einkZeichnen(); }
+function einkFormSpeichern(id){
+  var wer=einkWer(); if(!wer) return;
+  var roh=einkRohZeile(id); if(!roh){ alert('Bestellung nicht gefunden.'); return; }
+  var felder={};
+  EINK_FORM.forEach(function(x){
+    var el=$('ef_'+x.f); if(!el) return;
+    var neu=einkWert(x.f,el.value);
+    var alt=einkWert(x.f,roh[x.f]);
+    if(neu===alt) return;
+    /* Firebase löscht Schlüssel mit null – leeres Feld darum als '' ablegen,
+       Einkauf_Bauen.py macht daraus wieder "nicht bekannt". */
+    felder[x.f]=(neu===null)?'':neu;
+  });
+  if(!Object.keys(felder).length){
+    /* Nichts abweichend: eine allenfalls bestehende Änderung ist damit hinfällig. */
+    if(AEND[id]){ einkAendWeg(id); return; }
+    einkFormZu(); return;
+  }
+  var o={felder:felder,von:wer,am:bedHeute(),ts:Date.now()};
+  /* PUT: der Satz ersetzt die vorige Änderung vollständig – zweimal Speichern
+     erzeugt keinen zweiten Eintrag. */
+  fetch(RTDB+'/einkauf_aenderung/'+encodeURIComponent(id)+'.json',
+        {method:'PUT',body:JSON.stringify(o)})
+    .then(function(r){ if(!r.ok) throw 0; AEND[id]=o; einkFormOffen=''; einkOverlay(); })
+    .catch(function(){ alert('Konnte nicht gespeichert werden – Netz prüfen.'); });
+}
+function einkAendWeg(id){
+  if(!confirm('Alle hier gemachten Änderungen an dieser Bestellung verwerfen? '
+    +'Es gilt danach wieder der Stand aus dem Register.')) return;
+  fetch(RTDB+'/einkauf_aenderung/'+encodeURIComponent(id)+'.json',{method:'DELETE'})
+    .then(function(r){ if(!r.ok) throw 0; delete AEND[id]; einkFormOffen=''; einkOverlay(); })
+    .catch(function(){ alert('Konnte nicht gespeichert werden – Netz prüfen.'); });
+}
+
+/* ── EINGANGSBESTÄTIGUNG ────────────────────────────────────────
+   Drei Zustände, mehr braucht es nicht: es ist da · es liegt zum Abholen
+   bereit · es kam nur ein Teil. Wer am Handy vor der Palette steht, soll
+   dafür kein Formular ausfüllen müssen – das steht im «✎ ändern» daneben.
+   ─────────────────────────────────────────────────────────────── */
+function einkEingBlock(b){
+  var e=b.eingang, id=b.id;
+  var kn=[{s:'geliefert',n:'✅ ist da',k:''},
+          {s:'abholbereit',n:'📦 liegt bereit',k:' blau'},
+          {s:'teil',n:'⚠ nur ein Teil',k:' orange'}];
+  var h='';
+  if(e){
+    h+='<div class="einkEing">'+esc(einkEingText(e))
+      +(e.notiz?'<br>'+esc(e.notiz):'')+'</div>';
+  }
+  h+='<div class="einkTun">'+kn.map(function(x){
+    var an=(e&&e.status===x.s);
+    return '<button'+(an?' class="on'+x.k+'"':'')+' onclick="einkEingSetzen(\''+esc(id)
+      +'\',\''+x.s+'\')">'+x.n+'</button>';
+  }).join('');
+  if(e) h+='<button onclick="einkEingNotiz(\''+esc(id)+'\')">✎ Notiz</button>'
+         +'<button class="weg" onclick="einkEingWeg(\''+esc(id)+'\')">↩ zurücknehmen</button>';
+  h+='<button'+(einkFormOffen===id?' class="on orange"':'')
+    +' onclick="einkFormAuf(\''+esc(id)+'\')">✎ ändern</button>';
+  return h+'</div>';
+}
+function einkEingText(e){
+  var w={geliefert:'auf der Baustelle',abholbereit:'liegt zum Abholen bereit',
+         teil:'nur ein Teil angekommen'}[e.status]||e.status;
+  return w+' – bestätigt '+(e.am?deDat(e.am):'')+(e.von?' von '+e.von:'');
+}
+/* Name einmal fragen und merken – gleicher Schlüssel wie Protokoll und Sitzung.
+   Ohne Namen wird nichts geschrieben: bei einer Lieferung muss nachvollziehbar
+   bleiben, auf wessen Aussage sie als angekommen gilt. */
+function einkWer(){
+  var n='';
+  try { n=localStorage.getItem('nalp_user_name_v1')||''; } catch(err){}
+  if(!n){
+    n=(prompt('Dein Name – er steht bei der Bestätigung:','')||'').trim();
+    if(!n) return '';
+    try { localStorage.setItem('nalp_user_name_v1',n); } catch(err){}
+  }
+  return n;
+}
+function einkEingSetzen(id,status){
+  var wer=einkWer(); if(!wer) return;
+  var alt=EING[id]||{};
+  var o={status:status, am:bedHeute(), von:wer, notiz:alt.notiz||'', ts:Date.now()};
+  /* PUT statt POST: zweimal antippen darf keinen zweiten Eintrag erzeugen. */
+  fetch(RTDB+'/einkauf_eingang/'+encodeURIComponent(id)+'.json',
+        {method:'PUT',body:JSON.stringify(o)})
+    .then(function(r){ if(!r.ok) throw 0; EING[id]=o; einkOverlay(); })
+    .catch(function(){ alert('Konnte nicht gespeichert werden – Netz prüfen.'); });
+}
+function einkEingNotiz(id){
+  var e=EING[id]||{};
+  var t=prompt('Notiz zum Eingang (z.B. Menge, wo es steht):',e.notiz||'');
+  if(t===null) return;
+  fetch(RTDB+'/einkauf_eingang/'+encodeURIComponent(id)+'.json',
+        {method:'PATCH',body:JSON.stringify({notiz:t.trim()})})
+    .then(function(r){ if(!r.ok) throw 0; EING[id].notiz=t.trim(); einkOverlay(); })
+    .catch(function(){ alert('Konnte nicht gespeichert werden – Netz prüfen.'); });
+}
+function einkEingWeg(id){
+  if(!confirm('Bestätigung zurücknehmen? Die Bestellung steht danach wieder als offen da.')) return;
+  fetch(RTDB+'/einkauf_eingang/'+encodeURIComponent(id)+'.json',{method:'DELETE'})
+    .then(function(r){ if(!r.ok) throw 0; delete EING[id]; einkOverlay(); })
+    .catch(function(){ alert('Konnte nicht gespeichert werden – Netz prüfen.'); });
 }
 
 /* ══════════════════════════════════════════════════════════════

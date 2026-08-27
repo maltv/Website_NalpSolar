@@ -13,7 +13,7 @@ Zwei Nalpi-Exporte werden verstanden:
      -> nur Status je Pfahl; Koordinaten kommen aus dem Cache (A).
 
 Ausgabe je Pfahl: [tischId, stuetze 1..4, E, N, H, status 0..4, nachbohrungen]
-Status: 0 Geplant · 1 Abgesteckt · 2 Gebohrt · 3 Vermessen/fixiert · 4 Injiziert
+Status: 0 Geplant · 1 Abgesteckt · 2 Gebohrt · 3 Pfähle fixiert · 4 Injiziert
 
 Aufruf:  python tools/build_bohrstand.py <csv> [weitere csv ...]
 """
@@ -23,7 +23,7 @@ BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 KOO_CACHE = os.path.join(BASE, 'uploads', 'tables', 'bohrpunkte_koo.json')
 ZIEL = os.path.join(BASE, 'uploads', 'tables', 'bohrstand.json')
 
-NAMEN = ['Geplant', 'Abgesteckt', 'Gebohrt', 'Vermessen', 'Injiziert']
+NAMEN = ['Geplant', 'Abgesteckt', 'Gebohrt', 'Pfähle fixiert', 'Injiziert']
 STATUS_TXT = {
     'geplant': 0, 'abgesteckt': 1, 'gebohrt': 2,
     'vermessen': 3, 'pfaehle fixiert': 3, 'pfahle fixiert': 3, 'pfähle fixiert': 3,

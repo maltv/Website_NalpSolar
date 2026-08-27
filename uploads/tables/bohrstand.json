@@ -1,6 +1,6 @@
 {"stand":"2026-08-27",
-"legende":["Geplant", "Abgesteckt", "Gebohrt", "Vermessen", "Injiziert"],
-"summe":{"Geplant": 991, "Abgesteckt": 313, "Gebohrt": 192, "Vermessen": 301, "Injiziert": 2403},
+"legende":["Geplant", "Abgesteckt", "Gebohrt", "Pfähle fixiert", "Injiziert"],
+"summe":{"Geplant": 991, "Abgesteckt": 313, "Gebohrt": 192, "Pfähle fixiert": 301, "Injiziert": 2403},
 "punkte":[
 ["10",1,2701817.07,1166064.87,2018.93,3,0],
 ["10",2,2701819.95,1166067.43,2019.55,3,0],

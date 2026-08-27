@@ -1650,7 +1650,7 @@ window.toggleBohr=function(){
 function bohrLegende(){
   var leg=document.getElementById('bohrLeg');
   if(!leg || !bohrDaten) return;
-  var s=bohrDaten.summe||{}, nm=bohrDaten.legende||['Geplant','Abgesteckt','Gebohrt','Vermessen','Injiziert'];
+  var s=bohrDaten.summe||{}, nm=bohrDaten.legende||['Geplant','Abgesteckt','Gebohrt','Pfähle fixiert','Injiziert'];
   var h='<b>⛏ Bohrstand '+(bohrDaten.stand||'')+'</b><br>';
   for(var i=4;i>=0;i--){
     var n=s[nm[i]]||0;
