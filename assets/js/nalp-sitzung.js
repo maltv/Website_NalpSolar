@@ -1724,7 +1724,9 @@ function protokollHtml(s){
     +(s.schwerpunkt?'<tr><td style="background:#f7f8f9"><b>Schwerpunkt</b></td><td>'
       +h(s.schwerpunkt)+'</td></tr>':'')+'</table>';
 
-  if(reden.length) o+='<div class="reden"><b>Darüber müssen wir heute reden</b><ol>'
+  if(reden.length) o+='<div class="reden"><b>'
+    +(s.status==='abgeschlossen'?'Beschlüsse und Kernpunkte':'Darüber müssen wir heute reden')
+    +'</b><ol>'
     +reden.map(function(t){ return '<li>'+h(t)+'</li>'; }).join('')+'</ol></div>';
 
   /* Die Nalpi-Übersicht zuerst – das ist die Seite, die aufgelegt wird. */
