@@ -756,8 +756,11 @@ function rundeZeichnen(){
   $('siRunde').innerHTML=teilnehmer(s).map(function(p){
     var st=s.teilnehmer[p.id]||'?';
     var kl=st==='da'?'da':(st==='fehlt'?'fehlt':'');
+    var rolle=(p.rolle && p.rolle!=='dazugekommen'
+        && h(p.name).toLowerCase().indexOf(p.rolle.toLowerCase().split(' ')[0])<0)
+      ? '<i style="font-style:normal;opacity:.62;font-weight:400"> · '+h(p.rolle)+'</i>' : '';
     return '<span class="si-pers '+kl+'" data-p="'+p.id+'" title="'+h(p.rolle)+'">'
-      +h(p.name)+(p.dazu?'<b data-pweg="'+p.id+'" title="wieder entfernen"> ✕</b>':'')+'</span>';
+      +h(p.name)+rolle+(p.dazu?'<b data-pweg="'+p.id+'" title="wieder entfernen"> ✕</b>':'')+'</span>';
   }).join('')
   +'<button class="si-kn mini" id="siPersonPlus">+ Person</button>';
 
@@ -1716,11 +1719,18 @@ function protokollHtml(s){
     +'<div class="wann">NalpSolar B8-13 · '+wochentag(s.datum)+' '+deDat(s.datum)+' · '
       +h(s.zeit)+' Uhr · '+h(s.ort)+' · Protokoll: '+h(s.protokoll)+'</div></div>';
 
+  function mitRolle(p){
+    var n=h(p.name);
+    if(!p.rolle || p.rolle==='dazugekommen') return n;
+    /* Steht die Funktion schon im Namen («Michele (Polier)»), nicht doppeln. */
+    if(n.toLowerCase().indexOf(p.rolle.toLowerCase().split(' ')[0])>-1) return n;
+    return n+' <span style="color:#666">('+h(p.rolle)+')</span>';
+  }
   o+='<table><tr><td style="width:14%;background:#f7f8f9"><b>Anwesend</b></td><td>'
-    +(da.length? da.map(function(p){ return h(p.name); }).join(' · ') : '<span class="leer">–</span>')
+    +(da.length? da.map(mitRolle).join(' · ') : '<span class="leer">–</span>')
     +(s.gaeste?' · '+h(s.gaeste):'')+'</td></tr>'
     +(weg.length?'<tr><td style="background:#f7f8f9"><b>Entschuldigt</b></td><td>'
-      +weg.map(function(p){ return h(p.name); }).join(' · ')+'</td></tr>':'')
+      +weg.map(mitRolle).join(' · ')+'</td></tr>':'')
     +(s.schwerpunkt?'<tr><td style="background:#f7f8f9"><b>Schwerpunkt</b></td><td>'
       +h(s.schwerpunkt)+'</td></tr>':'')+'</table>';
 
