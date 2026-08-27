@@ -101,6 +101,11 @@ html, body { width:100%; height:100%; overflow:hidden; background:#0d1117;
              transition:opacity .25s linear; will-change:opacity; }
 .lbl-d1  { background:rgba(215,38,34,.92); border-color:#ff6b6b; color:#fff; font-size:10.5px; font-weight:800; }
 .lbl-sta { background:rgba(20,22,26,.85); border-color:#ffd400; color:#ffe066; font-size:9.5px; padding:1px 5px; }
+/* Kabelblock: Abschnitt blau wie die HRB-Trasse, Schacht weiss als Punkt am Weg */
+.lbl-kb  { background:rgba(30,148,242,.92); border-color:#0b5fff; color:#fff;
+           font-size:11px; font-weight:900; padding:2px 6px; }
+.lbl-kb-sch { background:rgba(255,255,255,.94); border:2px solid #0b5fff; color:#0b3fa8;
+           font-size:10.5px; font-weight:900; padding:1px 6px; border-radius:999px; }
 .lbl-status { font-size:10px; font-weight:800; padding:1px 5px;
              box-shadow:0 0 0 1px rgba(0,0,0,.35), 0 2px 7px rgba(0,0,0,.45); }
 
@@ -492,6 +497,7 @@ body.ar-mode { background:transparent!important; }
   <button class="tb-btn active" id="btnTerrain" onclick="toggleTerrain()">🏔 Terrain</button>
   <button class="tb-btn active" id="btnSat"     onclick="toggleSat()">🛰 Satellit</button>
   <button class="tb-btn active" id="btnLeit"    onclick="toggleLayer('leitungen')">🟩 Werkleitungen PZ1–PZ3</button>
+  <button class="tb-btn active" id="btnKabel"   onclick="toggleKabelblock()">🔵 Kabelblock C1–C5</button>
   <button class="tb-btn active" id="btnErdung"  onclick="toggleLayer('erdung')">🟠 Erdung</button>
   <button class="tb-btn active" id="btnTische"  onclick="toggleTische()">🟨 Modultische</button>
   <button class="tb-btn" id="btnAlp" onclick="toggleAlpstrasse()">🛣 Alpstrasse + Schacht D1</button>
@@ -1076,9 +1082,12 @@ function updateLeitPuls(now){
 
 function leitPanelFuellen(st){
   var panel=document.getElementById('leitPanel'); if(!panel) return;
-  document.getElementById('lpTitel').textContent=LEIT_LAB[st.k]||'Leitung';
+  // Gehört das angetippte Rohr zum Kabelblock, steht dessen Bezeichnung
+  // (C1–C2 …) oben statt der allgemeinen Kategorie.
+  var kb=kbNameFuer(st);
+  document.getElementById('lpTitel').textContent=kb ? kb.titel : (LEIT_LAB[st.k]||'Leitung');
   document.getElementById('lpDot').style.background=LEIT_COL[st.k]||'#e6bf33';
-  var z=['Planungszone <b>'+(st.q||'?')+'</b>'];
+  var z=(kb?kb.zeilen:[]).concat(['Planungszone <b>'+(st.q||'?')+'</b>']);
   if(st.k!=='schacht' && st.l>0) z.push('Länge <b>'+st.l.toFixed(1).replace('.',',')+' m</b>');
   // Rohrhöhe aus dem Modell. KEINE Überdeckung ausrechnen: das Terrainraster
   // hat nur 64×64 Stützpunkte auf 1400 m (≈22 m Maschenweite), daraus käme
@@ -1097,6 +1106,84 @@ function leitPanelFuellen(st){
   if(e) z.push('Ende LV95 <b>'+Math.round(e[0]+OE)+' / '+Math.round(e[1]+ON)+'</b>');
   document.getElementById('lpBody').innerHTML=z.join('<br>');
   panel.classList.add('show');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   KABELBLOCK — welcher Block liegt wo (Auftrag Victor 26.08.2026)
+   Abschnitte C1–C2 … C4–C5 und die Schächte C1.1, C2 … C5 als
+   Schilder über der Trasse. Daten: uploads/kabelblock.json, gebaut
+   von Tools\Kabelblock_Bauen.py aus den ILF-HRB-Modellen
+   (Bezeichnung = IFC-PropertySet 01_Info.Name) — dieselbe Datei
+   benutzt die 2D-Karte, es gibt nur EINE Wahrheit.
+═══════════════════════════════════════════════════════════ */
+var kbLbls=[], kbAn=true, kbDaten=null;
+
+function kbSchild(q,text,css,hoch){
+  var div=document.createElement('div');
+  div.className=css; div.textContent=text;
+  var obj=new THREE.CSS2DObject(div);
+  // raw-Frame [E-OE, N-ON, Elev-OZ] → Szene (Y-up); Schild über die Trasse
+  obj.position.set(q[0], q[2]+(hoch||4), -q[1]);
+  obj.visible=kbAn; scene.add(obj); kbLbls.push(obj);
+}
+
+async function ladeKabelblock(){
+  var r=await fetch('uploads/kabelblock.json',{cache:'no-cache'});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  kbDaten=await r.json();
+  (kbDaten.abschnitte||[]).forEach(function(a){
+    if(a.xyz) kbSchild(a.xyz, a.label, 'lbl lbl-kb', 4);
+  });
+  (kbDaten.schaechte||[]).forEach(function(s){
+    if(s.xyz) kbSchild(s.xyz, 'Schacht '+s.name, 'lbl lbl-kb-sch', 6);
+  });
+  console.info('Kabelblock: '+kbLbls.length+' Schilder');
+}
+
+window.toggleKabelblock=function(){
+  if(!kbLbls.length){ flashMsg('⚠ Kabelblock-Beschriftung fehlt'); return; }
+  kbAn=!kbAn;
+  kbLbls.forEach(function(o){ o.visible=kbAn; });
+  var b=document.getElementById('btnKabel');
+  if(b) b.classList.toggle('active',kbAn);
+};
+
+/* Abstand Punkt → Achsenzug (beide im raw-Frame) */
+function kbAbstand(p,achse){
+  var best=1e18;
+  for(var i=0;i<achse.length;i++){
+    var a=achse[i], b=achse[Math.min(i+1,achse.length-1)];
+    var dx=b[0]-a[0], dy=b[1]-a[1], dz=b[2]-a[2];
+    var ll=dx*dx+dy*dy+dz*dz, t=0;
+    if(ll>1e-9) t=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy+(p[2]-a[2])*dz)/ll));
+    var ex=a[0]+dx*t-p[0], ey=a[1]+dy*t-p[1], ez=a[2]+dz*t-p[2];
+    best=Math.min(best, Math.sqrt(ex*ex+ey*ey+ez*ez));
+  }
+  return best;
+}
+
+/* Zu welchem Kabelblock gehört ein angetipptes Rohr / ein Schacht? */
+function kbNameFuer(st){
+  if(!kbDaten || !st || !st.m) return null;
+  if(st.k==='schacht'){
+    var bs=null, bd=6;
+    (kbDaten.schaechte||[]).forEach(function(s){
+      if(!s.xyz) return;
+      var d=Math.hypot(s.xyz[0]-st.m[0], s.xyz[1]-st.m[1], s.xyz[2]-st.m[2]);
+      if(d<bd){ bd=d; bs=s; }
+    });
+    return bs ? {titel:'Schacht '+bs.name, zeilen:['Grösse <b>'+(bs.typ||'–')+'</b>']} : null;
+  }
+  if(st.k!=='hrb' && st.k!=='120') return null;
+  var ba=null, bad=10;
+  (kbDaten.abschnitte||[]).forEach(function(a){
+    if(!a.achse_xyz || a.achse_xyz.length<2) return;
+    var d=kbAbstand(st.m, a.achse_xyz);
+    if(d<bad){ bad=d; ba=a; }
+  });
+  if(!ba) return null;
+  return {titel:'Kabelblock '+ba.label,
+          zeilen:['Belegung <b>'+(ba.typ||'–')+'</b>']};
 }
 
 /* ── Modultische ─────────────────────────────────────────── */
@@ -5802,6 +5889,10 @@ async function init(){
       pct(50+(i+1)*20);
     }
     try{ await loadTische(); }catch(e){ console.warn('Tische:',e); }
+    try{ await ladeKabelblock(); }
+    catch(e){ console.warn('Kabelblock:',e);
+              var kbB=document.getElementById('btnKabel');
+              if(kbB) kbB.classList.remove('active'); }
     pct(100);
 
     // Bounding box of IFC geometry
