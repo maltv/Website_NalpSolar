@@ -43,6 +43,9 @@ var DB    = 'https://highscore-test-2e784-default-rtdb.europe-west1.firebasedata
 var P_SITZ = 'erfassung/sitzungen';
 var P_PEND = 'erfassung/sitzung_pendenzen';
 var P_VM   = 'erfassung/vm_fortschritt';
+var P_PERS = 'erfassung/sitzung_personal';   /* Ferien, Ein-/Austritte, Bedarf */
+var P_BILD = 'erfassung/sitzung_bilder';     /* Bilder GETRENNT – sonst wird der Satz schwer */
+var P_ANW  = 'erfassung/anwesenheit';        /* Mannschaft aus der digitalen Anwesenheitsliste */
 var LS_OFF = 'nalp_sitzung_offen_v1';   /* noch nicht gespiegelte Sätze */
 var LS_WER = 'nalp_user_name_v1';       /* gleicher Schlüssel wie nalp-protokoll.js */
 
@@ -72,10 +75,27 @@ var ABLAUF = [
     hilfe:'Feinverteilung, Schächte, Erdung, Baupisten.' },
   { id:'sicherheit',   titel:'Sicherheit & Umwelt', dauer:5,
     hilfe:'Ereignisse seit der letzten Sitzung, Unterweisungen, UBB.' },
+  { id:'personal',     titel:'Personal', dauer:5,
+    hilfe:'Mannschaft, Ferien, Ein- und Austritte, offener Bedarf. Der geführte Stand '
+        + 'steht im Blatt «Personal» – hier nur, was besprochen wurde.' },
   { id:'pendenzen',    titel:'Pendenzen', dauer:15,
     hilfe:'Offene Punkte durchgehen – jeder bekommt Name und Datum.' },
-  { id:'offen',        titel:'Offene Diskussion', dauer:15,
+  { id:'offen',        titel:'Offene Diskussion', dauer:10,
     hilfe:'Jetzt kommt der Parkplatz dran. Alles, was liegen geblieben ist.' }
+];
+
+/* ── Personal ──────────────────────────────────────────────────
+   Geführt wird nur, was die Sitzung braucht: wer fällt wann aus, wer kommt
+   dazu, wo fehlen Leute. Die Mannschaft selbst steht schon in der digitalen
+   Anwesenheitsliste (erfassung/anwesenheit/personen) – die wird gelesen,
+   nicht abgetippt. */
+var PERS_ART = [
+  { id:'ferien',       n:'Ferien / frei',  f:'#FFF4E0', r:'#e08a00' },
+  { id:'krank',        n:'Krank / Unfall', f:'#FBE9E7', r:'#D72622' },
+  { id:'verstaerkung', n:'Verstärkung',    f:'#E8F6EC', r:'#1a5fb4' },
+  { id:'eintritt',     n:'Eintritt',       f:'#E8F6EC', r:'#2e9e46' },
+  { id:'austritt',     n:'Austritt',       f:'#eef0f2', r:'#63676d' },
+  { id:'bedarf',       n:'Bedarf offen',   f:'#FBE9E7', r:'#D72622' }
 ];
 
 /* Thematischer Schwerpunkt je Wochentag – so in der Einladung vereinbart. */
@@ -100,6 +120,12 @@ var LIVE=null;           /* live gerechnete Zahlen (Fallback + Vergleich) */
 var TIMER={ box:null, start:0, tick:null };
 var speicherWartet=null, netzOk=true;
 var pendFilter='offen', archivWahl=null;
+var LEIST=null;            /* uploads/tables/leistung.json – Wochenleistung je Gewerk */
+var leistAnsicht='bohr';   /* bohr | stahlbau */
+var PERSONAL={};           /* erfassung/sitzung_personal – geführte Einträge */
+var MANNSCHAFT=null;       /* aus der digitalen Anwesenheitsliste gelesen */
+var BILDER={};             /* sitzungDatum -> { bildId: {b,box,text,ts} } */
+var persArt='ferien';      /* Auswahl im Erfassungsformular */
 
 function $(id){ return document.getElementById(id); }
 function h(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
@@ -246,7 +272,61 @@ var CSS=[
 '.si-hin{font-size:12px;color:#63676d;line-height:1.55;background:#f6f7f9;border:1px solid #e3e5e8;',
 '  border-radius:6px;padding:10px 12px;margin-bottom:12px}',
 '.si-leer{text-align:center;color:#63676d;font-size:13px;padding:22px 10px}',
-'@media(max-width:520px){.si-uhr{top:76px}.si-neu .was{flex-basis:100%}}'
+/* ── Leistung ───────────────────────────────────────────── */
+'.si-leist{background:#fff;border:1px solid #e3e5e8;border-left:5px solid #1a5fb4;border-radius:6px;',
+'  padding:12px 14px;margin-bottom:12px}',
+'.si-leist-kopf{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:9px}',
+'.si-leist-kopf b{font-size:15px}',
+'.si-leist-kopf .si-um{display:flex;gap:5px}',
+'.si-leist-kopf .si-stand{margin-left:auto;font-size:11px;color:#63676d;font-weight:700}',
+'.si-leist canvas{display:block;max-width:100%}',
+'.si-legende{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:#5b6068;margin-top:7px}',
+'.si-legende span{display:flex;align-items:center;gap:5px;font-weight:700}',
+'.si-legende i{width:11px;height:11px;border-radius:2px;display:inline-block}',
+'.si-legende .si-legnote{color:#9aa0a6;font-weight:400;flex-basis:100%}',
+'.si-rueckwrap{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;padding-top:11px;',
+'  border-top:1px solid #eef0f2}',
+'.si-rueck{flex:1 1 220px;font-size:12px;color:#63676d}',
+'.si-rueck b{font-size:19px;color:#D72622;font-weight:900}',
+'.si-rbal{margin-top:6px}',
+'.si-rbal div{display:flex;align-items:center;gap:7px;margin-bottom:3px}',
+'.si-rbal .n{width:38px;font-weight:700;color:#5b6068;font-size:11px;flex:0 0 auto}',
+'.si-rbal .s{flex:1;height:9px;background:#f2f3f5;border-radius:5px;overflow:hidden}',
+'.si-rbal .s i{display:block;height:100%;background:#f08a24}',
+'.si-rbal .z{width:34px;text-align:right;font-weight:700;font-size:11px;flex:0 0 auto}',
+
+/* ── Bilder ─────────────────────────────────────────────── */
+'.si-bilder{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}',
+'.si-bild{position:relative;width:104px;border:1px solid #e3e5e8;border-radius:6px;overflow:hidden;',
+'  background:#f6f7f9}',
+'.si-bild img{display:block;width:100%;height:74px;object-fit:cover;cursor:zoom-in}',
+'.si-bild input{width:100%;border:0;border-top:1px solid #e3e5e8;font:inherit;font-size:10.5px;',
+'  padding:4px 5px;background:#fff;color:#1a1a1a}',
+'.si-bild .weg{position:absolute;top:3px;right:3px;background:rgba(20,24,29,.72);color:#fff;',
+'  border:0;border-radius:11px;width:21px;height:21px;font:900 12px Arial;cursor:pointer;line-height:1}',
+'.si-bild.laedt{opacity:.55}',
+'.si-gross{position:fixed;inset:0;z-index:9000;background:rgba(10,14,19,.9);display:flex;',
+'  align-items:center;justify-content:center;padding:16px;cursor:zoom-out}',
+'.si-gross img{max-width:100%;max-height:100%;border-radius:6px}',
+
+/* ── Personal ───────────────────────────────────────────── */
+'.si-pkarte{background:#fff;border:1px solid #e3e5e8;border-left:5px solid #1a5fb4;border-radius:6px;',
+'  padding:12px 14px;margin-bottom:12px}',
+'.si-pkarte h3{margin:0 0 3px;font-size:15px}',
+'.si-pkarte .sub{font-size:11.5px;color:#63676d;margin-bottom:9px;line-height:1.5}',
+'.si-pliste{list-style:none;margin:0;padding:0}',
+'.si-pliste li{border:1px solid #e3e5e8;border-radius:5px;padding:8px 10px;margin-bottom:6px;',
+'  font-size:13.5px;line-height:1.45;display:flex;gap:9px;align-items:flex-start;flex-wrap:wrap}',
+'.si-pliste li .wer{font-weight:700;flex:1 1 130px;min-width:0}',
+'.si-pliste li .zeit{font-size:12px;color:#63676d;white-space:nowrap}',
+'.si-pliste li .art{font-size:11px;font-weight:700;border-radius:11px;padding:2px 9px;white-space:nowrap}',
+'.si-pliste li.vorbei{opacity:.5}',
+'.si-firmen{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}',
+'.si-firmen div{background:#f6f7f9;border:1px solid #e3e5e8;border-radius:6px;padding:7px 11px;font-size:12px}',
+'.si-firmen b{display:block;font-size:18px;font-weight:900;line-height:1.15}',
+
+'@media(max-width:520px){.si-uhr{top:76px}.si-neu .was{flex-basis:100%}',
+'  .si-leist-kopf .si-stand{margin-left:0;flex-basis:100%}}'
 ].join('\n');
 
 /* ═══════════════════════════════════════════════════════════
@@ -272,17 +352,34 @@ function start(el){
 function laden(){
   Promise.all([
     hole(P_SITZ), hole(P_PEND),
-    fetch('uploads/tables/baustand.json?_='+Date.now(),{cache:'no-store'})
-      .then(function(r){ return r.ok?r.json():null; }).catch(function(){ return null; }),
-    fetch('uploads/tables/bohrstand.json?_='+Date.now(),{cache:'no-store'})
-      .then(function(r){ return r.ok?r.json():null; }).catch(function(){ return null; }),
-    hole(P_VM)
+    datei('uploads/tables/baustand.json'),
+    datei('uploads/tables/bohrstand.json'),
+    hole(P_VM),
+    datei('uploads/tables/leistung.json'),
+    hole(P_PERS)
   ]).then(function(a){
     SITZUNGEN=a[0]||{}; PUEBER=a[1]||{};
     LIVE=zahlenRechnen(a[2],a[3],a[4]);
+    LEIST=a[5]; PERSONAL=a[6]||{};
     offeneUebernehmen();
     if(!AKTIV) AKTIV=jungsteOffene()||naechsterTermin();
     zeichnen();
+    if(AKTIV) bilderLaden(AKTIV);
+  });
+}
+
+function datei(pfad){
+  return fetch(pfad+'?_='+Date.now(),{cache:'no-store'})
+    .then(function(r){ return r.ok?r.json():null; }).catch(function(){ return null; });
+}
+
+/* Bilder nur für die geführte Sitzung holen – über alle Sitzungen wären es
+   schnell etliche Megabyte, und das Handy zieht sie sonst jedes Mal mit. */
+function bilderLaden(datum){
+  if(!datum || BILDER[datum]) return Promise.resolve();
+  return hole(P_BILD+'/'+datum).then(function(j){
+    BILDER[datum]=j||{};
+    if(BLATT==='sitzung' && AKTIV===datum && $('siBoxen')) boxenZeichnen();
   });
 }
 
@@ -458,6 +555,7 @@ function nachschieben(){ var o=lsOffen();
 function zeichnen(){
   navZeichnen();
   if(BLATT==='pendenzen') pendenzBlatt();
+  else if(BLATT==='personal') personalBlatt();
   else if(BLATT==='archiv') archivBlatt();
   else sitzungBlatt();
   /* Nur wenn der Reiter wirklich offen ist – beim Seitenstart laeuft der
@@ -470,6 +568,7 @@ function navZeichnen(){
   var offen=allePendenzen().filter(function(p){ return p.status!=='erledigt'; }).length;
   var b=[{id:'sitzung',n:'Sitzung führen',z:0},
          {id:'pendenzen',n:'Pendenzen',z:offen},
+         {id:'personal',n:'Personal',z:persLaufend().length},
          {id:'archiv',n:'Archiv',z:0}];
   $('siNav').innerHTML=b.map(function(x){
     return '<button data-sb="'+x.id+'"'+(BLATT===x.id?' class="on"':'')+'>'+x.n
@@ -515,8 +614,8 @@ function sitzungBlatt(){
   /* Uhr */
   html+='<div class="si-uhr" id="siUhr"></div>';
 
-  /* Zahlen */
-  html+=zahlenBlock(s);
+  /* Leistung – der Einstieg in die Sitzung */
+  html+=leistungsBlock(s);
 
   /* Darüber müssen wir heute reden */
   html+='<div class="si-reden"><h3>Darüber müssen wir heute reden</h3>'
@@ -580,6 +679,7 @@ function sitzungBlatt(){
   $('siInhalt').innerHTML=html;
   kopfBinden(); rundeZeichnen(); redenZeichnen(); boxenZeichnen();
   parkZeichnen(); pendZeichnen(); abgleichBinden(); uhrZeichnen(); fussZeichnen();
+  plotZeichnen(); plotBinden();
 
   $('siLob').oninput=function(){ s.lob=this.value; merken(); };
   $('siDruck').onclick=drucken;
@@ -660,29 +760,163 @@ function redenZeichnen(){
   });
 }
 
-function zahlenBlock(s){
+/* ═══════════════════════════════════════════════════════════
+   Leistung – das ist der Block, mit dem die Sitzung anfängt.
+   Victor am 27.08.2026: der Gesamtstand ist zweitrangig, es zählt,
+   was in der Woche dazugekommen ist. Daten: uploads/tables/leistung.json
+   (tools/build_leistung.py, läuft in der Nalpi-Automatik mit).
+   ═══════════════════════════════════════════════════════════ */
+function leistungsBlock(s){
+  if(!LEIST || !LEIST.wochen || !LEIST.wochen.length)
+    return '<div class="si-hin">Leistungsdaten fehlen – einmal '
+      +'<code>NALPI_STAND_HOLEN.bat</code> laufen lassen '
+      +'(baut <code>uploads/tables/leistung.json</code>).</div>' + zahlenKlein(s);
+
+  var o='<div class="si-leist">'
+    +'<div class="si-leist-kopf">'
+      +'<b>Wochenleistung</b>'
+      +'<span class="si-um">'
+        +'<button class="si-kn mini'+(leistAnsicht==='bohr'?' rot':'')+'" data-la="bohr">Bohrkette</button>'
+        +'<button class="si-kn mini'+(leistAnsicht==='stahlbau'?' rot':'')+'" data-la="stahlbau">Stahlbau</button>'
+      +'</span>'
+      +'<span class="si-stand">Stand '+h(deDat(LEIST.stand||''))+'</span>'
+    +'</div>'
+    +'<canvas id="siPlot"></canvas>'
+    +'<div class="si-legende" id="siLegende"></div>'
+    +rueckstandBlock()
+    +'</div>';
+  return o + zahlenKlein(s);
+}
+
+/* Rückstand je Bereich – die Zahl, die in der Sitzung wehtut. */
+function rueckstandBlock(){
+  var r=LEIST.rueckstand||{};
+  var teile=[];
+  [['injektion','gebohrt, nicht injiziert'],['vermessung','gebohrt, nicht vermessen']]
+  .forEach(function(x){
+    var d=r[x[0]]; if(!d || !d.gesamt) return;
+    var max=Math.max.apply(null,d.bereiche.map(function(b){ return b.offen; }));
+    teile.push('<div class="si-rueck"><b>'+d.gesamt.toLocaleString('de-CH')+'</b> '+x[1]
+      +'<div class="si-rbal">'+d.bereiche.map(function(b){
+        return '<div><span class="n">'+h(b.bereich)+'</span>'
+          +'<span class="s"><i style="width:'+Math.round(b.offen/max*100)+'%"></i></span>'
+          +'<span class="z">'+b.offen+'</span></div>'; }).join('')+'</div></div>');
+  });
+  return teile.length? '<div class="si-rueckwrap">'+teile.join('')+'</div>' : '';
+}
+
+/* Gesamtzahlen bleiben – aber klein, als Fussnote unter der Leistung. */
+function zahlenKlein(s){
   var z=s.zahlen||LIVE; if(!z) return '';
-  var k='';
-  if(z.bohr) k+='<div><b>'+z.bohr.gebohrt.toLocaleString('de-CH')+'</b>'
-    +'<span>gebohrt von '+z.bohr.total.toLocaleString('de-CH')+'</span></div>'
-    +'<div><b>'+z.bohr.injiziert.toLocaleString('de-CH')+'</b><span>injiziert</span></div>'
-    +'<div style="border-top-color:'+(z.bohr.offenInj>250?'#D72622':'#e08a00')+'"><b>'
-      +z.bohr.offenInj.toLocaleString('de-CH')+'</b><span>gebohrt, nicht injiziert</span></div>'
-    +'<div style="border-top-color:'+(z.bohr.offenVerm>100?'#D72622':'#e08a00')+'"><b>'
-      +z.bohr.offenVerm.toLocaleString('de-CH')+'</b><span>gebohrt, nicht vermessen</span></div>';
-  if(z.tische) k+='<div><b>'+z.tische.pk+'</b><span>Primärkonstruktion</span></div>'
-    +'<div><b>'+z.tische.mt+'</b><span>Modulträger</span></div>'
-    +'<div><b>'+z.vormontiert+'</b><span>vormontiert (App)</span></div>'
-    +'<div><b>'+z.tische.verschraubt+'</b><span>verschraubt (Nalpi)</span></div>';
-  var w='';
-  if(z.woche) w='<div class="si-hin" style="margin-bottom:0">'
-    +'<b>Leistung KW'+z.woche.kw+' (laufend):</b> '+z.woche.pk+' PK · '+z.woche.mt+' Modulträger'
-    +(z.woche.vs?' · '+z.woche.vs+' verschraubt':'')
-    +' &nbsp;|&nbsp; <b>KW'+z.woche.kwVor+':</b> '+z.woche.vorPk+' PK · '+z.woche.vorMt+' Modulträger'
-    +'<br>Datenstand '+h(deDat(z.stand||''))+' (Nalpi-Automatik) · Vormontage und Verschrauben '
-    +'aus der Website-Datenbank. <b>Zahlen werden vorgelesen, nicht diskutiert</b> – '
-    +'wer eine anzweifelt, macht daraus eine Pendenz.</div>';
-  return '<div class="si-kach">'+k+'</div>'+w;
+  var t=[];
+  if(z.bohr) t.push('gebohrt <b>'+z.bohr.gebohrt.toLocaleString('de-CH')+'</b> von '
+    +z.bohr.total.toLocaleString('de-CH'),
+    'injiziert <b>'+z.bohr.injiziert.toLocaleString('de-CH')+'</b>');
+  if(z.tische) t.push('Primärkonstruktion <b>'+z.tische.pk+'</b>',
+    'Modulträger <b>'+z.tische.mt+'</b>',
+    'vormontiert <b>'+(z.vormontiert||0)+'</b>',
+    'verschraubt <b>'+z.tische.verschraubt+'</b>');
+  return '<div class="si-hin" style="margin-bottom:12px">'
+    +'<b>Gesamtstand</b> (Nalpi '+h(deDat(z.stand||''))+'): '+t.join(' · ')
+    +'<br>Zahlen werden vorgelesen, nicht diskutiert – wer eine anzweifelt, macht daraus eine Pendenz.</div>';
+}
+
+/* Gruppierte Balken je Kalenderwoche, Werte über den Balken. */
+function plotZeichnen(){
+  var c=$('siPlot'); if(!c || !LEIST || !LEIST.wochen) return;
+  var serien = leistAnsicht==='bohr'
+    ? [['abgesteckt','abgesteckt','#3a86e0'],['gebohrt','gebohrt','#f08a24'],
+       ['vermessen','vermessen','#a55ee0'],['injiziert','injiziert','#2e9e46']]
+    : [['pk','Primärkonstruktion','#D72622'],['mt','Modulträger','#1a5fb4'],
+       ['verschraubt','verschraubt','#8a5a00']];
+  var wochen=LEIST.wochen;
+  var dpr=window.devicePixelRatio||1;
+  var breite=c.parentNode.clientWidth-2;
+  if(breite<220) breite=220;
+  var hoehe=Math.max(190, Math.min(300, Math.round(breite*0.42)));
+  c.style.width=breite+'px'; c.style.height=hoehe+'px';
+  c.width=Math.round(breite*dpr); c.height=Math.round(hoehe*dpr);
+  var g=c.getContext && c.getContext('2d');
+  if(!g) return;                       /* kein Canvas – die Sitzung läuft trotzdem */
+  g.setTransform(dpr,0,0,dpr,0,0);
+  g.clearRect(0,0,breite,hoehe);
+
+  var links=34, rechts=6, oben=16, unten=26;
+  var pb=breite-links-rechts, ph=hoehe-oben-unten;
+  var max=1;
+  wochen.forEach(function(w){ serien.forEach(function(se){ if(w[se[0]]>max) max=w[se[0]]; }); });
+  var stufe=Math.pow(10,Math.floor(Math.log(max)/Math.LN10));
+  var schritt=Math.ceil(max/4/stufe)*stufe; if(!schritt) schritt=1;
+  var deckel=Math.ceil(max/schritt)*schritt;
+
+  /* Gitter */
+  g.strokeStyle='#e3e5e8'; g.fillStyle='#9aa0a6';
+  g.font='10px Arial'; g.textAlign='right'; g.textBaseline='middle'; g.lineWidth=1;
+  for(var v=0; v<=deckel; v+=schritt){
+    var y=oben+ph-(v/deckel)*ph;
+    g.beginPath(); g.moveTo(links,y+.5); g.lineTo(breite-rechts,y+.5); g.stroke();
+    g.fillText(String(v), links-5, y);
+  }
+
+  var gruppe=pb/wochen.length, luft=gruppe*0.18;
+  var bw=(gruppe-luft)/serien.length;
+  g.textAlign='center';
+  wochen.forEach(function(w,i){
+    var x0=links+i*gruppe+luft/2;
+    serien.forEach(function(se,j){
+      var wert=w[se[0]]||0;
+      var bh=(wert/deckel)*ph;
+      var x=x0+j*bw, y=oben+ph-bh;
+      g.fillStyle=se[2];
+      if(w.laufend) g.globalAlpha=0.62;      /* laufende Woche ist noch nicht fertig */
+      g.fillRect(x, y, Math.max(1,bw-1.5), bh);
+      g.globalAlpha=1;
+      if(wert>0 && bw>13){
+        g.fillStyle='#5b6068'; g.font='9px Arial'; g.textBaseline='bottom';
+        g.fillText(String(wert), x+(bw-1.5)/2, y-1);
+      }
+    });
+    g.fillStyle=w.laufend?'#D72622':'#5b6068';
+    g.font=(w.laufend?'bold ':'')+'10.5px Arial'; g.textBaseline='top';
+    g.fillText('KW'+w.kw, x0+(gruppe-luft)/2, oben+ph+6);
+  });
+
+  /* Achse */
+  g.strokeStyle='#c9ccd2'; g.beginPath();
+  g.moveTo(links,oben+ph+.5); g.lineTo(breite-rechts,oben+ph+.5); g.stroke();
+
+  var l=$('siLegende');
+  if(l) l.innerHTML=serien.map(function(se){
+      return '<span><i style="background:'+se[2]+'"></i>'+h(se[1])+'</span>'; }).join('')
+    + '<span class="si-legnote">blasse Balken = laufende Woche (noch nicht fertig) · '
+    + 'Quelle: Nalpi ' + h(deDat(LEIST.stand||'')) + '</span>';
+}
+
+function plotBinden(){
+  Array.prototype.forEach.call(document.querySelectorAll('[data-la]'),function(b){
+    b.onclick=function(){
+      leistAnsicht=b.getAttribute('data-la');
+      Array.prototype.forEach.call(document.querySelectorAll('[data-la]'),function(o){
+        o.classList.toggle('rot', o===b); });
+      plotZeichnen();
+    };
+  });
+  /* Bei Drehung/Grössenänderung neu zeichnen – sonst ist der Plot am Handy
+     nach dem Kippen abgeschnitten. */
+  if(!plotBinden.hoert){
+    plotBinden.hoert=true;
+    window.addEventListener('resize',function(){
+      clearTimeout(plotBinden.wart);
+      plotBinden.wart=setTimeout(function(){ if($('siPlot')) plotZeichnen(); },180);
+    });
+  }
+}
+
+/* Plot als Bild – so kommt er ins Protokoll und in die PDF. */
+function plotBild(){
+  var c=$('siPlot');
+  if(!c || !c.width) return null;
+  try { return c.toDataURL('image/png'); } catch(e){ return null; }
 }
 
 /* ── Abgleich zur letzten Sitzung ── */
@@ -733,12 +967,15 @@ function boxenZeichnen(){
           +(laeuft?'⏸ Stopp':'▶ '+b.dauer+' Min')+'</button></div>'
       +'<div class="inn">'
         +'<div class="hilfe">'+h(b.hilfe)+'</div>'
+        +(b.id==='personal'? personalKurz() : '')
         +'<textarea data-txt="'+b.id+'" placeholder="Stichworte – kurze Zeilen, keine Absätze">'
           +h(d.text||'')+'</textarea>'
         +'<div class="zeilen">'
           +'<button class="si-kn mini" data-mik="'+b.id+'">🎤 Diktieren</button>'
+          +'<button class="si-kn mini" data-bild="'+b.id+'">📷 Bild</button>'
           +'<button class="si-kn mini" data-daraus="'+b.id+'">→ Pendenz daraus</button>'
         +'</div>'
+        +bilderZuBox(b.id)
       +'</div></div>';
   }).join('');
 
@@ -761,7 +998,127 @@ function boxenZeichnen(){
       $('siPnWas').scrollIntoView({behavior:'smooth',block:'center'});
     };
   });
+  Array.prototype.forEach.call($('siBoxen').querySelectorAll('[data-bild]'),function(b){
+    b.onclick=function(){ bildWaehlen(b.getAttribute('data-bild')); };
+  });
+  bilderBinden();
   mikBinden();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Bilder – Foto von der Baustelle, Planausschnitt, Screenshot.
+   Sie liegen GETRENNT in erfassung/sitzung_bilder/<Datum>/<Id>; im
+   Sitzungssatz steht nur die Id mit Bildunterschrift. Sonst würde der
+   Satz mit jedem Bild um ein paar hundert Kilobyte wachsen und bei
+   jedem Speichern komplett neu durch die Leitung gehen.
+   ═══════════════════════════════════════════════════════════ */
+var BILD_KANTE=1400, BILD_GUETE=0.72;
+
+function bildWaehlen(boxId){
+  var e=document.createElement('input');
+  e.type='file'; e.accept='image/*'; e.multiple=true;
+  e.onchange=function(){
+    var dateien=Array.prototype.slice.call(e.files||[]);
+    dateien.forEach(function(f){ bildAufnehmen(f, boxId); });
+  };
+  e.click();
+}
+
+/* Verkleinern im Browser: ein Handyfoto hat 4 MB, das braucht hier niemand. */
+function bildVerkleinern(datei){
+  return new Promise(function(fertig, schief){
+    var leser=new FileReader();
+    leser.onerror=function(){ schief(new Error('Datei nicht lesbar')); };
+    leser.onload=function(){
+      var bild=new Image();
+      bild.onerror=function(){ schief(new Error('Kein Bild')); };
+      bild.onload=function(){
+        var f=Math.min(1, BILD_KANTE/Math.max(bild.width,bild.height));
+        var c=document.createElement('canvas');
+        c.width=Math.max(1,Math.round(bild.width*f));
+        c.height=Math.max(1,Math.round(bild.height*f));
+        var g=c.getContext('2d');
+        g.fillStyle='#fff'; g.fillRect(0,0,c.width,c.height);
+        g.drawImage(bild,0,0,c.width,c.height);
+        try { fertig(c.toDataURL('image/jpeg',BILD_GUETE)); }
+        catch(err){ schief(err); }
+      };
+      bild.src=leser.result;
+    };
+    leser.readAsDataURL(datei);
+  });
+}
+
+function bildAufnehmen(datei, boxId){
+  var s=sitz(); if(!s) return;
+  bildVerkleinern(datei).then(function(dataUrl){
+    var id=neueId();
+    if(!s.bilder) s.bilder=[];
+    s.bilder.push({ id:id, box:boxId, text:'', ts:Date.now() });
+    if(!BILDER[s.datum]) BILDER[s.datum]={};
+    BILDER[s.datum][id]={ b:dataUrl, box:boxId, ts:Date.now(), von:wer() };
+    merken();
+    bildSpiegeln(s.datum, id);
+    boxenZeichnen();
+  }).catch(function(){
+    alert('Das Bild konnte nicht gelesen werden. Bitte ein anderes wählen.');
+  });
+}
+
+function bildSpiegeln(datum, id){
+  var satz=(BILDER[datum]||{})[id]; if(!satz) return;
+  fetch(DB+'/'+P_BILD+'/'+datum+'/'+id+'.json',{ method:'PUT', body:JSON.stringify(satz) })
+    .then(function(r){ if(r.ok){ satz.fb=true; } })
+    .catch(function(){ netzOk=false; fussZeichnen(); });
+}
+
+function bilderZuBox(boxId){
+  var s=sitz(); if(!s || !s.bilder) return '';
+  var liste=s.bilder.filter(function(b){ return b.box===boxId; });
+  if(!liste.length) return '';
+  var vorrat=BILDER[s.datum]||{};
+  return '<div class="si-bilder">'+liste.map(function(b){
+    var quelle=(vorrat[b.id]||{}).b;
+    return '<div class="si-bild'+(quelle?'':' laedt')+'">'
+      +(quelle? '<img src="'+quelle+'" data-gross="'+b.id+'" alt="">'
+              : '<div style="height:74px;display:flex;align-items:center;justify-content:center;'
+                +'font-size:11px;color:#63676d">lädt …</div>')
+      +'<button class="weg" data-bweg="'+b.id+'" title="Bild entfernen">✕</button>'
+      +'<input data-btxt="'+b.id+'" value="'+h(b.text||'')+'" placeholder="Bildunterschrift">'
+      +'</div>';
+  }).join('')+'</div>';
+}
+
+function bilderBinden(){
+  var s=sitz(); if(!s) return;
+  Array.prototype.forEach.call(document.querySelectorAll('[data-gross]'),function(el){
+    el.onclick=function(){ bildGross(el.getAttribute('data-gross')); };
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-btxt]'),function(el){
+    el.oninput=function(){
+      var b=(s.bilder||[]).filter(function(x){ return x.id===el.getAttribute('data-btxt'); })[0];
+      if(b){ b.text=el.value; merken(); }
+    };
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-bweg]'),function(el){
+    el.onclick=function(){
+      var id=el.getAttribute('data-bweg');
+      if(!confirm('Bild aus dem Protokoll entfernen?')) return;
+      s.bilder=(s.bilder||[]).filter(function(x){ return x.id!==id; });
+      if(BILDER[s.datum]) delete BILDER[s.datum][id];
+      fetch(DB+'/'+P_BILD+'/'+s.datum+'/'+id+'.json',{method:'DELETE'}).catch(function(){});
+      merken(); boxenZeichnen();
+    };
+  });
+}
+
+function bildGross(id){
+  var s=sitz(); var quelle=((BILDER[s.datum]||{})[id]||{}).b; if(!quelle) return;
+  var d=document.createElement('div');
+  d.className='si-gross';
+  d.innerHTML='<img src="'+quelle+'" alt="">';
+  d.onclick=function(){ document.body.removeChild(d); };
+  document.body.appendChild(d);
 }
 function mmss(sek){ sek=Math.max(0,Math.round(sek)); return z2(Math.floor(sek/60))+':'+z2(sek%60); }
 
@@ -967,6 +1324,7 @@ function abschliessen(){
       +'Erledigung. Trotzdem abschliessen?\n\nIm Hörbuch steht: was auf dem Parkplatz landet, '
       +'darf nicht verschwinden – sonst vertraut die Runde ihm nicht mehr.')) return;
   if(TIMER.box) timerStopp();
+  plotEinfrieren(s);          /* Leistungsbild festhalten – es gehört ins Protokoll */
   s.status='abgeschlossen'; s.abgeschlossen=Date.now();
   merken(); spiegeln(); zeichnen();
   $('siFertigMsg').textContent='Abgeschlossen. Jetzt Druckansicht öffnen und als PDF an den '
@@ -1067,7 +1425,183 @@ function csvPendenzen(liste){
 }
 
 /* ═══════════════════════════════════════════════════════════
-   BLATT 3 – Archiv
+   BLATT 3 – Personal
+   ═══════════════════════════════════════════════════════════
+   Auftrag Victor 27.08.2026: das Personal muss in der Sitzung besprochen
+   werden können. Geführt wird hier nur, was die Sitzung braucht – wer
+   fällt wann aus, wer kommt dazu, wo fehlen Leute. Die Mannschaft selbst
+   steht in der digitalen Anwesenheitsliste und wird von dort gelesen.
+
+   VERTRAULICH: Aus der Anwesenheitsliste werden ausschliesslich Vorname,
+   Nachname und Firma gelesen. Die Telefonnummern liegen dort RSA-verschlüsselt
+   (Felder tk/tn/th) und haben hier nichts zu suchen – sie werden weder gelesen
+   noch angezeigt noch ins Protokoll übernommen.
+   ═══════════════════════════════════════════════════════════ */
+function persAlle(){
+  var l=[];
+  for(var id in PERSONAL){ var e=PERSONAL[id]; if(e && e.wer){ e.id=id; l.push(e); } }
+  l.sort(function(a,b){ return (a.von||'').localeCompare(b.von||''); });
+  return l;
+}
+/* Was heute oder in den nächsten 21 Tagen wirkt – das gehört in die Sitzung. */
+function persLaufend(){
+  var heu=heute();
+  var grenze=new Date(Date.now()+21*86400000).toISOString().slice(0,10);
+  return persAlle().filter(function(e){
+    if(e.art==='bedarf') return !e.erledigt;
+    var bis=e.bis||e.von||'';
+    return bis>=heu && (e.von||'')<=grenze;
+  });
+}
+function persArtInfo(id){
+  return PERS_ART.filter(function(a){ return a.id===id; })[0]||PERS_ART[0];
+}
+function persZeit(e){
+  if(e.art==='bedarf') return e.von? 'seit '+deDat(e.von) : '';
+  if(e.von && e.bis && e.von!==e.bis) return deDat(e.von)+' – '+deDat(e.bis);
+  return deDat(e.von||e.bis||'');
+}
+
+function mannschaftLaden(){
+  if(MANNSCHAFT) return Promise.resolve(MANNSCHAFT);
+  return hole(P_ANW+'/personen').then(function(j){
+    var firmen={}, leute=[];
+    for(var k in (j||{})){
+      var p=j[k]||{};
+      var name=((p.v||'')+' '+(p.n||'')).trim();
+      if(!name) continue;
+      var firma=(p.f||'unbekannt').trim();
+      var schl=firma.toUpperCase().replace(/\s+(AG|GMBH|SA)\.?$/,'').trim();
+      if(!firmen[schl]) firmen[schl]={ name:firma, anzahl:0 };
+      firmen[schl].anzahl++;
+      leute.push({ name:name, firma:firma });
+    }
+    leute.sort(function(a,b){ return a.name.localeCompare(b.name,'de'); });
+    MANNSCHAFT={ leute:leute, firmen:firmen };
+    return MANNSCHAFT;
+  });
+}
+
+function personalBlatt(){
+  var heu=heute();
+  var liste=persAlle();
+  var kommend=persLaufend();
+
+  $('siInhalt').innerHTML=
+    '<div class="si-hin">Wer fällt wann aus, wer kommt dazu, wo fehlen Leute. '
+      +'Steht in der Sitzung als eigener Punkt (5 Minuten, nach der Sicherheit) und '
+      +'geht so ins Protokoll. Die Namen kommen aus der digitalen Anwesenheitsliste – '
+      +'hier wird nichts doppelt erfasst.</div>'
+    +'<div id="siMann"><div class="si-pkarte"><div class="sub">Mannschaft wird geladen …</div></div></div>'
+    +'<div class="si-pkarte">'
+      +'<h3>Ferien, Ausfälle, Verstärkung und offener Bedarf</h3>'
+      +'<div class="sub">'+(kommend.length
+          ? '<b>'+kommend.length+'</b> Eintrag/Einträge wirken jetzt oder in den nächsten drei Wochen.'
+          : 'Zurzeit nichts eingetragen.')+'</div>'
+      +'<ul class="si-pliste" id="siPersListe"></ul>'
+      +'<div class="si-neu">'
+        +'<div class="was"><label>Wer</label><input id="siPeWer" list="siPeNamen" '
+          +'placeholder="Name – oder «Bohrgruppe», «Team Verschrauben»"><datalist id="siPeNamen"></datalist></div>'
+        +'<div><label>Was</label><select id="siPeArt">'
+          +PERS_ART.map(function(a){ return '<option value="'+a.id+'">'+a.n+'</option>'; }).join('')
+          +'</select></div>'
+        +'<div><label>Von</label><input type="date" id="siPeVon" value="'+heu+'" style="width:150px"></div>'
+        +'<div><label>Bis</label><input type="date" id="siPeBis" style="width:150px"></div>'
+        +'<div class="was"><label>Bemerkung</label><input id="siPeBem" placeholder="z. B. Vertretung Michele"></div>'
+        +'<div><button class="si-kn rot" id="siPeAdd">+ eintragen</button></div>'
+        +'<div class="wrn" id="siPeWrn"></div>'
+      +'</div>'
+    +'</div>'
+    +(liste.length>kommend.length
+      ? '<div style="text-align:center"><button class="si-kn mini" id="siPeAlle">'
+        +'auch Vergangenes zeigen ('+(liste.length-kommend.length)+')</button></div>' : '');
+
+  persListeZeichnen(false);
+  $('siPeAdd').onclick=persHinzu;
+  $('siPeWer').onkeydown=function(e){ if(e.key==='Enter') persHinzu(); };
+  if($('siPeAlle')) $('siPeAlle').onclick=function(){
+    persListeZeichnen(true); this.style.display='none'; };
+
+  mannschaftLaden().then(function(m){
+    if(BLATT!=='personal' || !$('siMann')) return;
+    var f=Object.keys(m.firmen).map(function(k){ return m.firmen[k]; })
+           .sort(function(a,b){ return b.anzahl-a.anzahl; });
+    $('siMann').innerHTML='<div class="si-pkarte"><h3>Mannschaft auf der Baustelle</h3>'
+      +'<div class="sub"><b>'+m.leute.length+'</b> Personen sind in der digitalen '
+      +'Anwesenheitsliste erfasst. Wer heute wirklich da ist, steht dort – '
+      +'<a href="https://anwesenheitnalpsolar.ch/admin.html" target="_blank" '
+      +'style="color:#D72622;font-weight:700">Liste öffnen</a>.</div>'
+      +'<div class="si-firmen">'+f.map(function(x){
+          return '<div><b>'+x.anzahl+'</b>'+h(x.name)+'</div>'; }).join('')+'</div></div>';
+    var dl=$('siPeNamen');
+    if(dl) dl.innerHTML=m.leute.map(function(p){
+      return '<option value="'+h(p.name)+'">'; }).join('');
+  });
+}
+
+function persListeZeichnen(alles){
+  var el=$('siPersListe'); if(!el) return;
+  var heu=heute();
+  var liste=alles?persAlle():persLaufend();
+  if(!liste.length){ el.innerHTML='<div class="si-leer">Nichts eingetragen.</div>'; return; }
+  el.innerHTML=liste.map(function(e){
+    var a=persArtInfo(e.art);
+    var vorbei=(e.bis||e.von||'')<heu && e.art!=='bedarf';
+    return '<li'+(vorbei?' class="vorbei"':'')+'>'
+      +'<span class="art" style="background:'+a.f+';color:'+a.r+'">'+h(a.n)+'</span>'
+      +'<span class="wer">'+h(e.wer)
+        +(e.bemerkung?'<div style="font-weight:400;font-size:12px;color:#63676d">'
+          +h(e.bemerkung)+'</div>':'')+'</span>'
+      +'<span class="zeit">'+h(persZeit(e))+'</span>'
+      +'<button class="si-kn mini" data-peweg="'+e.id+'">✕</button></li>';
+  }).join('');
+  Array.prototype.forEach.call(el.querySelectorAll('[data-peweg]'),function(b){
+    b.onclick=function(){
+      var id=b.getAttribute('data-peweg');
+      if(!confirm('Eintrag löschen?')) return;
+      delete PERSONAL[id];
+      fetch(DB+'/'+P_PERS+'/'+id+'.json',{method:'DELETE'}).catch(function(){});
+      persListeZeichnen(alles); navZeichnen();
+    };
+  });
+}
+
+function persHinzu(){
+  var w=$('siPeWer').value.trim(), art=$('siPeArt').value;
+  var von=$('siPeVon').value, bis=$('siPeBis').value, bem=$('siPeBem').value.trim();
+  if(!w){ $('siPeWrn').textContent='Wer? Ohne Namen (oder Gruppe) nützt der Eintrag nichts.'; return; }
+  if(!von && !bis){ $('siPeWrn').textContent='Ab wann gilt das?'; return; }
+  if(von && bis && bis<von){ $('siPeWrn').textContent='Das «bis» liegt vor dem «von».'; return; }
+  $('siPeWrn').textContent='';
+  var id=neueId();
+  var satz={ wer:w, art:art, von:von||bis, bis:bis||von, bemerkung:bem,
+             ts:Date.now(), erfasstVon:wer() };
+  PERSONAL[id]=satz;
+  fetch(DB+'/'+P_PERS+'/'+id+'.json',{ method:'PUT', body:JSON.stringify(satz) })
+    .catch(function(){ netzOk=false; });
+  $('siPeWer').value=''; $('siPeBem').value=''; $('siPeBis').value='';
+  personalBlatt();
+}
+
+/* Kompakte Anzeige in der Sitzungsbox «Personal» – damit der Stand am Tisch
+   vor einem liegt, ohne das Blatt zu wechseln. */
+function personalKurz(){
+  var l=persLaufend();
+  if(!l.length) return '<div class="si-hin" style="margin:0 0 8px">Nichts eingetragen – '
+    +'Ferien und Ausfälle stehen im Blatt «Personal».</div>';
+  return '<div class="si-hin" style="margin:0 0 8px">'
+    +l.slice(0,8).map(function(e){
+      var a=persArtInfo(e.art);
+      return '<span style="display:inline-block;margin:0 10px 3px 0">'
+        +'<b style="color:'+a.r+'">'+h(a.n)+'</b> '+h(e.wer)
+        +(persZeit(e)?' <span style="color:#63676d">'+h(persZeit(e))+'</span>':'')+'</span>';
+    }).join('')
+    +(l.length>8?'<br>… und '+(l.length-8)+' weitere im Blatt «Personal».':'')
+    +'</div>';
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BLATT 4 – Archiv
    ═══════════════════════════════════════════════════════════ */
 function archivBlatt(){
   var d=Object.keys(SITZUNGEN).sort().reverse();
@@ -1111,10 +1645,41 @@ function archivBlatt(){
    versendet wird. Tabellen und Ampelfarben statt Fliesstext.
    ═══════════════════════════════════════════════════════════ */
 function drucken(datum){
-  var s=SITZUNGEN[typeof datum==='string'?datum:AKTIV]; if(!s) return;
-  var w=window.open('','_blank'); if(!w){ alert('Der Browser hat das Fenster blockiert.'); return; }
-  w.document.write(protokollHtml(s));
-  w.document.close();
+  var tag=(typeof datum==='string')?datum:AKTIV;
+  var s=SITZUNGEN[tag]; if(!s) return;
+  /* Fenster SOFORT öffnen – nach einem await blockiert der Browser den Popup. */
+  var w=window.open('','_blank');
+  if(!w){ alert('Der Browser hat das Fenster blockiert – Popups für diese Seite erlauben.'); return; }
+  w.document.write('<!doctype html><meta charset="utf-8"><title>Protokoll wird gebaut …</title>'
+    +'<body style="font:14px Arial;padding:24px;color:#444">Protokoll wird gebaut …</body>');
+  plotEinfrieren(s);
+  bilderLaden(tag).then(function(){
+    w.document.open();
+    w.document.write(protokollHtml(s));
+    w.document.close();
+  });
+}
+
+/* Der Plot lebt als Canvas – fürs Protokoll (und fürs PDF am PC) wird er
+   als Bild in den Sitzungssatz gelegt. Nur wenn er gerade gezeichnet ist;
+   beim Druck aus dem Archiv bleibt der eingefrorene Stand von damals. */
+function plotEinfrieren(s){
+  if(s!==sitz()) return;
+  var bild=plotBild();
+  if(!bild) return;
+  s.plot=bild;
+  s.plotNote=(leistAnsicht==='bohr'?'Bohrkette':'Stahlbau')
+    +' · Wochenleistung je Kalenderwoche, Quelle Nalpi '+deDat((LEIST&&LEIST.stand)||'')
+    +' · blasse Balken = laufende Woche';
+  if(LEIST && LEIST.rueckstand){
+    s.rueckstand=[];
+    [['injektion','gebohrt, nicht injiziert'],['vermessung','gebohrt, nicht vermessen']]
+    .forEach(function(x){
+      var d=LEIST.rueckstand[x[0]];
+      if(d && d.gesamt) s.rueckstand.push({ name:x[1], gesamt:d.gesamt, bereiche:d.bereiche });
+    });
+  }
+  merken();
 }
 
 function protokollHtml(s){
@@ -1144,6 +1709,12 @@ function protokollHtml(s){
     +'.lob{background:#E8F6EC;border-left:5px solid #2e9e46;padding:8px 12px;margin:10px 0}'
     +'.park{background:#fffdf5;border-left:5px solid #e08a00;padding:8px 12px;margin:10px 0}'
     +'.txt{white-space:pre-wrap;font-size:10pt}'
+    +'.plot{display:block;width:100%;max-width:180mm;border:1px solid #d5d9dd;border-radius:4px;margin:6px 0 4px}'
+    +'.bu{font-size:8pt;color:#666;margin-bottom:8px}'
+    +'.bilder{display:flex;flex-wrap:wrap;gap:5mm;margin:7px 0 10px}'
+    +'figure{margin:0;flex:1 1 78mm;max-width:88mm;page-break-inside:avoid}'
+    +'figure img{width:100%;border:1px solid #d5d9dd;border-radius:4px;display:block}'
+    +'figcaption{font-size:8pt;color:#555;margin-top:3px;line-height:1.35}'
     +'.q{font-size:8pt;color:#666;border-top:1px solid #d5d9dd;padding-top:7px;margin-top:16px;line-height:1.5}'
     +'.leer{color:#888;font-style:italic;font-size:9.5pt}'
     +'@page{size:A4;margin:14mm}@media print{h2{page-break-after:avoid}table{page-break-inside:auto}'
@@ -1170,9 +1741,23 @@ function protokollHtml(s){
   if(reden.length) o+='<div class="reden"><b>Darüber müssen wir heute reden</b><ol>'
     +reden.map(function(t){ return '<li>'+h(t)+'</li>'; }).join('')+'</ol></div>';
 
+  /* Leistung zuerst – das ist die Seite, über die geredet wird. */
+  if(s.plot){
+    o+='<h2>Wochenleistung</h2>'
+      +'<img class="plot" src="'+s.plot+'" alt="Wochenleistung">'
+      +(s.plotNote?'<div class="bu">'+h(s.plotNote)+'</div>':'');
+  }
+  if(s.rueckstand && s.rueckstand.length){
+    o+='<table><tr><th>Rückstand</th><th>Bereiche</th><th style="width:15%">offen</th></tr>'
+      +s.rueckstand.map(function(r){
+        return '<tr class="rot"><td><b>'+h(r.name)+'</b></td><td>'
+          +r.bereiche.map(function(b){ return h(b.bereich)+' ('+b.offen+')'; }).join(' · ')
+          +'</td><td><b>'+r.gesamt+'</b></td></tr>'; }).join('')+'</table>';
+  }
+
   /* Zahlen */
   if(z.bohr||z.tische){
-    o+='<h2>Zahlen auf einen Blick</h2><div class="kach">';
+    o+='<h2>Gesamtstand</h2><div class="kach">';
     if(z.bohr) o+='<div><b>'+z.bohr.gebohrt.toLocaleString('de-CH')+'</b><span>GEBOHRT VON '
         +z.bohr.total.toLocaleString('de-CH')+'</span></div>'
       +'<div><b>'+z.bohr.injiziert.toLocaleString('de-CH')+'</b><span>INJIZIERT</span></div>'
@@ -1204,11 +1789,31 @@ function protokollHtml(s){
       }).join('')+'</table>';
   }
 
-  /* Boxen */
+  /* Boxen – mit den Bildern, die dort erfasst wurden */
+  var vorrat=BILDER[s.datum]||{};
   ABLAUF.forEach(function(b){
     var d=(s.boxen||{})[b.id]||{};
-    if(!d.text||!d.text.trim()) return;
-    o+='<h2>'+h(b.titel)+'</h2><div class="txt">'+h(d.text.trim())+'</div>';
+    var bilder=(s.bilder||[]).filter(function(x){ return x.box===b.id; });
+    var hatText=d.text && d.text.trim();
+    if(!hatText && !bilder.length && b.id!=='personal') return;
+    if(b.id==='personal' && !hatText && !bilder.length && !personalZeilen(s).length) return;
+    o+='<h2>'+h(b.titel)+'</h2>';
+    if(b.id==='personal'){
+      var pz=personalZeilen(s);
+      if(pz.length) o+='<table><tr><th>Was</th><th>Wer</th><th>Wann</th><th>Bemerkung</th></tr>'
+        +pz.map(function(e){
+          var kl= e.art==='krank'||e.art==='bedarf' ? 'rot'
+                : (e.art==='ferien'?'or':(e.art==='austritt'?'':'gr'));
+          return '<tr class="'+kl+'"><td>'+h(e.artName)+'</td><td>'+h(e.wer)+'</td>'
+            +'<td>'+h(e.zeit)+'</td><td>'+h(e.bemerkung||'')+'</td></tr>'; }).join('')+'</table>';
+    }
+    if(hatText) o+='<div class="txt">'+h(d.text.trim())+'</div>';
+    if(bilder.length) o+='<div class="bilder">'+bilder.map(function(x){
+      var quelle=(vorrat[x.id]||{}).b;
+      if(!quelle) return '';
+      return '<figure><img src="'+quelle+'" alt="">'
+        +(x.text?'<figcaption>'+h(x.text)+'</figcaption>':'')+'</figure>';
+    }).join('')+'</div>';
   });
 
   /* Parkplatz */
@@ -1251,6 +1856,25 @@ function protokollHtml(s){
   return o;
 }
 
+/* Personaleinträge, die zum Sitzungstag gelten oder in den drei Wochen danach
+   anstehen – aufbereitet für das Protokoll. */
+function personalZeilen(s){
+  var tag=s.datum;
+  var grenze=new Date(new Date(tag+'T12:00:00').getTime()+21*86400000)
+               .toISOString().slice(0,10);
+  var raus=[];
+  for(var id in PERSONAL){
+    var e=PERSONAL[id]; if(!e || !e.wer) continue;
+    var bis=e.bis||e.von||'';
+    if(e.art!=='bedarf' && (bis<tag || (e.von||'')>grenze)) continue;
+    if(e.art==='bedarf' && e.erledigt) continue;
+    raus.push({ art:e.art, artName:persArtInfo(e.art).n, wer:e.wer,
+                zeit:persZeit(e), bemerkung:e.bemerkung||'', von:e.von||'' });
+  }
+  raus.sort(function(a,b){ return (a.von||'').localeCompare(b.von||''); });
+  return raus;
+}
+
 function naechsterTerminNach(iso){
   var d=new Date(iso+'T12:00:00');
   for(var i=1;i<=8;i++){
@@ -1274,9 +1898,17 @@ function alsTextKopieren(){
     reden.forEach(function(r,i){ t+='  '+(i+1)+'. '+r+'\n'; }); t+='\n'; }
   ABLAUF.forEach(function(b){
     var d=(s.boxen||{})[b.id]||{};
-    if(!d.text||!d.text.trim()) return;
-    t+=b.titel.toUpperCase()+'\n'+d.text.trim().split('\n').map(function(z){
-      return '  '+z; }).join('\n')+'\n\n';
+    var pz=(b.id==='personal')?personalZeilen(s):[];
+    var bi=(s.bilder||[]).filter(function(x){ return x.box===b.id; });
+    if((!d.text||!d.text.trim()) && !pz.length && !bi.length) return;
+    t+=b.titel.toUpperCase()+'\n';
+    pz.forEach(function(e){
+      t+='  '+e.artName+': '+e.wer+(e.zeit?' ('+e.zeit+')':'')
+        +(e.bemerkung?' – '+e.bemerkung:'')+'\n'; });
+    if(d.text&&d.text.trim()) t+=d.text.trim().split('\n').map(function(z){
+      return '  '+z; }).join('\n')+'\n';
+    bi.forEach(function(x){ t+='  [Bild'+(x.text?': '+x.text:'')+']\n'; });
+    t+='\n';
   });
   var pn=pendenzenFuer(s);
   if(pn.length){ t+='PENDENZEN\n';
@@ -1305,10 +1937,15 @@ function alsTextKopieren(){
    und Druckausgabe ohne Browser erzeugen lassen: Tools\Sitzung_Protokoll.py
    rendert das Protokoll ueber Node mit genau diesem Code. So gibt es nur EINE
    Stelle, an der das Protokoll formatiert wird. */
-function daten(sitzungen, ueberlagerung){
+function daten(sitzungen, ueberlagerung, bilder, personal, leistung){
   if(sitzungen) SITZUNGEN=sitzungen;
   if(ueberlagerung) PUEBER=ueberlagerung;
+  if(bilder) BILDER=bilder;
+  if(personal) PERSONAL=personal;
+  if(leistung) LEIST=leistung;
 }
 return { start:start, druck:drucken, zahlenAus:zahlenRechnen, protokollHtml:protokollHtml,
-         daten:daten, ablauf:ABLAUF, runde:RUNDE };
+         daten:daten, ablauf:ABLAUF, runde:RUNDE,
+         /* fuer den Browsertest: Tools\Sitzung_Bildtest.html */
+         bildVerkleinern:bildVerkleinern, plotZeichnen:plotZeichnen };
 })();
