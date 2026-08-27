@@ -100,6 +100,8 @@
 
   #map.labels-hidden .label,
   #map.labels-hidden .label-table,
+  #map.labels-hidden .label-kb,
+  #map.labels-hidden .label-kb-sch,
   #map.labels-hidden .label-kran {
     display: none !important;
   }
@@ -151,39 +153,38 @@
   /* Kabelblock (HRB-Haupttrasse). Bewusst NICHT in der labels-hidden-Regel
      oben: es sind nur eine Handvoll Schilder, und die Frage "welcher
      Kabelblock ist das hier" stellt sich auch aus der Uebersicht heraus. */
-  /* Das Schild sitzt als INNERES div im Marker: Leaflet positioniert das
+  /* Kabelblock-Schilder: gleiches Verhalten und gleicher Stil wie die
+     Tisch-IDs (.label-table) - weisser Umriss statt Kasten, und sie kommen
+     erst beim Ranzoomen (labels-hidden oben, Victor 27.08.2026). Nur die
+     Farbe ist blau, damit man sie von einer Tisch-ID unterscheidet.
+     Das Schild sitzt als INNERES div im Marker: Leaflet positioniert das
      aeussere Icon selber per transform - ein eigenes transform darauf wuerde
      den Marker in die Ecke schieben. */
-  .label-kb {
-    position: absolute;
-    background: rgba(30,148,242,.95);
-    border: 1px solid #0b5fff;
-    color: #fff;
-    font-size: 11px;
-    font-weight: 900;
-    letter-spacing: .02em;
-    border-radius: 4px;
-    padding: 2px 6px;
-    white-space: nowrap;
-    pointer-events: auto;
-    transform: translate(-50%, -50%);
-    box-shadow: 0 1px 4px rgba(0,0,0,.45);
-  }
-
+  .label-kb,
   .label-kb-sch {
     position: absolute;
-    background: rgba(255,255,255,.96);
-    border: 2px solid #0b5fff;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    font-size: 9px;
+    font-weight: 700;
     color: #0b3fa8;
-    font-size: 11px;
-    font-weight: 900;
-    border-radius: 999px;
-    padding: 1px 7px;
     white-space: nowrap;
     pointer-events: auto;
-    transform: translate(-50%, -180%);
-    box-shadow: 0 1px 4px rgba(0,0,0,.35);
+
+    text-shadow:
+      -1px -1px 0 #fff,
+       1px -1px 0 #fff,
+      -1px  1px 0 #fff,
+       1px  1px 0 #fff,
+       0px -1px 0 #fff,
+       0px  1px 0 #fff,
+      -1px  0px 0 #fff,
+       1px  0px 0 #fff;
   }
+
+  .label-kb { transform: translate(-50%, -50%); }
+  .label-kb-sch { transform: translate(-50%, -180%); }
 
   .leaflet-control-layers {
     font-size: 13px;

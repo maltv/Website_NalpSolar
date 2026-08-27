@@ -101,11 +101,14 @@ html, body { width:100%; height:100%; overflow:hidden; background:#0d1117;
              transition:opacity .25s linear; will-change:opacity; }
 .lbl-d1  { background:rgba(215,38,34,.92); border-color:#ff6b6b; color:#fff; font-size:10.5px; font-weight:800; }
 .lbl-sta { background:rgba(20,22,26,.85); border-color:#ffd400; color:#ffe066; font-size:9.5px; padding:1px 5px; }
-/* Kabelblock: Abschnitt blau wie die HRB-Trasse, Schacht weiss als Punkt am Weg */
-.lbl-kb  { background:rgba(30,148,242,.92); border-color:#0b5fff; color:#fff;
-           font-size:11px; font-weight:900; padding:2px 6px; }
-.lbl-kb-sch { background:rgba(255,255,255,.94); border:2px solid #0b5fff; color:#0b3fa8;
-           font-size:10.5px; font-weight:900; padding:1px 6px; border-radius:999px; }
+/* Kabelblock: gleich gross und gleiches Ein-/Ausblenden wie die Tisch-IDs
+   (Victor 27.08.2026), nur blau statt gelb */
+.lbl-kb  { background:rgba(30,148,242,.9); border-color:#0b5fff; color:#fff;
+           font-size:9px; font-weight:800; padding:1px 4px;
+           transition:opacity .25s linear; will-change:opacity; }
+.lbl-kb-sch { background:rgba(255,255,255,.92); border:1px solid #0b5fff; color:#0b3fa8;
+           font-size:9px; font-weight:800; padding:1px 4px; border-radius:999px;
+           transition:opacity .25s linear; will-change:opacity; }
 .lbl-status { font-size:10px; font-weight:800; padding:1px 5px;
              box-shadow:0 0 0 1px rgba(0,0,0,.35), 0 2px 7px rgba(0,0,0,.45); }
 
@@ -1124,7 +1127,8 @@ function kbSchild(q,text,css,hoch){
   var obj=new THREE.CSS2DObject(div);
   // raw-Frame [E-OE, N-ON, Elev-OZ] → Szene (Y-up); Schild über die Trasse
   obj.position.set(q[0], q[2]+(hoch||4), -q[1]);
-  obj.visible=kbAn; scene.add(obj); kbLbls.push(obj);
+  obj.visible=false;                 // updateKbLabels() blendet nach Abstand ein
+  scene.add(obj); kbLbls.push(obj);
 }
 
 async function ladeKabelblock(){
@@ -1143,10 +1147,30 @@ async function ladeKabelblock(){
 window.toggleKabelblock=function(){
   if(!kbLbls.length){ flashMsg('⚠ Kabelblock-Beschriftung fehlt'); return; }
   kbAn=!kbAn;
-  kbLbls.forEach(function(o){ o.visible=kbAn; });
+  kbLbls.forEach(function(o){ o.visible=false; });   // an: das Ausblenden nach
+  updateKbLabels();                                  // Distanz übernimmt gleich
   var b=document.getElementById('btnKabel');
   if(b) b.classList.toggle('active',kbAn);
 };
+
+/* Ein- und Ausblenden nach Kamera-Abstand — dieselben Grenzen wie bei den
+   Tisch-IDs (LBL_NEAR/LBL_FAR), damit sich beides gleich verhält. */
+function updateKbLabels(){
+  if(!kbLbls.length) return;
+  var camP=camera.position;
+  for(var i=0;i<kbLbls.length;i++){
+    var l=kbLbls[i];
+    if(!kbAn){ if(l.visible) l.visible=false; continue; }
+    var d=camP.distanceTo(l.position);
+    var op = d<=LBL_NEAR ? 1 : (d>=LBL_FAR ? 0 : 1-(d-LBL_NEAR)/(LBL_FAR-LBL_NEAR));
+    if(op<=0.02){
+      if(l.visible) l.visible=false;
+    } else {
+      if(!l.visible) l.visible=true;
+      if(l.element) l.element.style.opacity=op.toFixed(2);
+    }
+  }
+}
 
 /* Abstand Punkt → Achsenzug (beide im raw-Frame) */
 function kbAbstand(p,achse){
@@ -5786,7 +5810,7 @@ function animate(){
   updateCompass();
 
   // Tisch-Label fade by distance (throttled)
-  if(frameN%5===0) updateTischeLabels();
+  if(frameN%5===0){ updateTischeLabels(); updateKbLabels(); }
 
   // Birkhuhn-Jagd countdown
   if(gamePlaying && frameN%4===0) updateGameTimer();
