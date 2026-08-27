@@ -1499,10 +1499,12 @@ function personalBlatt(){
   var kommend=persLaufend();
 
   $('siInhalt').innerHTML=
-    '<div class="si-hin">Wer fällt wann aus, wer kommt dazu, wo fehlen Leute. '
-      +'Steht in der Sitzung als eigener Punkt (5 Minuten, nach der Sicherheit) und '
-      +'geht so ins Protokoll. Die Namen kommen aus der digitalen Anwesenheitsliste – '
-      +'hier wird nichts doppelt erfasst.</div>'
+    '<div class="si-hin" style="border-left:4px solid #D72622">'
+      +'<b>Internes Blatt – geht NICHT ins Protokoll.</b> Wer fällt wann aus, wer kommt '
+      +'dazu, wo fehlen Leute: das ist Führungswissen und hat in einem Protokoll, das '
+      +'der Bauherr und Dritte lesen, nichts verloren. Was davon in die Sitzung gehört, '
+      +'schreibst du selbst in die Box «Personal». Die Namen kommen aus der digitalen '
+      +'Anwesenheitsliste – nichts doppelt erfassen.</div>'
     +'<div id="siMann"><div class="si-pkarte"><div class="sub">Mannschaft wird geladen …</div></div></div>'
     +'<div class="si-pkarte">'
       +'<h3>Ferien, Ausfälle, Verstärkung und offener Bedarf</h3>'
@@ -1600,7 +1602,10 @@ function personalKurz(){
   var l=persLaufend();
   if(!l.length) return '<div class="si-hin" style="margin:0 0 8px">Nichts eingetragen – '
     +'Ferien und Ausfälle stehen im Blatt «Personal».</div>';
+  /* Nur auf dem Bildschirm, damit der Stand am Tisch vorliegt – ins Protokoll
+     kommt davon nichts (Vorfall 27.08.2026). */
   return '<div class="si-hin" style="margin:0 0 8px">'
+    +'<b style="color:#a3231f">nur für dich, kommt nicht ins Protokoll:</b><br>'
     +l.slice(0,8).map(function(e){
       var a=persArtInfo(e.art);
       return '<span style="display:inline-block;margin:0 10px 3px 0">'
@@ -1765,18 +1770,12 @@ function protokollHtml(s){
     /* Die Nalpi-Übersicht steht schon zuoberst – hier nicht ein zweites Mal. */
     var bilder=(s.bilder||[]).filter(function(x){ return x.box===b.id && b.id!=='zahlen'; });
     var hatText=d.text && d.text.trim();
-    if(!hatText && !bilder.length && b.id!=='personal') return;
-    if(b.id==='personal' && !hatText && !bilder.length && !personalZeilen(s).length) return;
+    if(!hatText && !bilder.length) return;
     o+='<h2>'+h(b.titel)+'</h2>';
-    if(b.id==='personal'){
-      var pz=personalZeilen(s);
-      if(pz.length) o+='<table><tr><th>Was</th><th>Wer</th><th>Wann</th><th>Bemerkung</th></tr>'
-        +pz.map(function(e){
-          var kl= e.art==='krank'||e.art==='bedarf' ? 'rot'
-                : (e.art==='ferien'?'or':(e.art==='austritt'?'':'gr'));
-          return '<tr class="'+kl+'"><td>'+h(e.artName)+'</td><td>'+h(e.wer)+'</td>'
-            +'<td>'+h(e.zeit)+'</td><td>'+h(e.bemerkung||'')+'</td></tr>'; }).join('')+'</table>';
-    }
+    /* Das Blatt «Personal» kommt hier BEWUSST NICHT hinein. Dort stehen Ferien,
+       Ausfälle, Anstellungswünsche und offener Bedarf – internes Führungswissen.
+       Ein Protokoll geht an den Bauherrn und an Dritte; was davon hineingehört,
+       schreibt die Bauleitung selbst in die Box (Vorfall 27.08.2026). */
     if(hatText) o+='<div class="txt">'+h(d.text.trim())+'</div>';
     if(bilder.length) o+='<div class="bilder">'+bilder.map(function(x){
       var quelle=(vorrat[x.id]||{}).b;
@@ -1825,24 +1824,6 @@ function protokollHtml(s){
   return o;
 }
 
-/* Personaleinträge, die zum Sitzungstag gelten oder in den drei Wochen danach
-   anstehen – aufbereitet für das Protokoll. */
-function personalZeilen(s){
-  var tag=s.datum;
-  var grenze=new Date(new Date(tag+'T12:00:00').getTime()+21*86400000)
-               .toISOString().slice(0,10);
-  var raus=[];
-  for(var id in PERSONAL){
-    var e=PERSONAL[id]; if(!e || !e.wer) continue;
-    var bis=e.bis||e.von||'';
-    if(e.art!=='bedarf' && (bis<tag || (e.von||'')>grenze)) continue;
-    if(e.art==='bedarf' && e.erledigt) continue;
-    raus.push({ art:e.art, artName:persArtInfo(e.art).n, wer:e.wer,
-                zeit:persZeit(e), bemerkung:e.bemerkung||'', von:e.von||'' });
-  }
-  raus.sort(function(a,b){ return (a.von||'').localeCompare(b.von||''); });
-  return raus;
-}
 
 function naechsterTerminNach(iso){
   var d=new Date(iso+'T12:00:00');
@@ -1867,13 +1848,9 @@ function alsTextKopieren(){
     reden.forEach(function(r,i){ t+='  '+(i+1)+'. '+r+'\n'; }); t+='\n'; }
   ABLAUF.forEach(function(b){
     var d=(s.boxen||{})[b.id]||{};
-    var pz=(b.id==='personal')?personalZeilen(s):[];
     var bi=(s.bilder||[]).filter(function(x){ return x.box===b.id; });
-    if((!d.text||!d.text.trim()) && !pz.length && !bi.length) return;
+    if((!d.text||!d.text.trim()) && !bi.length) return;
     t+=b.titel.toUpperCase()+'\n';
-    pz.forEach(function(e){
-      t+='  '+e.artName+': '+e.wer+(e.zeit?' ('+e.zeit+')':'')
-        +(e.bemerkung?' – '+e.bemerkung:'')+'\n'; });
     if(d.text&&d.text.trim()) t+=d.text.trim().split('\n').map(function(z){
       return '  '+z; }).join('\n')+'\n';
     bi.forEach(function(x){ t+='  [Bild'+(x.text?': '+x.text:'')+']\n'; });
