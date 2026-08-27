@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v146';
+var CACHE = 'nalpsolar-v148';
 var PRECACHE = [
   './index.html',
   './protokoll.html',
@@ -53,6 +53,7 @@ var PRECACHE = [
   './uploads/terrain/terrain.json',
   // Werkleitungen PZ1+PZ2+PZ3 in EINEM Layer (tools/build_leitungen.py);
   // loest werkleitungen.* + leitungen26.* ab (Victor 12.08.2026)
+  './uploads/kabelblock.json',
   './uploads/ifc/leitungen.meta.json',
   './uploads/ifc/leitungen.v.bin',
   './uploads/ifc/leitungen.f.bin',

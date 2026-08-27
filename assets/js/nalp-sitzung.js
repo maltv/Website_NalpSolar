@@ -57,6 +57,7 @@ var RUNDE = [
   { id:'kristjan', name:'Kristjan Kullamaa',  rolle:'Vermessung / Absteckung',fest:true },
   { id:'nicolas',  name:'Nicolas Champion',   rolle:'Geowork',                fest:true },
   { id:'chris',    name:'Christopher Zimmermann', rolle:'Logistik',           fest:true },
+  { id:'przemek',  name:'Przemek Modrak',     rolle:'Verschrauben',           fest:true },
   { id:'lukas',    name:'Lukas Kälin',        rolle:'Werkleitungen / Erdbau', fest:false },
   { id:'francois', name:'François Borner',    rolle:'Bauleitung AG-Seite',    fest:false }
 ];
@@ -64,7 +65,8 @@ var RUNDE = [
 /* ── Der feste Ablauf. dauer = Sollzeit in Minuten (Summe 60). ── */
 var ABLAUF = [
   { id:'zahlen',       titel:'Zahlen & Programmabgleich', dauer:5,
-    hilfe:'Vorlesen, nicht diskutieren. Wer eine Zahl anzweifelt: Pendenz, kein Sitzungsthema.' },
+    hilfe:'Nalpi-Übersicht als Bild einlegen (Knopf 📷 unten) und vorlesen. Zahlen werden '
+        + 'nicht diskutiert – wer eine anzweifelt, macht daraus eine Pendenz.' },
   { id:'bohren',       titel:'Bohren · Injektion · Vermessung', dauer:5,
     hilfe:'Stand, was blockiert, was diese Woche drankommt.' },
   { id:'stahlbau',     titel:'Stahlbau & Vormontage', dauer:5,
@@ -294,6 +296,19 @@ var CSS=[
 '.si-rbal .s{flex:1;height:9px;background:#f2f3f5;border-radius:5px;overflow:hidden}',
 '.si-rbal .s i{display:block;height:100%;background:#f08a24}',
 '.si-rbal .z{width:34px;text-align:right;font-weight:700;font-size:11px;flex:0 0 auto}',
+
+/* ── Nalpi-Uebersicht als Bild ──────────────────────────── */
+'.si-nalpi{background:#fff;border:1px solid #e3e5e8;border-left:5px solid #D72622;border-radius:6px;',
+'  padding:12px 14px;margin-bottom:12px}',
+'.si-nalpi-kopf{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}',
+'.si-nalpi-kopf b{font-size:15px;flex:1;min-width:120px}',
+'.si-nalpi-leer{font-size:12px;color:#63676d;line-height:1.55;background:#f6f7f9;',
+'  border:1px dashed #c9ccd2;border-radius:6px;padding:11px 12px}',
+'.si-nalpi-bilder figure{margin:0 0 9px}',
+'.si-nalpi-bilder img{display:block;width:100%;border:1px solid #e3e5e8;border-radius:5px;cursor:zoom-in}',
+'.si-nalpi-bilder input{width:100%;margin-top:5px;font:inherit;font-size:12.5px;padding:6px 8px;',
+'  border:1px solid #c9ccd2;border-radius:5px;background:#fff;color:#1a1a1a}',
+'.si-nalpi-bilder .si-kn{margin-top:5px}',
 
 /* ── Bilder ─────────────────────────────────────────────── */
 '.si-bilder{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}',
@@ -679,7 +694,7 @@ function sitzungBlatt(){
   $('siInhalt').innerHTML=html;
   kopfBinden(); rundeZeichnen(); redenZeichnen(); boxenZeichnen();
   parkZeichnen(); pendZeichnen(); abgleichBinden(); uhrZeichnen(); fussZeichnen();
-  plotZeichnen(); plotBinden();
+  plotZeichnen(); plotBinden(); nalpiBinden();
 
   $('siLob').oninput=function(){ s.lob=this.value; merken(); };
   $('siDruck').onclick=drucken;
@@ -730,20 +745,61 @@ function kopfBinden(){
   $('siGaeste').oninput=function(){ s.gaeste=this.value; merken(); };
 }
 
+/* Die feste Runde plus alle, die für diese Sitzung dazugekommen sind. */
+function teilnehmer(s){
+  return RUNDE.concat((s.extra||[]).map(function(e){
+    return { id:e.id, name:e.name, rolle:e.rolle||'dazugekommen', fest:false, dazu:true }; }));
+}
+
 function rundeZeichnen(){
   var s=sitz();
-  $('siRunde').innerHTML=RUNDE.map(function(p){
+  $('siRunde').innerHTML=teilnehmer(s).map(function(p){
     var st=s.teilnehmer[p.id]||'?';
     var kl=st==='da'?'da':(st==='fehlt'?'fehlt':'');
     return '<span class="si-pers '+kl+'" data-p="'+p.id+'" title="'+h(p.rolle)+'">'
-      +h(p.name.split(' ')[0])+' '+h(p.name.split(' ').slice(1).join(' '))+'</span>';
-  }).join('');
+      +h(p.name)+(p.dazu?'<b data-pweg="'+p.id+'" title="wieder entfernen"> ✕</b>':'')+'</span>';
+  }).join('')
+  +'<button class="si-kn mini" id="siPersonPlus">+ Person</button>';
+
   Array.prototype.forEach.call($('siRunde').querySelectorAll('.si-pers'),function(el){
-    el.onclick=function(){
-      var id=el.getAttribute('data-p'), st=s.teilnehmer[id]||'?';
+    el.onclick=function(ev){
+      var id=el.getAttribute('data-p');
+      if(ev.target && ev.target.getAttribute('data-pweg')){
+        s.extra=(s.extra||[]).filter(function(x){ return x.id!==id; });
+        delete s.teilnehmer[id];
+        merken(); rundeZeichnen(); return;
+      }
+      var st=s.teilnehmer[id]||'?';
       s.teilnehmer[id]= st==='da'?'fehlt':'da';
       merken(); rundeZeichnen();
     };
+  });
+  $('siPersonPlus').onclick=personDazu;
+}
+
+/* Jemanden für diese Sitzung dazunehmen – er erscheint danach als Knopf wie
+   die anderen und lässt sich auf da/fehlt stellen. Namensvorschläge kommen aus
+   der digitalen Anwesenheitsliste. */
+function personDazu(){
+  var s=sitz(); if(!s) return;
+  mannschaftLaden().then(function(m){
+    var namen=(m&&m.leute||[]).map(function(p){ return p.name; });
+    var wer=prompt('Wer kommt dazu?'+(namen.length?'\n\n(auf der Baustelle erfasst: '
+      +namen.slice(0,12).join(', ')+(namen.length>12?' …':'')+')':''), '');
+    if(!wer) return;
+    wer=wer.trim(); if(!wer) return;
+    var id='x'+neueId();
+    if(!s.extra) s.extra=[];
+    s.extra.push({ id:id, name:wer });
+    s.teilnehmer[id]='da';
+    merken(); rundeZeichnen();
+  }).catch(function(){
+    var wer=prompt('Wer kommt dazu?',''); if(!wer||!wer.trim()) return;
+    var id='x'+neueId();
+    if(!s.extra) s.extra=[];
+    s.extra.push({ id:id, name:wer.trim() });
+    s.teilnehmer[id]='da';
+    merken(); rundeZeichnen();
   });
 }
 
@@ -766,13 +822,37 @@ function redenZeichnen(){
    was in der Woche dazugekommen ist. Daten: uploads/tables/leistung.json
    (tools/build_leistung.py, läuft in der Nalpi-Automatik mit).
    ═══════════════════════════════════════════════════════════ */
-function leistungsBlock(s){
-  if(!LEIST || !LEIST.wochen || !LEIST.wochen.length)
-    return '<div class="si-hin">Leistungsdaten fehlen – einmal '
-      +'<code>NALPI_STAND_HOLEN.bat</code> laufen lassen '
-      +'(baut <code>uploads/tables/leistung.json</code>).</div>' + zahlenKlein(s);
+/* Die Nalpi-Übersicht selbst – als Bild. Bewusst KEIN Nachbau: eigene Zahlen
+   neben den Nalpi-Zahlen führen in der Sitzung nur zum Streit über die Zahl
+   statt über die Sache (Vorgabe Victor 27.08.2026). Screenshot rein, fertig. */
+function nalpiBlock(s){
+  var bilder=(s.bilder||[]).filter(function(b){ return b.box==='zahlen'; });
+  var vorrat=BILDER[s.datum]||{};
+  var o='<div class="si-nalpi">'
+    +'<div class="si-nalpi-kopf"><b>Nalpi-Übersicht</b>'
+    +'<button class="si-kn rot" id="siNalpiAdd">📷 Übersicht einlegen</button></div>';
+  if(!bilder.length){
+    o+='<div class="si-nalpi-leer">In Nalpi die Übersicht aufmachen, Screenshot machen '
+      +'(Windows: <b>Win + Umschalt + S</b>, dann speichern) und hier einlegen. '
+      +'Sie steht danach zuoberst im Protokoll.</div>';
+  } else {
+    o+='<div class="si-nalpi-bilder">'+bilder.map(function(b){
+      var quelle=(vorrat[b.id]||{}).b;
+      return '<figure>'+(quelle?'<img src="'+quelle+'" data-gross="'+b.id+'" alt="">'
+              :'<div class="si-nalpi-leer">lädt …</div>')
+        +'<button class="si-kn mini" data-bweg="'+b.id+'">✕ entfernen</button>'
+        +'<input data-btxt="'+b.id+'" value="'+h(b.text||'')+'" placeholder="Bemerkung zur Übersicht">'
+        +'</figure>'; }).join('')+'</div>';
+  }
+  return o+'</div>';
+}
 
-  var o='<div class="si-leist">'
+function leistungsBlock(s){
+  var kopf=nalpiBlock(s);
+  if(!LEIST || !LEIST.wochen || !LEIST.wochen.length)
+    return kopf + zahlenKlein(s);
+
+  var o=kopf+'<div class="si-leist">'
     +'<div class="si-leist-kopf">'
       +'<b>Wochenleistung</b>'
       +'<span class="si-um">'
@@ -890,6 +970,12 @@ function plotZeichnen(){
       return '<span><i style="background:'+se[2]+'"></i>'+h(se[1])+'</span>'; }).join('')
     + '<span class="si-legnote">blasse Balken = laufende Woche (noch nicht fertig) · '
     + 'Quelle: Nalpi ' + h(deDat(LEIST.stand||'')) + '</span>';
+}
+
+function nalpiBinden(){
+  var k=$('siNalpiAdd');
+  if(k) k.onclick=function(){ bildWaehlen('zahlen'); };
+  bilderBinden();   /* Vergroessern, Bemerkung, Entfernen */
 }
 
 function plotBinden(){
@@ -1059,7 +1145,7 @@ function bildAufnehmen(datei, boxId){
     BILDER[s.datum][id]={ b:dataUrl, box:boxId, ts:Date.now(), von:wer() };
     merken();
     bildSpiegeln(s.datum, id);
-    boxenZeichnen();
+    if(boxId==='zahlen') nalpiNeu(); else boxenZeichnen();
   }).catch(function(){
     alert('Das Bild konnte nicht gelesen werden. Bitte ein anderes wählen.');
   });
@@ -1070,6 +1156,17 @@ function bildSpiegeln(datum, id){
   fetch(DB+'/'+P_BILD+'/'+datum+'/'+id+'.json',{ method:'PUT', body:JSON.stringify(satz) })
     .then(function(r){ if(r.ok){ satz.fb=true; } })
     .catch(function(){ netzOk=false; fussZeichnen(); });
+}
+
+/* Nur den Nalpi-Block neu zeichnen - der Rest der Seite (und der Fokus) bleibt. */
+function nalpiNeu(){
+  var s=sitz(); if(!s) return;
+  var alt=document.querySelector('.si-nalpi');
+  if(!alt){ sitzungBlatt(); return; }
+  var huelle=document.createElement('div');
+  huelle.innerHTML=nalpiBlock(s);
+  alt.parentNode.replaceChild(huelle.firstChild, alt);
+  nalpiBinden();
 }
 
 function bilderZuBox(boxId){
@@ -1107,7 +1204,8 @@ function bilderBinden(){
       s.bilder=(s.bilder||[]).filter(function(x){ return x.id!==id; });
       if(BILDER[s.datum]) delete BILDER[s.datum][id];
       fetch(DB+'/'+P_BILD+'/'+s.datum+'/'+id+'.json',{method:'DELETE'}).catch(function(){});
-      merken(); boxenZeichnen();
+      merken();
+      if(el.closest && el.closest('.si-nalpi')) nalpiNeu(); else boxenZeichnen();
     };
   });
 }
@@ -1613,13 +1711,14 @@ function archivBlatt(){
     +d.map(function(k){
       var s=SITZUNGEN[k];
       var da=Object.keys(s.teilnehmer||{}).filter(function(p){ return s.teilnehmer[p]==='da'; }).length;
+      var ganz=RUNDE.length+((s.extra||[]).length);
       var pn=(s.pendenzen||[]).length;
       var st=s.status==='abgeschlossen'
         ? '<span class="si-amp" style="background:#E8F6EC;color:#1c6b34">abgeschlossen</span>'
         : '<span class="si-amp" style="background:#FFF4E0;color:#8a5a00">offen</span>';
       return '<tr><td><b>'+wochentag(k)+' '+deDat(k)+'</b><div style="font-size:11px;color:#63676d">'
           +h(s.ort||'')+'</div></td>'
-        +'<td>'+da+' von '+RUNDE.length+'</td><td>'+pn+'</td><td>'+st+'</td>'
+        +'<td>'+da+' von '+ganz+'</td><td>'+pn+'</td><td>'+st+'</td>'
         +'<td style="white-space:nowrap"><button class="si-kn mini" data-oe="'+k+'">öffnen</button> '
         +'<button class="si-kn mini" data-dr="'+k+'">🖨</button></td></tr>';
     }).join('')+'</tbody></table></div>'
@@ -1683,8 +1782,9 @@ function plotEinfrieren(s){
 }
 
 function protokollHtml(s){
-  var da=RUNDE.filter(function(p){ return (s.teilnehmer||{})[p.id]==='da'; });
-  var weg=RUNDE.filter(function(p){ return (s.teilnehmer||{})[p.id]==='fehlt'; });
+  var alleP=teilnehmer(s);
+  var da=alleP.filter(function(p){ return (s.teilnehmer||{})[p.id]==='da'; });
+  var weg=alleP.filter(function(p){ return (s.teilnehmer||{})[p.id]==='fehlt'; });
   var z=s.zahlen||LIVE||{};
   var reden=(s.reden||[]).filter(function(x){ return x && x.trim(); });
   var offenVor=offenePendenzenVor(s.datum);
@@ -1741,7 +1841,18 @@ function protokollHtml(s){
   if(reden.length) o+='<div class="reden"><b>Darüber müssen wir heute reden</b><ol>'
     +reden.map(function(t){ return '<li>'+h(t)+'</li>'; }).join('')+'</ol></div>';
 
-  /* Leistung zuerst – das ist die Seite, über die geredet wird. */
+  /* Die Nalpi-Übersicht zuerst – das ist die Seite, die aufgelegt wird. */
+  var vorratOben=BILDER[s.datum]||{};
+  var nalpiBilder=(s.bilder||[]).filter(function(b){ return b.box==='zahlen'; });
+  if(nalpiBilder.length){
+    o+='<h2>Übersicht Nalpi</h2>'+nalpiBilder.map(function(b){
+      var quelle=(vorratOben[b.id]||{}).b;
+      if(!quelle) return '';
+      return '<img class="plot" src="'+quelle+'" alt="Nalpi-Übersicht">'
+        +(b.text?'<div class="bu">'+h(b.text)+'</div>':''); }).join('');
+  }
+
+  /* Leistung – das Wochenbild aus unseren eigenen Daten. */
   if(s.plot){
     o+='<h2>Wochenleistung</h2>'
       +'<img class="plot" src="'+s.plot+'" alt="Wochenleistung">'
@@ -1793,7 +1904,8 @@ function protokollHtml(s){
   var vorrat=BILDER[s.datum]||{};
   ABLAUF.forEach(function(b){
     var d=(s.boxen||{})[b.id]||{};
-    var bilder=(s.bilder||[]).filter(function(x){ return x.box===b.id; });
+    /* Die Nalpi-Übersicht steht schon zuoberst – hier nicht ein zweites Mal. */
+    var bilder=(s.bilder||[]).filter(function(x){ return x.box===b.id && b.id!=='zahlen'; });
     var hatText=d.text && d.text.trim();
     if(!hatText && !bilder.length && b.id!=='personal') return;
     if(b.id==='personal' && !hatText && !bilder.length && !personalZeilen(s).length) return;
@@ -1890,7 +2002,7 @@ function alsTextKopieren(){
   var s=sitz(); if(!s) return;
   var t='Koordinationssitzung BF/PL – '+wochentag(s.datum)+' '+deDat(s.datum)+', '+s.zeit+' Uhr, '+s.ort+'\n';
   t+='Protokoll: '+s.protokoll+'\n\n';
-  var da=RUNDE.filter(function(p){ return (s.teilnehmer||{})[p.id]==='da'; })
+  var da=teilnehmer(s).filter(function(p){ return (s.teilnehmer||{})[p.id]==='da'; })
               .map(function(p){ return p.name; });
   t+='Anwesend: '+da.join(', ')+(s.gaeste?', '+s.gaeste:'')+'\n\n';
   var reden=(s.reden||[]).filter(function(x){ return x&&x.trim(); });
