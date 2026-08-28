@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v151';
+var CACHE = 'nalpsolar-v152';
 var PRECACHE = [
   './index.html',
   './protokoll.html',
@@ -8,8 +8,8 @@ var PRECACHE = [
   './sicherheit.html',
   './lieferscheine.html',
   './vormontage.html',
-  './gewinde.html',
-  './pfahlkopf.html',
+  // './gewinde.html',   abgeschaltet 28.08.2026 (Auftrag Victor)
+  // './pfahlkopf.html',   abgeschaltet 28.08.2026 (Auftrag Victor)
   './einzelfundamente.html',
   './uploads/einzelfundamente.json',
   './assets/js/leaflet/leaflet.js',
@@ -96,7 +96,7 @@ var PRECACHE = [
   './betonspur-3d.html',
   // Skizzenblock (17.08.2026): Zeichnen muss auch ohne Empfang gehen; der Stand
   // liegt im localStorage, Speichern auf dem Server braucht dann Netz.
-  './skizze.html',
+  // './skizze.html',   abgeschaltet 28.08.2026 (Auftrag Victor)
   // Pizza-Truck 21.08.2026: Speisekarte auch am Berg ohne Empfang lesbar
   // (zum Abschicken braucht es dann trotzdem Netz). Nach dem Termin raus.
   './pizza.html',
