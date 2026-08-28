@@ -4,7 +4,7 @@ build_baustand.py – erzeugt die beiden Datendateien fuer den 3D-Baustand:
 
   uploads/tables/modultische_all.json   [id,E,N,Z,az,len,typ] aller Tische
       Quelle: Dropbox (READ ONLY!) – Belegung-Excels der 4 Planungszonen:
-      PZ2025 A9 / PZ1 A3 / PZ2 A2 / PZ3 A1 (Spalten zentrum_*, tisch_ausrichtung,
+      je Planungszone die HOECHSTE Revision im Ordner (Spalten zentrum_*, tisch_ausrichtung,
       tisch_laenge, tisch_typ). Fehlende IDs werden aus den bestehenden
       uploads/tables/modultische(.status).json ergaenzt (identisches Schema,
       Kalibrierung 09.07.2026: Abweichung 0.000).
@@ -21,26 +21,70 @@ Aufruf (aus Website_NalpSolar):
 Bei neuem Nalpi-Export einfach erneut laufen lassen (nur baustand.json aendert
 sich; die Koordinaten werden nur neu gebaut, wenn sich die Excels aendern).
 """
-import csv, io, json, os, sys
+import csv, glob, io, json, os, re, sys
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DROPBOX = (r"C:\Users\MaltVic\STRABAG SE Dropbox\CH-MX-EE-Projekte\EE-RK-240 AUSF"
            r"\EE-RKDO_2400024369_NalpSolar\07 Plaene-Gutachten-Statik"
            r"\01 Plane Ablage\Ausführungspläne\PV-Perimeter\2026")
-BELEGUNG = {
-    'PZ2025': DROPBOX + r"\PZ2025\NalpSolar_51_LI_0301_A9_Belegung-2025_260710.xlsx",
-    'PZ1':    DROPBOX + r"\PZ1\NalpSolar_51_LI_0305_A3_Belegung-2026-PZ1_260710.xlsx",
-    'PZ2':    DROPBOX + r"\PZ2\NalpSolar_51_LI_0307_A2_Belegung-26plus-PZ2_260520.xlsx",
-    'PZ3':    DROPBOX + r"\PZ3\NalpSolar_51_LI_0309_A1_Belegung-2027-PZ3_260612.xlsx",
-    # Fuellquelle NUR fuer IDs, die oben fehlen (Serie 2025, gebaut Herbst 2025;
-    # steht in keiner der 4 aktuellen Listen mehr):
-    'ALT2025': os.path.dirname(DROPBOX) + r"\alt\NalpSolar_51_LI_0301_A5_Daten-2025_Belegung_250603.xlsx",
+
+# Die Revision im Dateinamen wechselt (ILF schickt A3 -> A4 -> ...), und die
+# alte Datei wandert dabei in den Unterordner "Alt". Ein fest verdrahteter
+# Dateiname liess den Lauf am 27.08.2026 zwei Tage lang stillschweigend
+# abstuerzen – der 3D-Baustand blieb auf dem 26.08. stehen. Darum wird jetzt je
+# Ordner die HOECHSTE Revision gesucht (nur im Ordner selbst, nie in "Alt"),
+# und ein Revisionswechsel wird gemeldet.
+BELEGUNG_MUSTER = {
+    'PZ2025': (r"\PZ2025", "NalpSolar_51_LI_0301_A*_Belegung-2025_*.xlsx"),
+    'PZ1':    (r"\PZ1",    "NalpSolar_51_LI_0305_A*_Belegung-2026-PZ1_*.xlsx"),
+    'PZ2':    (r"\PZ2",    "NalpSolar_51_LI_0307_A*_Belegung-26plus-PZ2_*.xlsx"),
+    'PZ3':    (r"\PZ3",    "NalpSolar_51_LI_0309_A*_Belegung-2027-PZ3_*.xlsx"),
 }
+# Fuellquelle NUR fuer IDs, die oben fehlen (Serie 2025, gebaut Herbst 2025;
+# steht in keiner der 4 aktuellen Listen mehr):
+ALT2025 = os.path.dirname(DROPBOX) + r"\alt\NalpSolar_51_LI_0301_A5_Daten-2025_Belegung_250603.xlsx"
+# Merkzettel ausserhalb des Web-Repos: welche Revision galt beim letzten Lauf
+MERK = os.path.join(os.path.dirname(BASE), 'Tools', 'belegung_revisionen.json')
+
+
+def revision(pfad):
+    """'..._A4_...' -> 4 (fuer den Vergleich der Revisionen)."""
+    m = re.search(r'_A(\d+)_', os.path.basename(pfad))
+    return int(m.group(1)) if m else -1
+
+
+def belegung_dateien():
+    """{PZ: Pfad} der jeweils hoechsten Revision + Hinweis bei Wechsel."""
+    try:
+        frueher = json.load(io.open(MERK, encoding='utf-8'))
+    except Exception:
+        frueher = {}
+    gewaehlt, jetzt = {}, {}
+    for pz, (ordner, muster) in BELEGUNG_MUSTER.items():
+        treffer = glob.glob(os.path.join(DROPBOX + ordner, muster))
+        if not treffer:
+            sys.exit('KEINE Belegungsliste gefunden fuer %s: %s\\%s'
+                     % (pz, DROPBOX + ordner, muster))
+        treffer.sort(key=lambda p: (revision(p), os.path.getmtime(p)))
+        pfad = treffer[-1]
+        gewaehlt[pz] = pfad
+        jetzt[pz] = os.path.basename(pfad)
+        alt = frueher.get(pz)
+        if alt and alt != jetzt[pz]:
+            print('  ! %s: NEUE Revision – vorher %s, jetzt %s' % (pz, alt, jetzt[pz]))
+    gewaehlt['ALT2025'] = ALT2025
+    try:
+        os.makedirs(os.path.dirname(MERK), exist_ok=True)
+        json.dump(jetzt, io.open(MERK, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+    except Exception as e:
+        print('  ! Merkzettel nicht geschrieben: %s' % e)
+    return gewaehlt
+
 
 def lese_belegung():
     import openpyxl
     alle = {}
-    for pz, pfad in BELEGUNG.items():
+    for pz, pfad in belegung_dateien().items():
         wb = openpyxl.load_workbook(pfad, read_only=True, data_only=True)
         ws = wb[wb.sheetnames[0]]
         rows = ws.iter_rows(values_only=True)
@@ -81,7 +125,7 @@ def lese_belegung():
             alle[tid] = rec
             n += 1
         wb.close()
-        print('  %s: %d Tische' % (pz, n))
+        print('  %s: %d Tische  (%s)' % (pz, n, os.path.basename(pfad)))
     return alle
 
 def ergaenze_bestehende(alle):

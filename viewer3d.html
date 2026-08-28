@@ -501,6 +501,7 @@ body.ar-mode { background:transparent!important; }
   <button class="tb-btn active" id="btnSat"     onclick="toggleSat()">🛰 Satellit</button>
   <button class="tb-btn active" id="btnLeit"    onclick="toggleLayer('leitungen')">🟩 Werkleitungen PZ1–PZ3</button>
   <button class="tb-btn active" id="btnKabel"   onclick="toggleKabelblock()">🔵 Kabelblock C1–C5</button>
+  <button class="tb-btn" id="btnBohr"           onclick="toggleBohr()">⛏ Bohrpunkte – grün = gebohrt</button>
   <button class="tb-btn active" id="btnErdung"  onclick="toggleLayer('erdung')">🟠 Erdung</button>
   <button class="tb-btn active" id="btnTische"  onclick="toggleTische()">🟨 Modultische</button>
   <button class="tb-btn" id="btnAlp" onclick="toggleAlpstrasse()">🛣 Alpstrasse + Schacht D1</button>
@@ -1765,7 +1766,11 @@ window.togglePkModelle=function(){
    Nalpi-Bohrpunkt-Export). Zeigt den Stand auch dort, wo noch kein Tisch
    steht – 4 Pfähle je Tisch, Höhe aus IST_H/SOLL_H. */
 var bohrGroup=null, bohrOn=false, bohrDaten=null, bohrLaedt=false;
-var BOHR_FARBE=[0x9aa3b0, 0xf2c200, 0xe07b00, 0x37a2e0, 0x2ea44f];
+// Farbfolge nach Victors Vorgabe 28.08.2026: sobald ein Punkt GEBOHRT ist,
+// wird er grün; die weiteren Stufen sind dunklere Grüntöne, offen bleibt grau
+// (geplant) und gelb (abgesteckt). Index = Status aus tools/build_bohrstand.py
+// (0 Geplant · 1 Abgesteckt · 2 Gebohrt · 3 Pfähle fixiert · 4 Injiziert).
+var BOHR_FARBE=[0x9aa3b0, 0xf2c200, 0xa8e05f, 0x1faa4b, 0x0a5c2c];
 var BOHR_HOCH =[0.35,     1.15,     1.00,     1.00,     1.00];
 
 async function loadBohrpunkte(){
@@ -1798,7 +1803,7 @@ async function loadBohrpunkte(){
     if(!list.length) continue;
     var hoch=BOHR_HOCH[st];
     var mat=new THREE.MeshPhongMaterial({
-      color:BOHR_FARBE[st], emissive:new THREE.Color(BOHR_FARBE[st]).multiplyScalar(0.22),
+      color:BOHR_FARBE[st], emissive:new THREE.Color(BOHR_FARBE[st]).multiplyScalar(0.10),
       shininess:35, transparent:st===0, opacity:st===0?0.55:1
     });
     var im=new THREE.InstancedMesh(geom, mat, list.length);
@@ -6159,6 +6164,9 @@ async function init(){
       // viewer3d.html#alpstrasse = Strassenmodell gleich einschalten
       if(/alpstrasse|alpstrase|d1/i.test(location.hash))
         setTimeout(function(){ try{ toggleAlpstrasse(); }catch(e){} }, 600);
+      // viewer3d.html#bohr = Bohrpunkte gleich einschalten
+      if(/bohr|pfahl/i.test(location.hash))
+        setTimeout(function(){ try{ toggleBohr(); }catch(e){} }, 500);
     }catch(e){ console.warn('hash',e); }
     try{ menziPlan(); standorteTick(); setInterval(standorteTick,60000); }catch(e){ console.warn('menzi',e); }
     // Umgebung: Vegetation, Kletterer, Pneukran-Strasse, Wetter
