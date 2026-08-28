@@ -1603,7 +1603,8 @@ function tafelBereiche(){
   var l=ABLAUF.filter(function(b){ return BER_AUS.indexOf(b.id)<0; })
     .map(function(b){
       var eig=(TEAMS.bereiche||{})[b.id]||{};
-      return { id:b.id, name:eig.name||b.titel, farbe:BER_FARBE[b.id]||'#63676d',
+      return { id:b.id, name:eig.name||b.titel,
+               farbe:eig.farbe||BER_FARBE[b.id]||'#63676d',
                sort:(eig.sort==null?0:eig.sort), ablauf:true };
     });
   var eigene=TEAMS.bereiche||{};
@@ -1630,11 +1631,19 @@ function tafelPersonen(){
   var eig=TEAMS.personen||{};
   for(var k2 in eig){
     if(!eig[k2] || eig[k2].weg) continue;
-    m[k2]={ id:k2, name:eig[k2].name||k2, firma:eig[k2].firma||'', quelle:'hand' };
+    m[k2]={ id:k2, name:eig[k2].name||k2, firma:eig[k2].firma||'', quelle:'hand',
+            sort:eig[k2].sort };
   }
   var l=[];
   for(var k3 in m) l.push(m[k3]);
-  l.sort(function(a,b){ return a.name.localeCompare(b.name,'de'); });
+  /* Wer eine Reihenfolge mitbringt, behaelt sie – die Einteilung wurde in der
+     Sitzung in einer bestimmten Reihenfolge aufgeschrieben und soll auf dem
+     Aushang genau so stehen (Vorgabe Victor 28.08.2026). Alles ohne Nummer
+     (z. B. Namen aus der Anwesenheitsliste) kommt alphabetisch dahinter. */
+  l.sort(function(a,b){
+    var sa=(a.sort==null?99999:a.sort), sb=(b.sort==null?99999:b.sort);
+    return (sa-sb) || a.name.localeCompare(b.name,'de');
+  });
   return l;
 }
 
@@ -1845,7 +1854,12 @@ function aushangHtml(datum){
   return '<div class="dk"><h1>Personaleinteilung NalpSolar</h1>'
       +'<div class="w">Stand '+h(wochentag(d)+' '+deDat(d))+' · '+v.anzahl+' Personen · '
       +'besprochen in der Koordinationssitzung BF/PL</div></div>'
-    +'<div class="dg">'+v.bereiche.map(function(b){
+    /* Leere Bereiche kommen nicht aufs Blatt – ein Kasten «niemand eingeteilt»
+       am Anschlagbrett stiftet nur Verwirrung (28.08.2026). Am Bildschirm
+       bleiben sie stehen, dort zieht man ja jemanden hinein. */
+    +'<div class="dg">'+v.bereiche.filter(function(b){
+      return (v.nach[b.id]||[]).length;
+    }).map(function(b){
       var l=v.nach[b.id]||[];
       return '<div class="db" style="border-top-color:'+b.farbe+'">'
         +'<h2 style="color:'+b.farbe+'"><span>'+h(b.name)+'</span><span>'+l.length+'</span></h2>'
