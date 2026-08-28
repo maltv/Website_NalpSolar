@@ -1210,7 +1210,178 @@ function kbNameFuer(st){
           zeilen:['Belegung <b>'+(ba.typ||'–')+'</b>']};
 }
 
+/* ═══════════════════════════════════════════════════════════
+   TEMPO: ID-SCHILDER UND BEINE NUR IN DER NÄHE
+   (Auftrag Victor 27.08.2026 «der 3D-Viewer soll schneller und
+   flüssiger laufen»)
+
+   Gemessen vorher: 1048 Tische ergaben 2333 gezeichnete Objekte und
+   1048 eigene Canvas-Texturen (~68 MB Grafikspeicher) – bei nur 65'000
+   Dreiecken. Nicht die Geometrie bremste, sondern die Anzahl der
+   Zeichenaufrufe und die Texturen.
+
+   Deshalb: Schilder und Beine werden nach Abstand zur Kamera zu- und
+   weggeschaltet, und zwar über `object.layers` und NICHT über `visible`
+   – sonst käme sich das mit Bauablauf, AR und den Spielen in die Quere,
+   die ihrerseits `visible` setzen. Die Kamera zeichnet nur Ebene 0.
+   Die Textur eines Schildes entsteht erst, wenn es wirklich zu sehen ist.
+═══════════════════════════════════════════════════════════ */
+var dprMax=2, dprJetzt=1, tempoSumme=0, tempoN=0, tempoWarte=0;
+
+/* Auflösung dem Gerät nachführen: läuft es zäh, wird mit weniger Pixeln
+   gerechnet, läuft es rund, wieder mit mehr. Einmal pro Sekunde, mit
+   Abstand zwischen den Stufen, damit nichts flackert. */
+function tempoRegeln(){
+  if(tempoN<20 || !renderer) return;
+  var ms=(tempoSumme/tempoN)*1000;
+  tempoSumme=0; tempoN=0;
+  if(arActive || tempoWarte>0){ tempoWarte--; return; }
+  var neu=dprJetzt;
+  if(ms>26 && dprJetzt>0.75) neu=Math.max(0.75, dprJetzt-0.25);
+  else if(ms<14 && dprJetzt<dprMax) neu=Math.min(dprMax, dprJetzt+0.25);
+  if(neu!==dprJetzt){
+    dprJetzt=neu;
+    renderer.setPixelRatio(dprJetzt);
+    resize();
+    tempoWarte=2;
+  }
+}
+
+var LOD_AN=0, LOD_WEG=2;          // Ebene 2 = von der Kamera nicht gezeichnet
+var LOD_SCHILD=170, LOD_BEIN=280; // Meter
+var TEX_MAX=240;                  // gleichzeitig gehaltene Schild-Texturen (~16 MB)
+var TEX_PRO_LAUF=12;              // pro Durchgang neu gezeichnet (kein Ruckler)
+var texAktiv=[];                  // Schilder, die gerade eine Textur haben
+
+/* Canvas-Textur für ein ID-Schild. Gleiche Optik wie vorher, nur eben
+   erst auf Zuruf. `amBoden` = Schild auf dem Footprint eines noch nicht
+   gestellten Tisches (heller Text), sonst weiss mit dunklem Rand. */
+function tischSchildTex(txt, amBoden){
+  var cv=document.createElement('canvas'); cv.width=256; cv.height=64;
+  var c2=cv.getContext('2d');
+  var fs=amBoden?46:58; c2.font='700 '+fs+'px Arial';
+  var maxB=amBoden?200:238;
+  while(c2.measureText(txt).width>maxB && fs>18){ fs-=4; c2.font='700 '+fs+'px Arial'; }
+  c2.textAlign='center'; c2.textBaseline='middle';
+  if(!amBoden){ c2.lineWidth=8; c2.strokeStyle='rgba(0,0,0,.6)'; c2.strokeText(txt,128,34); }
+  c2.fillStyle=amBoden?'rgba(235,242,252,.85)':'#ffffff';
+  c2.fillText(txt,128,34);
+  var tex=new THREE.CanvasTexture(cv);
+  tex.generateMipmaps=false; tex.minFilter=THREE.LinearFilter;
+  return tex;
+}
+
+/* Kasten der Footprints – EINE Textur für alle noch zu bauenden Tische. */
+function footprintTex(){
+  var cv=document.createElement('canvas'); cv.width=128; cv.height=32;
+  var c2=cv.getContext('2d');
+  c2.fillStyle='rgba(8,12,20,.52)'; c2.fillRect(0,0,128,32);
+  c2.strokeStyle='rgba(220,230,245,.35)'; c2.lineWidth=2; c2.strokeRect(1,1,126,30);
+  var tex=new THREE.CanvasTexture(cv);
+  tex.generateMipmaps=false; tex.minFilter=THREE.LinearFilter;
+  return tex;
+}
+
+function schildTexHolen(m){
+  if(m.material.map) return true;
+  m.material.map=tischSchildTex(m.userData.txt, m.userData.amBoden);
+  m.material.needsUpdate=true;
+  texAktiv.push(m);
+  return true;
+}
+function schildTexWeg(m){
+  if(!m.material.map) return;
+  m.material.map.dispose();
+  m.material.map=null;
+  m.material.needsUpdate=true;
+}
+
+var _fpM=new THREE.Matrix4(), _fpNull=new THREE.Vector3(0,0,0), _fpEins=new THREE.Vector3(1,1,1);
+
+/* Läuft im 5-Frame-Takt zusammen mit den Labels. */
+function updateTischeLOD(){
+  if(!tischeItems || !tischeItems.length) return;
+  var camP=camera.position;
+  var dSchild=LOD_SCHILD*LOD_SCHILD, dBein=LOD_BEIN*LOD_BEIN;
+  var wartend=[], fpDirty=false;
+  for(var i=0;i<tischeItems.length;i++){
+    var it=tischeItems[i];
+    var dx=it.x-camP.x, dy=(it.y||0)-camP.y, dz=it.z-camP.z;
+    var d2=dx*dx+dy*dy+dz*dz;
+    it.d2=d2;
+    var nahSchild=d2<dSchild, nahBein=d2<dBein;
+
+    for(var j=0;j<it.legs.length;j++){
+      var o=it.legs[j];
+      var an=o.userData.istSchild ? nahSchild : nahBein;
+      if(an && o.userData.istSchild && !o.material.map){
+        wartend.push({o:o, d2:d2});     // Textur später, nächste Tische zuerst
+        an=false;
+      }
+      if(an){ if(o.layers.mask!==1) o.layers.set(LOD_AN); }
+      else   { if(o.layers.mask===1) o.layers.set(LOD_WEG); }
+    }
+
+    // Footprint: Kasten kommt aus dem InstancedMesh, die ID als eigenes Schild
+    if(it.bodenSchild){
+      var zeig=nahSchild && it.shadow && it.shadow.visible;
+      if(zeig && !it.bodenSchild.material.map){
+        wartend.push({o:it.bodenSchild, d2:d2});
+        zeig=false;
+      }
+      if(zeig){ if(it.bodenSchild.layers.mask!==1) it.bodenSchild.layers.set(LOD_AN); }
+      else if(it.bodenSchild.layers.mask===1) it.bodenSchild.layers.set(LOD_WEG);
+    }
+
+    // Sichtbarkeit der Footprints an das InstancedMesh weiterreichen
+    if(it.shadow && it.shadow.visible!==it.shadow.userData.war){
+      it.shadow.userData.war=it.shadow.visible;
+      fpDirty=true;
+    }
+  }
+  if(fpDirty) footprintsSchreiben();
+
+  // Die Schilder, die am nächsten sind, bekommen ihre Textur zuerst – sonst
+  // entscheidet die Reihenfolge in der Liste, und ausgerechnet der Tisch vor
+  // der Nase bleibt ohne Nummer.
+  if(wartend.length){
+    if(wartend.length>TEX_PRO_LAUF) wartend.sort(function(a,b){ return a.d2-b.d2; });
+    for(var n=0;n<Math.min(TEX_PRO_LAUF,wartend.length);n++){
+      schildTexHolen(wartend[n].o);
+      wartend[n].o.layers.set(LOD_AN);
+    }
+  }
+
+  // Deckel für den Grafikspeicher: die entferntesten Schilder wieder freigeben,
+  // gerade sichtbare bleiben in jedem Fall.
+  if(texAktiv.length>TEX_MAX){
+    texAktiv.sort(function(a,b){
+      return ((b.userData.it&&b.userData.it.d2)||0)-((a.userData.it&&a.userData.it.d2)||0); });
+    var weg=texAktiv.length-TEX_MAX, rest=[];
+    for(var k=0;k<texAktiv.length;k++){
+      var w=texAktiv[k];
+      if(weg>0 && w.layers.mask!==1){ schildTexWeg(w); weg--; }
+      else rest.push(w);
+    }
+    texAktiv=rest;
+  }
+}
+
+/* Matrizen der Footprint-Instanzen aus den Trägerobjekten schreiben. */
+function footprintsSchreiben(){
+  if(!fpMesh) return;
+  var items=fpMesh.userData.items;
+  for(var i=0;i<items.length;i++){
+    var it=items[i], s=it && it.shadow;
+    if(s && s.visible) _fpM.compose(s.position, s.quaternion, s.scale);
+    else _fpM.compose(_fpNull, s?s.quaternion:new THREE.Quaternion(), _fpNull);
+    fpMesh.setMatrixAt(i,_fpM);
+  }
+  fpMesh.instanceMatrix.needsUpdate=true;
+}
+
 /* ── Modultische ─────────────────────────────────────────── */
+var fpMesh=null;
 async function loadTische(){
   txt('Lade Modultische …');
   // Volldatensatz: alle Tische aus den ILF-Belegungslisten (PZ2025 A9 / PZ1 A3 /
@@ -1251,9 +1422,13 @@ async function loadTische(){
   var geomB=new THREE.BoxGeometry(12.394,0.25,3);
 
   // EIN Material für alle Tische mit Modulträger (einfarbig, Wunsch 23.07.)
+  // side:FrontSide ist Absicht: three r147 zeichnet ein transparentes Material
+  // mit DoubleSide in ZWEI Durchgängen – das kostete bei 415 sichtbaren
+  // Tischen 830 statt 415 Zeichenaufrufe. Die Tischfläche ist ein geschlossener
+  // Quader (0.25 m dick), man sieht ohnehin immer nur die Aussenseite.
   var panelMat=new THREE.MeshPhongMaterial({
     color:0x2266cc, emissive:0x001144, specular:0x5599ff, shininess:80,
-    transparent:true, opacity:0.50, side:THREE.DoubleSide, depthWrite:true
+    transparent:true, opacity:0.72, side:THREE.FrontSide, depthWrite:true
   });
   var legMat=new THREE.MeshPhongMaterial({color:0x777777, emissive:0x222222, shininess:30});
   var legGeom=new THREE.CylinderGeometry(0.07,0.07,1,6);  // unit-length, scaled per leg
@@ -1261,49 +1436,27 @@ async function loadTische(){
   // Leere Primärkonstruktion (noch kein Modulträger): offenes Stahlgerüst –
   // fast durchsichtige Füllung + zwei sichtbare Längsträger
   var pkFillMat=new THREE.MeshPhongMaterial({
-    color:0x3b6fd4, emissive:0x0a1e4a, transparent:true, opacity:0.14,
-    side:THREE.DoubleSide, depthWrite:false
+    color:0x3b6fd4, emissive:0x0a1e4a, transparent:true, opacity:0.26,
+    side:THREE.FrontSide, depthWrite:false        // s. panelMat: sonst zwei Durchgänge
   });
   var railMat=new THREE.MeshPhongMaterial({color:0x3b6fd4, emissive:0x11265c, shininess:60});
 
   // ID direkt auf die Modulträger-Fläche geschrieben (statt schwebendem Label)
   var qPlate=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),-Math.PI/2);
   qPlate.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),Math.PI));
-  function idCanvasTex(idTxt, fg, stroke){
-    var cv=document.createElement('canvas'); cv.width=256; cv.height=64;
-    var c2=cv.getContext('2d');
-    var fs=58; c2.font='700 '+fs+'px Arial';
-    while(c2.measureText(idTxt).width>238 && fs>20){ fs-=4; c2.font='700 '+fs+'px Arial'; }
-    c2.textAlign='center'; c2.textBaseline='middle';
-    if(stroke){ c2.lineWidth=8; c2.strokeStyle=stroke; c2.strokeText(idTxt,128,34); }
-    c2.fillStyle=fg||'#ffffff'; c2.fillText(idTxt,128,34);
-    var tex=new THREE.CanvasTexture(cv);
-    tex.generateMipmaps=false; tex.minFilter=THREE.LinearFilter;   // spart GPU-Speicher (1000+ Texturen)
-    return tex;
-  }
-  // fast flächenfüllende ID auf dem Modulträger
-  function idPlate(idTxt,len){
-    var m=new THREE.Mesh(new THREE.PlaneGeometry(Math.max(4.6,len*0.8),2.5),
-      new THREE.MeshBasicMaterial({map:idCanvasTex(idTxt,'#ffffff','rgba(0,0,0,.6)'),
-        transparent:true, depthWrite:false, side:THREE.DoubleSide}));
-    m.renderOrder=7;
-    return m;
-  }
-  // "zu bauender" Tisch: dunkler Footprint am Boden, ID eingebrannt
-  function shadowPlate(idTxt,len){
-    var cv=document.createElement('canvas'); cv.width=256; cv.height=64;
-    var c2=cv.getContext('2d');
-    c2.fillStyle='rgba(8,12,20,.52)'; c2.fillRect(0,0,256,64);
-    c2.strokeStyle='rgba(220,230,245,.35)'; c2.lineWidth=3; c2.strokeRect(2,2,252,60);
-    var fs=46; c2.font='700 '+fs+'px Arial';
-    while(c2.measureText(idTxt).width>200 && fs>18){ fs-=4; c2.font='700 '+fs+'px Arial'; }
-    c2.textAlign='center'; c2.textBaseline='middle';
-    c2.fillStyle='rgba(235,242,252,.8)'; c2.fillText(idTxt,128,34);
-    var tex=new THREE.CanvasTexture(cv);
-    tex.generateMipmaps=false; tex.minFilter=THREE.LinearFilter;
-    var m=new THREE.Mesh(new THREE.PlaneGeometry(len,3),
-      new THREE.MeshBasicMaterial({map:tex, transparent:true, depthWrite:false, side:THREE.DoubleSide}));
-    m.renderOrder=6;
+  // ID-Schild: Mesh ohne Textur. Die Textur zeichnet updateTischeLOD(), sobald
+  // der Tisch nah genug ist – vorher liegt das Schild auf der Ebene LOD_WEG
+  // und kostet nichts. `amBoden` = Schild auf dem Footprint eines noch nicht
+  // gestellten Tisches.
+  function idPlate(idTxt,len,amBoden){
+    var m=new THREE.Mesh(
+      new THREE.PlaneGeometry(amBoden?len:Math.max(4.6,len*0.8), amBoden?3:2.5),
+      new THREE.MeshBasicMaterial({transparent:true, depthWrite:false, side:THREE.FrontSide}));
+    m.renderOrder=amBoden?7:7;
+    m.userData.txt=String(idTxt);
+    m.userData.amBoden=!!amBoden;
+    m.userData.istSchild=true;
+    m.layers.set(LOD_WEG);
     return m;
   }
 
@@ -1312,6 +1465,8 @@ async function loadTische(){
   tischeLbls=[];
   tischeItems=[];
   tischeIndex={};
+  var fpTraeger=[], fpItems=[];   // Footprints der noch nicht gestellten Tische
+  texAktiv=[];
 
   // Rotation: Ry(-az) * Rx(-60°)
   // Panel normal faces az-direction (tilted 60° from horizontal)
@@ -1397,15 +1552,26 @@ async function loadTische(){
       tischeGroup.add(plate); legsForItem.push(plate);
     }
 
-    // Zu bauender Tisch: Schatten-Footprint am Boden mit eingebrannter ID
-    var shadow=null;
+    // Zu bauender Tisch: Footprint am Boden. Der Kasten steckt für ALLE in
+    // einem einzigen InstancedMesh (vorher 633 Einzelmeshes mit je eigener
+    // Textur); `shadow` ist nur noch der Träger für Lage und Sichtbarkeit,
+    // die ID kommt als eigenes Schild dazu, sobald man nah dran ist.
+    var shadow=null, bodenSchild=null;
     if(!bsVis){
-      shadow=shadowPlate(String(id),len);
       var gy=terraY(px,pz); if(gy===null||gy===undefined) gy=Z-OZ;
+      shadow=new THREE.Object3D();
       shadow.position.set(px,gy+0.35,pz);
       shadow.quaternion.setFromAxisAngle(new THREE.Vector3(0,1,0),-azR);
       shadow.quaternion.multiply(qPlate);
-      tischeGroup.add(shadow);
+      shadow.scale.set(len,3,1);
+      shadow.userData.war=true;
+      shadow.userData.fpIndex=fpTraeger.length;
+      fpTraeger.push(shadow);
+
+      bodenSchild=idPlate(String(id),len,true);
+      bodenSchild.position.set(px,gy+0.38,pz);
+      bodenSchild.quaternion.copy(shadow.quaternion);
+      tischeGroup.add(bodenSchild);
     }
 
     // Sichtbarkeit gemäss Baustand
@@ -1415,7 +1581,8 @@ async function loadTische(){
     }
 
     // Index for ID search (camera position = table centre)
-    var item={ id:String(id).trim(), mesh:mesh, legs:legsForItem, lbl:null, shadow:shadow, x:px, z:pz,
+    var item={ id:String(id).trim(), mesh:mesh, legs:legsForItem, lbl:null, shadow:shadow,
+               bodenSchild:bodenSchild, x:px, z:pz,
                bs:bs?bs.s:null, bsVis:bsVis,
                // fuer die echten PK-Modelle (IFC): Hoehe, Azimut, Typbuchstabe
                y:py, az:azR, typ:(t.length>6 && t[6]) ? String(t[6]).charAt(0).toUpperCase() : '' };
@@ -1423,11 +1590,34 @@ async function loadTische(){
     tischeItems.push(item);
     // fürs Antippen (Verbindungslinien zu erfassten Stahlteilen)
     mesh.userData.tischItem=item;
-    legsForItem.forEach(function(l){ l.userData.tischItem=item; });
-    if(shadow) shadow.userData.tischItem=item;
+    legsForItem.forEach(function(l){ l.userData.tischItem=item; l.userData.it=item; });
+    if(bodenSchild){ bodenSchild.userData.tischItem=item; bodenSchild.userData.it=item; }
+    if(shadow){ shadow.userData.tischItem=item; fpItems[shadow.userData.fpIndex]=item; }
   });
 
+  // Footprints: EIN InstancedMesh statt 633 Einzelmeshes mit je eigener Textur
+  fpMesh=null;
+  if(fpTraeger.length){
+    fpMesh=new THREE.InstancedMesh(
+      new THREE.PlaneGeometry(1,1),
+      new THREE.MeshBasicMaterial({map:footprintTex(), transparent:true,
+                                   depthWrite:false, side:THREE.DoubleSide}),
+      fpTraeger.length);
+    fpMesh.renderOrder=6;
+    fpMesh.frustumCulled=false;          // deckt die ganze Anlage ab
+    fpMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    fpMesh.userData.items=fpItems;
+    tischeGroup.add(fpMesh);
+    footprintsSchreiben();
+  }
+
   scene.add(tischeGroup);
+  // Die Tische stehen fest. Ohne diese Zeile rechnet three.js jedes Bild die
+  // Weltmatrix von rund 3600 Objekten neu; bewegt wird nur im Bauablauf,
+  // der updateMatrixWorld dann selbst anstösst.
+  tischeGroup.updateMatrixWorld(true);
+  tischeGroup.matrixWorldAutoUpdate=false;
+  updateTischeLOD();
   var nPk=tischeItems.filter(function(it){return it.bs==='pk';}).length;
   var nMt=tischeItems.filter(function(it){return it.bs==='mt';}).length;
   console.info('Modultische: '+data.length+' geladen'+(baustand
@@ -4732,10 +4922,12 @@ window.baSetSpeed=function(){
 };
 
 var _baLastHud='';
+var baBewegt=false;
 function updateBauablauf(dt){
   if(!baOn) return;
   if(gamePlaying){ baExit(); return; }
   baGroup.visible=!arActive;
+  baBewegt=false;
   if(baPlaying){
     var dow=Math.floor(baDay)%7;                     // Start = Montag
     baDay+=dt*baSpeed*(dow>=5?3:1)/BA_DAYSEC;        // Wochenende schneller
@@ -4767,6 +4959,7 @@ function updateBauablauf(dt){
           var e=1-Math.pow(1-it.baRise,3);
           it.mesh.position.y=it.baOrigY-14*(1-e);
           if(it.baRise>=1) it.legs.forEach(function(l){ l.visible=true; });
+          baBewegt=true;
         }
       });
     }
@@ -4788,6 +4981,9 @@ function updateBauablauf(dt){
         }).join('')
       : '<div class="ba-none">'+((di%7)>=5?'Wochenende – keine Arbeiten geplant':'Keine Arbeiten geplant')+'</div>';
   }
+  // Der Bauablauf ist die einzige Stelle, die Tische bewegt. Weil die Gruppe
+  // ihre Weltmatrizen sonst nicht mehr selber nachführt (Tempo), hier von Hand.
+  if(baBewegt && tischeGroup) tischeGroup.updateMatrixWorld(true);
 }
 
 /* ── Stahlteile: erfasste Teile als echte 3D-Objekte (nalp-stahlteile.js) ──
@@ -5028,6 +5224,13 @@ function pickTischLink(cx,cy){
   var it=null;
   for(var i=0;i<hits.length;i++){
     var o=hits[i].object;
+    // Footprints liegen alle in EINEM InstancedMesh – dort sagt die
+    // Instanznummer, welcher Tisch getroffen wurde.
+    if(o.isInstancedMesh && o.userData.items){
+      var tr=o.userData.items[hits[i].instanceId];
+      if(tr && tr.shadow && tr.shadow.visible){ it=tr; break; }
+      continue;
+    }
     if(o.visible && o.userData && o.userData.tischItem){ it=o.userData.tischItem; break; }
   }
   if(!it) return false;
@@ -5684,6 +5887,7 @@ function animate(){
   // General frame delta (workers, marmot)
   var _fnow=performance.now();
   var gdt=_lastFrameT?Math.min(0.05,(_fnow-_lastFrameT)/1000):0.016;
+  if(_lastFrameT){ tempoSumme+=gdt; tempoN++; }
   _lastFrameT=_fnow;
   updateWorkers(gdt);
   updateClimbers(gdt);
@@ -5810,7 +6014,8 @@ function animate(){
   updateCompass();
 
   // Tisch-Label fade by distance (throttled)
-  if(frameN%5===0){ updateTischeLabels(); updateKbLabels(); }
+  if(frameN%5===0){ updateTischeLabels(); updateKbLabels(); updateTischeLOD(); }
+  if(frameN%60===0) tempoRegeln();
 
   // Birkhuhn-Jagd countdown
   if(gamePlaying && frameN%4===0) updateGameTimer();
@@ -5840,8 +6045,15 @@ async function init(){
     txt('Szene aufbauen …'); pct(5);
 
     var container=document.getElementById('canvas3d');
-    renderer=new THREE.WebGLRenderer({antialias:true, alpha:true, preserveDrawingBuffer:true});
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    // Auf dem Handy ist die Pixelzahl der grösste Hebel: ein iPhone rechnet
+    // mit devicePixelRatio 3 neunmal so viele Pixel wie mit 1. Deshalb auf
+    // Touch-Geräten deckeln, Kantenglättung nur, wo sie nicht schon durch
+    // die hohe Pixeldichte erledigt ist. tempoRegeln() zieht später nach.
+    dprMax=(matchMedia && matchMedia('(pointer:coarse)').matches) ? 1.5 : 2;
+    renderer=new THREE.WebGLRenderer({antialias:window.devicePixelRatio<1.6,
+                                      alpha:true, preserveDrawingBuffer:true});
+    dprJetzt=Math.min(window.devicePixelRatio,dprMax);
+    renderer.setPixelRatio(dprJetzt);
     renderer.sortObjects=true;
     // Realistischeres Rendering
     renderer.outputEncoding=THREE.sRGBEncoding;
@@ -5885,7 +6097,9 @@ async function init(){
     sunLight=new THREE.DirectionalLight(0xfff2d6,1.55);
     sunLight.position.set(-200,500,-300);
     sunLight.castShadow=true;
-    sunLight.shadow.mapSize.set(2048,2048);
+    // Schattenkarte deckt nur ±120 m um das Blickziel ab; auf dem Handy
+    // reicht die halbe Kantenlänge (ein Viertel der Pixel) sichtbar aus.
+    sunLight.shadow.mapSize.set(dprMax<2?1024:2048, dprMax<2?1024:2048);
     sunLight.shadow.camera.near=1; sunLight.shadow.camera.far=900;
     sunLight.shadow.camera.left=-120; sunLight.shadow.camera.right=120;
     sunLight.shadow.camera.top=120; sunLight.shadow.camera.bottom=-120;
