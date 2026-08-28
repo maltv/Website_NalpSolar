@@ -44,6 +44,7 @@ var P_SITZ = 'erfassung/sitzungen';
 var P_PEND = 'erfassung/sitzung_pendenzen';
 var P_VM   = 'erfassung/vm_fortschritt';
 var P_PERS = 'erfassung/sitzung_personal';   /* Ferien, Ein-/Austritte, Bedarf */
+var P_TEAMS= 'erfassung/sitzung_teams';      /* Einsatztafel: wer arbeitet in welchem Bereich */
 var P_BILD = 'erfassung/sitzung_bilder';     /* Bilder GETRENNT – sonst wird der Satz schwer */
 var P_ANW  = 'erfassung/anwesenheit';        /* Mannschaft aus der digitalen Anwesenheitsliste */
 var LS_OFF = 'nalp_sitzung_offen_v1';   /* noch nicht gespiegelte Sätze */
@@ -129,6 +130,8 @@ var PERSONAL={};           /* erfassung/sitzung_personal – geführte Einträge
 var MANNSCHAFT=null;       /* aus der digitalen Anwesenheitsliste gelesen */
 var BILDER={};             /* sitzungDatum -> { bildId: {b,box,text,ts} } */
 var persArt='ferien';      /* Auswahl im Erfassungsformular */
+var TEAMS={};              /* erfassung/sitzung_teams – {zuteilung,personen,bereiche} */
+var tafelWahl=null;        /* am Handy angetippte Person – wartet auf den Bereich */
 
 function $(id){ return document.getElementById(id); }
 function h(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
@@ -203,8 +206,11 @@ var CSS=[
 '.si-box>.k .min.fertig{background:#E8F6EC;border-color:#9fd5b0;color:#1c6b34}',
 '.si-box .inn{padding:11px 13px}',
 '.si-box .hilfe{font-size:11.5px;color:#63676d;margin-bottom:7px;line-height:1.5}',
+/* Die Textfelder wachsen mit dem Text mit (siehe taWachsen) – darum kein
+   Scrollbalken und kein Ziehgriff: beim Protokollieren soll alles auf einen
+   Blick dastehen, ohne im Feld zu scrollen. Vorgabe Victor 28.08.2026. */
 '.si-box textarea{width:100%;min-height:78px;font:inherit;font-size:14px;line-height:1.55;padding:9px 10px;',
-'  border:1px solid #c9ccd2;border-radius:5px;resize:vertical;background:#fff;color:#1a1a1a}',
+'  border:1px solid #c9ccd2;border-radius:5px;resize:none;overflow:hidden;background:#fff;color:#1a1a1a}',
 '.si-box .zeilen{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}',
 
 '.si-kn{border:none;border-radius:5px;padding:8px 13px;font:700 13px Arial;cursor:pointer;',
@@ -213,7 +219,7 @@ var CSS=[
 '.si-kn.dunkel{background:#14181d;color:#fff}',
 '.si-kn.mini{padding:5px 10px;font-size:12px}',
 '.si-kn[disabled]{opacity:.42;cursor:default}',
-'.si-kn.hoert{background:#D72622;color:#fff}',
+'.si-lob textarea,.si-neu textarea{resize:none;overflow:hidden}',
 
 '.si-park{background:#fffdf5;border:1px solid #e8d9a8;border-left:5px solid #e08a00;border-radius:6px;',
 '  padding:12px 14px;margin-bottom:12px}',
@@ -344,7 +350,62 @@ var CSS=[
 '.si-firmen div{background:#f6f7f9;border:1px solid #e3e5e8;border-radius:6px;padding:7px 11px;font-size:12px}',
 '.si-firmen b{display:block;font-size:18px;font-weight:900;line-height:1.15}',
 
+/* ── Einsatztafel: Bereiche als Boxen, Namen hineinziehen ──────────── */
+'.si-tafel{display:grid;grid-template-columns:repeat(auto-fit,minmax(238px,1fr));gap:10px;margin-bottom:12px}',
+'.si-ber{background:#fff;border:1px solid #e3e5e8;border-top:4px solid #63676d;border-radius:6px;',
+'  padding:9px 11px 11px;display:flex;flex-direction:column;min-height:126px}',
+'.si-ber.ziel{background:#eef5ff;border-color:#1a5fb4;box-shadow:0 0 0 2px #1a5fb4 inset}',
+'.si-ber .bk{display:flex;align-items:baseline;gap:7px;margin-bottom:7px}',
+'.si-ber .bk b{font-size:13.5px;line-height:1.25;flex:1}',
+'.si-ber .bk .n{font-size:17px;font-weight:900;line-height:1}',
+'.si-ber .leer{font-size:11.5px;color:#9aa0a6;padding:9px 2px;font-style:italic}',
+'.si-chips{display:flex;flex-wrap:wrap;gap:5px;align-content:flex-start;flex:1}',
+'.si-chip{display:inline-flex;align-items:center;gap:6px;background:#f6f7f9;border:1px solid #d8dbdf;',
+'  border-radius:14px;padding:5px 9px;font-size:12.5px;font-weight:700;cursor:grab;user-select:none;',
+'  max-width:100%}',
+'.si-chip.gewaehlt{background:#1a5fb4;color:#fff;border-color:#1a5fb4}',
+'.si-chip.zieht{opacity:.4}',
+'.si-chip .fa{font-size:10.5px;font-weight:700;color:#e08a00;white-space:nowrap}',
+'.si-chip.gewaehlt .fa{color:#ffd9a0}',
+'.si-chip .fi{font-size:10.5px;font-weight:400;color:#63676d}',
+'.si-chip.gewaehlt .fi{color:#cfe0f7}',
+'.si-chip .x{border:none;background:transparent;font-size:13px;line-height:1;cursor:pointer;',
+'  color:#9aa0a6;padding:0 1px}',
+'.si-chip.gewaehlt .x{color:#fff}',
+'.si-pool{background:#fbfbfc;border:1px dashed #c9ccd2;border-radius:6px;padding:9px 11px;margin-bottom:10px}',
+'.si-pool.ziel{background:#eef5ff;border-color:#1a5fb4;border-style:solid}',
+'.si-tafelkn{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}',
+'.si-tafelhin{background:#eef5ff;border-left:4px solid #1a5fb4;border-radius:5px;padding:7px 10px;',
+'  font-size:12px;margin-bottom:9px;font-weight:700;color:#164a8a}',
+
+/* ── Aushang zum Aufhängen. Papier A3 quer (Vorgabe Victor 28.08.2026),
+      im Druckdialog auf A4 umstellbar. Farben müssen mitkommen, sonst sind
+      die Bereiche auf dem Blatt nicht auseinanderzuhalten. ── */
+'.si-druckblatt{display:none}',
+'@media print{',
+'  @page{size:A3 landscape;margin:11mm}',
+'  body.si-drucken>*{display:none!important}',
+'  body.si-drucken>.si-druckblatt{display:block!important}',
+'  .si-druckblatt{font-family:Arial,Helvetica,sans-serif;color:#000;',
+'    -webkit-print-color-adjust:exact;print-color-adjust:exact}',
+'  .si-druckblatt h1{font-size:23pt;margin:0 0 1mm;letter-spacing:-.01em}',
+'  .si-druckblatt .dk{border-bottom:3px solid #D72622;padding-bottom:2mm;margin-bottom:4mm}',
+'  .si-druckblatt .dk .w{font-size:11pt;color:#333;font-weight:bold}',
+'  .si-druckblatt .dg{display:grid;grid-template-columns:repeat(auto-fit,minmax(74mm,1fr));gap:4mm}',
+'  .si-druckblatt .db{border:1.2pt solid #333;border-top-width:5pt;border-radius:2mm;padding:2.5mm 3mm;',
+'    break-inside:avoid;page-break-inside:avoid}',
+'  .si-druckblatt .db h2{font-size:12.5pt;margin:0 0 2mm;padding-bottom:1mm;',
+'    border-bottom:.6pt solid #bbb;display:flex;justify-content:space-between;gap:3mm}',
+'  .si-druckblatt .db ul{list-style:none;margin:0;padding:0}',
+'  .si-druckblatt .db li{font-size:12.5pt;font-weight:bold;line-height:1.5;padding:.4mm 0}',
+'  .si-druckblatt .db li .fa{font-size:9pt;font-weight:normal;color:#a05a00}',
+'  .si-druckblatt .db li.frei{color:#777;font-weight:normal;font-style:italic}',
+'  .si-druckblatt .df{margin-top:5mm;border-top:.6pt solid #bbb;padding-top:2mm;',
+'    font-size:8.5pt;color:#555}',
+'}',
+
 '@media(max-width:520px){.si-uhr{top:76px}.si-neu .was{flex-basis:100%}',
+'  .si-tafel{grid-template-columns:1fr}',
 '  .si-leist-kopf .si-stand{margin-left:0;flex-basis:100%}}'
 ].join('\n');
 
@@ -374,11 +435,13 @@ function laden(){
     datei('uploads/tables/baustand.json'),
     datei('uploads/tables/bohrstand.json'),
     hole(P_VM),
-    hole(P_PERS)
+    hole(P_PERS),
+    hole(P_TEAMS)
   ]).then(function(a){
     SITZUNGEN=a[0]||{}; PUEBER=a[1]||{};
     LIVE=zahlenRechnen(a[2],a[3],a[4]);
     PERSONAL=a[5]||{};
+    TEAMS=a[6]||{};
     offeneUebernehmen();
     if(!AKTIV) AKTIV=jungsteOffene()||naechsterTermin();
     zeichnen();
@@ -915,7 +978,6 @@ function boxenZeichnen(){
         +'<textarea data-txt="'+b.id+'" placeholder="Stichworte – kurze Zeilen, keine Absätze">'
           +h(d.text||'')+'</textarea>'
         +'<div class="zeilen">'
-          +'<button class="si-kn mini" data-mik="'+b.id+'">🎤 Diktieren</button>'
           +'<button class="si-kn mini" data-bild="'+b.id+'">📷 Bild</button>'
           +'<button class="si-kn mini" data-daraus="'+b.id+'">→ Pendenz daraus</button>'
         +'</div>'
@@ -924,10 +986,11 @@ function boxenZeichnen(){
   }).join('');
 
   Array.prototype.forEach.call($('siBoxen').querySelectorAll('[data-txt]'),function(el){
+    taWachsen(el);
     el.oninput=function(){
       var id=el.getAttribute('data-txt');
       if(!s.boxen[id]) s.boxen[id]={text:'',gebraucht:0};
-      s.boxen[id].text=el.value; merken();
+      s.boxen[id].text=el.value; merken(); taWachsen(el);
     };
   });
   Array.prototype.forEach.call($('siBoxen').querySelectorAll('[data-timer]'),function(b){
@@ -946,7 +1009,15 @@ function boxenZeichnen(){
     b.onclick=function(){ bildWaehlen(b.getAttribute('data-bild')); };
   });
   bilderBinden();
-  mikBinden();
+}
+
+/* Textfeld auf die Höhe seines Inhalts ziehen – kein Scrollen im Feld,
+   die ganze Mitschrift steht sichtbar da (Vorgabe Victor 28.08.2026).
+   Erst auf 'auto', sonst schrumpft das Feld beim Löschen nie zurück. */
+function taWachsen(el){
+  if(!el) return;
+  el.style.height='auto';
+  el.style.height=(el.scrollHeight+2)+'px';
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1297,36 +1368,6 @@ function fussZeichnen(){
   $('siFussSave').onclick=function(){ spiegeln(); };
 }
 
-/* ── Diktieren (Chrome/Edge) ── */
-function mikBinden(){
-  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  Array.prototype.forEach.call(document.querySelectorAll('[data-mik]'),function(b){
-    if(!SR){ b.style.display='none'; return; }
-    var id=b.getAttribute('data-mik');
-    var feld=document.querySelector('[data-txt="'+id+'"]');
-    var erk=null, laeuft=false;
-    b.onclick=function(){
-      if(laeuft){ try{ erk.stop(); }catch(e){} return; }
-      erk=new SR(); erk.lang='de-CH'; erk.continuous=true; erk.interimResults=true;
-      var start=feld.value, zwischen='';
-      erk.onstart=function(){ laeuft=true; b.classList.add('hoert'); b.textContent='⏹ Stopp'; };
-      erk.onresult=function(ev){
-        var fest='',vorl='';
-        for(var i=ev.resultIndex;i<ev.results.length;i++){
-          if(ev.results[i].isFinal) fest+=ev.results[i][0].transcript;
-          else vorl+=ev.results[i][0].transcript;
-        }
-        if(fest) zwischen+=(zwischen?'\n':'')+fest;
-        feld.value=(start?start+'\n':'')+zwischen+vorl;
-      };
-      erk.onend=function(){ laeuft=false; b.classList.remove('hoert'); b.textContent='🎤 Diktieren';
-        var s=sitz(); if(!s.boxen[id]) s.boxen[id]={text:'',gebraucht:0};
-        s.boxen[id].text=feld.value; merken(); };
-      try { erk.start(); } catch(e){}
-    };
-  });
-}
-
 /* ── Abschliessen ── */
 function abschliessen(){
   var s=sitz();
@@ -1493,6 +1534,324 @@ function mannschaftLaden(){
   });
 }
 
+/* ═══════════════════════════════════════════════════════════
+   EINSATZTAFEL – wer arbeitet in welchem Bereich
+   ═══════════════════════════════════════════════════════════
+   Auftrag Victor 28.08.2026: «die Bereiche und dann Personen dahin ziehen …
+   damit ich nach der Sitzung das Personal direkt ausdrucken und aufhängen kann».
+
+   Die Bereiche sind NICHT neu erfunden, sondern genau die fachlichen Boxen des
+   Sitzungsablaufs (ABLAUF) – dieselben Überschriften wie im Protokoll. Ändert
+   sich dort ein Titel, ändert er sich hier mit. Zusätzliche Bereiche legt die
+   Bauleitung selbst an; sie liegen in erfassung/sitzung_teams/bereiche.
+
+   Nicht bespielbar sind die Boxen, die keine Arbeitsbereiche sind (Zahlen,
+   Sicherheit, Personal, Pendenzen, offene Diskussion) – dorthin kann man
+   niemanden einteilen.
+
+   AUSHANG: Auf das Blatt, das im Container hängt, kommt NUR die Einteilung und
+   – wenn eingetragen – der Ferienzeitraum. Krankheit, Unfall, Austritt und jede
+   Bemerkung bleiben am Bildschirm. Das ist die Lehre aus dem 27./28.08.2026
+   (siehe Kommentar bei BLATT 3): was aufgehängt wird, liest die ganze Baustelle.
+   ═══════════════════════════════════════════════════════════ */
+var BER_AUS = ['zahlen','sicherheit','personal','pendenzen','offen'];
+var BER_FARBE = { bohren:'#1a5fb4', stahlbau:'#D72622',
+                  verschrauben:'#e08a00', werkleitungen:'#2e9e46' };
+
+/* Namen zu vergleichbaren Wörtern machen – «Przemek (Przemyslaw) Modrak» und
+   «Przemyslaw Modrak» sollen sich finden. Kurze Füllwörter fliegen raus. */
+function woerter(s){
+  return String(s==null?'':s).toLowerCase()
+    .replace(/[äàáâ]/g,'a').replace(/[öòó]/g,'o').replace(/[üùú]/g,'u')
+    .replace(/[éèê]/g,'e').replace(/ß/g,'ss')
+    .replace(/[^a-z0-9]+/g,' ').split(' ')
+    .filter(function(x){ return x.length>=3; });
+}
+/* Stabile Id aus dem Namen – so fällt ein Doppeleintrag in der
+   Anwesenheitsliste (Rihards Dunovskis steht dort zweimal) von selbst zusammen. */
+function pid(name){ return woerter(name).join('_')||'x'; }
+
+function tafelBereiche(){
+  var l=ABLAUF.filter(function(b){ return BER_AUS.indexOf(b.id)<0; })
+    .map(function(b){
+      var eig=(TEAMS.bereiche||{})[b.id]||{};
+      return { id:b.id, name:eig.name||b.titel, farbe:BER_FARBE[b.id]||'#63676d',
+               sort:(eig.sort==null?0:eig.sort), ablauf:true };
+    });
+  var eigene=TEAMS.bereiche||{};
+  for(var id in eigene){
+    if(!eigene[id] || eigene[id].weg) continue;
+    if(ABLAUF.filter(function(b){ return b.id===id; }).length) continue;
+    l.push({ id:id, name:eigene[id].name||id, farbe:eigene[id].farbe||'#63676d',
+             sort:(eigene[id].sort==null?9:eigene[id].sort), ablauf:false });
+  }
+  l.sort(function(a,b){ return (a.sort-b.sort)||0; });
+  return l;
+}
+
+/* Alle Namen, die eingeteilt werden können: aus der Anwesenheitsliste plus die
+   von Hand angelegten. Die Anwesenheitsliste allein reicht nicht – sie enthält
+   auch Bauherr, Planer und UBB, und mehrere Leute aus den Produktionsteams
+   stehen gar nicht drin (geprüft 28.08.2026). */
+function tafelPersonen(){
+  var m={};
+  ((MANNSCHAFT&&MANNSCHAFT.leute)||[]).forEach(function(p){
+    var k=pid(p.name);
+    if(!m[k]) m[k]={ id:k, name:p.name, firma:p.firma, quelle:'liste' };
+  });
+  var eig=TEAMS.personen||{};
+  for(var k2 in eig){
+    if(!eig[k2] || eig[k2].weg) continue;
+    m[k2]={ id:k2, name:eig[k2].name||k2, firma:eig[k2].firma||'', quelle:'hand' };
+  }
+  var l=[];
+  for(var k3 in m) l.push(m[k3]);
+  l.sort(function(a,b){ return a.name.localeCompare(b.name,'de'); });
+  return l;
+}
+
+/* Ferien/Ausfall zu einem Namen – für den Vermerk am Chip. `nurAushang`
+   liefert ausschliesslich Ferien; Krankheit gehört auf kein Blatt im Container. */
+function abwesenheit(name, nurAushang){
+  var eigen=woerter(name), tref=null;
+  persLaufend().forEach(function(e){
+    if(tref) return;
+    var arten=nurAushang? ['ferien'] : ['ferien','krank'];
+    if(arten.indexOf(e.art)<0) return;
+    var andere=woerter(e.wer||'');
+    for(var i=0;i<eigen.length;i++){
+      if(andere.indexOf(eigen[i])>-1){ tref=e; return; }
+    }
+  });
+  return tref;
+}
+function abwText(e){
+  if(!e) return '';
+  var art=(e.art==='krank')?'Ausfall':'Ferien';
+  return art+' '+persZeit(e);
+}
+
+function tafelZeichnen(){
+  var el=$('siTafel'); if(!el) return;
+  var ber=tafelBereiche(), leute=tafelPersonen(), zu=TEAMS.zuteilung||{};
+  var nach={}, offen=[];
+  ber.forEach(function(b){ nach[b.id]=[]; });
+  leute.forEach(function(p){
+    var b=(zu[p.id]||{}).bereich;
+    if(b && nach[b]) nach[b].push(p); else offen.push(p);
+  });
+
+  function chip(p, imBereich){
+    var a=abwesenheit(p.name,false);
+    return '<span class="si-chip'+(tafelWahl===p.id?' gewaehlt':'')+'" draggable="true" '
+      +'data-chip="'+h(p.id)+'" title="'+h(p.name+(p.firma?' · '+p.firma:''))+'">'
+      +h(p.name)
+      +(a?'<span class="fa">'+h(abwText(a))+'</span>':'')
+      +(imBereich?'':'<span class="fi">'+h(p.firma||'')+'</span>')
+      +(imBereich?'<button class="x" data-raus="'+h(p.id)+'" title="aus dem Bereich nehmen">✕</button>':'')
+      +'</span>';
+  }
+
+  el.innerHTML=
+    '<div class="si-tafelkn">'
+      +'<button class="si-kn rot" id="siTfDruck">🖨 Aushang drucken (A3 quer)</button>'
+      +'<button class="si-kn mini" id="siTfBer">+ Bereich</button>'
+      +'<button class="si-kn mini" id="siTfPer">+ Person</button>'
+    +'</div>'
+    +(tafelWahl
+      ? '<div class="si-tafelhin">'+h((leute.filter(function(p){return p.id===tafelWahl;})[0]||{}).name||'')
+        +' ist ausgewählt – jetzt den Bereich antippen. (Nochmal antippen hebt es auf.)</div>'
+      : '<div class="si-tafelhin">Namen mit der Maus in einen Bereich ziehen – '
+        +'am Handy: Namen antippen, dann den Bereich antippen.</div>')
+    +'<div class="si-pool" id="siPool"><b style="font-size:12.5px">Noch nicht eingeteilt '
+      +'('+offen.length+')</b> <span style="font-size:11.5px;color:#63676d">– '
+      +'wer hier steht, kommt nicht auf den Aushang.</span>'
+      +'<div class="si-chips" style="margin-top:7px">'
+      +(offen.length? offen.map(function(p){ return chip(p,false); }).join('')
+        : '<span class="leer" style="font-size:11.5px;color:#9aa0a6;font-style:italic">'
+          +'alle eingeteilt</span>')
+      +'</div></div>'
+    +'<div class="si-tafel">'+ber.map(function(b){
+      var l=nach[b.id]||[];
+      return '<div class="si-ber" data-ber="'+h(b.id)+'" style="border-top-color:'+b.farbe+'">'
+        +'<div class="bk"><b>'+h(b.name)+'</b>'
+          +'<span class="n" style="color:'+b.farbe+'">'+l.length+'</span>'
+          +(b.ablauf?'':'<button class="si-kn mini" data-berweg="'+h(b.id)+'" '
+            +'title="Bereich entfernen">✕</button>')
+        +'</div>'
+        +'<div class="si-chips">'+(l.length? l.map(function(p){ return chip(p,true); }).join('')
+          : '<span class="leer">niemand eingeteilt</span>')+'</div>'
+      +'</div>';
+    }).join('')+'</div>';
+
+  tafelBinden();
+}
+
+function tafelBinden(){
+  var el=$('siTafel'); if(!el) return;
+
+  /* Ziehen (Maus/Trackpad) */
+  Array.prototype.forEach.call(el.querySelectorAll('[data-chip]'),function(c){
+    c.ondragstart=function(ev){
+      ev.dataTransfer.setData('text/plain',c.getAttribute('data-chip'));
+      ev.dataTransfer.effectAllowed='move';
+      c.classList.add('zieht');
+    };
+    c.ondragend=function(){ c.classList.remove('zieht'); };
+    /* Antippen (Handy): erst Person, dann Bereich */
+    c.onclick=function(ev){
+      if(ev.target.getAttribute && ev.target.getAttribute('data-raus')) return;
+      var id=c.getAttribute('data-chip');
+      tafelWahl=(tafelWahl===id)?null:id;
+      tafelZeichnen();
+    };
+  });
+  Array.prototype.forEach.call(el.querySelectorAll('[data-raus]'),function(b){
+    b.onclick=function(ev){ ev.stopPropagation(); teamSetzen(b.getAttribute('data-raus'),null); };
+  });
+
+  function ablegen(knoten, bereich){
+    knoten.ondragover=function(ev){ ev.preventDefault(); knoten.classList.add('ziel'); };
+    knoten.ondragleave=function(){ knoten.classList.remove('ziel'); };
+    knoten.ondrop=function(ev){
+      ev.preventDefault(); knoten.classList.remove('ziel');
+      var id=ev.dataTransfer.getData('text/plain');
+      if(id) teamSetzen(id,bereich);
+    };
+    knoten.addEventListener('click',function(ev){
+      if(!tafelWahl) return;
+      if(ev.target.closest && ev.target.closest('[data-chip]')) return;
+      teamSetzen(tafelWahl,bereich); tafelWahl=null;
+    });
+  }
+  Array.prototype.forEach.call(el.querySelectorAll('[data-ber]'),function(k){
+    ablegen(k,k.getAttribute('data-ber'));
+  });
+  Array.prototype.forEach.call(el.querySelectorAll('[data-berweg]'),function(b){
+    b.onclick=function(ev){ ev.stopPropagation(); bereichWeg(b.getAttribute('data-berweg')); };
+  });
+  if($('siPool')) ablegen($('siPool'),null);
+
+  $('siTfDruck').onclick=aushangDrucken;
+  $('siTfBer').onclick=bereichNeu;
+  $('siTfPer').onclick=personNeu;
+}
+
+/* Zuteilung schreiben. Eigener Knoten neben dem Sitzungssatz – die Einteilung
+   ist ein laufender Stand und darf ein abgeschlossenes Protokoll nicht ändern
+   (gleiches Muster wie erfassung/sitzung_pendenzen). */
+function teamSetzen(person, bereich){
+  if(!TEAMS.zuteilung) TEAMS.zuteilung={};
+  if(bereich){
+    var satz={ bereich:bereich, ts:Date.now(), von:wer() };
+    TEAMS.zuteilung[person]=satz;
+    fetch(DB+'/'+P_TEAMS+'/zuteilung/'+person+'.json',
+      { method:'PUT', body:JSON.stringify(satz) }).catch(function(){ netzOk=false; });
+  } else {
+    delete TEAMS.zuteilung[person];
+    fetch(DB+'/'+P_TEAMS+'/zuteilung/'+person+'.json',{ method:'DELETE' })
+      .catch(function(){ netzOk=false; });
+  }
+  tafelWahl=null;
+  tafelZeichnen();
+}
+
+function bereichNeu(){
+  var n=prompt('Wie heisst der Bereich?\n(z. B. «Logistik / Transport» oder «Bauleitung»)');
+  if(!n || !n.trim()) return;
+  var id='b'+Date.now().toString(36);
+  var satz={ name:n.trim(), sort:9, farbe:'#63676d' };
+  if(!TEAMS.bereiche) TEAMS.bereiche={};
+  TEAMS.bereiche[id]=satz;
+  fetch(DB+'/'+P_TEAMS+'/bereiche/'+id+'.json',{ method:'PUT', body:JSON.stringify(satz) })
+    .catch(function(){ netzOk=false; });
+  tafelZeichnen();
+}
+function bereichWeg(id){
+  var ber=tafelBereiche().filter(function(b){ return b.id===id; })[0];
+  if(!ber || ber.ablauf) return;   /* Ablaufbereiche bleiben – sie kommen aus dem Protokoll */
+  var drin=[]; var zu=TEAMS.zuteilung||{};
+  for(var p in zu) if(zu[p] && zu[p].bereich===id) drin.push(p);
+  if(!confirm('Bereich «'+ber.name+'» entfernen?'
+      +(drin.length?'\n'+drin.length+' Person(en) gehen zurück in «noch nicht eingeteilt».':''))) return;
+  drin.forEach(function(p){ teamSetzen(p,null); });
+  delete TEAMS.bereiche[id];
+  fetch(DB+'/'+P_TEAMS+'/bereiche/'+id+'.json',{ method:'DELETE' }).catch(function(){});
+  tafelZeichnen();
+}
+
+/* Von Hand angelegte Person. Nur Name und Firma – sonst nichts. Telefonnummern
+   liegen in der Anwesenheitsliste verschlüsselt und haben hier nichts zu suchen. */
+function personNeu(){
+  var n=prompt('Name der Person\n(wer sich nie in der Anwesenheitsliste eingetragen hat)');
+  if(!n || !n.trim()) return;
+  var f=prompt('Firma (leer lassen, wenn STRABAG)','')||'';
+  var id=pid(n);
+  var satz={ name:n.trim(), firma:f.trim(), ts:Date.now(), von:wer() };
+  if(!TEAMS.personen) TEAMS.personen={};
+  TEAMS.personen[id]=satz;
+  fetch(DB+'/'+P_TEAMS+'/personen/'+id+'.json',{ method:'PUT', body:JSON.stringify(satz) })
+    .catch(function(){ netzOk=false; });
+  tafelZeichnen();
+}
+
+/* ── Aushang: A3 quer, zum Aufhängen im Container ──────────────────
+   Gedruckt wird aus der Seite heraus (kein zweites Fenster – Popup-Blocker).
+   Dazu hängt das Blatt kurz direkt unter <body>, alles andere wird für den
+   Druck ausgeblendet und danach wieder aufgeräumt. */
+function aushangVerteilung(){
+  var ber=tafelBereiche(), leute=tafelPersonen(), zu=TEAMS.zuteilung||{};
+  var nach={}, anzahl=0;
+  ber.forEach(function(b){ nach[b.id]=[]; });
+  leute.forEach(function(p){
+    var b=(zu[p.id]||{}).bereich;
+    if(b && nach[b]){ nach[b].push(p); anzahl++; }
+  });
+  return { bereiche:ber, nach:nach, anzahl:anzahl };
+}
+
+/* Der Aushang als HTML – aussen sichtbar, damit Tools\Sitzung_Test.js ohne
+   Browser prüfen kann, dass hier NUR Name und Ferienzeitraum landen. */
+function aushangHtml(datum){
+  var v=aushangVerteilung(), d=datum||AKTIV||heute();
+  return '<div class="dk"><h1>Personaleinteilung NalpSolar</h1>'
+      +'<div class="w">Stand '+h(wochentag(d)+' '+deDat(d))+' · '+v.anzahl+' Personen · '
+      +'besprochen in der Koordinationssitzung BF/PL</div></div>'
+    +'<div class="dg">'+v.bereiche.map(function(b){
+      var l=v.nach[b.id]||[];
+      return '<div class="db" style="border-top-color:'+b.farbe+'">'
+        +'<h2 style="color:'+b.farbe+'"><span>'+h(b.name)+'</span><span>'+l.length+'</span></h2>'
+        +'<ul>'+(l.length? l.map(function(p){
+            var a=abwesenheit(p.name,true);   /* NUR Ferien – nichts anderes */
+            return '<li>'+h(p.name)
+              +(a?' <span class="fa">'+h('Ferien '+persZeit(a))+'</span>':'')+'</li>';
+          }).join('') : '<li class="frei">niemand eingeteilt</li>')
+        +'</ul></div>';
+    }).join('')+'</div>'
+    +'<div class="df">Einteilung aus dem Sitzungsreiter (Blatt «Personal»). '
+      +'Änderungen bitte der Bauleitung melden – gedruckt am '+h(deDat(heute()))+'.</div>';
+}
+
+function aushangDrucken(){
+  if(!aushangVerteilung().anzahl){
+    alert('Es ist noch niemand eingeteilt – erst Namen in die Bereiche ziehen.'); return; }
+
+  var alt=$('siDruckblatt'); if(alt) alt.parentNode.removeChild(alt);
+  var blatt=document.createElement('div');
+  blatt.id='siDruckblatt'; blatt.className='si-druckblatt';
+  blatt.innerHTML=aushangHtml(AKTIV||heute());
+  document.body.appendChild(blatt);
+  document.body.classList.add('si-drucken');
+
+  function aufraeumen(){
+    document.body.classList.remove('si-drucken');
+    if(blatt.parentNode) blatt.parentNode.removeChild(blatt);
+    window.removeEventListener('afterprint',aufraeumen);
+  }
+  window.addEventListener('afterprint',aufraeumen);
+  setTimeout(function(){ window.print(); setTimeout(aufraeumen,1500); },60);
+}
+
 function personalBlatt(){
   var heu=heute();
   var liste=persAlle();
@@ -1505,6 +1864,14 @@ function personalBlatt(){
       +'der Bauherr und Dritte lesen, nichts verloren. Was davon in die Sitzung gehört, '
       +'schreibst du selbst in die Box «Personal». Die Namen kommen aus der digitalen '
       +'Anwesenheitsliste – nichts doppelt erfassen.</div>'
+    +'<div class="si-pkarte" style="border-left-color:#D72622">'
+      +'<h3>Wer arbeitet wo</h3>'
+      +'<div class="sub">Die Bereiche sind dieselben wie im Protokoll. Namen in den '
+      +'Bereich ziehen, danach ausdrucken und aufhängen. <b>Auf den Aushang kommt nur '
+      +'die Einteilung und – falls eingetragen – der Ferienzeitraum</b>; Ausfälle, '
+      +'Bemerkungen und alles Weitere bleiben hier am Bildschirm.</div>'
+      +'<div id="siTafel"><div class="sub">Namen werden geladen …</div></div>'
+    +'</div>'
     +'<div id="siMann"><div class="si-pkarte"><div class="sub">Mannschaft wird geladen …</div></div></div>'
     +'<div class="si-pkarte">'
       +'<h3>Ferien, Ausfälle, Verstärkung und offener Bedarf</h3>'
@@ -1549,6 +1916,7 @@ function personalBlatt(){
     var dl=$('siPeNamen');
     if(dl) dl.innerHTML=m.leute.map(function(p){
       return '<option value="'+h(p.name)+'">'; }).join('');
+    tafelZeichnen();
   });
 }
 
@@ -1889,8 +2257,15 @@ function daten(sitzungen, ueberlagerung, bilder, personal){
   if(bilder) BILDER=bilder;
   if(personal) PERSONAL=personal;
 }
+/* Einsatztafel von aussen setzen – nur fuer Tools\Sitzung_Test.js. */
+function teamDaten(teams, mannschaft){
+  if(teams) TEAMS=teams;
+  if(mannschaft) MANNSCHAFT=mannschaft;
+}
 return { start:start, druck:drucken, zahlenAus:zahlenRechnen, protokollHtml:protokollHtml,
          daten:daten, ablauf:ABLAUF, runde:RUNDE,
+         /* Einsatztafel – Pruefung ohne Browser */
+         teamDaten:teamDaten, aushangHtml:aushangHtml, bereiche:tafelBereiche,
          /* fuer den Browsertest: Tools\Sitzung_Bildtest.html */
          bildVerkleinern:bildVerkleinern };
 })();
