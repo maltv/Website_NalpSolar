@@ -381,27 +381,33 @@ var CSS=[
 /* ── Aushang zum Aufhängen. Papier A3 quer (Vorgabe Victor 28.08.2026),
       im Druckdialog auf A4 umstellbar. Farben müssen mitkommen, sonst sind
       die Bereiche auf dem Blatt nicht auseinanderzuhalten. ── */
-'.si-druckblatt{display:none}',
+/* Das Layout steht BEWUSST ausserhalb von @media print: sonst sieht das
+   abgelegte HTML am Bildschirm aus wie eine ungestylte Textwueste, und man
+   kann den Aushang nicht kontrollieren, ohne ihn zu drucken (28.08.2026).
+   Im Browser ist das Blatt nur versteckt (display:none) und wird fuer den
+   Druck eingeblendet; das Werkzeug Tools\Personaltafel_Aushang.py dreht
+   diese eine Regel um und bekommt damit dasselbe Bild. */
+'.si-druckblatt{display:none;font-family:Arial,Helvetica,sans-serif;color:#000;',
+'  -webkit-print-color-adjust:exact;print-color-adjust:exact}',
+'.si-druckblatt h1{font-size:30pt;margin:0 0 1mm;letter-spacing:-.01em}',
+'.si-druckblatt .dk{border-bottom:3px solid #D72622;padding-bottom:2mm;margin-bottom:4mm}',
+'.si-druckblatt .dk .w{font-size:12.5pt;color:#333;font-weight:bold}',
+'.si-druckblatt .dg{display:grid;grid-template-columns:repeat(auto-fit,minmax(88mm,1fr));',
+'  gap:4mm;align-items:start}',
+'.si-druckblatt .db{border:1.2pt solid #333;border-top-width:5pt;border-radius:2mm;',
+'  padding:2.5mm 3mm;break-inside:avoid;page-break-inside:avoid}',
+'.si-druckblatt .db h2{font-size:15.5pt;margin:0 0 2mm;padding-bottom:1mm;',
+'  border-bottom:.6pt solid #bbb;display:flex;justify-content:space-between;gap:3mm}',
+'.si-druckblatt .db ul{list-style:none;margin:0;padding:0}',
+'.si-druckblatt .db li{font-size:15.5pt;font-weight:bold;line-height:1.45;padding:.7mm 0}',
+'.si-druckblatt .db li .fa{font-size:10.5pt;font-weight:normal;color:#a05a00}',
+'.si-druckblatt .db li.frei{color:#777;font-weight:normal;font-style:italic}',
+'.si-druckblatt .df{margin-top:5mm;border-top:.6pt solid #bbb;padding-top:2mm;',
+'  font-size:8.5pt;color:#555}',
 '@media print{',
 '  @page{size:A3 landscape;margin:11mm}',
 '  body.si-drucken>*{display:none!important}',
 '  body.si-drucken>.si-druckblatt{display:block!important}',
-'  .si-druckblatt{font-family:Arial,Helvetica,sans-serif;color:#000;',
-'    -webkit-print-color-adjust:exact;print-color-adjust:exact}',
-'  .si-druckblatt h1{font-size:23pt;margin:0 0 1mm;letter-spacing:-.01em}',
-'  .si-druckblatt .dk{border-bottom:3px solid #D72622;padding-bottom:2mm;margin-bottom:4mm}',
-'  .si-druckblatt .dk .w{font-size:11pt;color:#333;font-weight:bold}',
-'  .si-druckblatt .dg{display:grid;grid-template-columns:repeat(auto-fit,minmax(74mm,1fr));gap:4mm}',
-'  .si-druckblatt .db{border:1.2pt solid #333;border-top-width:5pt;border-radius:2mm;padding:2.5mm 3mm;',
-'    break-inside:avoid;page-break-inside:avoid}',
-'  .si-druckblatt .db h2{font-size:12.5pt;margin:0 0 2mm;padding-bottom:1mm;',
-'    border-bottom:.6pt solid #bbb;display:flex;justify-content:space-between;gap:3mm}',
-'  .si-druckblatt .db ul{list-style:none;margin:0;padding:0}',
-'  .si-druckblatt .db li{font-size:12.5pt;font-weight:bold;line-height:1.5;padding:.4mm 0}',
-'  .si-druckblatt .db li .fa{font-size:9pt;font-weight:normal;color:#a05a00}',
-'  .si-druckblatt .db li.frei{color:#777;font-weight:normal;font-style:italic}',
-'  .si-druckblatt .df{margin-top:5mm;border-top:.6pt solid #bbb;padding-top:2mm;',
-'    font-size:8.5pt;color:#555}',
 '}',
 
 '@media(max-width:520px){.si-uhr{top:76px}.si-neu .was{flex-basis:100%}',
@@ -2286,8 +2292,11 @@ function teamDaten(teams, mannschaft){
 }
 return { start:start, druck:drucken, zahlenAus:zahlenRechnen, protokollHtml:protokollHtml,
          daten:daten, ablauf:ABLAUF, runde:RUNDE,
-         /* Einsatztafel – Pruefung ohne Browser */
-         teamDaten:teamDaten, aushangHtml:aushangHtml, bereiche:tafelBereiche,
+         /* Einsatztafel – Pruefung ohne Browser und Aushang-PDF ueber Node
+            (Tools\Personaltafel_Aushang.py). css kommt mit, damit das PDF
+            dieselben Druckregeln benutzt wie der Browser – sonst gaebe es
+            zwei Fassungen des Aushangs. */
+         teamDaten:teamDaten, aushangHtml:aushangHtml, bereiche:tafelBereiche, css:CSS,
          /* fuer den Browsertest: Tools\Sitzung_Bildtest.html */
          bildVerkleinern:bildVerkleinern };
 })();
