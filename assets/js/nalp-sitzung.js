@@ -456,12 +456,33 @@ function datei(pfad){
 
 /* Bilder nur für die geführte Sitzung holen – über alle Sitzungen wären es
    schnell etliche Megabyte, und das Handy zieht sie sonst jedes Mal mit. */
-function bilderLaden(datum){
-  if(!datum || BILDER[datum]) return Promise.resolve();
+function bilderLaden(datum, nochmal){
+  if(!datum || (BILDER[datum] && !nochmal)) return Promise.resolve();
   return hole(P_BILD+'/'+datum).then(function(j){
+    /* FALLE (28.08.2026): hole() liefert bei einem Netzfehler dasselbe null wie bei
+       einem leeren Knoten. Wurde das ungeprüft als BILDER[datum]={} gemerkt, galt
+       der Tag als geladen – die Kacheln blieben für immer auf «lädt …», auch wenn
+       die Bilder in der Datenbank lagen. Bei Netzfehler also nichts merken. */
+    if(j===null && !netzOk) return;
     BILDER[datum]=j||{};
     if(BLATT==='sitzung' && AKTIV===datum && $('siBoxen')) boxenZeichnen();
   });
+}
+
+/* Fehlt zu einem eingelegten Bild die Bilddatei, ist das Laden schiefgegangen –
+   dann einmal nachfassen, statt «lädt …» stehen zu lassen. Höchstens drei
+   Versuche je Tag, sonst dreht sich das im Kreis. */
+var bildVersuch={};
+function bilderNachfassen(){
+  var s=sitz();
+  if(!s || !s.bilder || !s.bilder.length) return;
+  var vorrat=BILDER[s.datum]||{};
+  var fehlt=s.bilder.filter(function(b){ return !(vorrat[b.id]||{}).b; }).length;
+  if(!fehlt) return;
+  var n=bildVersuch[s.datum]||0;
+  if(n>=3) return;
+  bildVersuch[s.datum]=n+1;
+  setTimeout(function(){ bilderLaden(s.datum,true); }, 500*(n+1));
 }
 
 function hole(pfad){
@@ -1009,6 +1030,7 @@ function boxenZeichnen(){
     b.onclick=function(){ bildWaehlen(b.getAttribute('data-bild')); };
   });
   bilderBinden();
+  bilderNachfassen();
 }
 
 /* Textfeld auf die Höhe seines Inhalts ziehen – kein Scrollen im Feld,
