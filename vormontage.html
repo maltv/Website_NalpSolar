@@ -199,6 +199,19 @@
   .kLbl.kLblB{ font:700 9.5px Arial; color:#eef1f4; opacity:.9;
           text-shadow:0 0 3px rgba(0,0,0,.9), 0 1px 2px rgba(0,0,0,.85); }
   .kTipp{ font-size:11.5px; color:var(--mut); margin:6px 4px 0; }
+  .kKopf{ display:flex; align-items:center; gap:8px; justify-content:space-between;
+          margin:0 4px 7px; }
+  .kKopf .zaehler{ margin:0; }
+  .kKopf .btn.ghost{ flex:0 0 auto; padding:6px 10px; font-size:12.5px; white-space:nowrap; }
+  .kKopf .btn.ghost.an{ background:#1e40af; color:#fff; border-color:#1e40af; }
+  /* Bereichsschild (26_4.1) - wie in Nalpi ein Plaettchen, nicht der weisse
+     Umrisstext der Tisch-IDs: die beiden Beschriftungen muessen auf einen Blick
+     auseinandergehen. */
+  .kBer{ background:rgba(30,64,175,.86); border:none; box-shadow:none; border-radius:5px;
+         padding:1px 5px; font:800 10px Arial; color:#fff; text-shadow:none; white-space:nowrap; }
+  .kBer:before{ display:none; }
+  /* Bereiche spaeterer Bauzeiten treten zurueck - auf der Vormontage zaehlt 26_x */
+  .kBer.spaet{ background:rgba(71,85,105,.66); font-weight:700; }
   /* Blatt zum Tisch (lange druecken auf der Karte) */
   /* z-index ueber 800: die Leaflet-Ebenen liegen bei 400-800, sonst malt
      die Karte durch das Blatt hindurch. */
@@ -417,7 +430,10 @@
       <div class="sub" data-i18n="k_sub">Batch oben wählen. Je Bohrpunkt: Passstück erfasst?
         Je Tischfläche: vormontiert oder schon auf dem Berg?</div>
       <div class="kWahl" id="kWahl"></div>
-      <div class="zaehler" id="kz">–</div>
+      <div class="kKopf">
+        <div class="zaehler" id="kz">–</div>
+        <button class="btn ghost" id="kBerBtn" onclick="kBerUm()" data-i18n="btn_bereiche">🔷 Bereiche</button>
+      </div>
       <div class="kHinweis" id="kHw" style="display:none"></div>
       <div class="kmap" id="km"></div>
       <div class="kTipp" id="kTipp" data-i18n="tipp_lang">Tisch antippen = Kurzinfo · lange drücken = Vormontageplan</div>
@@ -431,6 +447,7 @@
       </div>
       <div class="kLeg" style="margin-top:5px">
         <span data-i18n="leg_andere" style="display:block;margin-bottom:4px">Blass in Grau = Tisch aus einem anderen Batch – dort steht ID-Batchnummer.</span>
+        <span data-i18n="leg_bereiche" style="display:block;margin-bottom:4px">🔷 Bereiche = die STRABAG-Bauphasenbereiche aus Nalpi (26_4.1, 26_4.2 …).</span>
         <span data-i18n="leg_eng" style="display:block;margin-bottom:4px;color:#D72622;font-weight:700">⚠️ rot gestrichelt = Normteil fehlt, Tisch nicht vormontierbar</span>
         <span data-i18n="leg_typ">Typ hinter der ID – Farbe wie die Normteile:</span>
         <span><i class="tk A">A</i></span><span><i class="tk B">B</i></span><span><i class="tk C">C</i></span>
@@ -527,6 +544,8 @@ var I18N={
   tab_auftrag:'🗺 Karte', k_titel:'🗺 Stand je Batch',
   k_sub:'Batch oben wählen. Je Bohrpunkt: Passstück erfasst? Je Tischfläche: vormontiert oder schon auf dem Berg?',
   leg_andere:'Blass in Grau = Tisch aus einem anderen Batch – dort steht ID-Batchnummer.',
+  btn_bereiche:'🔷 Bereiche',
+  leg_bereiche:'🔷 Bereiche = die STRABAG-Bauphasenbereiche aus Nalpi (26_4.1, 26_4.2 …).',
   tipp_lang:'Tisch antippen = Kurzinfo · lange drücken = Vormontageplan',
   pl_titel:'Tisch {id}', pl_batch:'Bestellbatch', pl_liefer:'Liefertermin',
   pl_stuetze:'Stütze', pl_bestellt:'bestellt [mm]', pl_erfasst:'erfasst [mm]',
@@ -627,6 +646,8 @@ var I18N={
   tab_auftrag:'🗺 Map', k_titel:'🗺 Status per batch',
   k_sub:'Pick the batch above. Per drill point: fitting piece saved? Per table area: pre-assembled or already on the mountain?',
   leg_andere:'Pale grey = table from another batch – it shows ID-batch number.',
+  btn_bereiche:'🔷 Areas',
+  leg_bereiche:'🔷 Areas = the STRABAG construction-phase areas from Nalpi (26_4.1, 26_4.2 …).',
   tipp_lang:'Tap a table = short info · press and hold = pre-assembly drawing',
   pl_titel:'Table {id}', pl_batch:'Order batch', pl_liefer:'Delivery date',
   pl_stuetze:'Post', pl_bestellt:'ordered [mm]', pl_erfasst:'saved [mm]',
@@ -727,6 +748,8 @@ var I18N={
   tab_auftrag:'🗺 Mapa', k_titel:'🗺 Stan wg partii',
   k_sub:'Wybierz partię u góry. Każdy punkt: podpora zapisana? Powierzchnia stołu: zmontowany czy już na górze?',
   leg_andere:'Blady szary = stół z innej partii – tam stoi ID-numer partii.',
+  btn_bereiche:'🔷 Obszary',
+  leg_bereiche:'🔷 Obszary = obszary faz budowy STRABAG z Nalpi (26_4.1, 26_4.2 …).',
   tipp_lang:'Dotknij stołu = krótka informacja · przytrzymaj = rysunek montażu',
   pl_titel:'Stół {id}', pl_batch:'Partia zamówienia', pl_liefer:'Termin dostawy',
   pl_stuetze:'Podpora', pl_bestellt:'zamówione [mm]', pl_erfasst:'zapisane [mm]',
@@ -1995,15 +2018,19 @@ var kM=null;                             // {map, hinter, vorne, flaechen, punkt
 var kTische=null;                        // Tisch -> {pk, mN, mE, ring}
 var kTBatch={};                          // Tisch -> juengster Batch, in dem er bestellt ist
 var kLbls={};                            // Tisch -> Hintergrundbeschriftung (nur im Bild)
-var kPfaehle=null, kGeoPer=null, kOrtho=null;
+var kPfaehle=null, kGeoPer=null, kOrtho=null, kBereiche=null;
+var LS_BER='nalp_vm_bereiche_v1';           // Ebene an/aus merkt sich das Handy
 
 function kDaten(cb){                     // Bohrpunkte + Kartenhintergruende einmal laden
-  if(kPfaehle && kGeoPer!==null && kOrtho!==null){ cb(); return; }
+  if(kPfaehle && kGeoPer!==null && kOrtho!==null && kBereiche!==null){ cb(); return; }
   Promise.all([
     kPfaehle?Promise.resolve(kPfaehle):fetch('uploads/pfaehle.json').then(function(r){ return r.json(); }),
     kGeoPer!==null?Promise.resolve(kGeoPer):fetch('uploads/perimeter_geo.json').then(function(r){ return r.ok?r.json():false; }).catch(function(){ return false; }),
-    kOrtho!==null?Promise.resolve(kOrtho):fetch('uploads/ortho/index.json').then(function(r){ return r.ok?r.json():[]; }).catch(function(){ return []; })
-  ]).then(function(r){ kPfaehle=r[0]; kGeoPer=r[1]; kOrtho=r[2]; cb(); }).catch(function(){});
+    kOrtho!==null?Promise.resolve(kOrtho):fetch('uploads/ortho/index.json').then(function(r){ return r.ok?r.json():[]; }).catch(function(){ return []; }),
+    // Bauphasenbereiche: fehlt die Datei, laeuft die Karte ohne die Ebene weiter
+    kBereiche!==null?Promise.resolve(kBereiche):fetch('uploads/bauphasen.json').then(function(r){ return r.ok?r.json():[]; }).catch(function(){ return []; })
+  ]).then(function(r){ kPfaehle=r[0]; kGeoPer=r[1]; kOrtho=r[2];
+                       kBereiche=(r[3]&&r[3].bereiche)||[]; cb(); }).catch(function(){});
 }
 function akLv95(lat,lon){                // WGS84 -> LV95 (Naeherung swisstopo)
   var p=(lat*3600-169028.66)/10000, l=(lon*3600-26782.5)/10000;
@@ -2089,15 +2116,22 @@ function kMapBauen(){
   kTischeBauen();
   var m=L.map('km', { crs:L.CRS.Simple, attributionControl:false,
                       zoomSnap:0.25, minZoom:-3, maxZoom:6 });
+  // Eigene Ebenen, damit die Reihenfolge stimmt: Luftbild ganz unten, darueber
+  // die Bauphasenbereiche, erst dann die Tische (Standard-overlayPane 400).
+  // Die Bereichsschilder liegen knapp unter den Tisch-IDs (tooltipPane 650).
+  m.createPane('bildPane').style.zIndex=350;
+  m.createPane('bereichePane').style.zIndex=360;
+  var bl=m.createPane('berLblPane'); bl.style.zIndex=640; bl.style.pointerEvents='none';
   var alle=[];
   Object.keys(kTische).forEach(function(tid){ alle.push([kTische[tid].mN,kTische[tid].mE]); });
   var b=L.latLngBounds(alle);
   m.fitBounds(b.pad(0.05));
   m.setMaxBounds(b.pad(0.35));
   if(kGeoPer) L.imageOverlay('assets/img/perimeter.jpg',
-      [[kGeoPer.minN,kGeoPer.minE],[kGeoPer.maxN,kGeoPer.maxE]]).addTo(m);
+      [[kGeoPer.minN,kGeoPer.minE],[kGeoPer.maxN,kGeoPer.maxE]], {pane:'bildPane'}).addTo(m);
   (kOrtho||[]).forEach(function(o){          // Drohnen-Ortho scharf darueber
-    L.imageOverlay('uploads/ortho/'+o.datei, [[o.minN,o.minE],[o.maxN,o.maxE]]).addTo(m);
+    L.imageOverlay('uploads/ortho/'+o.datei, [[o.minN,o.minE],[o.maxN,o.maxE]],
+                   {pane:'bildPane'}).addTo(m);
   });
   var cv=L.canvas({padding:0.3});            // siehe Kopf: 1048 Flaechen im Canvas
   var hinter={};
@@ -2108,7 +2142,8 @@ function kMapBauen(){
   });
   L.control.scale({imperial:false, maxWidth:110}).addTo(m);
   kM={ map:m, hinter:hinter, vorne:L.layerGroup().addTo(m),
-       flaechen:{}, punkte:{}, lbl:{}, gebaut:'' };
+       ber:kBereicheBauen(m), flaechen:{}, punkte:{}, lbl:{}, gebaut:'' };
+  kBerMalen();                               // gemerkter Stand vom letzten Mal
   // Beschriftungen erst zeigen, wenn nah genug gezoomt (sonst Buchstabensalat)
   function lblZeigen(){ m.getContainer().classList.toggle('kLblAus', m.getZoom()<1.4); }
   m.on('zoomend', lblZeigen); lblZeigen();
@@ -2119,6 +2154,52 @@ function kMapBauen(){
   });
   kLangdruck(m);
   kLblNach();
+}
+/* ---------- Ebene «STRABAG-Bereiche» ----------
+   Dieselben Bauphasenbereiche, die sich in Nalpi als Ebene einblenden lassen
+   (MAP_LAYERS Id 2 «Bauphasen_STRABAG_260410», Datei
+   Bauphasen_260409_NalpSolar.geojson, Beschriftung BZCH). Gebaut mit
+   tools/build_bereiche.py nach uploads/bauphasen.json - die Zahlen (Tische,
+   Pfaehle) stehen dort mit drin, angezeigt wird nur der Name: die Ebene ist
+   zur Orientierung da, nicht zum Rechnen.
+   Farben wie in Nalpi (Rand #1e40af, Fuellung #3b82f6), die Fuellung aber
+   schwaecher - darueber liegen die Tischfarben, die die Aussage tragen. */
+function kBereicheBauen(m){
+  var g=L.layerGroup();
+  var cv=L.canvas({pane:'bereichePane', padding:0.3});
+  (kBereiche||[]).forEach(function(b){
+    // 26_x = laufende Bauzeit, alles andere (27_, 28_) tritt zurueck - sonst
+    // ueberdecken die Schilder kuenftiger Etappen die, um die es heute geht.
+    var jetzt=String(b.n).indexOf('26_')===0;
+    var mN=0, mE=0, n=0;
+    (b.ringe||[]).forEach(function(ring){
+      var pts=ring.map(function(pk){
+        var v=akLv95(pk[0],pk[1]); mN+=v.N; mE+=v.E; n++; return [v.N,v.E]; });
+      L.polygon(pts, { renderer:cv, pane:'bereichePane', interactive:false,
+                       color: jetzt?'#1e40af':'#64748b', weight: jetzt?1.8:1.2,
+                       opacity: jetzt?.95:.6,
+                       fillColor:'#3b82f6', fillOpacity: jetzt?.10:.05 }).addTo(g);
+    });
+    if(!n) return;
+    L.tooltip({permanent:true, direction:'center', className:'kBer'+(jetzt?'':' spaet'),
+               pane:'berLblPane', opacity:1, interactive:false})
+      .setLatLng([mN/n,mE/n]).setContent(esc(b.n)).addTo(g);
+  });
+  return g;
+}
+function kBerAn(){                          // gemerkte Wahl, Vorgabe: aus
+  try{ return localStorage.getItem(LS_BER)==='1'; }catch(e){ return false; }
+}
+function kBerMalen(){
+  if(!kM || !kM.ber) return;
+  var an=kBerAn();
+  if(an) kM.ber.addTo(kM.map); else kM.map.removeLayer(kM.ber);
+  var b=$('kBerBtn');
+  if(b) b.classList.toggle('an', an);
+}
+function kBerUm(){
+  try{ localStorage.setItem(LS_BER, kBerAn()?'0':'1'); }catch(e){}
+  kBerMalen();
 }
 /* Hintergrundbeschriftung "ID-Batchnummer": nur die Tische, die gerade im
    Bild sind und nicht zum gewaehlten Batch gehoeren. */
