@@ -181,6 +181,40 @@
         margin-right:4px; vertical-align:-3px; }
   .tkZ i{ font-style:normal; font-size:10.5px; color:var(--mut); margin-left:3px; }
   .kLblAus .kLbl{ display:none; }
+  /* Batch-Wahl ueber der Karte: eine Zeile Knoepfe, waagrecht scrollbar.
+     Unter der Nummer steht, wie viel von diesem Batch schon erfasst ist,
+     darunter ein Streifen in der Ampelfarbe - am Handy sieht man den Stand
+     ohne die Tabelle zu oeffnen. */
+  .kWahl{ display:flex; gap:6px; overflow-x:auto; padding:2px 2px 7px; margin:7px 0 2px;
+          -webkit-overflow-scrolling:touch; }
+  .kWahl button{ flex:0 0 auto; border:1px solid var(--line); background:#fff; color:var(--ink);
+          border-radius:9px; padding:6px 10px 5px; font:800 16px Arial; line-height:1.1;
+          cursor:pointer; min-width:54px; text-align:center; }
+  .kWahl button i{ display:block; font:700 10.5px Arial; font-style:normal;
+          color:var(--mut); margin-top:2px; }
+  .kWahl button b{ display:block; height:3px; border-radius:2px; margin-top:4px; background:#dfe3e8; }
+  .kWahl button.on{ background:var(--orange); border-color:var(--orange); color:#fff; }
+  .kWahl button.on i{ color:#fff; }
+  /* Tische aus anderen Batches: blasse Beschriftung "ID-Batchnummer" */
+  .kLbl.kLblB{ font:700 9.5px Arial; color:#eef1f4; opacity:.9;
+          text-shadow:0 0 3px rgba(0,0,0,.9), 0 1px 2px rgba(0,0,0,.85); }
+  .kTipp{ font-size:11.5px; color:var(--mut); margin:6px 4px 0; }
+  /* Blatt zum Tisch (lange druecken auf der Karte) */
+  /* z-index ueber 800: die Leaflet-Ebenen liegen bei 400-800, sonst malt
+     die Karte durch das Blatt hindurch. */
+  #kpl{ position:fixed; inset:0; background:rgba(10,16,24,.55); display:none; z-index:1200;
+        align-items:flex-start; justify-content:center; padding:22px 12px; overflow:auto; }
+  #kpl.zeig{ display:flex; }
+  #kpl .dlg{ background:#fff; border-radius:14px; max-width:440px; width:100%; padding:16px; }
+  #kpl h2{ margin:0 0 2px; font-size:17px; }
+  #kpl .esub{ font-size:12px; color:var(--mut); margin-bottom:10px; }
+  #kpl table{ width:100%; border-collapse:collapse; font-size:13px; }
+  #kpl th{ text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.04em;
+        color:var(--mut); border-bottom:1px solid var(--line); padding:3px 4px; }
+  #kpl td{ padding:5px 4px; border-bottom:1px solid #eef0f3; }
+  #kpl .erow button{ font-size:13.5px; line-height:1.25; white-space:normal; }
+  #kpl .warnK{ margin:9px 0 0; padding:7px 9px; border-radius:6px; background:#fdecec;
+        border-left:4px solid var(--rot); font-size:12.5px; color:#7a1512; font-weight:600; }
   #toast{ position:fixed; left:50%; bottom:20px; transform:translateX(-50%) translateY(90px);
           background:#0f5c33; color:#fff; font-weight:700; padding:12px 18px; border-radius:8px;
           font-size:15px; transition:transform .25s; z-index:70; max-width:92%; text-align:center; }
@@ -199,12 +233,12 @@
   #ev input,#ev select,#ev textarea{width:100%;box-sizing:border-box;font:inherit;font-size:14.5px;
     padding:9px 10px;border:1px solid #c9ccd2;border-radius:9px;background:#fbfcfd;color:var(--ink);}
   #ev textarea{min-height:56px;resize:vertical;}
-  #ev .erow{display:flex;gap:8px;margin-top:14px;}
-  #ev .erow button{flex:1;border:0;font:inherit;font-size:14px;font-weight:900;
+  #ev .erow, #kpl .erow{display:flex;gap:8px;margin-top:14px;}
+  #ev .erow button, #kpl .erow button{flex:1;border:0;font:inherit;font-size:14px;font-weight:900;
     padding:12px 8px;border-radius:10px;cursor:pointer;}
-  #ev .eab{background:#e3e8ed;color:var(--ink);flex:0 0 32%;}
-  #ev .eok{background:var(--gruen);color:#fff;}
-  #ev .ehin{font-size:11.5px;color:var(--mut);margin-top:10px;}
+  #ev .eab, #kpl .eab{background:#e3e8ed;color:var(--ink);flex:0 0 32%;}
+  #ev .eok, #kpl .eok{background:var(--gruen);color:#fff;}
+  #ev .ehin, #kpl .ehin{font-size:11.5px;color:var(--mut);margin-top:10px;}
 </style>
 </head>
 <body>
@@ -376,12 +410,19 @@
       data-i18n="btn_protokoll">🗒 Änderungsprotokoll</button></div>
   </section>
 
-  <!-- ══════════ 4 · KARTEN JE BATCH ══════════ -->
+  <!-- ══════════ 4 · KARTE MIT BATCH-WAHL ══════════ -->
   <section id="s4" style="display:none">
-    <div class="box" style="border-left-color:var(--orange)">
+    <div class="box kBatch" style="border-left-color:var(--orange)">
       <h2 data-i18n="k_titel">🗺 Stand je Batch</h2>
-      <div class="sub" data-i18n="k_sub">Je Bohrpunkt: Passstück erfasst? Je Tischfläche: vormontiert oder schon auf dem Berg?</div>
-      <div class="kLeg">
+      <div class="sub" data-i18n="k_sub">Batch oben wählen. Je Bohrpunkt: Passstück erfasst?
+        Je Tischfläche: vormontiert oder schon auf dem Berg?</div>
+      <div class="kWahl" id="kWahl"></div>
+      <div class="zaehler" id="kz">–</div>
+      <div class="kHinweis" id="kHw" style="display:none"></div>
+      <div class="kmap" id="km"></div>
+      <div class="kTipp" id="kTipp" data-i18n="tipp_lang">Tisch antippen = Kurzinfo · lange drücken = Vormontageplan</div>
+      <div class="hint" id="kOhne" style="margin:6px 4px 0;display:none"></div>
+      <div class="kLeg" style="margin-top:9px">
         <span><i class="dot b"></i><span data-i18n="leg_ps">Passstück erfasst</span></span>
         <span><i class="dot o"></i><span data-i18n="leg_ps_offen">Passstück fehlt</span></span>
         <span><i class="fl o"></i><span data-i18n="leg_offen">offen</span></span>
@@ -389,6 +430,7 @@
         <span><i class="fl b"></i><span data-i18n="leg_berg">auf dem Berg</span></span>
       </div>
       <div class="kLeg" style="margin-top:5px">
+        <span data-i18n="leg_andere" style="display:block;margin-bottom:4px">Blass in Grau = Tisch aus einem anderen Batch – dort steht ID-Batchnummer.</span>
         <span data-i18n="leg_eng" style="display:block;margin-bottom:4px;color:#D72622;font-weight:700">⚠️ rot gestrichelt = Normteil fehlt, Tisch nicht vormontierbar</span>
         <span data-i18n="leg_typ">Typ hinter der ID – Farbe wie die Normteile:</span>
         <span><i class="tk A">A</i></span><span><i class="tk B">B</i></span><span><i class="tk C">C</i></span>
@@ -396,7 +438,6 @@
       </div>
       <div style="margin-top:9px"><button class="btn ghost" onclick="kartenLaden(true)" data-i18n="btn_aktualisieren">↻ Aktualisieren</button></div>
     </div>
-    <div id="kBoxen"></div>
   </section>
 
   <!-- Arbeitsanweisungen + Rückmeldung – gemeinsamer Stand mit Stahlbau und
@@ -445,6 +486,9 @@
   </div>
 </div></div>
 
+<!-- Blatt zum Tisch: lange auf die Karte druecken (oder antippen -> «📐 Plan») -->
+<div id="kpl" onclick="if(event.target===this)kplZu()"><div class="dlg" id="kplInhalt"></div></div>
+
 <div id="toast"></div>
 
 <script src="assets/js/tesseract/tesseract.min.js"></script>
@@ -480,8 +524,17 @@ var I18N={
   btn_protokoll:'🗒 Änderungsprotokoll', edit_titel:'Eintrag bearbeiten',
   btn_abbrechen:'Abbrechen', edit_hinweis:'Wird protokolliert: wer, wann, alt → neu.',
   err_bp:'Bohrpunkt: Zahl 1–12', ok_geaendert:'Änderung gespeichert & protokolliert',
-  tab_auftrag:'🗺 Karten', k_titel:'🗺 Stand je Batch',
-  k_sub:'Je Bohrpunkt: Passstück erfasst? Je Tischfläche: vormontiert oder schon auf dem Berg?',
+  tab_auftrag:'🗺 Karte', k_titel:'🗺 Stand je Batch',
+  k_sub:'Batch oben wählen. Je Bohrpunkt: Passstück erfasst? Je Tischfläche: vormontiert oder schon auf dem Berg?',
+  leg_andere:'Blass in Grau = Tisch aus einem anderen Batch – dort steht ID-Batchnummer.',
+  tipp_lang:'Tisch antippen = Kurzinfo · lange drücken = Vormontageplan',
+  pl_titel:'Tisch {id}', pl_batch:'Bestellbatch', pl_liefer:'Liefertermin',
+  pl_stuetze:'Stütze', pl_bestellt:'bestellt [mm]', pl_erfasst:'erfasst [mm]',
+  pl_offen:'noch nicht erfasst', pl_kein:'keine Meldung',
+  pl_stand:'Stand', pl_eng:'Fehlt im Tal', pl_zu:'Schliessen',
+  pl_btn:'📐 Vormontageplan öffnen',
+  pl_btn_sub:'öffnet vormontage.buildtrack.ch – braucht Netz und Anmeldung',
+  pl_nachbest:'⟳ diese Stütze wurde neu bestellt – beim Abladen kontrollieren',
   leg_ps:'Passstück erfasst', leg_ps_offen:'Passstück fehlt',
   leg_offen:'offen', leg_vormontiert:'vormontiert', leg_berg:'auf dem Berg',
   eng_karte:'Es fehlt im Tal', leg_eng:'⚠️ rot gestrichelt = Normteil fehlt, Tisch nicht vormontierbar',
@@ -571,8 +624,17 @@ var I18N={
   btn_protokoll:'🗒 Change log', edit_titel:'Edit entry',
   btn_abbrechen:'Cancel', edit_hinweis:'Logged: who, when, old → new.',
   err_bp:'Drill point: number 1–12', ok_geaendert:'Change saved & logged',
-  tab_auftrag:'🗺 Maps', k_titel:'🗺 Status per batch',
-  k_sub:'Per drill point: fitting piece saved? Per table area: pre-assembled or already on the mountain?',
+  tab_auftrag:'🗺 Map', k_titel:'🗺 Status per batch',
+  k_sub:'Pick the batch above. Per drill point: fitting piece saved? Per table area: pre-assembled or already on the mountain?',
+  leg_andere:'Pale grey = table from another batch – it shows ID-batch number.',
+  tipp_lang:'Tap a table = short info · press and hold = pre-assembly drawing',
+  pl_titel:'Table {id}', pl_batch:'Order batch', pl_liefer:'Delivery date',
+  pl_stuetze:'Post', pl_bestellt:'ordered [mm]', pl_erfasst:'saved [mm]',
+  pl_offen:'not saved yet', pl_kein:'no report',
+  pl_stand:'Status', pl_eng:'Missing in the valley', pl_zu:'Close',
+  pl_btn:'📐 Open the drawing',
+  pl_btn_sub:'opens vormontage.buildtrack.ch – needs network and login',
+  pl_nachbest:'⟳ this post was re-ordered – check it when unloading',
   leg_ps:'fitting piece saved', leg_ps_offen:'fitting piece missing',
   leg_offen:'open', leg_vormontiert:'pre-assembled', leg_berg:'sent up the mountain',
   eng_karte:'Missing in the valley', leg_eng:'⚠️ dashed red = standard part missing, table cannot be pre-assembled',
@@ -662,8 +724,17 @@ var I18N={
   btn_protokoll:'🗒 Rejestr zmian', edit_titel:'Edytuj wpis',
   btn_abbrechen:'Anuluj', edit_hinweis:'Rejestrowane: kto, kiedy, stare → nowe.',
   err_bp:'Punkt wiercenia: liczba 1–12', ok_geaendert:'Zmiana zapisana i zarejestrowana',
-  tab_auftrag:'🗺 Mapy', k_titel:'🗺 Stan wg partii',
-  k_sub:'Każdy punkt: podpora zapisana? Powierzchnia stołu: zmontowany czy już na górze?',
+  tab_auftrag:'🗺 Mapa', k_titel:'🗺 Stan wg partii',
+  k_sub:'Wybierz partię u góry. Każdy punkt: podpora zapisana? Powierzchnia stołu: zmontowany czy już na górze?',
+  leg_andere:'Blady szary = stół z innej partii – tam stoi ID-numer partii.',
+  tipp_lang:'Dotknij stołu = krótka informacja · przytrzymaj = rysunek montażu',
+  pl_titel:'Stół {id}', pl_batch:'Partia zamówienia', pl_liefer:'Termin dostawy',
+  pl_stuetze:'Podpora', pl_bestellt:'zamówione [mm]', pl_erfasst:'zapisane [mm]',
+  pl_offen:'jeszcze nie zapisane', pl_kein:'brak zgłoszenia',
+  pl_stand:'Stan', pl_eng:'Brakuje w dolinie', pl_zu:'Zamknij',
+  pl_btn:'📐 Otwórz rysunek',
+  pl_btn_sub:'otwiera vormontage.buildtrack.ch – wymaga sieci i logowania',
+  pl_nachbest:'⟳ ta podpora została zamówiona ponownie – sprawdź przy rozładunku',
   leg_ps:'podpora zapisana', leg_ps_offen:'brak podpory',
   leg_offen:'otwarte', leg_vormontiert:'wstępnie zmontowane', leg_berg:'wysłane w góry',
   eng_karte:'Brakuje w dolinie', leg_eng:'⚠️ czerwona przerywana = brak części, stołu nie można zmontować',
@@ -1546,7 +1617,12 @@ var LIEFERUNG={
   11:{soll:'2026-08-11', hinweis:'Anlieferung abends'},
   12:{soll:'2026-08-17'},
   13:{soll:'2026-08-24'},
-  14:{soll:'2026-09-01'},
+  // 14: Soll laut Bestell-xlsx 01.09., tatsaechlich am 28.08. abgeladen - an
+  // diesem Tag hat Mariusz 59 der 100 Positionen erfasst, alle Laengen
+  // deckungsgleich mit der Bestellung (0 Abweichungen). Ohne dieses Ist-Datum
+  // liegt die Schwelle auf dem 01.09. und die 59 Stueck gelten faelschlich als
+  // "frueher schon einmal erfasst" (Nachbestellung).
+  14:{soll:'2026-09-01', ist:'2026-08-28', hinweis:'Teillieferung – 41 Positionen offen'},
   15:{soll:'2026-09-07'},
   16:{soll:'2026-09-14'}
 };
@@ -1554,7 +1630,8 @@ function lieferText(b, voll){
   var l=LIEFERUNG[b];
   if(!l) return '<span style="color:var(--mut)">–</span>';
   if(l.ist)   return '<b style="color:var(--gruen)">'+fmtD(l.ist)+'</b>'
-                     +(l.spaet?' <span style="color:var(--mut);font-size:11px">(Soll '+fmtD(l.soll)+')</span>':'');
+                     +(l.spaet?' <span style="color:var(--mut);font-size:11px">(Soll '+fmtD(l.soll)+')</span>':'')
+                     +(l.hinweis?' <span style="color:var(--mut);font-size:11px">'+esc(l.hinweis)+'</span>':'');
   if(l.soll){
     var offen=!voll, heuteS=heute();
     var farbe = offen && l.soll<heuteS ? 'var(--rot)' : 'var(--ink)';
@@ -1841,13 +1918,25 @@ function dashChartMalen(E, von14){
   el.innerHTML='<div class="sub" style="margin:6px 0 2px">'+T('d_chart')+'</div>'+s;
 }
 
-/* ══════════ Karten je Batch ══════════
-   Eine Karte pro Bestellbatch (Batch 9 und 10 gehoeren zusammen): je
-   Bohrpunkt zeigt ein Punkt, ob das Passstueck erfasst ist; die Tisch-
-   flaeche traegt den Fortschritt (orange = vormontiert, gruen = auf dem
-   Berg; Berg ueberschreibt). Die Arbeitsreihenfolge gibt die Bauleitung
-   muendlich durch - hier steht nur der Stand. */
-/* Hinweise der Bauleitung je Batch-Karte. ids = Tische, die auf der Karte
+/* ══════════ Karte mit Batch-Wahl ══════════
+   EINE Karte statt einer je Batch (Vorgabe Victor 31.08.2026): oben den
+   Bestellbatch antippen, die Karte bleibt stehen, es wird nur umgefaerbt.
+   Der gewaehlte Batch ist farbig - je Bohrpunkt ein Punkt (Passstueck
+   erfasst?), die Tischflaeche traegt den Fortschritt (orange = vormontiert,
+   gruen = auf dem Berg; Berg ueberschreibt). ALLE uebrigen Tische stehen
+   blass in Grau daneben und tragen ihre Batchnummer ("622-13") - so sieht
+   man, was ringsum liegt und aus welcher Lieferung es kommt.
+   Die Arbeitsreihenfolge gibt die Bauleitung muendlich durch - hier steht
+   nur der Stand.
+   ZWEI Entscheide, die das Handy am Leben halten:
+   1. Der graue Hintergrund (1048 Tische) liegt im CANVAS-Renderer und ist
+      nicht anklickbar - 1048 SVG-Polygone mit Treffertest bringen jedes
+      Handy zum Stocken. Angetippt wird ueber die Karte selbst: aus dem
+      Klickpunkt wird der naechstgelegene Tisch gesucht (kTischBei), damit
+      auch die grauen Tische antippbar sind.
+   2. Beschriftet wird im Hintergrund nur, was gerade im Bild ist - 1048
+      feste Tooltips waeren 1048 DOM-Knoten. */
+/* Hinweise der Bauleitung je Batch. ids = Tische, die auf der Karte
    gestrichelt markiert und im Text genannt werden. Erledigt sich ein Hinweis,
    Eintrag hier loeschen - sonst steht er weiter auf der Karte. */
 var KHINWEIS={
@@ -1885,7 +1974,7 @@ function engFuer(tid){                   // Liste der fehlenden Teile fuer diese
   return li.length?li:null;
 }
 function kartenLaden(manuell){
-  kartenMalen();                         // Karten sofort bauen - Status kommt nach
+  kartenMalen();                         // Karte sofort bauen - Status kommt nach
   engpassLaden(function(){ kartenMalen(); engMalen(); });
   laden(manuell);                        // frische Daten -> renderTab -> kartenMalen
   if(manuell) toast(T('ok_aktualisiert'));
@@ -1896,12 +1985,16 @@ function kartenGruppen(){                // Batch 9 + 10 zusammen
     var lbl=(b==='9'||b==='10')?'9+10':String(b);
     g[lbl]=g[lbl]||{};
     Object.keys(map[b]).forEach(function(k){ g[lbl][k]=b; });   // Wert = Batch
-                                             // (Karte 9+10 mischt zwei Batches)
+                                             // (Gruppe 9+10 mischt zwei Batches)
   });
   return g;
 }
-var kGrp={};                             // Batchgruppe -> Positionsschluessel
-var kMaps={};                            // lbl -> {map, flaechen, punkte, nGesamt}
+var kGrp={};                             // Batchgruppe -> {Positionsschluessel: Batch}
+var kWahl='';                            // gewaehlte Batchgruppe ('14', '9+10')
+var kM=null;                             // {map, hinter, vorne, flaechen, punkte, lbl, gebaut}
+var kTische=null;                        // Tisch -> {pk, mN, mE, ring}
+var kTBatch={};                          // Tisch -> juengster Batch, in dem er bestellt ist
+var kLbls={};                            // Tisch -> Hintergrundbeschriftung (nur im Bild)
 var kPfaehle=null, kGeoPer=null, kOrtho=null;
 
 function kDaten(cb){                     // Bohrpunkte + Kartenhintergruende einmal laden
@@ -1934,154 +2027,348 @@ function akStatus(){
   });
   return st;
 }
-
-/* Leaflet-Minikarten: einmal bauen, danach nur noch Farben nachziehen -
-   so bleiben Zoom und Ausschnitt beim Aktualisieren erhalten. */
-function kartenMalen(){
-  var wrap=$('kBoxen');
-  if(!wrap || typeof L==='undefined') return;
-  if($('s4').style.display==='none') return;
-  kGrp=kartenGruppen();
-  // Nur aktuelle Batches: ab 8 (aeltere sind verbaut) und erst, wenn die
-  // Lieferung da oder faellig ist - kuenftige Batches erscheinen von selbst.
-  // Zuoberst der Batch, der gerade abgeladen wird, dann absteigend.
-  var akt=aktuellerBatch(), heuteS=heute();
-  var lbls=Object.keys(kGrp)
-    .filter(function(l){
-      var b=parseInt(l,10);
-      if(b<8) return false;
-      var lf=LIEFERUNG[b];
-      return !!(lf && (lf.ist || (lf.soll && lf.soll<=heuteS)));
-    })
-    .sort(function(a,b){
-      var pa=parseInt(a,10), pb=parseInt(b,10);
-      if(pa===akt) return -1;
-      if(pb===akt) return 1;
-      return pb-pa;
-    });
-  kDaten(function(){
-    if(!kPfaehle) return;
-    lbls.forEach(function(lbl){ if(!kMaps[lbl]) kMapBauen(wrap,lbl); });
-    Object.keys(kMaps).forEach(function(l){ kMaps[l].map.invalidateSize(); });
-    kStatusMalen();
+/* ---------- Geometrie einmal rechnen: Umriss + Mittelpunkt je Tisch -------- */
+function kTischeBauen(){
+  if(kTische) return;
+  kTische={};
+  kPfaehle.forEach(function(q){
+    var tid=normId(q[0]), v=akLv95(q[2],q[3]);
+    (kTische[tid]=kTische[tid]||{pk:[]}).pk.push({ s:q[1], key:tid+'-'+q[1], N:v.N, E:v.E });
+  });
+  Object.keys(kTische).forEach(function(tid){
+    var t=kTische[tid], mN=0, mE=0;
+    t.pk.forEach(function(p){ mN+=p.N; mE+=p.E; });
+    t.mN=mN/t.pk.length; t.mE=mE/t.pk.length;
+    t.ring=t.pk.slice().sort(function(a,b){
+        return Math.atan2(a.N-t.mN,a.E-t.mE)-Math.atan2(b.N-t.mN,b.E-t.mE); })
+      .map(function(p){ return [p.N,p.E]; });
   });
 }
-function kMapBauen(wrap,lbl){
-  var keys=Object.keys(kGrp[lbl]);
-  var pos={}; kPfaehle.forEach(function(q){ pos[normId(q[0])+'-'+q[1]]=q; });
-  var tische={}, ohne={};
-  keys.forEach(function(k){
-    var i=k.lastIndexOf('-'), tid=k.slice(0,i), s=k.slice(i+1);
-    var q=pos[k];
-    if(!q){ ohne[tid]=true; return; }
-    var v=akLv95(q[2],q[3]);
-    (tische[tid]=tische[tid]||[]).push({s:s, key:k, N:v.N, E:v.E});
+/* Tisch -> juengster Batch, in dem eine seiner Stuetzen bestellt ist. Diese
+   Nummer steht bei den grauen Tischen hinter der ID ("622-13"). */
+function kBatchJeTisch(){
+  kTBatch={};
+  var map=batchPositionen();
+  Object.keys(map).forEach(function(b){
+    var n=parseInt(b,10); if(isNaN(n)) return;      // 'RES' hat keine Nummer
+    Object.keys(map[b]).forEach(function(k){
+      var tid=k.slice(0,k.lastIndexOf('-'));
+      if(!kTBatch[tid] || n>kTBatch[tid]) kTBatch[tid]=n;
+    });
   });
-  if(!Object.keys(tische).length) return;
-
-  var sid=lbl.replace('+','_');
-  var hw=kHinweis(lbl);
-  var box=document.createElement('div');
-  box.className='box kBatch';
-  box.innerHTML='<h2>Batch '+esc(lbl)+'</h2>'
-    +'<div class="zaehler" id="kz_'+sid+'">–</div>'
-    +(hw?'<div class="kHinweis">'+esc(hw.txt)+'</div>':'')
-    +'<div class="kmap" id="km_'+sid+'"></div>'
-    +(Object.keys(ohne).length?'<div class="hint" style="margin:6px 4px 0">'+T('karte_ohne')+' '
-      +Object.keys(ohne).sort().join(', ')+'</div>':'');
-  wrap.appendChild(box);
-
-  var m=L.map('km_'+sid, { crs:L.CRS.Simple, attributionControl:false,
-                           zoomSnap:0.25, minZoom:-3, maxZoom:6 });
-  // zuerst den Ausschnitt setzen, dann zeichnen - sonst stimmen die Anker nicht
-  var bounds=[];
-  Object.keys(tische).forEach(function(tid){
-    tische[tid].forEach(function(p){ bounds.push([p.N,p.E]); });
+}
+/* Waehlbare Batches: ab 8 (aeltere sind laengst verbaut), juengster zuerst.
+   Kuenftige Batches stehen bewusst mit dabei - sie sagen, welche Tische als
+   naechstes drankommen; frueher fielen sie raus, weil jeder Batch eine eigene
+   Karte hatte und die Seite sonst zu lang geworden waere. */
+function kBatchListe(){
+  return Object.keys(kGrp).filter(function(l){ return parseInt(l,10)>=8; })
+    .sort(function(a,b){ return parseInt(b,10)-parseInt(a,10); });
+}
+function kWahlMalen(){
+  var el=$('kWahl'); if(!el) return;
+  var da=psErfasstDatum(), h='';
+  kBatchListe().forEach(function(lbl){
+    var grp=kGrp[lbl], keys=Object.keys(grp), n=keys.length;
+    var e=keys.filter(function(k){ return batchGeliefert(da,k,batchSchwelle(grp[k])); }).length;
+    var f = e===n ? 'var(--gruen)' : (e ? 'var(--orange)' : '#dfe3e8');
+    h+='<button class="'+(lbl===kWahl?'on':'')+'" onclick="kSetzen(&quot;'+esc(lbl)+'&quot;)">'
+      +esc(lbl)+'<i>'+e+'/'+n+'</i><b style="background:'+f+'"></b></button>';
   });
-  var b=L.latLngBounds(bounds);
-  m.fitBounds(b.pad(0.12));
-  m.setMaxBounds(b.pad(1.2));
-
+  el.innerHTML=h;
+}
+function kSetzen(lbl){
+  if(!kGrp[lbl]) return;
+  kWahl=lbl;
+  kWahlMalen();
+  kVorneBauen();
+  kStatusMalen();
+}
+function kMapBauen(){
+  if(kM || typeof L==='undefined' || !$('km')) return;
+  kTischeBauen();
+  var m=L.map('km', { crs:L.CRS.Simple, attributionControl:false,
+                      zoomSnap:0.25, minZoom:-3, maxZoom:6 });
+  var alle=[];
+  Object.keys(kTische).forEach(function(tid){ alle.push([kTische[tid].mN,kTische[tid].mE]); });
+  var b=L.latLngBounds(alle);
+  m.fitBounds(b.pad(0.05));
+  m.setMaxBounds(b.pad(0.35));
   if(kGeoPer) L.imageOverlay('assets/img/perimeter.jpg',
       [[kGeoPer.minN,kGeoPer.minE],[kGeoPer.maxN,kGeoPer.maxE]]).addTo(m);
   (kOrtho||[]).forEach(function(o){          // Drohnen-Ortho scharf darueber
     L.imageOverlay('uploads/ortho/'+o.datei, [[o.minN,o.minE],[o.maxN,o.maxE]]).addTo(m);
   });
-
-  var flaechen={}, punkte={};
-  Object.keys(tische).forEach(function(tid){
-    var pk=tische[tid];
-    var mN=0,mE=0; pk.forEach(function(p){ mN+=p.N; mE+=p.E; }); mN/=pk.length; mE/=pk.length;
-    var srt=pk.slice().sort(function(a,b){
-      return Math.atan2(a.N-mN,a.E-mE)-Math.atan2(b.N-mN,b.E-mE); });
-    var mrk=hw && hw.ids.indexOf(String(tid))>=0;      // im Hinweis genannt
-    var eng=engFuer(tid);                              // Normteil fehlt
-    var poly=L.polygon(srt.map(function(p){ return [p.N,p.E]; }),
-      eng ? { color:'#D72622', weight:2.6, opacity:1, dashArray:'3 3', fillColor:'#c9ccd2', fillOpacity:.38 }
-      : mrk ? { color:'#1565c0', weight:2.6, opacity:1, dashArray:'6 4', fillColor:'#c9ccd2', fillOpacity:.38 }
-            : { color:'#fff', weight:1.2, opacity:.9, fillColor:'#c9ccd2', fillOpacity:.38 }).addTo(m);
-    if(eng) poly.bindPopup('<b>'+tid+'</b><br>'+T('eng_karte')+':<br>'+eng.join('<br>'));
-    flaechen[tid]=poly;
-    // Beschriftung fest auf den Tisch-Mittelpunkt (nicht an das Polygon gebunden).
-    // "622-B": Typ immer dran, unabhaengig davon, ob die Passstuecke schon
-    // erfasst sind - der Typ hilft beim Suchen, der Stand steht in der Farbe.
-    L.tooltip({permanent:true, direction:'center', className:'kLbl', opacity:1})
-      .setLatLng([mN,mE]).setContent(String(tid)+'-'+typChip(tid)+(mrk?' ⏳':'')+(eng?' ⚠️':'')).addTo(m);
-    pk.forEach(function(p){
-      punkte[p.key]=L.circleMarker([p.N,p.E],
-        { radius:3.2, weight:1.1, color:'#fff', opacity:.95, fillColor:'#e4e7eb', fillOpacity:1 }).addTo(m);
-    });
+  var cv=L.canvas({padding:0.3});            // siehe Kopf: 1048 Flaechen im Canvas
+  var hinter={};
+  Object.keys(kTische).forEach(function(tid){
+    hinter[tid]=L.polygon(kTische[tid].ring,
+      { renderer:cv, interactive:false, color:'#fff', weight:0.8, opacity:0.30,
+        fillColor:'#9aa0a6', fillOpacity:0.16 }).addTo(m);
   });
   L.control.scale({imperial:false, maxWidth:110}).addTo(m);
+  kM={ map:m, hinter:hinter, vorne:L.layerGroup().addTo(m),
+       flaechen:{}, punkte:{}, lbl:{}, gebaut:'' };
   // Beschriftungen erst zeigen, wenn nah genug gezoomt (sonst Buchstabensalat)
-  function lblZeigen(){
-    m.getContainer().classList.toggle('kLblAus', m.getZoom()<1.4);
-  }
+  function lblZeigen(){ m.getContainer().classList.toggle('kLblAus', m.getZoom()<1.4); }
   m.on('zoomend', lblZeigen); lblZeigen();
-  kMaps[lbl]={map:m, flaechen:flaechen, punkte:punkte, nGesamt:keys.length};
+  m.on('zoomend moveend', kLblNach);
+  m.on('click', function(e){
+    if(Date.now()-kLangTs<800) return;      // der Klick nach dem langen Druck
+    var t=kTischBei(e.latlng); if(t) kKurzinfo(t, e.latlng);
+  });
+  kLangdruck(m);
+  kLblNach();
+}
+/* Hintergrundbeschriftung "ID-Batchnummer": nur die Tische, die gerade im
+   Bild sind und nicht zum gewaehlten Batch gehoeren. */
+function kLblNach(){
+  if(!kM) return;
+  // Erst ab Zoom 2.2 - bei 1.4 kleben die IDs der Nachbarreihen ineinander.
+  // Der gewaehlte Batch wird schon ab 1.4 beschriftet (kLblAus), er ist duenner besetzt.
+  var m=kM.map, an=m.getZoom()>=2.2, b=an?m.getBounds():null;
+  Object.keys(kTische).forEach(function(tid){
+    var t=kTische[tid];
+    var drin = an && !kM.flaechen[tid] && b.contains(L.latLng(t.mN,t.mE));
+    if(drin && !kLbls[tid]){
+      kLbls[tid]=L.tooltip({permanent:true, direction:'center', className:'kLbl kLblB', opacity:1})
+        .setLatLng([t.mN,t.mE])
+        .setContent(tid+(kTBatch[tid]?'-'+kTBatch[tid]:'')).addTo(m);
+    } else if(!drin && kLbls[tid]){
+      m.removeLayer(kLbls[tid]); delete kLbls[tid];
+    }
+  });
+}
+/* Naechstgelegener Tisch zum Klickpunkt (LV95, also Meter). 5 m um den
+   Mittelpunkt - ein Tisch ist 7.4 m breit, damit trifft man ihn sicher,
+   ohne beim Danebentippen einen Nachbarn zu erwischen. */
+function kTischBei(latlng){
+  if(!kTische) return null;
+  var best=null, bd=1e9;
+  Object.keys(kTische).forEach(function(tid){
+    var t=kTische[tid];
+    var d=(t.mN-latlng.lat)*(t.mN-latlng.lat)+(t.mE-latlng.lng)*(t.mE-latlng.lng);
+    if(d<bd){ bd=d; best=tid; }
+  });
+  return bd<=25 ? best : null;
+}
+/* Langer Druck (550 ms ohne zu verschieben) = Vormontageplan. Eigene
+   Erkennung statt 'contextmenu': das Ereignis kommt auf iOS und Android
+   unterschiedlich - und gar nicht, wenn der Finger ein paar Pixel wandert. */
+var kLangTs=0;                             // wann zuletzt lange gedrueckt wurde
+function kLangdruck(m){
+  var el=m.getContainer(), t=null, sx=0, sy=0, ll=null;
+  function ab(){ if(t){ clearTimeout(t); t=null; } }
+  el.addEventListener('touchstart', function(e){
+    if(e.touches.length!==1) return;
+    var p=e.touches[0]; sx=p.clientX; sy=p.clientY;
+    ll=m.containerPointToLatLng(m.mouseEventToContainerPoint(p));
+    ab();
+    t=setTimeout(function(){
+      t=null;
+      var tid=kTischBei(ll);
+      if(tid){
+        kLangTs=Date.now();
+        if(navigator.vibrate){ try{ navigator.vibrate(30); }catch(x){} }
+        kPlanOeffnen(tid);
+      }
+    }, 550);
+  }, {passive:true});
+  el.addEventListener('touchmove', function(e){
+    var p=e.touches[0];
+    if(!p || Math.abs(p.clientX-sx)>12 || Math.abs(p.clientY-sy)>12) ab();
+  }, {passive:true});
+  el.addEventListener('touchend', ab, {passive:true});
+  el.addEventListener('touchcancel', ab, {passive:true});
+  m.on('contextmenu', function(e){            // am PC: Rechtsklick
+    var tid=kTischBei(e.latlng);
+    if(tid) kPlanOeffnen(tid);
+  });
+}
+/* Kurzinfo beim Antippen - mit dem Weg zum Plan. */
+function kKurzinfo(tid, latlng){
+  var st=akStatus()[tid], eng=engFuer(tid), b=kTBatch[tid];
+  var h='<b style="font-size:15px">'+esc(tid)+'</b> '+typChip(tid)
+    +(b?' <span style="color:#63676d">· '+T('pl_batch')+' '+b+'</span>':'')
+    +'<br>'+T('pl_stand')+': '
+    +(st==='berg'?T('leg_berg'):(st==='vormontiert'?T('leg_vormontiert'):T('leg_offen')))
+    +(eng?'<br><span style="color:#D72622;font-weight:700">'+T('pl_eng')+': '+esc(eng.join(', '))+'</span>':'')
+    +'<br><button class="stiftE" style="margin-top:6px" onclick="kPlanOeffnen(&quot;'+esc(tid)+'&quot;)">📐 Plan</button>';
+  L.popup({closeButton:true, autoPan:true}).setLatLng(latlng).setContent(h).openOn(kM.map);
+}
+/* ---------- Vordergrund: der gewaehlte Batch ---------- */
+function kStil(mrk,eng){
+  return eng ? { color:'#D72622', weight:2.6, opacity:1, dashArray:'3 3', fillColor:'#c9ccd2', fillOpacity:0.38 }
+     : mrk   ? { color:'#1565c0', weight:2.6, opacity:1, dashArray:'6 4', fillColor:'#c9ccd2', fillOpacity:0.38 }
+             : { color:'#fff', weight:1.4, opacity:1, fillColor:'#c9ccd2', fillOpacity:0.38 };
+}
+function kVorneBauen(){
+  if(!kM || !kWahl || !kGrp[kWahl]) return;
+  var grp=kGrp[kWahl], hw=kHinweis(kWahl), ohne={}, tische={}, bounds=[];
+  Object.keys(grp).forEach(function(k){
+    var tid=k.slice(0,k.lastIndexOf('-'));
+    if(!kTische[tid]){ ohne[tid]=true; return; }
+    var p=null;
+    kTische[tid].pk.forEach(function(q){ if(q.key===k) p=q; });
+    (tische[tid]=tische[tid]||[]).push({ key:k, punkt:p });
+  });
+  kM.vorne.clearLayers();
+  kM.flaechen={}; kM.punkte={}; kM.lbl={};
+  // Hintergrund unter dem gewaehlten Batch wegnehmen, damit nichts doppelt liegt
+  Object.keys(kTische).forEach(function(tid){
+    var weg=!!tische[tid];
+    kM.hinter[tid].setStyle({ opacity: weg?0:0.30, fillOpacity: weg?0:0.16 });
+  });
+  Object.keys(tische).forEach(function(tid){
+    var t=kTische[tid];
+    var mrk=hw && hw.ids.indexOf(String(tid))>=0;      // im Hinweis genannt
+    var eng=engFuer(tid);                              // Normteil fehlt
+    kM.flaechen[tid]=L.polygon(t.ring, kStil(mrk,eng)).addTo(kM.vorne);
+    t.ring.forEach(function(p){ bounds.push(p); });
+    // Beschriftung fest auf den Tisch-Mittelpunkt. "622-B": Typ immer dran,
+    // unabhaengig davon, ob die Passstuecke schon erfasst sind - der Typ hilft
+    // beim Suchen, der Stand steht in der Farbe.
+    kM.lbl[tid]=L.tooltip({permanent:true, direction:'center', className:'kLbl', opacity:1})
+      .setLatLng([t.mN,t.mE])
+      .setContent(String(tid)+'-'+typChip(tid)+(mrk?' ⏳':'')+(eng?' ⚠️':''))
+      .addTo(kM.vorne);
+    tische[tid].forEach(function(e){
+      if(!e.punkt) return;
+      kM.punkte[e.key]=L.circleMarker([e.punkt.N,e.punkt.E],
+        { radius:3.2, weight:1.1, color:'#fff', opacity:0.95,
+          fillColor:'#e4e7eb', fillOpacity:1 }).addTo(kM.vorne);
+    });
+  });
+  kM.gebaut=kWahl;
+  if(bounds.length) kM.map.fitBounds(L.latLngBounds(bounds).pad(0.25));
+  var hwEl=$('kHw');
+  if(hwEl){ hwEl.style.display=hw?'':'none'; hwEl.textContent=hw?hw.txt:''; }
+  var oEl=$('kOhne'), oL=Object.keys(ohne).sort();
+  if(oEl){ oEl.style.display=oL.length?'':'none';
+           oEl.textContent=oL.length?T('karte_ohne')+' '+oL.join(', '):''; }
+  kLblNach();                              // graue Beschriftungen nachziehen
 }
 function kStatusMalen(){
-  var st=akStatus(), da=psErfasstDatum();
-  Object.keys(kMaps).forEach(function(lbl){
-    var M=kMaps[lbl], e=0, nv=0, nb=0, grp=kGrp[lbl]||{};
-    Object.keys(M.punkte).forEach(function(k){
-      var er=batchGeliefert(da,k,batchSchwelle(grp[k])); if(er) e++;
-      // orange + groesser = Position war frueher schon einmal erfasst, das
-      // Stueck DIESES Batches (Nachbestellung) fehlt aber noch. Grau waere
-      // richtig, faellt aber zwischen 100 grauen Punkten niemandem auf.
-      var nach=!er && !!da[k];
-      M.punkte[k].setStyle({ fillColor: er?'#1565c0':(nach?'#e08a00':'#e4e7eb'),
-                             radius: nach?4.8:3.2, weight: nach?1.6:1.1 });
-      if(nach && !M.punkte[k]._nachTip){
-        M.punkte[k]._nachTip=true;
-        M.punkte[k].bindPopup('<b>'+k+'</b><br>'+T('batch_nach'));
-      }
-    });
-    Object.keys(M.flaechen).forEach(function(tid){
-      var zu=st[tid];
-      if(zu==='berg') nb++; else if(zu==='vormontiert') nv++;
-      M.flaechen[tid].setStyle({
-        fillColor: zu==='berg' ? '#1e9e5a' : (zu==='vormontiert' ? '#e08a00' : '#c9ccd2'),
-        fillOpacity: zu ? .55 : .38
-      });
-    });
-    var el=$('kz_'+lbl.replace('+','_'));
-    if(el) el.textContent=T('karte_stand',{e:e,g:M.nGesamt,v:nv,b:nb});
+  if(!kM || !kWahl) return;
+  var st=akStatus(), da=psErfasstDatum(), grp=kGrp[kWahl]||{};
+  var keys=Object.keys(grp), e=0, nv=0, nb=0;
+  keys.forEach(function(k){ if(batchGeliefert(da,k,batchSchwelle(grp[k]))) e++; });
+  Object.keys(kM.punkte).forEach(function(k){
+    var er=batchGeliefert(da,k,batchSchwelle(grp[k]));
+    // orange + groesser = Position war frueher schon einmal erfasst, das
+    // Stueck DIESES Batches (Nachbestellung) fehlt aber noch. Grau waere
+    // richtig, faellt aber zwischen 100 grauen Punkten niemandem auf.
+    var nach=!er && !!da[k];
+    kM.punkte[k].setStyle({ fillColor: er?'#1565c0':(nach?'#e08a00':'#e4e7eb'),
+                            radius: nach?4.8:3.2, weight: nach?1.6:1.1 });
+    if(nach && !kM.punkte[k]._nachTip){
+      kM.punkte[k]._nachTip=true;
+      kM.punkte[k].bindPopup('<b>'+k+'</b><br>'+T('batch_nach'));
+    }
   });
+  Object.keys(kM.flaechen).forEach(function(tid){
+    var zu=st[tid];
+    if(zu==='berg') nb++; else if(zu==='vormontiert') nv++;
+    kM.flaechen[tid].setStyle({
+      fillColor: zu==='berg' ? '#1e9e5a' : (zu==='vormontiert' ? '#e08a00' : '#c9ccd2'),
+      fillOpacity: zu ? 0.55 : 0.38
+    });
+  });
+  var el=$('kz');
+  if(el) el.textContent=T('karte_stand',{e:e,g:keys.length,v:nv,b:nb});
+  var hw=kHinweis(kWahl), hwEl=$('kHw');       // Sprachwechsel schlaegt hier durch
+  if(hwEl){ hwEl.style.display=hw?'':'none'; hwEl.textContent=hw?hw.txt:''; }
   engMalen();
 }
-/* Tische, denen im Tal ein Normteil fehlt, rot stricheln */
+/* Tische, denen im Tal ein Normteil fehlt, rot stricheln. Die Engpaesse
+   kommen erst nach dem ersten Zeichnen aus nalp-lager.js - darum wird hier
+   auch die Beschriftung nachtraeglich um das ⚠️ ergaenzt. */
 function engMalen(){
-  Object.keys(kMaps).forEach(function(lbl){
-    var M=kMaps[lbl];
-    Object.keys(M.flaechen).forEach(function(tid){
-      var e=engFuer(tid);
-      if(!e) return;
-      M.flaechen[tid].setStyle({ color:'#D72622', weight:2.6, opacity:1, dashArray:'3 3' });
-      M.flaechen[tid].bindPopup('<b>'+tid+'</b><br>'+T('eng_karte')+':<br>'+e.join('<br>'));
-    });
+  if(!kM) return;
+  Object.keys(kM.flaechen).forEach(function(tid){
+    var e=engFuer(tid);
+    if(!e) return;
+    kM.flaechen[tid].setStyle({ color:'#D72622', weight:2.6, opacity:1, dashArray:'3 3' });
+    var l=kM.lbl[tid], c=l&&l.getContent();
+    if(l && typeof c==='string' && c.indexOf('⚠️')<0) l.setContent(c+' ⚠️');
   });
 }
+function kartenMalen(){
+  if(!$('km') || typeof L==='undefined') return;
+  if($('s4').style.display==='none') return;
+  kGrp=kartenGruppen();
+  kBatchJeTisch();
+  var lst=kBatchListe();
+  if(!lst.length) return;
+  if(!kWahl || !kGrp[kWahl]){              // erste Wahl: der Batch, der gerade laeuft
+    var akt=aktuellerBatch();
+    var lbl=(akt===9||akt===10)?'9+10':String(akt);
+    kWahl = kGrp[lbl] ? lbl : lst[0];
+  }
+  kDaten(function(){
+    if(!kPfaehle) return;
+    kMapBauen();
+    kWahlMalen();
+    if(kM.gebaut!==kWahl) kVorneBauen();
+    kM.map.invalidateSize();
+    kStatusMalen();
+  });
+}
+/* ══════════ Blatt zum Tisch (lange druecken) ══════════
+   Zeigt, was zu diesem Tisch belegt ist: Typ, Batch, je Stuetze die
+   bestellte Laenge gegen die erfasste, der Vormontagestand und fehlende
+   Normteile. Der Vormontageplan selbst wird hier NICHT nachgezeichnet -
+   er wird in der Vormontage-App von BuildTrack geoeffnet, damit die
+   Zeichnung an genau einer Stelle gepflegt wird (gleicher Grundsatz wie
+   beim Sitzungsprotokoll: eine Formatierungsstelle, nie eine zweite
+   Fassung danebenbauen). */
+var PLAN_URL='https://vormontage.buildtrack.ch/';
+function kErfasst(tid){                   // Stuetze -> juengste Erfassung
+  var o={};
+  alleStuetzen().forEach(function(r){
+    if(normId(r.tischId)!==String(tid)) return;
+    var s=String(r.stuetze||'').trim().toUpperCase(), t=dTag(r)||'';
+    if(!o[s] || t>=o[s].t) o[s]={ len:r.laenge, t:t, von:r.von };
+  });
+  return o;
+}
+function kPlanOeffnen(tid){
+  tid=String(tid);
+  var soll=sollIndex(), erf=kErfasst(tid), st=akStatus()[tid], eng=engFuer(tid);
+  var voll=typVoll(tid), ser=/_(\d{4})/.exec(voll);
+  var h='<h2>'+T('pl_titel',{id:esc(tid)})+' '+typChip(tid)
+   +(ser?' <span style="font-size:12px;color:#63676d">'+ser[1]+'</span>':'')+'</h2>'
+   +'<div class="esub">'+T('pl_stand')+': '
+   +(st==='berg'?'⛰ '+T('leg_berg'):(st==='vormontiert'?'🔧 '+T('leg_vormontiert'):T('leg_offen')))+'</div>';
+  var bt=kTBatch[tid], lf=bt&&LIEFERUNG[bt];
+  if(bt) h+='<div class="esub" style="margin:-6px 0 9px">'+T('pl_batch')+' <b>'+bt+'</b>'
+    +(lf?' · '+T('pl_liefer')+' '+(lf.ist?fmtD(lf.ist):(lf.soll?fmtD(lf.soll):'–')):'')+'</div>';
+  h+='<table><tr><th>'+T('pl_stuetze')+'</th><th>'+T('pl_bestellt')+'</th><th>'+T('pl_erfasst')+'</th></tr>';
+  var nachbest=false;
+  ['S1','S2','S3','S4'].forEach(function(sx){
+    var b=soll[tid+'-'+sx], e=erf[sx];
+    if(!b && !e) return;
+    // erfasst, aber vor der Schwelle dieses Batches = die Stuetze wurde neu
+    // bestellt und das Stueck DIESER Lieferung ist noch nicht da
+    var nach = b && e && e.t < batchSchwelle(b.batch);
+    if(nach) nachbest=true;
+    h+='<tr><td><b>'+sx+'</b></td>'
+      +'<td>'+(b?Math.round(b.laenge)+' <span style="color:#63676d;font-size:11.5px">('+T('pl_batch')+' '+b.batch+')</span>':'–')+'</td>'
+      +'<td>'+(e?(nach?'<b style="color:#b9721a">⟳ </b>':'')+esc(e.len)
+                 +' <span style="color:#63676d;font-size:11.5px">'+esc(fmtD(e.t))+(e.von?' · '+esc(e.von):'')+'</span>'
+              :'<span style="color:#b9721a">'+T('pl_offen')+'</span>')+'</td></tr>';
+  });
+  h+='</table>';
+  if(nachbest) h+='<div class="ehin" style="margin-top:6px;color:#b9721a">'+T('pl_nachbest')+'</div>';
+  if(eng) h+='<div class="warnK">⚠️ '+T('pl_eng')+': '+esc(eng.join(', '))+'</div>';
+  h+='<div class="erow" style="margin-top:12px">'
+    +'<button class="eab" onclick="kplZu()">'+T('pl_zu')+'</button>'
+    +'<button class="eok" onclick="window.open(&quot;'+PLAN_URL+'?tisch='+encodeURIComponent(tid)+'&quot;,&quot;_blank&quot;,&quot;noopener&quot;)">'+T('pl_btn')+'</button>'
+    +'</div><div class="ehin" style="margin-top:6px">'+T('pl_btn_sub')+'</div>';
+  $('kplInhalt').innerHTML=h;
+  $('kpl').classList.add('zeig');
+}
+function kplZu(){ $('kpl').classList.remove('zeig'); }
 
 /* ---------- Start ---------- */
 setLang(lang);
@@ -2089,8 +2376,18 @@ $('f_von').value=getVon(); $('p_von').value=getVon();
 netzMalen(); pendSenden(); typenLaden(); laden(false);
 setInterval(function(){ if(netzAn()) laden(false); }, 90000);
 window.addEventListener('resize', function(){
-  Object.keys(kMaps).forEach(function(l){ kMaps[l].map.invalidateSize(); });
+  if(kM) kM.map.invalidateSize();
 });
+/* Direktlink auf einen bestimmten Batch: vormontage.html#karten/14 */
+(function(){
+  var m=/^#karten\/(.+)$/.exec(location.hash||'');
+  if(!m) return;
+  var lbl=decodeURIComponent(m[1]);
+  window.addEventListener('load', function(){
+    tab(4);
+    setTimeout(function(){ if(kGrp[lbl]) kSetzen(lbl); }, 600);
+  });
+})();
 var qs=location.search;
 if(qs.indexOf('f=fortschritt')>=0) tab(2);
 else if(qs.indexOf('f=tabelle')>=0 || qs.indexOf('f=leistung')>=0) tab(3);
