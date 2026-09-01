@@ -191,6 +191,36 @@ html, body { width:100%; height:100%; overflow:hidden; background:#0d1117;
   /* Schilder im Modell schmal halten, sonst laufen sie aus dem Bild */
   .lbl-d1, .lbl-sta { max-width:44vw; white-space:normal; font-size:9.5px; }
 }
+/* ── Rückbau Baupiste (Zielhöhen + Mikropfähle) ────────────
+   Gleiche Karte wie die Alpstrasse: einklappbar, das ✕ schliesst nur
+   die Karte, nie das Modell. Ausgeschaltet wird über «Ebenen». */
+#rbPanel {
+  display:none; position:fixed; right:10px; top:54px; z-index:110;
+  width:308px; max-width:calc(100vw - 20px);
+  max-height:calc(100vh - 130px); overflow:auto;
+  background:rgba(5,10,20,.9); border:1px solid rgba(255,140,90,.5);
+  border-radius:10px; padding:7px 9px; font-size:11.5px; line-height:1.42;
+  backdrop-filter:blur(8px); box-shadow:0 6px 22px rgba(0,0,0,.45);
+}
+#rbPanel.show { display:block; }
+#rbPanel .lp-head { cursor:pointer; margin-bottom:4px; font-size:12px; }
+#rbPanel .lp-body i { color:rgba(255,255,255,.45); font-size:9.5px; }
+#rbKurz { display:none; color:rgba(255,255,255,.6); font-size:10.5px; }
+#rbPanel.zu { max-height:none; overflow:visible; }
+#rbPanel.zu #rbBody, #rbPanel.zu .alp-sw, #rbPanel.zu #rbLeg { display:none; }
+#rbPanel.zu #rbKurz { display:block; }
+#rbPanel .lp-x { transition:transform .15s; }
+#rbPanel.zu .lp-x { transform:rotate(-90deg); }
+#rbLeg { display:flex; gap:9px; flex-wrap:wrap; margin-top:6px; font-size:10px;
+         color:rgba(255,255,255,.72); }
+#rbLeg span { display:flex; align-items:center; gap:4px; }
+#rbLeg i { width:10px; height:10px; border-radius:2px; display:inline-block; }
+.lbl-rb { background:rgba(255,140,60,.9); border-color:#ff8c3c; color:#111;
+          font-size:9px; font-weight:800; padding:1px 4px; }
+@media (max-width:760px){
+  #rbPanel { top:auto; bottom:auto; right:8px; left:8px; width:auto;
+             max-height:44vh; font-size:11px; }
+}
 .lp-head { display:flex; align-items:center; gap:7px; font-weight:800; margin-bottom:5px; }
 .lp-dot { width:11px; height:11px; border-radius:3px; flex-shrink:0; background:#29cc73; }
 .lp-x {
@@ -505,6 +535,7 @@ body.ar-mode { background:transparent!important; }
   <button class="tb-btn active" id="btnErdung"  onclick="toggleLayer('erdung')">🟠 Erdung</button>
   <button class="tb-btn active" id="btnTische"  onclick="toggleTische()">🟨 Modultische</button>
   <button class="tb-btn" id="btnAlp" onclick="toggleAlpstrasse()">🛣 Alpstrasse + Schacht D1</button>
+  <button class="tb-btn" id="btnRb"  onclick="toggleRueckbau()">⛏ Rückbau Baupiste B3/B4</button>
 </div>
 
 <div id="menuMore" class="tb-menu">
@@ -585,6 +616,31 @@ body.ar-mode { background:transparent!important; }
     <button id="alpBPlanum" class="on" onclick="alpTeil('planum',this)">Planum (UK)</button>
     <button id="alpBSchild" onclick="alpSchilder()">Beschriftung</button>
     <button onclick="alpHinfliegen()">↗ Hinfliegen</button>
+  </div>
+</div>
+
+<!-- Rückbau Baupiste: Kennzahlen + Teilebenen -->
+<div id="rbPanel">
+  <div class="lp-head" onclick="rbKarteAufZu()">
+    <span class="lp-dot" style="background:#ff8c3c"></span>
+    <span>Rückbau Baupiste B3/B4</span>
+    <span style="flex:1"></span>
+    <button class="lp-x" title="Karte auf/zu – das Modell bleibt stehen">▾</button>
+  </div>
+  <div id="rbKurz"></div>
+  <div class="lp-body" id="rbBody"></div>
+  <div id="rbLeg">
+    <span><i style="background:#ff4d1a"></i>Abtrag</span>
+    <span><i style="background:#22c55e"></i>±5 cm</span>
+    <span><i style="background:#1d4ed8"></i>Auftrag</span>
+    <span><i style="background:#5a6070"></i>ausserhalb Pfahlnetz</span>
+  </div>
+  <div class="alp-sw">
+    <button id="rbBFlaeche" class="on" onclick="rbTeil('flaeche',this)">Zielfläche</button>
+    <button id="rbBRohr"    class="on" onclick="rbTeil('rohr',this)">Pfähle</button>
+    <button id="rbBLoch"    class="on" onclick="rbTeil('bohrloch',this)">Bohrloch</button>
+    <button id="rbBSchild"  onclick="rbSchilder()">Tisch-Nr.</button>
+    <button onclick="rbHinfliegen()">↗ Hinfliegen</button>
   </div>
 </div>
 
@@ -728,6 +784,7 @@ body.ar-mode { background:transparent!important; }
 <script src="assets/js/three/OrbitControls.js"></script>
 <script src="assets/js/three/CSS2DRenderer.js"></script>
 <script src="assets/js/nalp-alpstrasse.js"></script>
+<script src="assets/js/nalp-rueckbau.js"></script>
 <script>
 'use strict';
 var GAME_APP=document.documentElement.className.indexOf('game-app')>=0;   // reine Spiel-App (?game=1)
@@ -5534,6 +5591,92 @@ window.alpHinfliegen=function(){
   requestAnimationFrame(function(){ stellen(); });
 };
 
+/* ═══════════════════════════════════════════════════════════
+   RÜCKBAU BAUPISTE B3/B4 – Zielhöhen + Mikropfähle im Boden
+   Zielfläche = Pfahlkopf − 15 cm (Typenplan 0289 A1). Wird erst
+   beim ersten Klick geladen. Geometrie, Farben und Kennzahlen
+   stecken in assets/js/nalp-rueckbau.js.
+═══════════════════════════════════════════════════════════ */
+var rbAn=false, rbGeladen=false, rbLaedt=false;
+window.toggleRueckbau=function(){
+  var btn=document.getElementById('btnRb');
+  var panel=document.getElementById('rbPanel');
+  if(!window.NalpRueckbau){ flashMsg('⚠ Rückbau-Baustein fehlt'); return; }
+
+  if(rbGeladen){
+    rbAn=!rbAn;
+    NalpRueckbau.sichtbar(rbAn);
+    if(btn) btn.classList.toggle('active',rbAn);
+    if(panel){ panel.classList.toggle('show',rbAn); if(rbAn) rbPanelSetzen(); }
+    return;
+  }
+  if(rbLaedt) return;
+  rbLaedt=true;
+  if(btn) btn.textContent='⛏ lädt …';
+  NalpRueckbau.laden(THREE,scene,{OE:OE,ON:ON,OZ:OZ},'baupiste_3_4').then(function(){
+    rbGeladen=true; rbLaedt=false; rbAn=true;
+    if(btn){ btn.textContent='⛏ Rückbau Baupiste B3/B4'; btn.classList.add('active'); }
+    var body=document.getElementById('rbBody');
+    if(body) body.innerHTML=NalpRueckbau.infoHtml();
+    var kurz=document.getElementById('rbKurz');
+    if(kurz) kurz.textContent=NalpRueckbau.kurzHtml();
+    if(panel){
+      panel.classList.add('show');
+      panel.classList.toggle('zu', window.innerWidth<760);
+      rbPanelSetzen();
+    }
+    rbSchildKnopf();
+    rbHinfliegen();
+  }).catch(function(e){
+    rbLaedt=false;
+    if(btn) btn.textContent='⛏ Rückbau Baupiste B3/B4';
+    console.error('Rückbau',e);
+    flashMsg('⚠ Rückbau: '+e.message);
+  });
+};
+window.rbKarteAufZu=function(){
+  var p=document.getElementById('rbPanel');
+  if(p) p.classList.toggle('zu');
+};
+function rbPanelSetzen(){
+  var p=document.getElementById('rbPanel'); if(!p) return;
+  if(window.innerWidth>=760){ p.style.top=''; return; }
+  var tb=document.getElementById('toolbar');
+  p.style.top=((tb?tb.getBoundingClientRect().bottom:60)+8)+'px';
+}
+window.addEventListener('resize',function(){ if(rbAn) rbPanelSetzen(); });
+window.rbTeil=function(name,b){
+  if(!rbGeladen) return;
+  var an=!b.classList.contains('on');
+  b.classList.toggle('on',an);
+  NalpRueckbau.teilSichtbar(name,an);
+};
+function rbSchildKnopf(){
+  var b=document.getElementById('rbBSchild'); if(!b||!rbGeladen) return;
+  b.classList.toggle('on', NalpRueckbau.schilderAn());
+}
+window.rbSchilder=function(){
+  if(!rbGeladen) return;
+  NalpRueckbau.schilderUm();
+  rbSchildKnopf();
+};
+window.rbHinfliegen=function(){
+  if(!rbGeladen) return;
+  var m=NalpRueckbau.mitte(); if(!m) return;
+  if(arActive) stopAR();
+  var t=new THREE.Vector3(m.E-OE, m.H-OZ, -(m.N-ON));
+  var d=window.innerWidth<760 ? 46 : 62;
+  function stellen(){
+    controls.target.copy(t);
+    camera.position.set(t.x+d, t.y+d*0.62, t.z+d);
+    controls.update();
+  }
+  // gleiche Falle wie bei der Alpstrasse: OrbitControls mit Dämpfung
+  // braucht einen zweiten Durchgang, sonst sitzt das Ziel neben der Mitte
+  stellen(); flyDone=true;
+  requestAnimationFrame(function(){ stellen(); });
+};
+
 var SLOT_BTN={leitungen:'btnLeit',erdung:'btnErdung'};
 window.toggleLayer=function(slot){
   var m=layers[slot]; if(!m) return;
@@ -6164,8 +6307,11 @@ async function init(){
       // viewer3d.html#alpstrasse = Strassenmodell gleich einschalten
       if(/alpstrasse|alpstrase|d1/i.test(location.hash))
         setTimeout(function(){ try{ toggleAlpstrasse(); }catch(e){} }, 600);
+      // viewer3d.html#rueckbau = Rückbaumodell gleich einschalten
+      if(/rueckbau|rückbau|baupiste/i.test(location.hash))
+        setTimeout(function(){ try{ toggleRueckbau(); }catch(e){} }, 600);
       // viewer3d.html#bohr = Bohrpunkte gleich einschalten
-      if(/bohr|pfahl/i.test(location.hash))
+      else if(/bohr|pfahl/i.test(location.hash))
         setTimeout(function(){ try{ toggleBohr(); }catch(e){} }, 500);
     }catch(e){ console.warn('hash',e); }
     try{ menziPlan(); standorteTick(); setInterval(standorteTick,60000); }catch(e){ console.warn('menzi',e); }
