@@ -1,8 +1,8 @@
 /* nalp-lager.js — laufende Normteil-Inventur auf dem IP Tal 1
  *
  * Wunsch Mariusz / Auftrag Victor 20.08.2026: den Bestand im Tal laufend führen
- * statt zweimal im Jahr zählen. Erfasst werden fünf Teile:
- *   Knieträger S-1 · Knieträger S-4 · Quertraverse · Normstütze Berg · Normstütze Tal
+ * statt zweimal im Jahr zählen. Erfasst werden vier Teile:
+ *   Knieträger S-1 · Knieträger S-4 · Quertraverse · Normstütze Berg
  *
  * Rechenweg  Bestand = letzte Zählung
  *                     + erfasste Zugänge (Lieferungen)
@@ -15,9 +15,9 @@
  *
  * Startwerte und Bedarf kommen aus uploads/material.json (Reiter «Material» im Admin,
  * erzeugt von Tools\Material_Bilanz_Bauen.py). Sobald Mariusz zählt, gilt seine Zahl.
- * Normstützen Tal stehen dort nicht – die werden nicht mehr verbaut, sondern gehen
- * zurück nach Sursee; hier werden sie nur gezählt, damit die Menge für den
- * Rücklieferschein bekannt ist.
+ * Die Normstütze Tal wurde am 01.09.2026 herausgenommen (Auftrag Victor): sie wird
+ * nicht mehr verbaut und ist komplett nach Sursee zurück. In der Skizze bleiben die
+ * Talstützen S1/S4 grau stehen – ohne sie ist die Konstruktion nicht zu erkennen.
  *
  * Ganz oben im Blatt «Bestand» steht die Uebersicht «Wie viele Tische kannst du
  * noch stellen?» (Auftrag Victor 27.08.2026): je Typ und Serie das Minimum ueber
@@ -55,12 +55,8 @@ var TEILE=[
  {id:'kt4', jeTisch:1, wann:'vormontage', de:'Knieträger S-4', en:'Knee beam S-4', pl:'Wspornik S-4',
   hde:'talseitig bei S4', hen:'valley side at S4', hpl:'od doliny przy S4'},
  {id:'nsb', jeTisch:2, wann:'vormontage', de:'Normstütze Berg', en:'Standard post mountain', pl:'Podpora górska'},
- {id:'qt',  jeTisch:1, wann:'berg', de:'Quertraverse', en:'Cross beam', pl:'Trawersa poprzeczna'},
- {id:'nst', jeTisch:0, wann:'rueck', de:'Normstütze Tal', en:'Standard post valley', pl:'Podpora dolinowa'}
+ {id:'qt',  jeTisch:1, wann:'berg', de:'Quertraverse', en:'Cross beam', pl:'Trawersa poprzeczna'}
 ];
-/* Normstützen Tal gibt es nur aus der Serie 2025 (ab 2026 ist die Talstütze
-   passgenau) – Typen gemäss ILF-Mail 08.05.2026. */
-var NST_TYPEN=['A','B','D','E'];
 var FARBE={A:'#1565c0', B:'#D72622', C:'#8b929b', D:'#1e9e5a', E:'#e0a800'};
 
 /* ─────────────── Skizze: wo sitzt das Teil? ───────────────
@@ -107,7 +103,7 @@ function skizze(teil, gross){
    +'<polygon points="'+K1[0]+' '+K1[1]+' '+K4[1]+' '+K4[0]+'" fill="#eef1f5"'
    +' stroke="#c3c8ce" stroke-width="1.2"/>'
    +li(K1[0],K1[1],f('kt1'),w('kt1'))+li(K4[0],K4[1],f('kt4'),w('kt4'))
-   +li(S1[0],S1[1],f('nst'),w('nst'))+li(S4[0],S4[1],f('nst'),w('nst'))
+   +li(S1[0],S1[1],g,2)+li(S4[0],S4[1],g,2)                 // Tal: nur noch Kontext
    +li(QT[0],QT[1],f('qt'),w('qt'))
    +be(41,119.5,'S1')+be(178,119.5,'S4')+be(17,116,'S2')+be(154,116,'S3')
    +'</svg>';
@@ -404,9 +400,8 @@ function laden(neu){
 function obj2arr(o){ var a=[]; if(!o) return a;
   for(var k in o){ var v=o[k]; if(v&&typeof v==='object'){ v._k=k; a.push(v); } } return a; }
 
-/* Artikel = eine Zeile im Lager: Teil + Typ + Serie.
-   Für Knieträger/Traverse/Bergstütze kommen sie aus material.json (dort steht auch
-   der Bedarf); Normstützen Tal stehen dort nicht mehr und werden ergänzt. */
+/* Artikel = eine Zeile im Lager: Teil + Typ + Serie, alle aus material.json
+   (dort steht auch der Bedarf). */
 function artikel(){
   var li=[], gesehen={};
   ((MAT&&MAT.artikel)||[]).forEach(function(a){
@@ -417,11 +412,6 @@ function artikel(){
             lager:(a.lager==null?null:a.lager), lagerArt:a.lager_art, lagerQuelle:a.lager_quelle,
             bedarf:(a.bedarf_2026==null?null:a.bedarf_2026), offen:a.bestellt_offen||0 };
     gesehen[x.teil+x.typ+x.serie]=1; li.push(x);
-  });
-  NST_TYPEN.forEach(function(ty){
-    li.push({ id:'nst_'+ty.toLowerCase()+'_2025', teil:'nst', typ:ty, serie:'2025',
-              name:'Normstütze Tal '+ty+' 2025', lager:null, lagerArt:null,
-              lagerQuelle:null, bedarf:0, offen:0, rueck:true });
   });
   return li;
 }
@@ -487,7 +477,6 @@ function reicht(a,b){ var def=teilDef(a.teil);
   return Math.floor(b/def.jeTisch); }
 
 function ampel(a,e){
-  if(a.rueck) return 'grau';
   if(e.bestand==null) return 'grau';
   var r=reicht(a,e.bestand);
   if(!a.bedarf) return 'gruen';                          // kein Bedarf mehr = egal
@@ -500,7 +489,7 @@ function ampel(a,e){
 function engpaesse(){
   var li=[];
   artikel().forEach(function(a){
-    if(a.rueck || !a.bedarf) return;
+    if(!a.bedarf) return;
     var e=bestand(a);
     if(e.bestand==null) return;
     var r=reicht(a,e.bestand);
@@ -524,7 +513,7 @@ function saetze(){
   var li=artikel(), serien={}, fach={}, reihe=[];
   /* Welche Serien gibt es je Typ? Nur serienreine Artikel geben das vor -
      bauteilgleiche (Serie '') gehoeren in beide. */
-  li.forEach(function(a){ if(a.rueck||a.serie==='') return;
+  li.forEach(function(a){ if(a.serie==='') return;
     (serien[a.typ]=serien[a.typ]||{})[a.serie]=1; });
   function holen(typ,serie){
     var k=typ+'|'+serie;
@@ -534,7 +523,7 @@ function saetze(){
   }
   li.forEach(function(a){
     var def=teilDef(a.teil);
-    if(a.rueck||!def||!def.jeTisch) return;              // Normstuetze Tal geht zurueck
+    if(!def||!def.jeTisch) return;
     var ser=(a.serie!=='')?[a.serie]:Object.keys(serien[a.typ]||{});
     if(!ser.length) ser=[''];
     ser.forEach(function(se){ holen(a.typ,se).teile[a.teil]=a; });
@@ -776,7 +765,7 @@ function malenBestand(){
       if(e.bestand==null) unter.push(t('ungezaehlt'));
       else if(e.bestand<0) unter.push(t('negativ'));   // mehr verbraucht als gezaehlt
       else {
-        if(!a.rueck && r!==null) unter.push(t(r===1?'reicht1':(r===0?'reicht0':'reicht'),{n:r}));
+        if(r!==null) unter.push(t(r===1?'reicht1':(r===0?'reicht0':'reicht'),{n:r}));
         if(a.bedarf) unter.push(t('bedarf',{n:a.bedarf}));
       }
       /* Wann wurde zuletzt gezaehlt? Stand bisher nur im Erfassen-Formular
