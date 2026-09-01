@@ -41,6 +41,7 @@ var LS_VON='nalp_erfasser_v1', IDB_NAME='nalp_lager', IDB_STORE='jobs', LS_PEND=
 var ENG_TISCHE=3;
 
 var L='de', ZIEL=null, ANSICHT='bestand', LAEUFT=null;
+var CHR_TEIL='', CHR_MAX=60;          // Chronik: Filter und wie viele Zeilen
 var MAT=null, TYPEN=null, INV=null, FORT=null;
 var eArt='zaehlung', eTeil=null, eTyp=null, eSerie=null, eAnzahl=0, eFoto=null;
 var mitZeilen=[];
@@ -101,6 +102,12 @@ var T={
   frage_art:'Was machst du?',
   korr_titel:'Bestand ändern', korr_neu:'Neuer Bestand', korr_grund:'Warum? (optional)',
   korr_ok:'Bestand gesetzt: {n}', korr_abbr:'Abbrechen', korr_hilfe:'Zahl eintragen und speichern – der alte Wert bleibt im Protokoll stehen.',
+  chronik:'Chronik', chr_leer:'Noch keine Bewegung.', chr_mehr:'Ältere zeigen', chr_alle:'Alles',
+  chr_vm:'Tisch {n} vormontiert', chr_neu:'Bestand neu gesetzt',
+  chr_heute:'heute', chr_gestern:'gestern',
+  chr_hilfe:'Alles, was den Bestand verändert hat – das Neuste zuerst. Was VOR einer Zählung liegt, steckt in dieser Zählung schon drin.',
+  chr_vorher:'in der Zählung schon drin',
+  gez_am:'gezählt {d}', wt:['So','Mo','Di','Mi','Do','Fr','Sa'],
   prot_titel:'Protokoll', prot_leer:'Noch keine Buchung.', prot_auto:'Vormontage (automatisch)',
   prot_zaehlung:'gezählt', prot_zugang:'geliefert', prot_abgang:'weggegangen', prot_korrektur:'geändert',
   reset_titel:'Bestand ist zurückgesetzt', reset_text:'{n} Positionen sind noch nicht gezählt. Zählen und eintragen – erst dann rechnet das Lager mit.',
@@ -139,6 +146,12 @@ var T={
   frage_art:'What are you doing?',
   korr_titel:'Change stock', korr_neu:'New stock', korr_grund:'Why? (optional)',
   korr_ok:'Stock set to {n}', korr_abbr:'Cancel', korr_hilfe:'Enter the number and save – the old value stays in the log.',
+  chronik:'History', chr_leer:'No movement yet.', chr_mehr:'Show older', chr_alle:'All',
+  chr_vm:'Table {n} pre-assembled', chr_neu:'stock set anew',
+  chr_heute:'today', chr_gestern:'yesterday',
+  chr_hilfe:'Everything that changed the stock – newest first. Anything BEFORE a count is already included in that count.',
+  chr_vorher:'already included in that count',
+  gez_am:'counted {d}', wt:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
   prot_titel:'Log', prot_leer:'No entry yet.', prot_auto:'Pre-assembly (automatic)',
   prot_zaehlung:'counted', prot_zugang:'delivered', prot_abgang:'taken away', prot_korrektur:'changed',
   reset_titel:'Stock has been reset', reset_text:'{n} positions have not been counted yet. Count them and enter the number – only then the store can calculate.',
@@ -177,6 +190,12 @@ var T={
   frage_art:'Co robisz?',
   korr_titel:'Zmień stan', korr_neu:'Nowy stan', korr_grund:'Dlaczego? (opcjonalnie)',
   korr_ok:'Stan ustawiony: {n}', korr_abbr:'Anuluj', korr_hilfe:'Wpisz liczbę i zapisz – stara wartość zostaje w dzienniku.',
+  chronik:'Kronika', chr_leer:'Brak ruchów.', chr_mehr:'Pokaż starsze', chr_alle:'Wszystko',
+  chr_vm:'Stół {n} zmontowany wstępnie', chr_neu:'stan ustawiony na nowo',
+  chr_heute:'dziś', chr_gestern:'wczoraj',
+  chr_hilfe:'Wszystko, co zmieniło stan – od najnowszych. To, co jest PRZED liczeniem, jest już w tym liczeniu.',
+  chr_vorher:'już w tym liczeniu',
+  gez_am:'policzono {d}', wt:['Nd','Pn','Wt','Śr','Cz','Pt','So'],
   prot_titel:'Dziennik', prot_leer:'Brak wpisów.', prot_auto:'Montaż wstępny (automatycznie)',
   prot_zaehlung:'policzono', prot_zugang:'dostawa', prot_abgang:'wydano', prot_korrektur:'zmieniono',
   reset_titel:'Stan został wyzerowany', reset_text:'{n} pozycji nie zostało jeszcze policzonych. Policz i wpisz – dopiero wtedy magazyn liczy.',
@@ -317,6 +336,23 @@ var CSS=''
 +'.lg .lgk.grau em{color:#9aa6b4;}'
 +'.lg .lgueh{font-size:11.5px;color:#93a3b5;line-height:1.35;margin-top:10px;}'
 +'.lg .lgsatz .lgz{cursor:default;}'
++'.lg .lgchf{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;}'
++'.lg .lgchf button{border:1.5px solid #d7dade;background:#fff;color:#1a1a1a;font:700 12.5px inherit;'
+ +'padding:7px 11px;border-radius:9px;cursor:pointer;}'
++'.lg .lgchf button.on{background:#1a1a1a;border-color:#1a1a1a;color:#fff;}'
++'.lg .lgcht{font:800 13px inherit;color:#1a1a1a;margin:15px 0 2px;padding-bottom:5px;'
+ +'border-bottom:1.5px solid #e6e9ec;}'
++'.lg .lgchz{display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #f2f4f6;}'
++'.lg .lgchz .ik{flex:0 0 20px;text-align:center;font-size:13.5px;line-height:1.35;}'
++'.lg .lgchz .tx{flex:1;min-width:0;font-size:13px;line-height:1.35;}'
++'.lg .lgchz .tx b{display:block;font-weight:800;}'
++'.lg .lgchz .tx small{display:block;color:#63676d;font-size:11.5px;margin-top:1px;}'
++'.lg .lgchz .mg{flex:0 0 auto;font:800 13.5px inherit;white-space:nowrap;padding-top:1px;}'
++'.lg .lgchz .mg.ab{color:#D72622;}'
++'.lg .lgchz .mg.zu{color:#1e9e5a;}'
++'.lg .lgchz .mg.ze{color:#1a1a1a;}'
++'.lg .lgchmehr{width:100%;margin-top:14px;border:1.5px solid #d7dade;background:#fff;'
+ +'border-radius:10px;padding:12px;font:700 13px inherit;cursor:pointer;}'
 +'.lg .lgstand{font-size:11.5px;color:#63676d;text-align:center;margin-top:16px;}';
 
 function stil(){ if(document.getElementById('lgStil')) return;
@@ -391,13 +427,14 @@ function vormontageErste(){
 }
 
 function bestand(a){
-  var erg={ artikel:a, basis:null, basisText:'', seit:0, zugang:0, abgang:0, auto:0, bestand:null };
+  var erg={ artikel:a, basis:null, basisText:'', basisDatum:'', seit:0, zugang:0, abgang:0,
+            auto:0, bestand:null };
   var z=null;
   INV.forEach(function(e){
     if(e.artikel!==a.id || (e.art!=='zaehlung' && e.art!=='korrektur')) return;
     if(!z || (+e.ts||0)>(+z.ts||0)) z=e;
   });
-  if(z){ erg.basis=+z.anzahl||0; erg.seit=+z.ts||0;
+  if(z){ erg.basis=+z.anzahl||0; erg.seit=+z.ts||0; erg.basisDatum=z.datum||dIso(z.ts);
          erg.basisText=(z.datum||'')+(z.von?' · '+z.von:''); }
   else return erg;      // Bestand am 20.08.2026 zurueckgesetzt (Entscheid Victor):
                         // Basis ist einzig eine Zaehlung im Feld, nicht mehr die
@@ -672,10 +709,14 @@ function malen(){
   ZIEL.innerHTML='<div class="lgnav">'
    +'<button id="lgB" class="'+(ANSICHT==='bestand'?'on':'')+'">'+h(t('bestand'))+'</button>'
    +'<button id="lgE" class="'+(ANSICHT==='erfassen'?'on':'')+'">'+h(t('erfassen'))+'</button>'
+   +'<button id="lgC" class="'+(ANSICHT==='chronik'?'on':'')+'">'+h(t('chronik'))+'</button>'
    +'</div><div id="lgBody"></div>';
   ZIEL.querySelector('#lgB').onclick=function(){ ANSICHT='bestand'; malen(); };
   ZIEL.querySelector('#lgE').onclick=function(){ ANSICHT='erfassen'; malen(); };
-  if(ANSICHT==='bestand') malenBestand(); else malenErfassen();
+  ZIEL.querySelector('#lgC').onclick=function(){ ANSICHT='chronik'; CHR_MAX=60; malen(); };
+  if(ANSICHT==='bestand') malenBestand();
+  else if(ANSICHT==='chronik') malenChronik();
+  else malenErfassen();
 }
 
 function malenBestand(){
@@ -710,6 +751,9 @@ function malenBestand(){
         if(!a.rueck && r!==null) unter.push(t(r===1?'reicht1':(r===0?'reicht0':'reicht'),{n:r}));
         if(a.bedarf) unter.push(t('bedarf',{n:a.bedarf}));
       }
+      /* Wann wurde zuletzt gezaehlt? Stand bisher nur im Erfassen-Formular
+         (Rueckmeldung Victor 01.09.2026). */
+      if(e.basisDatum) unter.push(t('gez_am',{d:dKurz(e.basisDatum)}));
       s+='<div class="lgz '+amp+'" data-a="'+a.id+'">'
        +'<span class="pkt'+(a.serie==='2026'?' n26':'')+'" style="background:'+(FARBE[a.typ]||'#999')+'"></span>'
        +'<span class="lgt"><b>'+h(a.typ+(a.serie?' · '+a.serie:' · '+t('beide')))+'</b>'
@@ -903,21 +947,142 @@ function korrigieren(id){
   };
 }
 function protokoll(a){
-  var li=INV.filter(function(e){ return e.artikel===a.id; })
-    .sort(function(x,y){ return (+y.ts||0)-(+x.ts||0); }).slice(0,12);
-  var e=bestand(a), s='';
+  var e=bestand(a), li=chronikZeilen(null,a), s='';
+  /* Summe oben, damit die Rechnung nachvollziehbar bleibt: nur was NACH der
+     letzten Zaehlung liegt, belastet den Bestand. Darunter die Zeitleiste. */
   if(e.auto) s+='<div class="auto">'+h(t('prot_auto'))+': −'+e.auto+' '+h(t('stueck'))+'</div>';
-  if(!li.length && !e.auto) return '<div class="auto">'+h(t('prot_leer'))+'</div>';
-  li.forEach(function(x){
-    var wie=t('prot_'+(x.art||'zaehlung'));
-    var zahl=(x.art==='zugang'?'+':(x.art==='abgang'?'−':''))+x.anzahl;
-    s+='<div><b>'+h(zahl)+' '+h(t('stueck'))+'</b> · '+h(wie)+' · '+h(x.datum||'')
-      +(x.von?' · '+h(x.von):'')
-      +(x.vorher!=null?' <span class="auto">('+x.vorher+' → '+x.anzahl+')</span>':'')
-      +(x.grund?' <span class="auto">'+h(x.grund)+'</span>':'')
-      +(x.tische?' <span class="auto">'+h(x.tische)+'</span>':'')+'</div>';
+  if(!li.length) return s||'<div class="auto">'+h(t('prot_leer'))+'</div>';
+  li.slice(0,14).forEach(function(x){
+    /* Was vor der letzten Zaehlung liegt, steckt in dieser Zaehlung schon
+       drin und belastet den Bestand nicht mehr - sonst wundert sich jeder,
+       warum die Summe oben kleiner ist als die Zeilen darunter. */
+    var vor=((x.ts||0)<e.seit)?' <span class="auto">'+h(t('chr_vorher'))+'</span>':'';
+    if(x.kind==='vm'){
+      s+='<div><b>−'+x.summe+' '+h(t('stueck'))+'</b> · '+h(t('prot_auto'))
+        +' · '+h(dKurz(x.datum))+' · '+h(t('chr_vm',{n:x.tisch}))+vor+'</div>';
+      return;
+    }
+    var y=x.e, wie=t('prot_'+(y.art||'zaehlung'));
+    var zahl=(y.art==='zugang'?'+':(y.art==='abgang'?'−':''))+y.anzahl;
+    s+='<div><b>'+h(zahl)+' '+h(t('stueck'))+'</b> · '+h(wie)+' · '+h(dKurz(x.datum))
+      +(y.von?' · '+h(y.von):'')
+      +(y.vorher!=null?' <span class="auto">('+y.vorher+' → '+y.anzahl+')</span>':'')
+      +(y.grund?' <span class="auto">'+h(y.grund)+'</span>':'')
+      +(y.tische?' <span class="auto">'+h(y.tische)+'</span>':'')+vor+'</div>';
   });
+  if(li.length>14) s+='<div class="auto">… '+(li.length-14)+'</div>';
   return s;
+}
+
+/* ─────────────── Datum ─────────────── */
+function dIso(ts){ var d=new Date(+ts||0);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')
+        +'-'+String(d.getDate()).padStart(2,'0'); }
+function dKurz(iso){ var p=String(iso||'').split('-');
+  return p.length===3?(p[2]+'.'+p[1]+'.'):String(iso||''); }
+function dLang(iso){
+  var p=String(iso||'').split('-'); if(p.length!==3) return String(iso||'');
+  var w=(T[L]&&T[L].wt)||T.de.wt, d=new Date(+p[0],+p[1]-1,+p[2]);
+  var s=w[d.getDay()]+' '+p[2]+'.'+p[1]+'.'+p[0];
+  if(iso===heute()) s+=' · '+t('chr_heute');
+  else if(iso===dIso(Date.now()-86400000)) s+=' · '+t('chr_gestern');
+  return s;
+}
+
+/* ─────────────── Chronik ───────────────
+   Alle Ereignisse, die den Bestand veraendert haben, in einer Zeitleiste.
+   Die Abgaenge aus der Vormontage standen bisher NIRGENDS mit Datum - im
+   Protokoll je Artikel gab es nur eine Summe (Wunsch Victor 01.09.2026:
+   sehen, wann zuletzt erfasst wurde und wann was weggegangen ist). */
+function vormontageListe(){
+  var erst={};
+  FORT.forEach(function(f){
+    if(f.art!=='vormontiert'||!f.tischId) return;
+    var id=String(f.tischId), ts=+f.ts||0;
+    if(!erst[id]||ts<erst[id].ts) erst[id]={ts:ts, datum:f.datum||dIso(ts), von:f.von||''};
+  });
+  return erst;
+}
+
+/* nurTeil = nur dieses Teil zeigen (Filter), nurArtikel = Protokoll einer Zeile. */
+function chronikZeilen(nurTeil, nurArtikel){
+  var li=[];
+  INV.forEach(function(e){
+    if(nurArtikel){ if(e.artikel!==nurArtikel.id) return; }
+    else if(nurTeil && e.teil!==nurTeil) return;
+    li.push({ts:+e.ts||0, datum:e.datum||dIso(e.ts), kind:'buch', e:e});
+  });
+  var vm=vormontageListe();
+  for(var id in vm){
+    var tp=String(TYPEN[id]||''), typ=(tp.charAt(0)||'').toUpperCase(),
+        se=(tp.split('_')[1]||''), teile=[], summe=0;
+    if(!typ) continue;                       // Typ unbekannt: nichts behaupten
+    TEILE.forEach(function(d){
+      if(d.wann!=='vormontage'||!d.jeTisch) return;
+      if(nurArtikel){ if(d.id!==nurArtikel.teil||!passt(nurArtikel,tp)) return; }
+      else if(nurTeil && d.id!==nurTeil) return;
+      teile.push({teil:d.id, n:d.jeTisch}); summe+=d.jeTisch;
+    });
+    if(!teile.length) continue;
+    li.push({ts:vm[id].ts, datum:vm[id].datum, kind:'vm', tisch:id, typ:typ,
+             serie:se, von:vm[id].von, teile:teile, summe:summe});
+  }
+  li.sort(function(x,y){ return (y.ts||0)-(x.ts||0); });
+  return li;
+}
+
+function chrZeile(x){
+  if(x.kind==='vm'){
+    var was=x.teile.map(function(p){ return '−'+p.n+' '+teilName(p.teil); }).join(' · ');
+    return '<div class="lgchz"><span class="ik">🔧</span><span class="tx">'
+     +'<b>'+h(t('chr_vm',{n:x.tisch}))+(x.typ?' ('+h(x.typ+(x.serie?' '+x.serie:''))+')':'')+'</b>'
+     +'<small>'+h(was+(x.von?' · '+x.von:''))+'</small></span>'
+     +'<span class="mg ab">−'+x.summe+'</span></div>';
+  }
+  var e=x.e, art=e.art||'zaehlung', mg, kl;
+  var ik=(art==='zugang'?'📦':(art==='abgang'?'🚚'
+        :(art==='korrektur'?'✎':'\ud83d\udccb')));
+  if(art==='zugang'){ mg='+'+e.anzahl; kl='zu'; }
+  else if(art==='abgang'){ mg='−'+e.anzahl; kl='ab'; }
+  else { mg='= '+e.anzahl; kl='ze'; }
+  var u=[t('prot_'+art)];
+  if(art==='zaehlung'||art==='korrektur') u.push(t('chr_neu'));
+  if(e.vorher!=null) u.push(e.vorher+' → '+e.anzahl);
+  if(e.von) u.push(e.von);
+  if(e.grund) u.push(e.grund);
+  if(e.tische) u.push(e.tische);
+  return '<div class="lgchz"><span class="ik">'+ik+'</span><span class="tx">'
+   +'<b>'+h(teilName(e.teil)+' '+(e.typ||'')+(e.serie?' '+e.serie:''))+'</b>'
+   +'<small>'+h(u.join(' · '))+'</small></span>'
+   +'<span class="mg '+kl+'">'+h(mg)+'</span></div>';
+}
+
+function malenChronik(){
+  var b=ZIEL.querySelector('#lgBody'), s='';
+  /* Nur Teile anbieten, zu denen es ueberhaupt etwas zu sehen gibt. */
+  var hat={}; chronikZeilen('',null).forEach(function(x){
+    if(x.kind==='vm') x.teile.forEach(function(p){ hat[p.teil]=1; });
+    else hat[x.e.teil]=1; });
+  s+='<div class="lgchf"><button data-t="" class="'+(CHR_TEIL===''?'on':'')+'">'
+    +h(t('chr_alle'))+'</button>';
+  TEILE.forEach(function(d){
+    if(!hat[d.id]) return;
+    s+='<button data-t="'+d.id+'" class="'+(CHR_TEIL===d.id?'on':'')+'">'+h(tt(d))+'</button>';
+  });
+  s+='</div><div class="lgueh">'+h(t('chr_hilfe'))+'</div>';
+  var li=chronikZeilen(CHR_TEIL,null), tag='';
+  if(!li.length) s+='<div class="lghint">'+h(t('chr_leer'))+'</div>';
+  li.slice(0,CHR_MAX).forEach(function(x){
+    if(x.datum!==tag){ tag=x.datum; s+='<div class="lgcht">'+h(dLang(tag))+'</div>'; }
+    s+=chrZeile(x);
+  });
+  if(li.length>CHR_MAX) s+='<button class="lgchmehr" id="lgMehrC">'+h(t('chr_mehr'))
+    +' ('+(li.length-CHR_MAX)+')</button>';
+  b.innerHTML=s;
+  klick(b,'.lgchf button[data-t]',function(el){
+    CHR_TEIL=el.getAttribute('data-t'); CHR_MAX=60; malenChronik(); });
+  var m=b.querySelector('#lgMehrC');
+  if(m) m.onclick=function(){ CHR_MAX+=60; malenChronik(); };
 }
 
 /* ─────────────── Zusatzteile beim Bergtransport ─────────────── */
