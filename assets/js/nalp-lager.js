@@ -64,34 +64,52 @@ var NST_TYPEN=['A','B','D','E'];
 var FARBE={A:'#1565c0', B:'#D72622', C:'#8b929b', D:'#1e9e5a', E:'#e0a800'};
 
 /* ─────────────── Skizze: wo sitzt das Teil? ───────────────
-   Schematische Ansicht einer Primaerkonstruktion von schraeg vorne:
-   vorne die beiden Talstuetzen (S1/S4), hinten die hoeheren Bergstuetzen
-   (S2/S3), darueber die Modulflaeche. Kein Massbild - nur zum Wiedererkennen. */
+   Primaerkonstruktion von schraeg vorne. Die Punkte sind aus dem Tekla-IFC
+   gerechnet (MAAG via ILF, Typ B Serie 2025,
+   Stahlbau_Modelle\NalpSolar_51_PL_0351_A1_MT-3D-Ges-10er-B_250612.ifc):
+   Achsen-Endpunkte je Bauteil, Kavaliersprojektion y*0.42 zur Seite und
+   y*0.30 nach unten, Massstab 0.0185. Kein Massbild - aber lagerichtig.
+
+   Die fruehere Handskizze war an drei Stellen grob falsch (beanstandet von
+   Victor 01.09.2026, als Falle schon in CLAUDE.md vermerkt):
+     - Quertraverse lag zwischen den BERGstuetzen; sie liegt vorne auf den
+       Talstuetzen (IFC: y=190 wie die Talstuetzen, z=3461),
+     - Bergstuetzen standen senkrecht; sie sind geneigt (Fuss y=3139/z=1081
+       bergwaerts unten, Kopf y=1522/z=3883 talwaerts oben),
+     - Knietraeger waren kurze Schraegen; sie sind die steilen Haupttraeger
+       ueber die ganze Modulhoehe (3181 mm, von z=3098 auf z=6049).
+   Wer die Zahlen neu braucht: scratchpad-Skripte achsen.py / skizze_punkte.py,
+   Vorgehen in Memory project_normteile_inventur_tal. */
 function skizze(teil, gross){
   var b=gross?190:112, hh=gross?125:74;
-  /* Am Hang stehen die Talstuetzen S1/S4 auf dem tieferen Gelaende und sind
-     deshalb die langen; S2/S3 bergseitig sind kurz. */
-  var A=[46,106], B=[150,106];          // Fusspunkte Tal (vorne, tief)
-  var C=[80,76],  D=[186,76];           // Fusspunkte Berg (hinten, hoeher)
-  var A2=[46,48], B2=[150,48];          // Kopf Talstuetze
-  var C2=[80,40], D2=[186,40];          // Kopf Bergstuetze
-  function li(p,q,farbe,dick){ return '<line x1="'+p[0]+'" y1="'+p[1]+'" x2="'+q[0]+'" y2="'+q[1]
-    +'" stroke="'+farbe+'" stroke-width="'+dick+'" stroke-linecap="round"/>'; }
+  var S1=[[47.9,113],[48.1,53.7]], S4=[[185,113],[184.9,53.7]];        // Tal, senkrecht
+  var S2=[[25,109.4],[37.3,48.5]], S3=[[162.1,109.4],[174.9,48.5]];    // Berg, geneigt
+  var QT=[[50.1,48.9],[182.8,48.9]];                                   // vorne oben
+  var K1=[[49.9,55],[39.5,7]], K4=[[184.9,55],[176.8,7]];              // steile Traeger
+  /* Strebe B/1006: haengt den Bergstuetzenkopf an den Knietraeger. Kein Lagerteil,
+     wird nie hervorgehoben - ohne sie enden die Bergstuetzen im Bild in der Luft. */
+  var T1=[[37.2,49.3],[41.9,27.7]], T4=[[174.8,49.3],[179,27.7]];
   var g='#c3c8ce', r='#D72622';
   function f(id){ return teil===id?r:g; }
   function w(id){ return teil===id?4.2:2; }
+  function li(p,q,farbe,dick){ return '<line x1="'+p[0]+'" y1="'+p[1]+'" x2="'+q[0]
+    +'" y2="'+q[1]+'" stroke="'+farbe+'" stroke-width="'+dick+'" stroke-linecap="round"/>'; }
+  function be(x,y,tx){ return '<text x="'+x+'" y="'+y+'" font-size="9" font-weight="700"'
+    +' fill="#63676d">'+tx+'</text>'; }
   var svg='<svg viewBox="0 0 210 120" width="'+b+'" height="'+hh+'" aria-hidden="true">'
-   +'<line x1="18" y1="114" x2="202" y2="66" stroke="#dfe3e8" stroke-width="2" stroke-dasharray="4 4"/>'
-   +'<polygon points="'+A2+' '+B2+' '+D2+' '+C2+'" fill="#eef1f5" stroke="#c3c8ce" stroke-width="1.4"/>'
-   +li(A,A2,f('nst'),w('nst'))+li(B,B2,f('nst'),w('nst'))
-   +li(C,C2,f('nsb'),w('nsb'))+li(D,D2,f('nsb'),w('nsb'))
-   +li(C2,D2,f('qt'),w('qt'))
-   +li([A2[0],A2[1]+20],[A2[0]+19,A2[1]+2],f('kt1'),w('kt1'))
-   +li([B2[0],B2[1]+20],[B2[0]+19,B2[1]+2],f('kt4'),w('kt4'))
-   +'<text x="38" y="118" font-size="11" font-weight="700" fill="#63676d">S1</text>'
-   +'<text x="142" y="118" font-size="11" font-weight="700" fill="#63676d">S4</text>'
-   +'<text x="70" y="72" font-size="11" font-weight="700" fill="#63676d">S2</text>'
-   +'<text x="190" y="72" font-size="11" font-weight="700" fill="#63676d">S3</text>'
+   /* Standflaeche durch die vier Fusspunkte - zeigt, was vorne und hinten ist.
+      Die Bergstuetzen stehen 1081 mm hoeher am Hang (IFC). */
+   +'<polygon points="47.9,113 185,113 162.1,109.4 25,109.4" fill="none"'
+   +' stroke="#dfe3e8" stroke-width="1.5" stroke-dasharray="3 3"/>'
+   +li(S2[0],S2[1],f('nsb'),w('nsb'))+li(S3[0],S3[1],f('nsb'),w('nsb'))
+   +li(T1[0],T1[1],g,1.6)+li(T4[0],T4[1],g,1.6)
+   /* Modulflaeche = die Ebene ueber den beiden Knietraegern */
+   +'<polygon points="'+K1[0]+' '+K1[1]+' '+K4[1]+' '+K4[0]+'" fill="#eef1f5"'
+   +' stroke="#c3c8ce" stroke-width="1.2"/>'
+   +li(K1[0],K1[1],f('kt1'),w('kt1'))+li(K4[0],K4[1],f('kt4'),w('kt4'))
+   +li(S1[0],S1[1],f('nst'),w('nst'))+li(S4[0],S4[1],f('nst'),w('nst'))
+   +li(QT[0],QT[1],f('qt'),w('qt'))
+   +be(41,119.5,'S1')+be(178,119.5,'S4')+be(17,116,'S2')+be(154,116,'S3')
    +'</svg>';
   return svg;
 }
@@ -132,7 +150,8 @@ var T={
   ue_offen_n:'Bei {n} Typen fehlt eine Zählung – die sind hier nicht mitgerechnet.',
   ue_offen_1:'Bei 1 Typ fehlt eine Zählung – der ist hier nicht mitgerechnet.',
   ue_zuerst:'{t} geht zuerst aus', ue_nichtgez:'nicht gezählt: {t}',
-  ue_von_offen:'von {n} noch offenen', ue_reicht_alle:'reicht für alle {n} offenen',
+  ue_von_offen:'noch {n} zu stellen 2026', ue_reicht_alle:'reicht für alle {n} von 2026',
+  ue_gesamt:'2026 sind noch {n} Tische zu stellen',
   ue_kein_bedarf:'kein Bedarf mehr 2026', ue_leer:'Noch nichts gezählt – zuerst zählen.',
   ue_hilfe:'Je Tisch 1 × S-1, 1 × S-4, 2 × Normstütze Berg, 1 × Quertraverse. Es zählt das knappste Teil. Bauteilgleiche Traversen (2025 = 2026) sind nur einmal gerechnet.',
   ue_det:'Was ein Tisch braucht', ue_det_je:'{n} × je Tisch', ue_zu:'Schliessen',
@@ -176,7 +195,8 @@ var T={
   ue_offen_n:'{n} types are not fully counted – they are not included here.',
   ue_offen_1:'1 type is not fully counted – it is not included here.',
   ue_zuerst:'{t} runs out first', ue_nichtgez:'not counted: {t}',
-  ue_von_offen:'of {n} still open', ue_reicht_alle:'covers all {n} open ones',
+  ue_von_offen:'{n} still to build in 2026', ue_reicht_alle:'covers all {n} of 2026',
+  ue_gesamt:'{n} tables still to build in 2026',
   ue_kein_bedarf:'no demand left in 2026', ue_leer:'Nothing counted yet – count first.',
   ue_hilfe:'Per table 1 × S-1, 1 × S-4, 2 × standard post mountain, 1 × cross beam. The scarcest part counts. Identical cross beams (2025 = 2026) are counted once.',
   ue_det:'What one table needs', ue_det_je:'{n} × per table', ue_zu:'Close',
@@ -220,7 +240,9 @@ var T={
   ue_offen_n:'{n} typów nie jest w pełni policzonych – nie ma ich w tej liczbie.',
   ue_offen_1:'1 typ nie jest w pełni policzony – nie ma go w tej liczbie.',
   ue_zuerst:'{t} skończy się pierwszy', ue_nichtgez:'nie policzono: {t}',
-  ue_von_offen:'z {n} pozostałych', ue_reicht_alle:'starczy na wszystkie {n}',
+  ue_von_offen:'jeszcze {n} do postawienia w 2026',
+  ue_reicht_alle:'starczy na wszystkie {n} z 2026',
+  ue_gesamt:'w 2026 jeszcze {n} stołów do postawienia',
   ue_kein_bedarf:'brak potrzeb w 2026', ue_leer:'Nic jeszcze nie policzono – najpierw policz.',
   ue_hilfe:'Na stół 1 × S-1, 1 × S-4, 2 × podpora górska, 1 × trawersa. Liczy się najmniejszy stan. Identyczne trawersy (2025 = 2026) liczone są raz.',
   ue_det:'Czego potrzeba na stół', ue_det_je:'{n} × na stół', ue_zu:'Zamknij',
@@ -320,6 +342,7 @@ var CSS=''
 +'.lg .lgue .kopf .gr{font-size:42px;font-weight:900;line-height:1;letter-spacing:-1px;}'
 +'.lg .lgue .kopf .tx{flex:1;min-width:0;font-size:13px;line-height:1.3;color:#c7d2de;}'
 +'.lg .lgue .kopf .tx b{display:block;font-size:15px;font-weight:800;color:#fff;margin-bottom:2px;}'
++'.lg .lgue .kopf .tx .of{display:block;margin-top:4px;font-weight:800;color:#fff;}'
 +'.lg .lgue .hinw{background:rgba(255,255,255,.10);border-radius:9px;padding:8px 10px;margin-top:10px;'
  +'font-size:12.5px;font-weight:700;color:#ffd98a;line-height:1.35;}'
 +'.lg .lgueg{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:11px;}'
@@ -572,9 +595,14 @@ function teilName(tid){ var d=teilDef(tid); return d?tt(d):tid; }
 
 function uebersicht(){
   var reihe=saetze(), g=satzGesamt(reihe), gez=reihe.length-g.offen;
+  /* Wie viele Tische stehen 2026 ueberhaupt noch an? Summe ueber die Faecher
+     (Bedarf aus material.json), damit die Zahl oben einen Bezug hat. */
+  var offenGesamt=0; reihe.forEach(function(f){ if(f.offen) offenGesamt+=f.offen; });
   var s='<div class="lgue"><div class="kopf"><span class="gr">'
    +(gez?g.tische:'–')+'</span><span class="tx"><b>'
-   +h(t(gez&&g.tische===1?'ue_titel1':'ue_titel'))+'</b>'+h(t('ue_mit'))+'</span></div>';
+   +h(t(gez&&g.tische===1?'ue_titel1':'ue_titel'))+'</b>'+h(t('ue_mit'))
+   +(offenGesamt?'<span class="of">'+h(t('ue_gesamt',{n:offenGesamt}))+'</span>':'')
+   +'</span></div>';
   if(!gez) s+='<div class="hinw">'+h(t('ue_leer'))+'</div>';
   else if(g.offen) s+='<div class="hinw">'+h(t(g.offen===1?'ue_offen_1':'ue_offen_n',{n:g.offen}))+'</div>';
   s+='<div class="lgueg">';
