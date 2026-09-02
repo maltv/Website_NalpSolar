@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v164';
+var CACHE = 'nalpsolar-v165';
 var PRECACHE = [
   './index.html',
   './protokoll.html',
@@ -87,6 +87,8 @@ var PRECACHE = [
   './uploads/road.json',
   './uploads/bauablauf.json',
   './bauprogramm.html',
+  './5w-programm.html',
+  './uploads/5w.json',
   './uploads/bauprogramm_gantt.json',
   './game.html',
   './manifest-game.json',

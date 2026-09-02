@@ -2,48 +2,282 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>5W-Programm · NalpSolar</title>
 <meta name="theme-color" content="#ffffff">
 <script src="assets/js/nalp-gate.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8; }
-  *{ box-sizing:border-box; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body{ margin:0; height:100%; }
   body{ background:#eef0f3; color:var(--ink); font-family:Arial,"Helvetica Neue",sans-serif;
         display:flex; flex-direction:column; }
-  header{ display:flex; align-items:center; gap:12px; flex-wrap:wrap;
-          padding:10px 14px; background:#fff; border-bottom:4px solid var(--rot); }
+  header{ display:flex; align-items:center; gap:10px; padding:9px 12px;
+          background:#fff; border-bottom:4px solid var(--rot); z-index:30; }
   header a.home{ color:var(--ink); text-decoration:none; font-size:20px; }
-  header .logo img{ height:22px; display:block; }
-  header h1{ font-size:15.5px; margin:0; flex:1; font-weight:800; white-space:nowrap; }
-  .btn{ display:inline-block; border:none; border-radius:6px; padding:9px 13px; font-size:13.5px;
-        font-weight:800; cursor:pointer; color:#fff; background:var(--rot); text-decoration:none; }
-  .btn.ghost{ background:#fff; color:var(--ink); border:1px solid #c9ccd2; font-weight:700; }
+  header .logo img{ height:20px; display:block; }
+  header h1{ font-size:15px; margin:0; flex:1; font-weight:900; white-space:nowrap;
+             overflow:hidden; text-overflow:ellipsis; }
+  .btn{ border:1px solid #c9ccd2; background:#f6f7f9; border-radius:6px; padding:8px 12px;
+        font-size:13.5px; font-weight:800; cursor:pointer; color:var(--ink); text-decoration:none;
+        display:inline-block; }
+  .btn.rot{ background:var(--rot); border-color:var(--rot); color:#fff; }
+
+  .tabs{ display:flex; gap:8px; padding:8px 12px; background:#fff; border-bottom:1px solid var(--line); }
+  .tab{ flex:1; max-width:260px; padding:9px 12px; border:1px solid var(--line); border-radius:6px;
+        background:#f6f7f9; font-weight:900; font-size:14px; cursor:pointer; text-align:center; }
+  .tab.on{ background:var(--rot); border-color:var(--rot); color:#fff; }
+
+  .blatt{ flex:1; min-height:0; display:none; flex-direction:column; }
+  .blatt.on{ display:flex; }
+
+  /* ---- Blatt Programm (PDF) ---- */
   .viewer{ flex:1; min-height:0; margin:10px; background:#fff; border:1px solid var(--line);
         border-radius:6px; overflow:hidden; }
   iframe{ width:100%; height:100%; border:0; background:#e8ebef; }
+
+  /* ---- Blatt Animation ---- */
+  #map{ flex:1 1 auto; min-height:46vh; background:#dfe3e8; }
+  .hud{ flex:0 0 auto; max-height:54%; overflow-y:auto; background:#fff;
+        border-top:1px solid var(--line);
+        padding:8px 12px calc(10px + env(safe-area-inset-bottom)); }
+  .wochen{ display:flex; gap:6px; align-items:stretch; }
+  .wo{ flex:1; border:1px solid var(--line); background:#f6f7f9; border-radius:6px;
+       padding:6px 4px; font-size:12.5px; font-weight:900; cursor:pointer; text-align:center;
+       line-height:1.25; }
+  .wo small{ display:block; font-weight:400; color:var(--mut); font-size:10.5px; }
+  .wo.on{ background:var(--ink); border-color:var(--ink); color:#fff; }
+  .wo.on small{ color:#c9ccd2; }
+  .wo.jetzt{ box-shadow:inset 0 0 0 2px var(--rot); }
+
+  .zeile1{ display:flex; align-items:center; gap:8px; margin-top:8px; }
+  .zeile1 .play{ min-width:44px; font-size:15px; }
+  .wtext{ flex:1; font-size:12.5px; color:var(--ink); line-height:1.45; white-space:pre-line; }
+
+  .sparten{ margin-top:8px; display:flex; flex-direction:column; gap:4px; }
+  .sp{ display:flex; align-items:flex-start; gap:8px; font-size:12.5px; line-height:1.45; }
+  .sp .nam{ flex:0 0 108px; font-weight:900; color:#fff; border-radius:4px; padding:3px 7px;
+            font-size:11.5px; text-align:center; }
+  .sp .was{ flex:1; padding-top:2px; }
+  .sp .was i{ font-style:normal; }
+  .sp .was i.verzug{ color:#C00000; font-weight:800; }
+  .sp .was i.gesperrt{ font-weight:900; }
+  .sp .was span.tr{ color:#b8bdc4; padding:0 5px; }
+  @media (max-width:560px){ .sp .nam{ flex-basis:86px; font-size:10.5px; } }
+  .legende{ display:flex; gap:12px; flex-wrap:wrap; font-size:11px; color:var(--mut); margin-top:8px;
+            align-items:center; }
+  .legende b{ display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:4px;
+              vertical-align:-1px; }
+  .quelle{ font-size:10.5px; color:#9aa0a7; margin-top:6px; line-height:1.5; }
+  .karte-link{ margin-left:auto; }
+  @media (max-width:560px){
+    .wo{ font-size:11.5px; }
+    .karte-link{ display:none; }
+    header h1{ font-size:13px; }
+    #dlXlsx{ display:none; }          /* am Handy reicht der PDF-Knopf */
+    #map{ min-height:38vh; }
+    .hud{ max-height:58%; }
+    .wtext{ font-size:12px; }
+  }
 </style>
 </head>
 <body>
 <header>
   <a class="home" href="index.html" title="Startseite">🏠</a>
   <div class="logo"><img src="assets/img/strabag-logo.png" alt="STRABAG"></div>
-  <h1>🗓 5W-Programm KW 34–38 (Entwurf 17.08., mit Programm-Abgleich)</h1>
-  <a class="btn" href="5W-Programm/Fuenfwochenprogramm_KW34-38_Entwurf.xlsx" download>⬇ Excel</a>
-  <a class="btn ghost" href="5W-Programm/Bereichskarte_KW32-36.png" target="_blank">Bereichskarte KW32–36</a>
+  <h1 id="titel">5W-Programm</h1>
+  <a class="btn" id="dlXlsx" href="#" download>⬇ Excel</a>
+  <a class="btn rot" id="dlPdf" href="#" target="_blank">PDF</a>
 </header>
-<div class="viewer"><iframe id="pdfFrame" title="5W Programm PDF"></iframe></div>
+
+<div class="tabs">
+  <button class="tab on" data-b="prog" onclick="setBlatt('prog')">📄 Programm</button>
+  <button class="tab"     data-b="anim" onclick="setBlatt('anim')">▶ Animation</button>
+</div>
+
+<div class="blatt on" id="b-prog">
+  <div class="viewer"><iframe id="pdfFrame" title="5W-Programm PDF"></iframe></div>
+</div>
+
+<div class="blatt" id="b-anim">
+  <div id="map"></div>
+  <div class="hud">
+    <div class="wochen" id="wochen"></div>
+    <div class="zeile1">
+      <button class="btn play" id="btnPlay" onclick="togglePlay()">▶</button>
+      <div class="wtext" id="wtext"></div>
+    </div>
+    <div class="sparten" id="sparten"></div>
+    <div class="legende" id="legende"></div>
+    <div class="quelle" id="quelle"></div>
+  </div>
+</div>
+
 <script>
 'use strict';
-/* zeigt das PDF aus 5W-Programm/ (Dateiname aus manifest.json) */
+
+/* ─────────────────────────────────────────────── Blatt Programm (PDF) */
 fetch('5W-Programm/manifest.json',{cache:'no-store'})
   .then(function(r){ return r.ok?r.json():null; }).catch(function(){ return null; })
   .then(function(man){
-    var p=man&&(man.pdf||man.file||man.main||man.path);
-    document.getElementById('pdfFrame').src='5W-Programm/'+(p||'Fuenfwochenprogramm_KW30-34.pdf');
+    var pdf = (man && (man.pdf||man.file||man.main||man.path)) || 'Fuenfwochenprogramm_KW36-40_Entwurf.pdf';
+    document.getElementById('pdfFrame').src = '5W-Programm/'+pdf;
+    document.getElementById('dlPdf').href   = '5W-Programm/'+pdf;
+    document.getElementById('dlXlsx').href  = '5W-Programm/'+pdf.replace(/\.pdf$/i,'.xlsx');
+    if(man && man.titel) document.getElementById('titel').textContent = man.titel;
   });
+
+function setBlatt(b){
+  ['prog','anim'].forEach(function(x){
+    document.getElementById('b-'+x).classList.toggle('on', x===b);
+  });
+  document.querySelectorAll('.tab').forEach(function(t){
+    t.classList.toggle('on', t.dataset.b===b);
+  });
+  location.hash = b;
+  if(b==='anim'){ startAnim(); setTimeout(passen,60); setTimeout(passen,400); }
+}
+
+/* ─────────────────────────────────────────────── Blatt Animation */
+var D=null, map=null, punkte=[], idx=0, playTimer=null, gestartet=false, grenzen=null;
+
+function passen(){
+  if(!map||!grenzen) return;
+  map.invalidateSize(false);
+  map.fitBounds(grenzen);
+}
+
+/* Grundkarte: Farbe nach Ist-Stand (0 geplant … 6 Modultraeger montiert) */
+var STANDFARBE=['#ffffff','#e6e9ed','#c7ccd3','#a7aeb7','#8a929c','#5d6771','#38414b'];
+
+function startAnim(){
+  if(gestartet) return;
+  gestartet=true;
+  fetch('uploads/5w.json',{cache:'no-store'}).then(function(r){ return r.json(); })
+    .then(function(d){ D=d; initKarte(); baueWochen(); zeigeWoche(heuteWoche()); })
+    .catch(function(e){ document.getElementById('wtext').textContent='Daten nicht ladbar: '+e; });
+}
+
+function initKarte(){
+  map=L.map('map',{renderer:L.canvas({padding:.3}), zoomControl:true, attributionControl:false});
+  L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg',
+    {maxZoom:20}).addTo(map);
+  var alle=[];
+  D.tische.forEach(function(t){
+    var m=L.circleMarker([t[1],t[2]],{radius:3.5,stroke:false,fillOpacity:.85,
+                                      fillColor:STANDFARBE[t[4]]||'#ffffff'});
+    m.tisch=t; m.addTo(map); punkte.push(m);
+    alle.push([t[1],t[2]]);
+  });
+  grenzen=L.latLngBounds(alle).pad(0.05);
+  map.fitBounds(grenzen);
+  /* Das Blatt ist beim Laden versteckt -> Leaflet kennt die Hoehe noch nicht und
+     zoomt daneben. Nach dem Einblenden neu vermessen und neu einpassen. */
+  passen();
+  document.getElementById('quelle').textContent =
+    'Grundkarte = Ist-Stand aus Nalpi vom '+fmt(D.stand)+'. Balken = 5W-Programm, '+
+    'Quellen: Koordinationssitzung 01.09.2026 und Gesamtbauprogramm F. Borner 03.08.2026.';
+}
+
+function fmt(s){ var t=s.split('-'); return t[2]+'.'+t[1]+'.'+t[0]; }
+function fmtK(s){ var t=s.split('-'); return t[2]+'.'+t[1]+'.'; }
+
+function heuteWoche(){
+  var h=new Date().toISOString().slice(0,10), i=0;
+  D.wochen.forEach(function(w,n){ if(w.von<=h) i=n; });
+  return i;
+}
+
+function baueWochen(){
+  var el=document.getElementById('wochen'); el.innerHTML='';
+  var h=new Date().toISOString().slice(0,10);
+  D.wochen.forEach(function(w,n){
+    var b=document.createElement('button');
+    b.className='wo'+(w.von<=h&&h<=w.bis?' jetzt':'');
+    b.innerHTML='KW '+w.kw+'<small>'+fmtK(w.von)+'–'+fmtK(w.bis)+'</small>';
+    b.onclick=function(){ stopPlay(); zeigeWoche(n); };
+    el.appendChild(b);
+  });
+  var l=document.getElementById('legende'); l.innerHTML='';
+  Object.keys(D.sparten).forEach(function(k){
+    var s=D.sparten[k];
+    l.insertAdjacentHTML('beforeend',
+      '<span><b style="background:'+s.farbe+'"></b>'+s.name+'</span>');
+  });
+  l.insertAdjacentHTML('beforeend',
+    '<span style="margin-left:auto"><b style="background:'+STANDFARBE[6]+'"></b>Tisch fertig montiert'+
+    ' &nbsp;<b style="background:'+STANDFARBE[4]+'"></b>Pfähle injiziert'+
+    ' &nbsp;<b style="background:'+STANDFARBE[1]+'"></b>offen</span>');
+}
+
+/* aktive Zeilen einer Woche */
+function aktiv(n){
+  var w=D.wochen[n];
+  return D.zeilen.filter(function(z){
+    return z.segmente.some(function(s){ return s[0]<=w.bis && s[1]>=w.von; });
+  });
+}
+
+function zeigeWoche(n){
+  idx=n;
+  var w=D.wochen[n], az=aktiv(n);
+
+  /* Bereich -> Farbe der ersten aktiven Zeile, die ihn nennt */
+  var farbe={}, gesperrt={};
+  az.forEach(function(z){
+    z.bereiche.forEach(function(c){
+      if(z.banner){ gesperrt[c]=1; return; }
+      if(!farbe[c]) farbe[c]=D.sparten[z.sparte].farbe;
+    });
+  });
+
+  punkte.forEach(function(m){
+    var c=m.tisch[3], f=c&&farbe[c];
+    if(f){
+      m.setStyle({fillColor:f, fillOpacity:1, radius:5.5, stroke:true,
+                  color:'#ffffff', weight:.8, opacity:.9});
+    }else if(c&&gesperrt[c]){
+      m.setStyle({fillColor:'#ffffff', fillOpacity:.35, radius:4.5, stroke:true,
+                  color:D.sparten.termin.farbe, weight:1.6, opacity:1});
+    }else{
+      m.setStyle({fillColor:STANDFARBE[m.tisch[4]]||'#fff', fillOpacity:.85, radius:3.5,
+                  stroke:false});
+    }
+  });
+
+  document.querySelectorAll('.wo').forEach(function(b,i){ b.classList.toggle('on', i===n); });
+  document.getElementById('wtext').textContent=w.text;
+
+  /* eine Zeile je Sparte statt 24 Chips - so ist es in zwei Sekunden gelesen */
+  var box=document.getElementById('sparten'); box.innerHTML='';
+  (D.sparten_reihenfolge||Object.keys(D.sparten)).forEach(function(k){
+    var zs=az.filter(function(z){ return z.sparte===k; });
+    if(!zs.length) return;
+    var s=D.sparten[k];
+    var was=zs.map(function(z){
+      var cls=z.banner?'gesperrt':(z.verzug?'verzug':'');
+      return '<i class="'+cls+'">'+z.kurz+'</i>';
+    }).join('<span class="tr">·</span>');
+    box.insertAdjacentHTML('beforeend',
+      '<div class="sp"><span class="nam" style="background:'+s.farbe+'">'+s.name+
+      '</span><span class="was">'+was+'</span></div>');
+  });
+}
+
+function togglePlay(){ playTimer?stopPlay():startPlay(); }
+function startPlay(){
+  document.getElementById('btnPlay').textContent='⏸';
+  playTimer=setInterval(function(){ zeigeWoche((idx+1)%D.wochen.length); },1800);
+}
+function stopPlay(){
+  clearInterval(playTimer); playTimer=null;
+  document.getElementById('btnPlay').textContent='▶';
+}
+
+window.addEventListener('resize', passen);
+if(location.hash==='#anim') setBlatt('anim');
 </script>
 </body>
 </html>
-
