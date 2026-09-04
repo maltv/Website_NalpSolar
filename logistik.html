@@ -326,8 +326,13 @@ function mailBetreff(r){
     + (r.zielDatum ? ' ' + fmtD(r.zielDatum) : '');
 }
 function mailHref(r){
+  // FALLE: Outlook am PC trennt Empfaenger im mailto NUR mit Semikolon. Mit
+  // dem im Standard vorgesehenen Komma haelt es die ganze Liste fuer EINEN
+  // Namen und fragt "Namen ueberpruefen - kann nicht erkennen" (erlebt
+  // 04.09.2026). Handys wollen umgekehrt das Komma, darum nach System.
+  var trenner = /Windows|Win32|Win64/i.test(navigator.userAgent) ? ';' : ',';
   return 'mailto:'+MELDE_MAIL
-    +'?cc='+encodeURIComponent(MELDE_CC.join(','))
+    +'?cc='+encodeURIComponent(MELDE_CC.join(trenner))
     +'&subject='+encodeURIComponent(mailBetreff(r))
     +'&body='+encodeURIComponent(waText(r));
 }
