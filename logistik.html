@@ -66,15 +66,18 @@
             border-radius:6px; padding:12px 13px; margin-bottom:11px; box-shadow:0 1px 4px rgba(20,25,32,.06); }
   .auftrag.dringend{ border-left-color:var(--rot); }
   .auftrag.done{ opacity:.65; border-left-color:var(--gruen); }
-  .a-top{ display:flex; gap:8px; align-items:flex-start; }
+  .a-top{ display:flex; gap:8px; align-items:flex-start; flex-wrap:wrap; }
   .a-txt{ flex:1; font-size:15px; line-height:1.45; font-weight:600; white-space:pre-wrap; }
   .a-badge{ font-size:10.5px; font-weight:900; letter-spacing:.05em; border-radius:4px;
             padding:3px 7px; white-space:nowrap; }
   .a-badge.dr{ background:var(--rot); color:#fff; }
   .a-badge.ok{ background:var(--gruen); color:#fff; }
+  .a-badge.tag{ background:#33404d; color:#fff; }
   .a-meta{ font-size:12.5px; color:var(--mut); margin-top:6px; }
   .a-ziel{ font-size:13.5px; font-weight:800; margin-top:6px; }
   .a-ziel.ueber{ color:var(--rot); }
+  .a-fz{ font-size:13.5px; font-weight:800; margin-top:6px; }
+  .a-fz.muss{ color:var(--rot); }
   .a-meta .ort{ color:var(--ink); font-weight:800; }
   .a-meta .ort b{ color:var(--rot); }
   .a-fotos{ display:flex; gap:8px; margin-top:9px; flex-wrap:wrap; }
@@ -112,6 +115,12 @@
 <main>
   <div class="box">
     <h2 id="formTitel">➕ Neuer Auftrag / Abholung melden</h2>
+    <div style="display:flex;gap:6px;margin-bottom:4px">
+      <button type="button" class="btn" id="art_transport" style="flex:1"
+              onclick="artSetzen('transport')">🚚 Transport</button>
+      <button type="button" class="btn ghost" id="art_tagesmiete" style="flex:1"
+              onclick="artSetzen('tagesmiete')">📅 Fahrzeug ganzer Tag</button>
+    </div>
     <label class="fl">Was ist zu tun?</label>
     <textarea id="f_text" placeholder="z.B. Modulträgerstapel fertig, kann abgeholt werden"></textarea>
     <div class="row2">
@@ -140,16 +149,38 @@
     </div>
     <div class="row2">
       <div>
-        <label class="fl">Abholen am (optional)</label>
+        <label class="fl" id="lblFz">Fahrzeug (bevorzugt)</label>
+        <select id="f_fz_sel" onchange="fzToggle()">
+          <option value="">egal</option>
+          <option>LKW 3-Achser</option>
+          <option>LKW 3-Achser Allrad</option>
+          <option>LKW 4-Achser</option>
+          <option>LKW 4-Achser Allrad</option>
+          <option>Sattelzug / Spezialauflieger</option>
+          <option>Tieflader</option>
+          <option>Hakengerät</option>
+          <option>Fahrmischer</option>
+          <option value="anderes">anderes …</option>
+        </select>
+        <input id="f_fz_txt" style="display:none;margin-top:6px" placeholder="Fahrzeug eingeben">
+      </div>
+      <div>
+        <label class="fl">&nbsp;</label>
+        <div class="chkrow" style="margin-top:0"><input type="checkbox" id="f_fzmuss"><label for="f_fzmuss">zwingend nötig</label></div>
+      </div>
+    </div>
+    <div class="row2">
+      <div>
+        <label class="fl" id="lblAbhol">Abholen am (optional)</label>
         <input type="date" id="f_zdatum">
       </div>
       <div>
-        <label class="fl">Uhrzeit (optional)</label>
+        <label class="fl" id="lblAbholZeit">Uhrzeit (optional)</label>
         <input type="time" id="f_zzeit" step="900">
       </div>
     </div>
     <div id="zeitChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
-    <div class="row2">
+    <div class="row2" id="zeileLiefern">
       <div>
         <label class="fl">Liefern bis am (optional)</label>
         <input type="date" id="f_ldatum">
@@ -246,11 +277,19 @@ function setVon(v){ try{ localStorage.setItem(LS_VON,v||''); }catch(e){} }
 
 /* WhatsApp-/Anruf-Meldung an den Transporteur (Testphase: Victors Nummer) */
 function waText(r){
-  var t='🚚 NalpSolar Logistik – neuer Auftrag'+(r.prio==='dringend'?' (DRINGEND!)':'')+'\n';
+  var tag = r.art==='tagesmiete';
+  var t=(tag?'📅 NalpSolar – Fahrzeug für einen ganzen Tag'
+            :'🚚 NalpSolar Logistik – neuer Auftrag')
+        +(r.prio==='dringend'?' (DRINGEND!)':'')+'\n';
   t+=r.text+'\n';
   var v=r.vonOrt||'', n=r.nachOrt||'';
   if(v||n) t+='📍 '+(v||'?')+(n?' → '+n:'')+'\n';
-  if(r.zielDatum||r.zielZeit)
+  if(r.fahrzeug)
+    t+='🚛 Fahrzeug: '+r.fahrzeug+(r.fahrzeugMuss?' (ZWINGEND)':' (bevorzugt)')+'\n';
+  if(tag && (r.zielDatum||r.zielZeit))
+    t+='📅 Am: '+(r.zielDatum?fmtDWT(r.zielDatum):'')+', ganzer Tag'
+      +(r.zielZeit?', ab '+r.zielZeit+' Uhr':'')+'\n';
+  if(!tag && (r.zielDatum||r.zielZeit))
     t+='📅 Abholen: '+(r.zielDatum?fmtDWT(r.zielDatum):'')
       +(r.zielZeit?' um '+r.zielZeit+' Uhr':(r.zielDatum?' (Zeit noch offen)':''))+'\n';
   if(r.lieferDatum||r.lieferZeit)
@@ -298,6 +337,50 @@ function zeitChipsMarkieren(){
       b.style.color=an?'#fff':'var(--ink)';
     });
   });
+}
+
+/* Auftragsart: normaler Transport oder ein Fahrzeug fuer einen ganzen Tag.
+   Beim ganzen Tag gibt es kein "liefern bis" - das Fahrzeug steht den Tag
+   ueber zur Verfuegung -, dafuer sind Fahrzeug und Datum Pflicht. */
+var artAktuell='transport';
+function artSetzen(a){
+  artAktuell = (a==='tagesmiete') ? 'tagesmiete' : 'transport';
+  var tr = artAktuell==='transport';
+  $('art_transport').className  = tr ? 'btn' : 'btn ghost';
+  $('art_tagesmiete').className = tr ? 'btn ghost' : 'btn';
+  $('zeileLiefern').style.display = tr ? '' : 'none';
+  $('lieferChips').style.display  = tr ? 'flex' : 'none';
+  if(!tr){ $('f_ldatum').value=''; $('f_lzeit').value=''; }
+  $('lblAbhol').textContent     = tr ? 'Abholen am (optional)' : 'Reservieren am';
+  $('lblAbholZeit').textContent = tr ? 'Uhrzeit (optional)'    : 'ab Uhrzeit (optional)';
+  $('lblFz').textContent        = tr ? 'Fahrzeug (bevorzugt)'  : 'Welches Fahrzeug';
+  $('f_text').placeholder = tr ? 'z.B. Modulträgerstapel fertig, kann abgeholt werden'
+                               : 'z.B. Material vom IP Tal auf den Berg fahren, den ganzen Tag';
+  $('formTitel').textContent = editKey
+      ? (tr ? '✏️ Auftrag bearbeiten' : '✏️ Reservation bearbeiten')
+      : (tr ? '➕ Neuer Auftrag / Abholung melden' : '➕ Fahrzeug für einen ganzen Tag reservieren');
+  $('btnSave').textContent = editKey ? '💾 Änderungen speichern'
+      : (tr ? '📤 Auftrag melden' : '📤 Fahrzeug reservieren');
+  zeitChipsMarkieren();
+}
+
+/* Fahrzeug: Auswahl oder freier Text - gleiches Muster wie Von-wo/Wohin */
+function fzToggle(){
+  var sel=$('f_fz_sel'), txt=$('f_fz_txt');
+  txt.style.display = sel.value==='anderes' ? '' : 'none';
+  if(sel.value==='anderes') txt.focus();
+}
+function fzVal(){
+  var sel=$('f_fz_sel');
+  return sel.value==='anderes' ? $('f_fz_txt').value.trim() : sel.value;
+}
+function setFzFeld(val){
+  var sel=$('f_fz_sel'), txt=$('f_fz_txt'), gibts=false;
+  Array.prototype.forEach.call(sel.options,function(o){ if(o.value===val && val) gibts=true; });
+  if(!val){ sel.value=''; txt.value=''; }
+  else if(gibts){ sel.value=val; txt.value=''; }
+  else { sel.value='anderes'; txt.value=val; }
+  fzToggle();
 }
 
 /* Von-wo/Wohin: Auswahl oder freier Text */
@@ -361,15 +444,19 @@ function formReset(){
   $('f_ldatum').value=''; $('f_lzeit').value=''; zeitChipsMarkieren();
   $('f_foto').value=''; $('fotoPrev').innerHTML=''; fotoDataNeu=null;
   $('status').textContent=''; $('btnSave').disabled=false;
+  setFzFeld(''); $('f_fzmuss').checked=false;
   editKey=null;
-  $('formTitel').textContent='➕ Neuer Auftrag / Abholung melden';
-  $('btnSave').textContent='📤 Auftrag melden';
   $('btnCancel').style.display='none';
+  artSetzen('transport');                 // setzt Titel, Knopftext und die Labels
 }
 function speichern(){
   var text=$('f_text').value.trim(), von=$('f_von').value.trim();
   if(!text){ toast('Bitte beschreiben, was zu tun ist.',true); return; }
   if(!von){ toast('Bitte Namen angeben.',true); return; }
+  if(artAktuell==='tagesmiete'){
+    if(!fzVal()){ toast('Bitte angeben, welches Fahrzeug du brauchst.',true); return; }
+    if(!$('f_zdatum').value){ toast('Bitte das Datum angeben, für das du das Fahrzeug brauchst.',true); return; }
+  }
   setVon(von);
   $('btnSave').disabled=true; $('status').textContent='Speichere …';
 
@@ -380,6 +467,7 @@ function speichern(){
               prio:$('f_prio').checked?'dringend':'normal',
               zielDatum:$('f_zdatum').value||'', zielZeit:$('f_zzeit').value||'',
               lieferDatum:$('f_ldatum').value||'', lieferZeit:$('f_lzeit').value||'',
+              art:artAktuell, fahrzeug:fzVal(), fahrzeugMuss:$('f_fzmuss').checked,
               geaendertVon:von, geaendertTs:Date.now() };
     apiPatch(P_AUF+'/'+k, upd).then(function(ok){
       if(!ok) throw 0;
@@ -398,6 +486,7 @@ function speichern(){
             prio:$('f_prio').checked?'dringend':'normal',
             zielDatum:$('f_zdatum').value||'', zielZeit:$('f_zzeit').value||'',
               lieferDatum:$('f_ldatum').value||'', lieferZeit:$('f_lzeit').value||'',
+              art:artAktuell, fahrzeug:fzVal(), fahrzeugMuss:$('f_fzmuss').checked,
             datum:heute(), ts:Date.now(), status:'offen' };
   var recKopie=rec;
   apiPost(P_AUF,rec).then(function(key){
@@ -436,9 +525,10 @@ function bearbeiten(k){
   $('f_ldatum').value=r.lieferDatum||'';
   $('f_lzeit').value=r.lieferZeit||'';
   zeitChipsMarkieren();
-  $('formTitel').textContent='✏️ Auftrag bearbeiten';
-  $('btnSave').textContent='💾 Änderungen speichern';
+  setFzFeld(r.fahrzeug||'');
+  $('f_fzmuss').checked = !!r.fahrzeugMuss;
   $('btnCancel').style.display='';
+  artSetzen(r.art==='tagesmiete' ? 'tagesmiete' : 'transport');
   window.scrollTo({top:0, behavior:'smooth'});
 }
 function bearbeitenAbbrechen(){ formReset(); }
@@ -486,6 +576,7 @@ function card(r){
   var fotoKeys=r.fotos?Object.keys(r.fotos):[];
   var h='<div class="auftrag'+(dr&&!don?' dringend':'')+(don?' done':'')+'" id="a_'+k+'">';
   h+='<div class="a-top"><div class="a-txt">'+esc(r.text)+'</div>';
+  if(r.art==='tagesmiete' && !don) h+='<span class="a-badge tag">GANZER TAG</span>';
   h+= don ? '<span class="a-badge ok">ERLEDIGT</span>' : (dr?'<span class="a-badge dr">DRINGEND</span>':'');
   h+='</div>';
   var ot=ortText(r);
@@ -499,7 +590,8 @@ function card(r){
       var nun=heute()+' '+String(jetzt.getHours()).padStart(2,'0')+':'+String(jetzt.getMinutes()).padStart(2,'0');
       ueber = zd<nun;
     }
-    h+='<div class="a-ziel'+(ueber?' ueber':'')+'">📅 Abholen: '
+    h+='<div class="a-ziel'+(ueber?' ueber':'')+'">'
+      +(r.art==='tagesmiete' ? '📅 Ganzer Tag: ' : '📅 Abholen: ')
       +(r.zielDatum?esc(fmtDWT(r.zielDatum)):'')
       +(r.zielZeit ? (r.zielDatum?' · ':'')+'<b>'+esc(r.zielZeit)+' Uhr</b>'
                    : (r.zielDatum?' · <span style="font-weight:400">Zeit noch offen</span>':''))
@@ -518,6 +610,10 @@ function card(r){
       +(r.lieferZeit ? (r.lieferDatum?' · ':'')+'<b>'+esc(r.lieferZeit)+' Uhr</b>'
                    : (r.lieferDatum?' · <span style="font-weight:400">Zeit noch offen</span>':''))
       +(lueber?' – ÜBERFÄLLIG':'')+'</div>';
+  }
+  if(r.fahrzeug){
+    h+='<div class="a-fz'+(r.fahrzeugMuss?' muss':'')+'">🚛 '+esc(r.fahrzeug)
+      +(r.fahrzeugMuss?' – ZWINGEND':' <span style="font-weight:400">(bevorzugt)</span>')+'</div>';
   }
   if(fotoKeys.length){
     h+='<div class="a-fotos" id="af_'+k+'"><button class="btn ghost" onclick="fotosZeigen(\''+k+'\')">📷 '+fotoKeys.length+' Foto'+(fotoKeys.length>1?'s':'')+' anzeigen</button></div>';
