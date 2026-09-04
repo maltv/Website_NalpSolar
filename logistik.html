@@ -232,8 +232,9 @@
 <div id="waNudge" style="display:none;position:fixed;inset:0;z-index:80;background:rgba(15,20,26,.6);align-items:flex-end;justify-content:center;">
   <div style="background:#fff;border-radius:10px 10px 0 0;border-top:6px solid var(--rot);max-width:720px;width:100%;padding:18px 16px calc(18px + env(safe-area-inset-bottom));">
     <div style="font-size:16px;font-weight:900;margin-bottom:4px;">✔ Auftrag gespeichert – jetzt melden?</div>
-    <div style="font-size:13px;color:var(--mut);margin-bottom:14px;">Damit nichts liegen bleibt: Auftrag direkt per WhatsApp schicken oder kurz durchrufen.</div>
+    <div style="font-size:13px;color:var(--mut);margin-bottom:14px;">Damit nichts liegen bleibt: Auftrag direkt per WhatsApp oder Mail schicken oder kurz durchrufen.</div>
     <a id="waLink" class="btn" style="display:block;text-align:center;text-decoration:none;background:#25D366;margin-bottom:9px;" target="_blank" rel="noopener">📱 Per WhatsApp senden</a>
+    <a id="mailLink" class="btn ghost" style="display:block;text-align:center;text-decoration:none;margin-bottom:9px;">✉️ Per Mail senden</a>
     <a id="telLink" class="btn ghost" style="display:block;text-align:center;text-decoration:none;margin-bottom:9px;">📞 Anrufen</a>
     <button class="btn ghost" style="display:block;width:100%;" onclick="document.getElementById('waNudge').style.display='none'">Ohne Meldung schliessen</button>
   </div>
@@ -248,9 +249,13 @@ var DB='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.
 // 18.08.2026 bleiben unter logistik/auftraege liegen und sind hier nicht
 // sichtbar.
 var P_AUF='erfassung/transporte', P_FOTO='erfassung/transport_fotos';
+// Geloeschte Auftraege wandern hierhin statt spurlos zu verschwinden: die App
+// ist unser Beleg, wann bestellt wurde - ein Fehlgriff darf den nicht ausloeschen.
+var P_WEG='erfassung/transporte_geloescht';
 // Melde-Nummer für WhatsApp/Anruf: Sandro Schuoler (Schuoler Logistik AG),
 // umgestellt 28.07.2026 (vorher Testphase Victor).
 var MELDE_NUMMER='+41799614663';
+var MELDE_MAIL='info@schuoler-logistik.ch';   // Dispo Schuoler Logistik AG
 var MELDE_NAME='Sandro';
 var SEITE='https://maltv.github.io/Website_NalpSolar/logistik.html';
 var LS_VON='nalp_erfasser_v1';                       // gleicher Name wie Stahlteile-Erfassung
@@ -299,9 +304,18 @@ function waText(r){
   t+='Abhaken: '+SEITE;
   return t;
 }
+function mailBetreff(r){
+  return (r.art==='tagesmiete' ? 'NalpSolar - Fahrzeug ganzer Tag' : 'NalpSolar - Transportauftrag')
+    + (r.zielDatum ? ' ' + fmtD(r.zielDatum) : '');
+}
+function mailHref(r){
+  return 'mailto:'+MELDE_MAIL+'?subject='+encodeURIComponent(mailBetreff(r))
+    +'&body='+encodeURIComponent(waText(r));
+}
 function waZeigen(r){
   document.getElementById('waLink').href=
     'https://wa.me/'+MELDE_NUMMER.replace(/[^0-9]/g,'')+'?text='+encodeURIComponent(waText(r));
+  document.getElementById('mailLink').href=mailHref(r);
   document.getElementById('telLink').href='tel:'+MELDE_NUMMER;
   document.getElementById('telLink').textContent='📞 '+MELDE_NAME+' anrufen ('+MELDE_NUMMER+')';
   document.getElementById('waNudge').style.display='flex';
@@ -432,6 +446,8 @@ function apiPost(p,body){ return fetch(DB+'/'+p+'.json',{method:'POST',body:JSON
 function apiPatch(p,body){ return fetch(DB+'/'+p+'.json',{method:'PATCH',body:JSON.stringify(body)})
   .then(function(r){ return r.ok; }); }
 function apiPut(p,body){ return fetch(DB+'/'+p+'.json',{method:'PUT',body:JSON.stringify(body)})
+  .then(function(r){ return r.ok; }); }
+function apiDelete(p){ return fetch(DB+'/'+p+'.json',{method:'DELETE'})
   .then(function(r){ return r.ok; }); }
 
 /* ---------- Speichern (neu ODER Bearbeiten-Modus) ---------- */
@@ -627,6 +643,7 @@ function card(r){
   }
   if(don){
     h+='<div class="a-done-info">✅ '+esc(r.erledigtVon||'—')+' · '+esc(fmtDZ(r.erledigtAm||'', r.erledigtTs))+'</div>';
+    h+='<div class="a-act"><button class="btn ghost" onclick="loeschen(\''+k+'\')">🗑 Löschen</button></div>';
   } else {
     h+='<div class="a-act">'+
        '<button class="btn gruen" onclick="erledigen(\''+k+'\')">✅ Erledigt</button>'+
@@ -634,7 +651,9 @@ function card(r){
        '<button class="btn ghost" onclick="kommentieren(\''+k+'\')">💬 Kommentar</button>'+
        '<button class="btn ghost" onclick="fotoNach(\''+k+'\')">📷 Foto</button>'+
        '<a class="btn ghost" style="text-decoration:none" target="_blank" rel="noopener" href="https://wa.me/'+MELDE_NUMMER.replace(/[^0-9]/g,'')+'?text='+encodeURIComponent(waText(r))+'">📱 WhatsApp</a>'+
+       '<a class="btn ghost" style="text-decoration:none" href="'+mailHref(r)+'">✉️ Mail</a>'+
        '<a class="btn ghost" style="text-decoration:none" href="tel:'+MELDE_NUMMER+'">📞</a>'+
+       '<button class="btn ghost" onclick="loeschen(\''+k+'\')">🗑</button>'+
        '</div>';
   }
   h+='</div>';
@@ -660,6 +679,24 @@ function erledigen(k){
       return apiPost(P_AUF+'/'+k+'/kommentare',{text:komm.trim(),von:von,ts:Date.now()});
   }).then(function(){ toast('Abgehakt ✔'); laden(false); })
     .catch(function(){ toast('Fehlgeschlagen – Empfang?',true); });
+}
+function loeschen(k){
+  var r=eintraege[k]; if(!r) return;
+  if(!confirm('Auftrag wirklich löschen?\n\n'+(r.text||'')+'\n\nDas kann man nicht rueckgaengig machen.')) return;
+  var von=prompt('Dein Name:', getVon()); if(von===null) return;
+  von=von.trim(); if(!von){ toast('Name fehlt.',true); return; }
+  setVon(von);
+  var kopie={}; for(var f in r){ if(f!=='_k') kopie[f]=r[f]; }
+  var fotos=r.fotos?Object.keys(r.fotos):[];
+  apiPut(P_WEG+'/'+k, {auftrag:kopie, geloeschtVon:von, geloeschtAm:heute(), geloeschtTs:Date.now()})
+    .then(function(){ return Promise.all(fotos.map(function(fk){ return apiDelete(P_FOTO+'/'+fk); })); })
+    .then(function(){ return apiDelete(P_AUF+'/'+k); })
+    .then(function(ok){
+      if(!ok) throw 0;
+      if(editKey===k) formReset();
+      toast('Auftrag gelöscht'); laden(false);
+    })
+    .catch(function(){ toast('Löschen fehlgeschlagen – Empfang?',true); });
 }
 function kommentieren(k){
   var von=prompt('Dein Name:', getVon()); if(von===null) return;
