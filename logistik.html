@@ -243,7 +243,7 @@
     <div style="font-size:16px;font-weight:900;margin-bottom:4px;">✔ Auftrag gespeichert – jetzt melden?</div>
     <div style="font-size:13px;color:var(--mut);margin-bottom:14px;">Damit nichts liegen bleibt: Auftrag direkt per WhatsApp oder Mail schicken oder kurz durchrufen.</div>
     <a id="waLink" class="btn" style="display:block;text-align:center;text-decoration:none;background:#25D366;margin-bottom:9px;" target="_blank" rel="noopener">📱 Per WhatsApp senden</a>
-    <a id="mailLink" class="btn ghost" style="display:block;text-align:center;text-decoration:none;margin-bottom:9px;">✉️ Per Mail senden</a>
+    <a id="mailLink" class="btn ghost" style="display:block;text-align:center;text-decoration:none;margin-bottom:9px;">✉️ Per Mail senden (BL in Kopie)</a>
     <a id="telLink" class="btn ghost" style="display:block;text-align:center;text-decoration:none;margin-bottom:9px;">📞 Anrufen</a>
     <button class="btn ghost" style="display:block;width:100%;" onclick="document.getElementById('waNudge').style.display='none'">Ohne Meldung schliessen</button>
   </div>
@@ -270,6 +270,9 @@ var P_WEG='erfassung/transporte_geloescht';
 // umgestellt 28.07.2026 (vorher Testphase Victor).
 var MELDE_NUMMER='+41799614663';
 var MELDE_MAIL='info@schuoler-logistik.ch';   // Dispo Schuoler Logistik AG
+// Bauleitung immer in Kopie, damit jeder sieht, was bestellt ist (Vorgabe Victor 04.09.2026)
+var MELDE_CC=['samuel.decurtins@strabag.com','michele.manno@strabag.com',
+              'lukas.kaelin@strabag.com','victor.malt@strabag.com'];
 var MELDE_NAME='Sandro';
 var SEITE='https://maltv.github.io/Website_NalpSolar/logistik.html';
 var LS_VON='nalp_erfasser_v1';                       // gleicher Name wie Stahlteile-Erfassung
@@ -323,7 +326,9 @@ function mailBetreff(r){
     + (r.zielDatum ? ' ' + fmtD(r.zielDatum) : '');
 }
 function mailHref(r){
-  return 'mailto:'+MELDE_MAIL+'?subject='+encodeURIComponent(mailBetreff(r))
+  return 'mailto:'+MELDE_MAIL
+    +'?cc='+encodeURIComponent(MELDE_CC.join(','))
+    +'&subject='+encodeURIComponent(mailBetreff(r))
     +'&body='+encodeURIComponent(waText(r));
 }
 function waZeigen(r){
