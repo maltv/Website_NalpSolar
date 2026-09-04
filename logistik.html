@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>NalpSolar · Transporte bestellen</title>
 <meta name="theme-color" content="#ffffff">
+<link rel="manifest" href="manifest-logistik.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Transporte">
+<link rel="apple-touch-icon" href="assets/img/ico-transporte.png">
 <script>
   /* Wieder aufgeschaltet 04.09.2026 (Auftrag Victor, Beschluss
      Koordinationssitzung 03.09.2026: die Bestell-App wird ab sofort wieder
@@ -217,6 +223,9 @@
   <div class="sek">✅ Erledigt <button class="btn ghost" id="btnDone" onclick="toggleDone()">anzeigen</button></div>
   <div id="listDone" style="display:none"></div>
 
+  <div class="sek">🗑 Gelöscht <button class="btn ghost" id="btnWeg" onclick="toggleWeg()">anzeigen</button></div>
+  <div id="listWeg" style="display:none"></div>
+
   <div class="mini" style="margin-top:18px">
     Einträge kann jeder erfassen (Mike, Samuel, Victor …). Sandro Schuoler hakt ab, wenn erledigt –
     mit Kommentar und Foto. Daten liegen geschützt in der Baustellen-Datenbank (nur mit Login).
@@ -242,6 +251,11 @@
 
 <script>
 'use strict';
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
 var DB='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app';
 // Umgehaengt 04.09.2026: der alte Top-Level-Knoten 'logistik' ist in den
 // RTDB-Regeln gesperrt (HTTP 401 geprueft) – alles, was die Website
@@ -259,7 +273,7 @@ var MELDE_MAIL='info@schuoler-logistik.ch';   // Dispo Schuoler Logistik AG
 var MELDE_NAME='Sandro';
 var SEITE='https://maltv.github.io/Website_NalpSolar/logistik.html';
 var LS_VON='nalp_erfasser_v1';                       // gleicher Name wie Stahlteile-Erfassung
-var eintraege={}, fotoDataNeu=null, fotoCache={};
+var eintraege={}, geloeschte={}, fotoDataNeu=null, fotoCache={};
 
 function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
@@ -555,6 +569,7 @@ function fotoSpeichern(auftragKey, data, von){
 
 /* ---------- Laden + Rendern ---------- */
 function laden(manuell){
+  apiGet(P_WEG).then(function(j){ geloeschte=j||{}; renderWeg(); }).catch(function(){});
   apiGet(P_AUF).then(function(j){
     eintraege=j||{};
     render();
@@ -658,6 +673,40 @@ function card(r){
   }
   h+='</div>';
   return h;
+}
+/* Geloeschte Auftraege: sie sind nicht weg, sie stehen nur nicht mehr im Weg.
+   Von hier laesst sich einer zurueckholen, wenn jemand danebengegriffen hat. */
+function toggleWeg(){
+  var e=$('listWeg');
+  e.style.display = e.style.display==='none' ? '' : 'none';
+  renderWeg();
+}
+function renderWeg(){
+  var keys=Object.keys(geloeschte||{});
+  keys.sort(function(a,b){ return (geloeschte[b].geloeschtTs||0)-(geloeschte[a].geloeschtTs||0); });
+  $('btnWeg').textContent = ($('listWeg').style.display==='none'?'anzeigen':'verbergen')+' ('+keys.length+')';
+  if($('listWeg').style.display==='none') return;
+  $('listWeg').innerHTML = keys.length ? keys.map(function(k){
+    var w=geloeschte[k], r=w.auftrag||{};
+    var h='<div class="auftrag done" id="w_'+k+'">';
+    h+='<div class="a-top"><div class="a-txt">'+esc(r.text||'(ohne Text)')+'</div></div>';
+    var ot=ortText(r);
+    h+='<div class="a-meta">'+(ot?'<span class="ort">📍 '+ot+'</span> · ':'')
+      +'gemeldet von '+esc(r.von||'—')+' · '+esc(fmtDZ(r.datum,r.ts))+'</div>';
+    h+='<div class="a-done-info" style="color:var(--mut)">🗑 gelöscht von '+esc(w.geloeschtVon||'—')
+      +' · '+esc(fmtDZ(w.geloeschtAm||'', w.geloeschtTs))+'</div>';
+    h+='<div class="a-act"><button class="btn ghost" onclick="zurueckholen(\''+k+'\')">↩ Wiederherstellen</button></div>';
+    return h+'</div>';
+  }).join('') : '<div class="leer">Nichts gelöscht.</div>';
+}
+function zurueckholen(k){
+  var w=geloeschte[k]; if(!w||!w.auftrag) return;
+  if(!confirm('Diesen Auftrag wieder in die Liste stellen?\n\n'+(w.auftrag.text||''))) return;
+  var r={}; for(var f in w.auftrag){ if(f!=='fotos') r[f]=w.auftrag[f]; }   // Fotos sind beim Loeschen weg
+  apiPut(P_AUF+'/'+k, r)
+    .then(function(ok){ if(!ok) throw 0; return apiDelete(P_WEG+'/'+k); })
+    .then(function(){ toast('Wieder in der Liste ✔'); laden(false); })
+    .catch(function(){ toast('Fehlgeschlagen – Empfang?',true); });
 }
 function toggleDone(){
   var e=$('listDone');

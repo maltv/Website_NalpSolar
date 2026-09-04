@@ -1,0 +1,25 @@
+{
+  "name": "NalpSolar Transporte",
+  "short_name": "Transporte",
+  "description": "Transporte und Fahrzeuge fuer die Baustelle NalpSolar bestellen - Auftrag melden, Termin setzen, Fahrzeug waehlen, an Schuoler schicken.",
+  "start_url": "./logistik.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef0f3",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='34' fill='%23D72622'/><rect x='24' y='66' width='82' height='52' rx='5' fill='%23fff'/><path d='M112 82 h28 l22 24 v12 h-50 z' fill='%23fff'/><path d='M118 88 h20 l16 17 h-36 z' fill='%23D72622'/><circle cx='56' cy='128' r='14' fill='%23fff'/><circle cx='56' cy='128' r='6' fill='%23D72622'/><circle cx='136' cy='128' r='14' fill='%23fff'/><circle cx='136' cy='128' r='6' fill='%23D72622'/><rect x='20' y='146' width='152' height='7' rx='3.5' fill='%23fff' opacity='.7'/></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./assets/img/ico-transporte.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
