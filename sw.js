@@ -1,11 +1,12 @@
 'use strict';
-var CACHE = 'nalpsolar-v167';
+var CACHE = 'nalpsolar-v168';
 var PRECACHE = [
   './index.html',
   './protokoll.html',
   './assets/js/nalp-protokoll.js',
   './assets/js/nalp-scan-parse.js',
   './sicherheit.html',
+  './logistik.html',
   './lieferscheine.html',
   './vormontage.html',
   // './gewinde.html',   abgeschaltet 28.08.2026 (Auftrag Victor)
