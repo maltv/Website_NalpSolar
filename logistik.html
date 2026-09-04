@@ -151,6 +151,17 @@
     <div id="zeitChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
     <div class="row2">
       <div>
+        <label class="fl">Liefern bis am (optional)</label>
+        <input type="date" id="f_ldatum">
+      </div>
+      <div>
+        <label class="fl">Uhrzeit (optional)</label>
+        <input type="time" id="f_lzeit" step="900">
+      </div>
+    </div>
+    <div id="lieferChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
+    <div class="row2">
+      <div>
         <label class="fl">Gemeldet von</label>
         <input id="f_von" placeholder="Name / Kürzel">
       </div>
@@ -242,6 +253,9 @@ function waText(r){
   if(r.zielDatum||r.zielZeit)
     t+='📅 Abholen: '+(r.zielDatum?fmtDWT(r.zielDatum):'')
       +(r.zielZeit?' um '+r.zielZeit+' Uhr':(r.zielDatum?' (Zeit noch offen)':''))+'\n';
+  if(r.lieferDatum||r.lieferZeit)
+    t+='🎯 Liefern bis: '+(r.lieferDatum?fmtDWT(r.lieferDatum):'')
+      +(r.lieferZeit?' um '+r.lieferZeit+' Uhr':(r.lieferDatum?' (Zeit noch offen)':''))+'\n';
   t+='Gemeldet: '+(r.von||'—')+', '+fmtD(r.datum)+' '+fmtZeit(r.ts)+' Uhr\n';
   t+='Abhaken: '+SEITE;
   return t;
@@ -255,16 +269,17 @@ function waZeigen(r){
 }
 
 /* Uhrzeit-Schnellwahl: ein Tipp statt Zeitrad (Feld bleibt frei editierbar) */
-(function(){
-  var box=$('zeitChips');
+var ZEITFELDER=[['zeitChips','f_zzeit','f_zdatum'],['lieferChips','f_lzeit','f_ldatum']];
+ZEITFELDER.forEach(function(f){
+  var box=$(f[0]);
   ['06:00','07:00','08:00','09:00','10:00','13:00','15:00','17:00'].forEach(function(z){
     var b=document.createElement('button');
     b.type='button'; b.className='btn ghost'; b.textContent=z;
     b.style.padding='6px 9px'; b.style.fontSize='12.5px';
     b.onclick=function(){
-      $('f_zzeit').value = ($('f_zzeit').value===z) ? '' : z;   // nochmal tippen = löschen
+      $(f[1]).value = ($(f[1]).value===z) ? '' : z;   // nochmal tippen = löschen
       zeitChipsMarkieren();
-      if(!$('f_zdatum').value) $('f_zdatum').value=heute();     // Zeit ohne Datum ergibt selten Sinn
+      if(!$(f[2]).value) $(f[2]).value=heute();       // Zeit ohne Datum ergibt selten Sinn
     };
     box.appendChild(b);
   });
@@ -272,16 +287,18 @@ function waZeigen(r){
   frei.className='mini'; frei.style.background='none'; frei.style.padding='4px 0';
   frei.textContent='oder frei eintippen ↑';
   box.appendChild(frei);
-})();
+  $(f[1]).addEventListener('change',zeitChipsMarkieren);
+});
 function zeitChipsMarkieren(){
-  var v=$('f_zzeit').value;
-  Array.prototype.forEach.call($('zeitChips').querySelectorAll('button'),function(b){
-    var an=b.textContent===v;
-    b.style.background=an?'var(--rot)':'#fff';
-    b.style.color=an?'#fff':'var(--ink)';
+  ZEITFELDER.forEach(function(f){
+    var v=$(f[1]).value;
+    Array.prototype.forEach.call($(f[0]).querySelectorAll('button'),function(b){
+      var an=b.textContent===v;
+      b.style.background=an?'var(--rot)':'#fff';
+      b.style.color=an?'#fff':'var(--ink)';
+    });
   });
 }
-$('f_zzeit').addEventListener('change',zeitChipsMarkieren);
 
 /* Von-wo/Wohin: Auswahl oder freier Text */
 function ortToggle(w){
@@ -341,6 +358,7 @@ function formReset(){
   $('f_von_sel').value=''; $('f_nach_sel').value='';
   $('f_von_txt').value=''; $('f_nach_txt').value=''; ortToggle('von'); ortToggle('nach');
   $('f_zdatum').value=''; $('f_zzeit').value='';
+  $('f_ldatum').value=''; $('f_lzeit').value=''; zeitChipsMarkieren();
   $('f_foto').value=''; $('fotoPrev').innerHTML=''; fotoDataNeu=null;
   $('status').textContent=''; $('btnSave').disabled=false;
   editKey=null;
@@ -361,6 +379,7 @@ function speichern(){
     var upd={ text:text, vonOrt:ortVal('von'), nachOrt:ortVal('nach'), von:von,
               prio:$('f_prio').checked?'dringend':'normal',
               zielDatum:$('f_zdatum').value||'', zielZeit:$('f_zzeit').value||'',
+              lieferDatum:$('f_ldatum').value||'', lieferZeit:$('f_lzeit').value||'',
               geaendertVon:von, geaendertTs:Date.now() };
     apiPatch(P_AUF+'/'+k, upd).then(function(ok){
       if(!ok) throw 0;
@@ -378,6 +397,7 @@ function speichern(){
   var rec={ text:text, vonOrt:ortVal('von'), nachOrt:ortVal('nach'), von:von,
             prio:$('f_prio').checked?'dringend':'normal',
             zielDatum:$('f_zdatum').value||'', zielZeit:$('f_zzeit').value||'',
+              lieferDatum:$('f_ldatum').value||'', lieferZeit:$('f_lzeit').value||'',
             datum:heute(), ts:Date.now(), status:'offen' };
   var recKopie=rec;
   apiPost(P_AUF,rec).then(function(key){
@@ -413,6 +433,9 @@ function bearbeiten(k){
   $('f_prio').checked=r.prio==='dringend';
   $('f_zdatum').value=r.zielDatum||'';
   $('f_zzeit').value=r.zielZeit||'';
+  $('f_ldatum').value=r.lieferDatum||'';
+  $('f_lzeit').value=r.lieferZeit||'';
+  zeitChipsMarkieren();
   $('formTitel').textContent='✏️ Auftrag bearbeiten';
   $('btnSave').textContent='💾 Änderungen speichern';
   $('btnCancel').style.display='';
@@ -440,8 +463,14 @@ function render(){
     var r=eintraege[k]; if(!r||!r.text) return;
     r._k=k; (r.status==='erledigt'?done:offen).push(r);
   });
-  // dringend zuoberst, dann nach Abholtermin (nächster zuerst), Rest nach Meldung
-  function zielKey(r){ return r.zielDatum ? (r.zielDatum+' '+(r.zielZeit||'23:59')) : '9999-99-99'; }
+  // dringend zuoberst, dann nach Termin (nächster zuerst), Rest nach Meldung.
+  // Massgebend ist der Liefertermin - daran hängt die Baustelle; nur wenn keiner
+  // gesetzt ist, zählt der Abholtermin.
+  function zielKey(r){
+    var d = r.lieferDatum || r.zielDatum;
+    if(!d) return '9999-99-99';
+    return d+' '+(r.lieferDatum ? (r.lieferZeit||'23:59') : (r.zielZeit||'23:59'));
+  }
   offen.sort(function(a,b){
     return (b.prio==='dringend')-(a.prio==='dringend')
       || (zielKey(a)<zielKey(b)?-1:zielKey(a)>zielKey(b)?1:0)
@@ -475,6 +504,20 @@ function card(r){
       +(r.zielZeit ? (r.zielDatum?' · ':'')+'<b>'+esc(r.zielZeit)+' Uhr</b>'
                    : (r.zielDatum?' · <span style="font-weight:400">Zeit noch offen</span>':''))
       +(ueber?' – ÜBERFÄLLIG':'')+'</div>';
+  }
+  if(r.lieferDatum||r.lieferZeit){
+    var lueber=false;
+    if(!don && r.lieferDatum){
+      var ljetzt=new Date();
+      var ld=r.lieferDatum+' '+(r.lieferZeit||'23:59');
+      var lnun=heute()+' '+String(ljetzt.getHours()).padStart(2,'0')+':'+String(ljetzt.getMinutes()).padStart(2,'0');
+      lueber = ld<lnun;
+    }
+    h+='<div class="a-ziel'+(lueber?' ueber':'')+'">🎯 Liefern bis: '
+      +(r.lieferDatum?esc(fmtDWT(r.lieferDatum)):'')
+      +(r.lieferZeit ? (r.lieferDatum?' · ':'')+'<b>'+esc(r.lieferZeit)+' Uhr</b>'
+                   : (r.lieferDatum?' · <span style="font-weight:400">Zeit noch offen</span>':''))
+      +(lueber?' – ÜBERFÄLLIG':'')+'</div>';
   }
   if(fotoKeys.length){
     h+='<div class="a-fotos" id="af_'+k+'"><button class="btn ghost" onclick="fotosZeigen(\''+k+'\')">📷 '+fotoKeys.length+' Foto'+(fotoKeys.length>1?'s':'')+' anzeigen</button></div>';
