@@ -68,6 +68,43 @@
   #fotoPrev img{ width:74px; height:74px; object-fit:cover; border-radius:6px; border:1px solid var(--line); }
   #status{ font-size:12.5px; color:var(--mut); min-height:17px; margin-top:8px; }
 
+  /* ---- Kalender ganz oben: was ist wann geplant (Auftrag Victor 07.09.2026) ---- */
+  .kal-kopf{ display:flex; align-items:center; gap:6px; margin-bottom:9px; }
+  .kal-kopf #kalTitel{ flex:1; text-align:center; font-size:15px; font-weight:900; }
+  .kal-wt{ display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin-bottom:3px; }
+  .kal-wt span{ text-align:center; font-size:10.5px; font-weight:800; color:var(--mut);
+        text-transform:uppercase; letter-spacing:.04em; }
+  .kal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
+  .kal-t{ min-height:46px; border:1px solid var(--line); border-radius:6px; background:#fff;
+        padding:3px 2px 4px; cursor:pointer; text-align:center; }
+  .kal-t .n{ font-size:12.5px; font-weight:700; line-height:1.2; }
+  .kal-t.fremd{ background:#f6f7f9; }
+  .kal-t.fremd .n{ color:#b3b7bd; }
+  .kal-t.we .n{ color:var(--mut); }
+  .kal-t.ueber{ background:#fff4f4; }
+  .kal-t.heute{ box-shadow:inset 0 0 0 2px var(--rot); }
+  .kal-t.sel{ background:#fdecec; border-color:var(--rot); }
+  .kal-t .pkt{ display:flex; gap:2px; justify-content:center; flex-wrap:wrap; margin-top:3px; }
+  .kal-t .pkt i{ width:6px; height:6px; border-radius:50%; background:#ff7a59; }
+  .kal-t .pkt i.dr{ background:var(--rot); }
+  .kal-t .pkt i.ok{ background:var(--gruen); }
+  .kal-t .pkt i.tag{ background:#33404d; }
+  .kal-t .mehr{ font-size:9px; font-weight:800; color:var(--mut); line-height:1.1; }
+  .kal-liste{ margin-top:11px; border-top:1px dashed var(--line); padding-top:9px; }
+  .kal-liste h3{ margin:0 0 7px; font-size:13.5px; }
+  .kal-z{ display:flex; gap:9px; align-items:flex-start; padding:7px 9px; border-radius:6px;
+        background:#f6f7f9; margin-bottom:6px; cursor:pointer; }
+  .kal-z .zt{ font-size:12.5px; font-weight:900; color:var(--rot); min-width:46px; white-space:nowrap; }
+  .kal-z .zx{ flex:1; font-size:13.5px; line-height:1.35; font-weight:600; }
+  .kal-z .zx small{ display:block; color:var(--mut); font-size:11.5px; font-weight:400; margin-top:2px; }
+  .kal-z.done{ opacity:.7; }
+  .kal-z.done .zt{ color:var(--gruen); }
+  .kal-leer{ color:var(--mut); font-size:13px; padding:3px 0 5px; }
+  .kal-fuss{ margin-top:7px; font-size:12.5px; }
+  .kal-fuss a{ color:var(--rot); font-weight:800; text-decoration:none; }
+  .auftrag{ scroll-margin-top:74px; }
+  .auftrag.blink{ box-shadow:0 0 0 3px rgba(215,38,34,.55); }
+
   .auftrag{ background:#fff; border:1px solid var(--line); border-left:5px solid #b9bdc4;
             border-radius:6px; padding:12px 13px; margin-bottom:11px; box-shadow:0 1px 4px rgba(20,25,32,.06); }
   .auftrag.dringend{ border-left-color:var(--rot); }
@@ -119,6 +156,20 @@
   <button onclick="laden(true)">↻</button>
 </header>
 <main>
+  <!-- Kalender ganz zuoberst (Auftrag Victor 07.09.2026): was ist wann geplant.
+       Ein Auftrag steht an jedem Tag, an dem er die Baustelle beschaeftigt -
+       am Abholtermin UND am "liefern bis". -->
+  <div class="box" id="kalBox">
+    <div class="kal-kopf">
+      <button class="btn ghost" type="button" onclick="kalMonat(-1)">&lsaquo;</button>
+      <div id="kalTitel">Kalender</div>
+      <button class="btn ghost" type="button" onclick="kalMonat(1)">&rsaquo;</button>
+      <button class="btn ghost" type="button" onclick="kalHeute()">Heute</button>
+    </div>
+    <div class="kal-wt"><span>Mo</span><span>Di</span><span>Mi</span><span>Do</span><span>Fr</span><span>Sa</span><span>So</span></div>
+    <div class="kal-grid" id="kalGrid"></div>
+    <div class="kal-liste" id="kalListe"></div>
+  </div>
   <div class="box">
     <h2 id="formTitel">➕ Neuer Auftrag / Abholung melden</h2>
     <div style="display:flex;gap:6px;margin-bottom:4px">
@@ -152,6 +203,10 @@
         </select>
         <input id="f_nach_txt" style="display:none;margin-top:6px" placeholder="Ort eingeben (z.B. Magazin)">
       </div>
+    </div>
+    <div id="dispoHinweis" class="mini"
+         style="display:none;margin-top:8px;background:#fff3e0;color:#8a5300">
+      📋 Geht über die Baustelle hinaus – <b>Livio Flepp</b> (Disposition STRABAG) bekommt die Meldung in Kopie.
     </div>
     <div class="row2">
       <div>
@@ -273,6 +328,37 @@ var MELDE_MAIL='info@schuoler-logistik.ch';   // Dispo Schuoler Logistik AG
 // Bauleitung immer in Kopie, damit jeder sieht, was bestellt ist (Vorgabe Victor 04.09.2026)
 var MELDE_CC=['samuel.decurtins@strabag.com','michele.manno@strabag.com',
               'lukas.kaelin@strabag.com','victor.malt@strabag.com'];
+/* Transporte, die ueber die Baustelle hinausgehen - nach Kueblis, nach Sursee,
+   zu einem Lieferanten, in den Werkhof -, sind Sache der STRABAG-Disposition:
+   Livio Flepp bekommt sie in Kopie (Auftrag Victor 07.09.2026). Reine Fahrten
+   zwischen IP Tal 1, IP Tal 4 und IP Berg gehen ihn nichts an.
+   ACHTUNG - DIE REGEL STEHT AN ZWEI STELLEN: hier und in ausserhalb() in
+   Bestellmail_NalpSolar/functions/kern.py (die Cloud kann diesen Code nicht
+   mitbenutzen). Wer sie aendert, muss beide anfassen - gleiche Falle wie der
+   Auftragstext in waText()/auftrag_text(). */
+var ORTE_BAUSTELLE=['IP Tal 1','IP Tal 4','IP Berg'];
+/* Kurzformen, die unter "anderer Ort" von Hand getippt werden und dieselben
+   drei Plaetze meinen - belegt aus den Auftraegen selbst ("von IP1 nach ..."
+   bei vonOrt=IP Tal 1, "bei IP4" bei vonOrt=IP Tal 4). Verglichen wird ohne
+   Gross-/Kleinschreibung und ohne Leer- und Satzzeichen, damit "ip tal1" und
+   "IP-Tal 1" nicht als fremder Ort durchgehen. */
+var ORTE_KURZ=['IP1','IP4'];
+var DISPO_MAIL='livio.flepp@strabag.com';  // Livio Flepp, Disponent STRABAG (Outlook-Adressbuch 07.09.2026)
+var DISPO_NAME='Livio Flepp';
+function ortSchluessel(o){ return String(o==null?'':o).toLowerCase().replace(/[^a-z0-9]/g,''); }
+var ORTE_INTERN=ORTE_BAUSTELLE.concat(ORTE_KURZ).map(ortSchluessel);
+function ausserhalb(r){
+  // Ein leeres Ortsfeld sagt nichts aus und loest darum auch nichts aus.
+  return [r.vonOrt||r.ort||'', r.nachOrt||''].some(function(o){
+    var s=ortSchluessel(o);
+    return s && ORTE_INTERN.indexOf(s)<0;
+  });
+}
+function meldeCc(r){ return ausserhalb(r) ? MELDE_CC.concat([DISPO_MAIL]) : MELDE_CC; }
+function dispoPruefen(){
+  $('dispoHinweis').style.display =
+    ausserhalb({vonOrt:ortVal('von'), nachOrt:ortVal('nach')}) ? '' : 'none';
+}
 var MELDE_NAME='Sandro';
 var SEITE='https://maltv.github.io/Website_NalpSolar/logistik.html';
 var LS_VON='nalp_erfasser_v1';                       // gleicher Name wie Stahlteile-Erfassung
@@ -332,7 +418,7 @@ function mailHref(r){
   // 04.09.2026). Handys wollen umgekehrt das Komma, darum nach System.
   var trenner = /Windows|Win32|Win64/i.test(navigator.userAgent) ? ';' : ',';
   return 'mailto:'+MELDE_MAIL
-    +'?cc='+encodeURIComponent(MELDE_CC.join(trenner))
+    +'?cc='+encodeURIComponent(meldeCc(r).join(trenner))
     +'&subject='+encodeURIComponent(mailBetreff(r))
     +'&body='+encodeURIComponent(waText(r));
 }
@@ -340,6 +426,9 @@ function waZeigen(r){
   document.getElementById('waLink').href=
     'https://wa.me/'+MELDE_NUMMER.replace(/[^0-9]/g,'')+'?text='+encodeURIComponent(waText(r));
   document.getElementById('mailLink').href=mailHref(r);
+  document.getElementById('mailLink').textContent = ausserhalb(r)
+    ? '✉️ Per Mail senden (BL + '+DISPO_NAME+' in Kopie)'
+    : '✉️ Per Mail senden (BL in Kopie)';
   document.getElementById('telLink').href='tel:'+MELDE_NUMMER;
   document.getElementById('telLink').textContent='📞 '+MELDE_NAME+' anrufen ('+MELDE_NUMMER+')';
   document.getElementById('waNudge').style.display='flex';
@@ -426,6 +515,7 @@ function ortToggle(w){
   var sel=$('f_'+w+'_sel'), txt=$('f_'+w+'_txt');
   txt.style.display = sel.value==='anderer' ? '' : 'none';
   if(sel.value==='anderer') txt.focus();
+  dispoPruefen();
 }
 function ortVal(w){
   var sel=$('f_'+w+'_sel');
@@ -611,6 +701,7 @@ function render(){
   $('listOffen').innerHTML = offen.length ? offen.map(card).join('') : '<div class="leer">Nichts offen – alles abgeholt. 👍</div>';
   $('listDone').innerHTML  = done.length ? done.map(card).join('') : '<div class="leer">Noch nichts erledigt.</div>';
   $('btnDone').textContent = ($('listDone').style.display==='none'?'anzeigen':'verbergen')+' ('+done.length+')';
+  kalRender();                                       // Kalender oben mitfuehren
 }
 function card(r){
   var k=r._k, dr=r.prio==='dringend', don=r.status==='erledigt';
@@ -955,8 +1046,128 @@ kCv.addEventListener('pointermove',function(e){
 });
 kCv.addEventListener('pointerup',function(){ kDrag=null; });
 
+/* ---------- Kalender ganz oben: was ist wann geplant ----------
+   Auftrag Victor 07.09.2026. Ein Auftrag steht an jedem Tag, an dem er die
+   Baustelle beschaeftigt: am Abholtermin (zielDatum, beim ganzen Tag der
+   reservierte Tag) UND am "liefern bis" (lieferDatum). Faellt beides auf
+   denselben Tag, steht er dort einmal. Auftraege ganz ohne Termin haengen
+   unter dem Monat - sonst sieht sie im Kalender niemand.
+   Tag antippen = seine Auftraege; Zeile antippen = zur Karte in der Liste. */
+var MONATE=['Januar','Februar','März','April','Mai','Juni','Juli','August',
+            'September','Oktober','November','Dezember'];
+var kalM=new Date(), kalSel=heute(), kalOhneAn=false;
+function kalIso(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')
+                    +'-'+String(d.getDate()).padStart(2,'0'); }
+function kalTage(){                        // Tag -> Auftragsschluessel (je Auftrag einmal)
+  var m={};
+  Object.keys(eintraege).forEach(function(k){
+    var r=eintraege[k]; if(!r||!r.text) return;
+    var tage=[];
+    if(r.zielDatum) tage.push(r.zielDatum);
+    if(r.lieferDatum && r.lieferDatum!==r.zielDatum) tage.push(r.lieferDatum);
+    tage.forEach(function(d){ (m[d]=m[d]||[]).push(k); });
+  });
+  return m;
+}
+function kalOhneTermin(){
+  return Object.keys(eintraege).filter(function(k){
+    var r=eintraege[k];
+    return r && r.text && r.status!=='erledigt' && !r.zielDatum && !r.lieferDatum;
+  });
+}
+function kalPunkt(r){
+  if(r.status==='erledigt') return 'ok';
+  if(r.prio==='dringend') return 'dr';
+  return r.art==='tagesmiete' ? 'tag' : '';
+}
+function kalZeit(r,tag){                   // Sortierschluessel im Tagesblatt
+  if(r.lieferDatum===tag && r.lieferZeit) return r.lieferZeit;
+  if(r.zielDatum===tag && r.zielZeit) return r.zielZeit;
+  return '99:99';
+}
+function kalMonat(n){ kalM=new Date(kalM.getFullYear(),kalM.getMonth()+n,1); kalRender(); }
+function kalHeute(){ kalM=new Date(); kalSel=heute(); kalOhneAn=false; kalRender(); }
+function kalRender(){
+  var m=kalTage(), jahr=kalM.getFullYear(), mon=kalM.getMonth(), ht=heute();
+  $('kalTitel').textContent='🗓 '+MONATE[mon]+' '+jahr;
+  var vor=(new Date(jahr,mon,1).getDay()+6)%7;          // Woche beginnt am Montag
+  var imMonat=new Date(jahr,mon+1,0).getDate();
+  var zellen=Math.ceil((vor+imMonat)/7)*7, h='';
+  for(var i=0;i<zellen;i++){
+    var d=new Date(jahr,mon,1-vor+i), iso=kalIso(d), liste=m[iso]||[];
+    var cls='kal-t';
+    if(d.getMonth()!==mon) cls+=' fremd';
+    if(d.getDay()===0||d.getDay()===6) cls+=' we';
+    if(iso<ht && liste.some(function(k){ return eintraege[k].status!=='erledigt'; })) cls+=' ueber';
+    if(iso===ht) cls+=' heute';
+    if(iso===kalSel && !kalOhneAn) cls+=' sel';
+    h+='<div class="'+cls+'" data-d="'+iso+'"><div class="n">'+d.getDate()+'</div>';
+    if(liste.length){
+      h+='<div class="pkt">';
+      liste.slice(0,4).forEach(function(k){ h+='<i class="'+kalPunkt(eintraege[k])+'"></i>'; });
+      h+='</div>'+(liste.length>4?'<div class="mehr">+'+(liste.length-4)+'</div>':'');
+    }
+    h+='</div>';
+  }
+  $('kalGrid').innerHTML=h;
+  kalListe();
+}
+function kalZeile(k,tag){
+  var r=eintraege[k], don=r.status==='erledigt', was=[];
+  if(tag && r.zielDatum===tag) was.push(r.art==='tagesmiete'?'📅 ganzer Tag':'📅 abholen');
+  if(tag && r.lieferDatum===tag) was.push('🎯 liefern bis');
+  if(!tag) was.push('⏳ kein Termin gesetzt');
+  var ot=[r.vonOrt||r.ort||'', r.nachOrt||''].filter(Boolean).join(' → ');
+  var z=tag?kalZeit(r,tag):'99:99';
+  return '<div class="kal-z'+(don?' done':'')+'" data-k="'+k+'">'
+    +'<div class="zt">'+(z==='99:99'?(don?'✅':'—'):esc(z))+'</div>'
+    +'<div class="zx">'+esc(r.text)
+    +'<small>'+esc(was.join(' · '))+(ot?' · 📍 '+esc(ot):'')
+    +(r.fahrzeug?' · 🚛 '+esc(r.fahrzeug):'')
+    +(r.prio==='dringend'&&!don?' · <b>DRINGEND</b>':'')
+    +(don?' · erledigt':'')+'</small></div></div>';
+}
+function kalListe(){
+  var h='', ohne=kalOhneTermin();
+  if(kalOhneAn){
+    h='<h3>⏳ Ohne Termin ('+ohne.length+')</h3>';
+    h+= ohne.length ? ohne.map(function(k){ return kalZeile(k,''); }).join('')
+                    : '<div class="kal-leer">Alles hat einen Termin. 👍</div>';
+  } else {
+    var liste=(kalTage()[kalSel]||[]).slice();
+    liste.sort(function(a,b){
+      var za=kalZeit(eintraege[a],kalSel), zb=kalZeit(eintraege[b],kalSel);
+      return za<zb?-1:za>zb?1:0;
+    });
+    h='<h3>'+esc(fmtDWT(kalSel))+(kalSel===heute()?' · heute':'')+'</h3>';
+    h+= liste.length ? liste.map(function(k){ return kalZeile(k,kalSel); }).join('')
+                     : '<div class="kal-leer">Für diesen Tag ist nichts geplant.</div>';
+  }
+  if(ohne.length) h+='<div class="kal-fuss"><a href="#" data-ohne="1">'
+    +(kalOhneAn?'‹ zurück zum Tag':'⏳ '+ohne.length+' ohne Termin anzeigen')+'</a></div>';
+  $('kalListe').innerHTML=h;
+}
+function kalSpringen(k){                   // vom Kalender zur Karte in der Liste
+  var r=eintraege[k]; if(!r) return;
+  if(r.status==='erledigt' && $('listDone').style.display==='none') toggleDone();
+  var el=$('a_'+k); if(!el) return;
+  el.scrollIntoView({behavior:'smooth', block:'center'});
+  el.classList.add('blink');
+  setTimeout(function(){ el.classList.remove('blink'); },1800);
+}
+$('kalBox').addEventListener('click',function(e){
+  var z=e.target.closest('[data-d],[data-k],[data-ohne]');
+  if(!z) return;
+  if(z.hasAttribute('data-ohne')){ e.preventDefault(); kalOhneAn=!kalOhneAn; kalRender(); return; }
+  if(z.hasAttribute('data-d')){ kalOhneAn=false; kalSel=z.getAttribute('data-d'); kalRender(); return; }
+  kalSpringen(z.getAttribute('data-k'));
+});
+
 /* ---------- Start ---------- */
 $('f_von').value=getVon();
+['f_von_txt','f_nach_txt'].forEach(function(id){ $(id).addEventListener('input',dispoPruefen); });
+dispoPruefen();
+kalRender();                    // Kalender steht schon da, bevor die Daten kommen
 laden(false);
 setInterval(function(){ laden(false); },60000);
 </script>
