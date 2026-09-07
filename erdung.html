@@ -246,7 +246,8 @@ function popup(p){
   if (p.st) h += ' · Strang ' + p.st + ' / ' + p.ab;
   h += '<br>LV95 ' + p.e.toFixed(3) + ' / ' + p.n.toFixed(3) + ' · ' + p.z.toFixed(3) + ' m ü.M.';
   h += '<br>Vermessung: ' + p.q + '</div>';
-  if (p.koll) h += '<div class="bem">Nummer 1101–1115 ist 2025 <b>und</b> 2026 vergeben – die beiden Punkte liegen weit auseinander. Deshalb der Schlüssel 25-/26-.</div>';
+  if (p.dop) h += '<div class="bem">' + p.dop + '</div>';
+  else if (p.koll) h += '<div class="bem">Nummer 1101–1115 ist 2025 <b>und</b> 2026 vergeben – die beiden Punkte liegen weit auseinander. Deshalb der Schlüssel 25-/26-.</div>';
   if (!p.f.length) {
     h += '<div class="warn" style="margin-top:7px">Kein Foto vorhanden</div>';
   } else if (p.fj === 2026) {

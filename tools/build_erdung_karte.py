@@ -28,10 +28,19 @@ ZFOTO = os.path.join(ZIEL, 'fotos')
 sys.path.insert(0, os.path.join(ERD, 'Tools'))
 from erdleiter import (ROHDATEN, doku_lesen, rohdaten_lesen, abstand,   # noqa: E402
                        survey123_fotos)
-from doku_bauen import datum_aus_dateiname                            # noqa: E402
+from doku_bauen import (datum_aus_dateiname, konflikt_varianten,      # noqa: E402
+                        fotos_aufteilen)
 
 LV95_NACH_WGS84 = Transformer.from_crs('EPSG:2056', 'EPSG:4326', always_xy=True)
 BREITE_FOTO = 900
+DOP_TEXT = ('Punktnummer 2026 <b>doppelt vergeben</b> - dies ist die %s. '
+            'Die beiden Aufnahmen liegen %.0f m auseinander und sind zwei '
+            'verschiedene Verbindungsstellen. Klaerung bei Zimmermann/Dobler offen.')
+
+
+def je_punkt_dateien(je_punkt, name):
+    """Punktnummern, unter denen ein Foto gefuehrt wird."""
+    return [nr for nr, dateien in je_punkt.items() if name in dateien]
 
 
 def nach_wgs84(ost, nord):
@@ -200,7 +209,7 @@ def fotos_verkleinern(namen):
 
 def main():
     doku25 = doku_lesen()
-    roh26, _ = rohdaten_lesen(ROHDATEN)
+    roh26, konflikte = rohdaten_lesen(ROHDATEN)
 
     je_punkt = {}
     foto_meta = {}
@@ -221,6 +230,13 @@ def main():
 
     kollisionen = {nr for nr in roh26
                    if nr in doku25 and abstand(roh26[nr], doku25[nr]) > 0.10}
+    # Doppelt vergebene Nummern INNERHALB 2026 (seit 01.09.2026: 1320-1324).
+    # rohdaten_lesen() behaelt nur die erste Aufnahme - die zweite wird hier
+    # nachgeladen, sonst fehlt sie auf der Karte.
+    doppelt = konflikt_varianten(konflikte)
+    foto_zeilen = [(n, m['d'], je_punkt_dateien(je_punkt, n), m['b'])
+                   for n, m in foto_meta.items()]
+    doppelt_fotos = fotos_aufteilen(doppelt, roh26, je_punkt, foto_zeilen)
 
     punkte = []
     for nr, p in doku25.items():
@@ -236,7 +252,8 @@ def main():
         p = roh26[nr]
         lat, lon = nach_wgs84(p['E'], p['N'])
         datum = datum_aus_dateiname(p['quelle'])
-        dateien = je_punkt.get(nr, [])
+        dateien = [f for f in je_punkt.get(nr, [])
+                   if f not in doppelt_fotos.get(nr, [])]
         punkte.append(dict(s='26-%s' % nr, nr=nr, j=2026, lat=lat, lon=lon,
                            e=round(p['E'], 3), n=round(p['N'], 3), z=round(p['H'], 3),
                            st='', ab='',
@@ -244,7 +261,24 @@ def main():
                                        ' · %s' % datum.strftime('%d.%m.%Y') if datum else ''),
                            f=dateien, fj=2026,
                            k='ok' if dateien else 'ohne_foto',
-                           koll=nr in kollisionen))
+                           koll=nr in kollisionen,
+                           dop=(DOP_TEXT % ('1. Aufnahme', doppelt[nr]['dist'])
+                                if nr in doppelt else '')))
+
+        if nr in doppelt:
+            v = doppelt[nr]
+            lat2, lon2 = nach_wgs84(v['E'], v['N'])
+            d2 = datum_aus_dateiname(v['quelle'])
+            f2 = doppelt_fotos.get(nr, [])
+            punkte.append(dict(s='26-%s-b' % nr, nr=nr, j=2026, lat=lat2, lon=lon2,
+                               e=round(v['E'], 3), n=round(v['N'], 3),
+                               z=round(v['H'], 3), st='', ab='',
+                               q='%s%s' % (v['quelle'],
+                                           ' · %s' % d2.strftime('%d.%m.%Y') if d2 else ''),
+                               f=f2, fj=2026,
+                               k='ok' if f2 else 'ohne_foto',
+                               koll=True,
+                               dop=DOP_TEXT % ('2. Aufnahme', v['dist'])))
 
     # Punkte, die nur auf Fotos vorkommen - ohne Koordinaten, deshalb nicht auf der
     # Karte. Auch gegen die 2025er Doku pruefen (sonst faellt z.B. 1039 hier rein).
@@ -258,7 +292,7 @@ def main():
     erdung = erdung_lesen()
 
     daten = dict(
-        stand='12.08.2026',
+        stand='01.09.2026',
         punkte=punkte,
         fotos=foto_meta,
         nur_foto=nur_foto,
@@ -271,12 +305,17 @@ def main():
             ohne_foto=sum(1 for p in punkte if p['k'] == 'ohne_foto'),
             ohne_vermessung=len(nur_foto),
             kollisionen=sorted(kollisionen, key=int),
+            doppelt_2026=sorted(doppelt, key=int),
         ),
         quellen=dict(
             doku2025='Dropbox 04 Pruefungen\\Erdleiter\\251027_Dokumentation Erdleiter.xlsx',
-            roh2026='Dropbox 04 Pruefungen\\Erdleiter\\Rohdaten\\ (12 Dateien 12.06.-31.07.2026)',
-            fotos2026='Google Drive "Erdungsdok", uebernommen 12.08.2026; Punktnummer aus der '
-                      'Beschriftung im Bild ausgelesen',
+            roh2026='Dropbox 04 Pruefungen\\Erdleiter\\Rohdaten\\ (12 Dateien 12.06.-31.07.2026) '
+                    'plus Erdungsdokumentation\\Rohdaten_aus_Mails\\ (TOPO.03.07.POINTS.txt, '
+                    'FEINVERTEILUNG-140826.csv, TOPO 27-28.08.csv, TOPO TC2 - per Mail bzw. '
+                    'USB-Stick gekommen, nie in Dropbox abgelegt)',
+            fotos2026='Google Drive "Erdungsdok" (uebernommen 12.08.2026) und USB-Stick '
+                      '"Fotis erdung" (uebernommen 01.09.2026, 17 Bilder vom 27./28.08.); '
+                      'Punktnummer aus der Beschriftung im Bild ausgelesen',
             leitungen='ILF-Werkleitungsmodelle PZ1/PZ2/PZ3 (M_0460_A2, M_0468_A2, M_0465_A1, '
                       'M_0472_A1, M_0475_A1) ueber tools\\build_leitungen.py',
             erdungsoll='PZ1-Erdungsmodell M_0463_A1 (uploads\\ifc\\erdung.ifc). Fuer PZ2 und PZ3 '
