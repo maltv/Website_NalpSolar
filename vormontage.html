@@ -1627,7 +1627,14 @@ var batchAuf={};
    8 Ist: Victor 30.07. (komplett vor Ort)  ·  9/11/12/13: Bucheli 30.07. 10:52
    Batch 10: laut F. Borner / Bucheli 30.07. gibt es keinen eigenen Batch 10.
    11-16: Liefertermin aus der jeweiligen Bestell-xlsx (Zeile 1); Batch 11 laut
-   Bauleitung 11.08.2026 abends auf dem Platz (Bestellung sagte 06.08.). */
+   Bauleitung 11.08.2026 abends auf dem Platz (Bestellung sagte 06.08.).
+   15 Ist: Mail Victor an C. Schmuckle 08.09.2026 12:52 - die 100 Stueck kamen am
+   Montag 07.09.2026 an und wurden alle einzeln erfasst.  ·  18: Mail Victor an
+   J. Maeder 31.08.2026 13:26 "Gewuenschter Liefertermin: 28.09.2026"  ·  19: Mail
+   Victor an J. Maeder 07.09.2026 14:55 "Gewuenschter Liefertermin: 05.10.2026".
+   17 hat KEINEN belegten Termin: den Batch hat F. Borner am 24.08.2026 11:28 ohne
+   Terminangabe an Maeder geschickt. Der Wert unten ist hergeleitet (Bestelldatum
+   + 4 Wochen, wie bei 3, 4, 8, 15, 16, 18 und 19 belegt) und als solcher markiert. */
 var LIEFERUNG={
   1:{soll:'2026-05-18'},
   3:{soll:'2026-06-01'},
@@ -1646,8 +1653,11 @@ var LIEFERUNG={
   // liegt die Schwelle auf dem 01.09. und die 59 Stueck gelten faelschlich als
   // "frueher schon einmal erfasst" (Nachbestellung).
   14:{soll:'2026-09-01', ist:'2026-08-28', hinweis:'Teillieferung – 41 Positionen offen'},
-  15:{soll:'2026-09-07'},
-  16:{soll:'2026-09-14'}
+  15:{soll:'2026-09-07', ist:'2026-09-07'},
+  16:{soll:'2026-09-14'},
+  17:{soll:'2026-09-21', hinweis:'Termin nicht belegt - hergeleitet (+4 Wochen)'},
+  18:{soll:'2026-09-28', hinweis:'65 Pos. Baupiste B sind Zweitbestellungen'},
+  19:{soll:'2026-10-05'}
 };
 function lieferText(b, voll){
   var l=LIEFERUNG[b];

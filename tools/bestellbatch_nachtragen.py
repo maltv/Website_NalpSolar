@@ -140,8 +140,8 @@ def main(argv):
 
     daten["meta"]["bestellungen_quelle"] = (
         "Mauchle-Bestellbatches NR %d-%d (je Batch die an Mauchle gesendete xlsx; "
-        "Batch 5+6 = Korrektur-Regenerierung 08.06.2026, Batch 11-15 nachgetragen "
-        "%s aus den Bestellmails). Felder: tisch, stuetze, laenge_mm, batch, datum, "
+        "Batch 5+6 = Korrektur-Regenerierung 08.06.2026, Batch 11 und hoeher je "
+        "einzeln nachgetragen, zuletzt %s). Felder: tisch, stuetze, laenge_mm, batch, datum, "
         "bauteilart, gueltig(1)/ersetzt(0) - ersetzt = dieselbe Position wurde spaeter "
         "neu bestellt. ACHTUNG: belegt nur die BESTELLUNG (Basis = damaliger SOLL-Stand), "
         "nicht die Lieferung." % (nr_alle[0], nr_alle[-1], date.today().strftime("%d.%m.%Y"))
