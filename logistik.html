@@ -23,6 +23,11 @@
   window.NALP_GATE_SUB   = 'Code eingeben, um fortzufahren';
 </script>
 <script src="assets/js/nalp-gate.js"></script>
+<!-- Fragt beim Aufmachen, ob die Seite als App aufs Handy soll (Auftrag
+     Victor 08.09.2026). Muss FRUEH stehen: das Ereignis beforeinstallprompt
+     kommt kurz nach dem Laden, ein spaeter gesetzter Listener verpasst es. -->
+<script src="assets/js/nalp-install.js"></script>
+<script>NalpInstall.start({name:'Transporte bestellen', icon:'assets/img/ico-transporte-192.png'});</script>
 <style>
   /* STRABAG-CI: Weiss, Rot #D72622, Arial */
   :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
@@ -130,6 +135,11 @@
   .a-komm b{ color:var(--rot); }
   .a-act{ display:flex; gap:8px; margin-top:11px; flex-wrap:wrap; }
   .a-done-info{ margin-top:8px; font-size:13px; color:var(--gruen); font-weight:800; }
+  /* Steht der Auftrag bei Schuoler? Grau = unterwegs, gruen = draussen,
+     rot = es ging nichts raus und jemand muss von Hand melden. */
+  .a-meld{ margin-top:8px; font-size:12.5px; font-weight:800; color:var(--mut); }
+  .a-meld.ok{ color:var(--gruen); }
+  .a-meld.warn{ color:var(--rot); background:#fdecec; border-radius:6px; padding:6px 9px; }
   .sek{ margin:20px 0 9px; font-size:13px; font-weight:900; letter-spacing:.06em;
         text-transform:uppercase; color:#fff; text-shadow:0 1px 8px rgba(10,15,22,.85); }
   .leer{ color:var(--mut); font-size:13.5px; padding:9px 12px; background:rgba(255,255,255,.9);
@@ -284,7 +294,7 @@
   <div class="mini" style="margin-top:18px">
     Einträge kann jeder erfassen (Mike, Samuel, Victor …). Sandro Schuoler hakt ab, wenn erledigt –
     mit Kommentar und Foto. Daten liegen geschützt in der Baustellen-Datenbank (nur mit Login).
-    · <a href="#" onclick="try{localStorage.removeItem('nalp_logistik_unlock_v1');}catch(e){};location.reload();return false;">Abmelden</a>
+    · <a href="#" onclick="try{localStorage.removeItem(window.NALP_GATE_KEY||'nalp_portal_unlock_v1');}catch(e){};location.reload();return false;">Abmelden</a>
   </div>
 </main>
 
@@ -295,12 +305,12 @@
 <!-- Nach dem Melden: Auftrag per WhatsApp/Anruf an den Transporteur -->
 <div id="waNudge" style="display:none;position:fixed;inset:0;z-index:80;background:rgba(15,20,26,.6);align-items:flex-end;justify-content:center;">
   <div style="background:#fff;border-radius:10px 10px 0 0;border-top:6px solid var(--rot);max-width:720px;width:100%;padding:18px 16px calc(18px + env(safe-area-inset-bottom));">
-    <div style="font-size:16px;font-weight:900;margin-bottom:4px;">✔ Auftrag gespeichert – jetzt melden?</div>
-    <div style="font-size:13px;color:var(--mut);margin-bottom:14px;">Damit nichts liegen bleibt: Auftrag direkt per WhatsApp oder Mail schicken oder kurz durchrufen.</div>
-    <a id="waLink" class="btn" style="display:block;text-align:center;text-decoration:none;background:#25D366;margin-bottom:9px;" target="_blank" rel="noopener">📱 Per WhatsApp senden</a>
-    <a id="mailLink" class="btn ghost" style="display:block;text-align:center;text-decoration:none;margin-bottom:9px;">✉️ Per Mail senden (BL in Kopie)</a>
+    <div style="font-size:16px;font-weight:900;margin-bottom:4px;">✔ Auftrag gespeichert – die Mail ans Büro läuft</div>
+    <div style="font-size:13px;color:var(--mut);margin-bottom:14px;">Der Auftrag geht automatisch per Mail ans Büro Schuoler, die Bauleitung in Kopie. Auf der Karte in der Liste steht, sobald er draussen ist. Eilt es: Sandro zusätzlich per WhatsApp oder Anruf.</div>
+    <a id="waLink" class="btn" style="display:block;text-align:center;text-decoration:none;background:#25D366;margin-bottom:9px;" target="_blank" rel="noopener">📱 Sandro per WhatsApp</a>
+    <a id="mailLink" class="btn ghost" style="display:block;text-align:center;text-decoration:none;margin-bottom:9px;">✉️ Mail selber schreiben</a>
     <a id="telLink" class="btn ghost" style="display:block;text-align:center;text-decoration:none;margin-bottom:9px;">📞 Anrufen</a>
-    <button class="btn ghost" style="display:block;width:100%;" onclick="document.getElementById('waNudge').style.display='none'">Ohne Meldung schliessen</button>
+    <button class="btn ghost" style="display:block;width:100%;" onclick="document.getElementById('waNudge').style.display='none'">Schliessen</button>
   </div>
 </div>
 
@@ -422,16 +432,59 @@ function mailHref(r){
     +'&subject='+encodeURIComponent(mailBetreff(r))
     +'&body='+encodeURIComponent(waText(r));
 }
-function waZeigen(r){
+function waZeigen(r, k){
   document.getElementById('waLink').href=
     'https://wa.me/'+MELDE_NUMMER.replace(/[^0-9]/g,'')+'?text='+encodeURIComponent(waText(r));
   document.getElementById('mailLink').href=mailHref(r);
   document.getElementById('mailLink').textContent = ausserhalb(r)
-    ? '✉️ Per Mail senden (BL + '+DISPO_NAME+' in Kopie)'
-    : '✉️ Per Mail senden (BL in Kopie)';
+    ? '✉️ Mail selber schreiben (BL + '+DISPO_NAME+' in Kopie)'
+    : '✉️ Mail selber schreiben';
   document.getElementById('telLink').href='tel:'+MELDE_NUMMER;
   document.getElementById('telLink').textContent='📞 '+MELDE_NAME+' anrufen ('+MELDE_NUMMER+')';
+  // Wer von Hand meldet, haelt das im Auftrag fest - sonst weiss spaeter
+  // niemand, ob Sandro schon Bescheid weiss.
+  [['waLink','whatsapp'],['mailLink','mail'],['telLink','anruf']].forEach(function(p){
+    document.getElementById(p[0]).onclick = k
+      ? function(){ meldungNotieren(k, p[1]); } : null;
+  });
   document.getElementById('waNudge').style.display='flex';
+}
+
+/* ---------------------------------------------------------------------------
+   IST DER AUFTRAG WIRKLICH DRAUSSEN?
+   Die Cloud-Funktion bestellung_gemeldet mailt jeden neuen Auftrag ans Buero
+   Schuoler (BL in Kopie) und setzt danach im Auftrag die Marke mailBl. Steht
+   sie nach ein paar Minuten immer noch nicht da, ist die Mail NICHT
+   rausgegangen - Zugangsdaten fehlen, SMTP-Fehler, Funktion nicht ausgerollt.
+   Genau das muss auf der Karte stehen: sonst faellt ein stiller Ausfall erst
+   auf, wenn der Lastwagen nicht kommt (erlebt 04.-08.09.2026: neun Auftraege,
+   kein einziger mit mailBl, und niemand hat es gemerkt).
+   'gemeldet' ist die Gegenprobe von Hand: wer WhatsApp, Mail oder Anruf
+   antippt, setzt sie. Der Knopfdruck beweist nicht, dass die WhatsApp auch
+   abgeschickt wurde - darum steht dort, WER gemeldet hat, und nicht einfach
+   "erledigt".
+--------------------------------------------------------------------------- */
+var MELDE_FRIST=10*60*1000;                  // so lange darf die Cloud brauchen
+var MELDE_WEG={whatsapp:'WhatsApp', mail:'Mail', anruf:'Anruf'};
+function meldungNotieren(k, weg){
+  if(!k) return;
+  var g={weg:weg, von:getVon()||'', ts:Date.now()};
+  // Auch schreiben, wenn der Auftrag lokal noch gar nicht steht: direkt nach
+  // dem Speichern laeuft laden() noch, und der Knopf wird trotzdem gedrueckt.
+  if(eintraege[k]){ eintraege[k].gemeldet=g; render(); }
+  apiPatch(P_AUF+'/'+k, {gemeldet:g});
+}
+function meldeZeile(r){
+  var g=r.gemeldet||null, hand='';
+  if(g) hand='📱 '+(MELDE_WEG[g.weg]||g.weg)+' von '+esc(g.von||'—')+', '+fmtZeit(g.ts);
+  if(r.mailBl)
+    return '<div class="a-meld ok">✉ Beim Büro Schuoler – '+fmtZeit(r.mailBl)
+      +(hand?' · '+hand:'')+'</div>';
+  if(g) return '<div class="a-meld ok">'+hand+' – Mail ans Büro noch nicht bestätigt</div>';
+  if(Date.now()-(r.ts||0) < MELDE_FRIST)
+    return '<div class="a-meld">✉ Meldung ans Büro Schuoler läuft …</div>';
+  return '<div class="a-meld warn">⚠ Es ging keine Meldung raus – bitte Sandro '
+    +'per WhatsApp oder Anruf melden</div>';
 }
 
 /* Uhrzeit-Schnellwahl: ein Tipp statt Zeitrad (Feld bleibt frei editierbar) */
@@ -623,10 +676,10 @@ function speichern(){
     if(!key) throw 0;
     if(!fotoDataNeu) return key;
     return fotoSpeichern(key, fotoDataNeu, von).then(function(){ return key; });
-  }).then(function(){
+  }).then(function(key){
     formReset();
     toast('Auftrag gemeldet ✔'); laden(false);
-    waZeigen(recKopie);                              // WhatsApp/Anruf anbieten
+    waZeigen(recKopie, key);                         // WhatsApp/Anruf anbieten
   }).catch(function(){
     $('status').textContent=''; $('btnSave').disabled=false;
     toast('Speichern fehlgeschlagen – Empfang?',true);
@@ -761,14 +814,15 @@ function card(r){
     h+='<div class="a-done-info">✅ '+esc(r.erledigtVon||'—')+' · '+esc(fmtDZ(r.erledigtAm||'', r.erledigtTs))+'</div>';
     h+='<div class="a-act"><button class="btn ghost" onclick="loeschen(\''+k+'\')">🗑 Löschen</button></div>';
   } else {
+    h+=meldeZeile(r);                        // steht der Auftrag bei Schuoler?
     h+='<div class="a-act">'+
        '<button class="btn gruen" onclick="erledigen(\''+k+'\')">✅ Erledigt</button>'+
        '<button class="btn ghost" onclick="bearbeiten(\''+k+'\')">✏️ Bearbeiten</button>'+
        '<button class="btn ghost" onclick="kommentieren(\''+k+'\')">💬 Kommentar</button>'+
        '<button class="btn ghost" onclick="fotoNach(\''+k+'\')">📷 Foto</button>'+
-       '<a class="btn ghost" style="text-decoration:none" target="_blank" rel="noopener" href="https://wa.me/'+MELDE_NUMMER.replace(/[^0-9]/g,'')+'?text='+encodeURIComponent(waText(r))+'">📱 WhatsApp</a>'+
-       '<a class="btn ghost" style="text-decoration:none" href="'+mailHref(r)+'">✉️ Mail</a>'+
-       '<a class="btn ghost" style="text-decoration:none" href="tel:'+MELDE_NUMMER+'">📞</a>'+
+       '<a class="btn ghost" style="text-decoration:none" target="_blank" rel="noopener" onclick="meldungNotieren(\''+k+'\',\'whatsapp\')" href="https://wa.me/'+MELDE_NUMMER.replace(/[^0-9]/g,'')+'?text='+encodeURIComponent(waText(r))+'">📱 WhatsApp</a>'+
+       '<a class="btn ghost" style="text-decoration:none" onclick="meldungNotieren(\''+k+'\',\'mail\')" href="'+mailHref(r)+'">✉️ Mail</a>'+
+       '<a class="btn ghost" style="text-decoration:none" onclick="meldungNotieren(\''+k+'\',\'anruf\')" href="tel:'+MELDE_NUMMER+'">📞</a>'+
        '<button class="btn ghost" onclick="loeschen(\''+k+'\')">🗑</button>'+
        '</div>';
   }

@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v175';
+var CACHE = 'nalpsolar-v176';
 var PRECACHE = [
   './index.html',
   './protokoll.html',
@@ -9,6 +9,9 @@ var PRECACHE = [
   './logistik.html',
   './manifest-logistik.json',
   './assets/img/ico-transporte.png',
+  './assets/img/ico-transporte-192.png',   // ab 192 px, sonst bietet Chrome die Installation nie an
+  './assets/img/ico-transporte-512.png',
+  './assets/js/nalp-install.js',
   './lieferscheine.html',
   './vormontage.html',
   // './gewinde.html',   abgeschaltet 28.08.2026 (Auftrag Victor)
