@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v176';
+var CACHE = 'nalpsolar-v177';
 var PRECACHE = [
   './index.html',
   './protokoll.html',
@@ -14,6 +14,8 @@ var PRECACHE = [
   './assets/js/nalp-install.js',
   './lieferscheine.html',
   './vormontage.html',
+  './wasserleitung.html',
+  './uploads/wasserleitung.json',
   // './gewinde.html',   abgeschaltet 28.08.2026 (Auftrag Victor)
   // './pfahlkopf.html',   abgeschaltet 28.08.2026 (Auftrag Victor)
   './einzelfundamente.html',

@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NalpSolar · Wasserleitung PZ4</title>
+<meta name="theme-color" content="#ffffff">
+<script>
+  window.NALP_GATE_CODE  = '6460';
+  window.NALP_GATE_KEY   = 'nalp_portal_unlock_v1';
+  window.NALP_GATE_TITEL = 'Wasserleitung PZ4';
+  window.NALP_GATE_SUB   = 'Code eingeben / Enter code / Wpisz kod';
+</script>
+<script src="assets/js/nalp-gate.js"></script>
+<link rel="stylesheet" href="assets/js/leaflet/leaflet.css">
+<style>
+  /* Reiter «Wasserleitung PZ4» – Baustellenanweisung NalpSolar_51_BA_0274_A1 (03.09.2026).
+     Daten: uploads/wasserleitung.json (Tools: siehe WERKZEUGE.md §56). Gleiche Optik wie vormontage.html. */
+  :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
+         --gruen:#1e9e5a; --blau:#1565c0; --orange:#e08a00; --lila:#8e24aa; --lila2:#4a148c; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body{ margin:0; background:#eef0f3; min-height:100vh; color:var(--ink);
+        font-family:Arial,"Helvetica Neue",sans-serif; }
+  header{ position:sticky; top:0; z-index:10; display:flex; align-items:center; gap:8px;
+          padding:9px 10px; background:#fff; border-bottom:4px solid var(--rot); }
+  header a.home{ color:var(--ink); text-decoration:none; font-size:20px; }
+  header .logo img{ height:20px; display:block; }
+  header h1{ font-size:14.5px; margin:0; flex:1; font-weight:800; }
+  .tabs{ display:flex; background:#fff; border-bottom:1px solid var(--line); position:sticky; top:52px; z-index:9; }
+  .tabs button{ flex:1 1 25%; border:none; background:none; padding:11px 2px; font-size:12px; font-weight:800;
+        white-space:nowrap; color:var(--mut); cursor:pointer; border-bottom:3px solid transparent; }
+  .tabs button.on{ color:var(--rot); border-bottom-color:var(--rot); }
+  main{ max-width:760px; margin:0 auto; padding:12px 12px 80px; }
+  section[hidden]{ display:none; }
+  .box{ background:#fff; border:1px solid var(--line); border-left:5px solid var(--rot);
+        border-radius:6px; padding:13px; margin-bottom:13px; box-shadow:0 1px 4px rgba(20,25,32,.07); }
+  .box.lila{ border-left-color:var(--lila); }
+  .box.blau{ border-left-color:var(--blau); }
+  .box.grau{ border-left-color:#9aa0a6; }
+  .box h2{ margin:0 0 6px; font-size:15.5px; }
+  .box p{ margin:0 0 8px; font-size:14px; line-height:1.5; }
+  .box .sub{ font-size:12px; color:var(--mut); line-height:1.45; }
+  ol.todo{ margin:6px 0 0; padding-left:0; list-style:none; counter-reset:s; }
+  ol.todo li{ counter-increment:s; display:flex; gap:10px; align-items:flex-start; padding:9px 0;
+              border-top:1px solid var(--line); font-size:14.5px; line-height:1.45; }
+  ol.todo li::before{ content:counter(s); flex:0 0 28px; height:28px; border-radius:50%; background:var(--lila);
+              color:#fff; font-weight:900; display:flex; align-items:center; justify-content:center; font-size:14px; }
+  .big{ font-size:30px; font-weight:900; color:var(--lila); line-height:1; }
+  .chips{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .chip{ background:#f3e5f5; border:1px solid #ce93d8; color:var(--lila2); border-radius:6px;
+         padding:6px 9px; font-weight:800; font-size:14px; min-width:56px; text-align:center; cursor:pointer; }
+  .btn{ display:inline-block; border:none; border-radius:6px; padding:12px 16px; font-size:14.5px;
+        font-weight:800; cursor:pointer; color:#fff; background:var(--rot); text-decoration:none; text-align:center; }
+  .btn.w{ background:#fff; color:var(--ink); border:1px solid #c9ccd2; }
+  .btnrow{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  #map2d{ height:calc(100vh - 215px); min-height:380px; border-radius:6px; border:1px solid var(--line); background:#d9dde3; }
+  .legende{ display:flex; flex-wrap:wrap; gap:12px; font-size:12px; color:var(--mut); margin:8px 0 0; }
+  .legende i{ display:inline-block; width:14px; height:14px; border-radius:3px; vertical-align:-2px; margin-right:4px; }
+  .tlbl{ background:none; border:none; box-shadow:none; color:#fff; font-weight:900; font-size:11px;
+         text-shadow:0 0 3px #4a148c,0 0 3px #4a148c,0 0 2px #000; padding:0; }
+  .tlbl::before{ display:none; }
+  .lblAus .tlbl{ display:none; }
+  .leaflet-container{ font-family:inherit; }
+  #k3dFrame{ width:100%; height:calc(100vh - 260px); min-height:380px; border:1px solid var(--line); border-radius:6px; background:#111; }
+  .bild{ width:100%; border-radius:6px; border:1px solid var(--line); display:block; margin-top:8px; }
+  .gps{ position:absolute; right:10px; top:10px; z-index:900; }
+</style>
+</head>
+<body>
+<header>
+  <a class="home" href="index.html" title="Portal">‹</a>
+  <div class="logo"><img src="assets/img/strabag-logo.png" alt="STRABAG"></div>
+  <h1>💧 Wasserleitung PZ4 – diese Tische zuerst bohren</h1>
+</header>
+
+<div class="tabs">
+  <button class="on" data-t="info" onclick="tab('info')">📋 Was tun</button>
+  <button data-t="k2d" onclick="tab('k2d')">🗺 Karte 2D</button>
+  <button data-t="k3d" onclick="tab('k3d')">🏔 3D</button>
+  <button data-t="liste" onclick="tab('liste')">🔢 Liste</button>
+</div>
+
+<main>
+  <!-- ================= WAS TUN ================= -->
+  <section id="t-info">
+    <div class="box lila">
+      <div class="big" id="anz">44</div>
+      <h2>Modultische im Bereich der Wasserleitungen (PZ4) zuerst bohren</h2>
+      <p>Ganz oben im Perimeter (PZ4) liegen zwei Wasserleitungen: die der <b>Alphütte</b> und die der <b>KVR</b>.
+         Für die Bohrarbeiten müssen beide ausser Betrieb – dafür gibt es je ein <b>oberirdisches Provisorium</b>.
+         Nach dem Bohren werden die definitiven Leitungen im Bereich PZ4 <b>neu erstellt – noch in dieser Bausaison</b>,
+         damit die KVR-Leitung vor dem Winter wieder läuft und im Frost nichts unterbricht.</p>
+      <div class="sub">Darum gilt für diese Tische Bohr-Priorität. Verrechnung gemäss Werkvertrag.</div>
+    </div>
+
+    <div class="box">
+      <h2>Das ist zu tun</h2>
+      <ol class="todo">
+        <li><div><b>Vor dem Bohren:</b> beide Wasserleitungen (Alphütte, KVR) ausser Betrieb, Provisorium oberirdisch verlegt.
+            Im Bereich nichts bohren, solange eine Leitung in Betrieb ist.</div></li>
+        <li><div><b>Bohren:</b> die <b>44 violetten Tische</b> (Karte 2D/3D, Liste) zuerst – vor den übrigen Tischen in PZ4.</div></li>
+        <li><div><b>Nach dem Bohren:</b> definitive Wasserleitungen im Bereich PZ4 neu erstellen – diese Bausaison, wegen Frost.</div></li>
+      </ol>
+    </div>
+
+    <div class="box grau">
+      <h2>Quelle</h2>
+      <p class="sub">Baustellenanweisung <b>NalpSolar_51_BA_0274_A1_MT-Wasserleitung_260903</b> «Priorisierte Modultische Bereich Wasserleitung»,
+         NalpSolar AG / B. Ruede, 03.09.2026, gehört zu LI_0311_A1 (Daten 2027 PZ4) und PL_0312_A1 (Belegung 2027 PZ4).
+         Weitergeleitet Michele Manno 16.09.2026 → Samuel Decurtins 18.09.2026 07:48.<br>
+         Lage der Tische aus den Bohrpunkten der Website (bohrpunkte_koo.json). Der genaue Verlauf der beiden Wasserleitungen
+         liegt nicht als Geodaten vor – nur im Übersichtsbild der Anweisung.</p>
+      <div class="btnrow">
+        <a class="btn w" href="uploads/wasserleitung/BA_0274_A1_Wasserleitung_260903.pdf" target="_blank">📄 Anweisung (PDF)</a>
+        <a class="btn w" href="uploads/wasserleitung/Bereich_Wasserleitung.png" target="_blank">🖼 Übersichtsbild gross</a>
+      </div>
+      <img class="bild" src="uploads/wasserleitung/Bereich_Wasserleitung.png" alt="Übersicht betroffener Bereich (violett) aus der Anweisung" loading="lazy">
+    </div>
+  </section>
+
+  <!-- ================= KARTE 2D ================= -->
+  <section id="t-k2d" hidden>
+    <div style="position:relative">
+      <div id="map2d"></div>
+      <button class="btn w gps" onclick="gps()" title="Mein Standort">📍</button>
+    </div>
+    <div class="legende">
+      <span><i style="background:#8e24aa"></i>zuerst bohren (44 Tische, BA 0274 A1)</span>
+      <span><i style="background:#9aa0a6;opacity:.5"></i>übrige Tische</span>
+      <span>Tisch antippen = ID und Lage · Luftbild swisstopo (braucht Netz)</span>
+    </div>
+  </section>
+
+  <!-- ================= 3D ================= -->
+  <section id="t-k3d" hidden>
+    <iframe id="k3dFrame" title="3D-Geländemodell mit den priorisierten Tischen" allow="fullscreen; geolocation"></iframe>
+    <div class="btnrow">
+      <a class="btn" href="viewer3d.html#wasserleitung" target="_blank">🏔 3D in eigenem Fenster öffnen</a>
+    </div>
+    <div class="legende"><span>Die 44 Tische stehen violett im 3D-Modell; die Kamera fliegt beim Start hin.</span></div>
+  </section>
+
+  <!-- ================= LISTE ================= -->
+  <section id="t-liste" hidden>
+    <div class="box lila">
+      <h2>Tisch-Nummern (aufsteigend) – antippen zeigt den Tisch auf der Karte</h2>
+      <div class="chips" id="chips"></div>
+      <div class="sub" style="margin-top:8px" id="listeInfo"></div>
+    </div>
+  </section>
+</main>
+
+<script src="assets/js/leaflet/leaflet.js"></script>
+<script>
+(function(){
+  'use strict';
+  var DATEN='uploads/wasserleitung.json';
+  var daten=null, map=null, lyrPrio={}, gpsMarker=null;
+
+  function $(id){ return document.getElementById(id); }
+  window.tab=function(t){
+    document.querySelectorAll('.tabs button').forEach(function(b){ b.classList.toggle('on', b.dataset.t===t); });
+    ['info','k2d','k3d','liste'].forEach(function(k){ $('t-'+k).hidden=(k!==t); });
+    try{ location.hash=t; }catch(e){}
+    if(t==='k2d'){ mapBauen(); setTimeout(function(){ if(map) map.invalidateSize(); },50); }
+    if(t==='k3d'){ var f=$('k3dFrame'); if(f && !f.src) f.src='viewer3d.html#wasserleitung'; }
+  };
+
+  /* LV95 -> WGS84 (swisstopo Näherungsformel, gleiche Funktion wie in karte.html) */
+  function ll(E,N){
+    var x=(N-1200000)/1e6, y=(E-2600000)/1e6;
+    var lat=16.9023892+3.238272*x-0.270978*y*y-0.002528*x*x-0.0447*y*y*x-0.0140*x*x*x;
+    var lng=2.6779094+4.728982*y+0.791484*y*x+0.1306*y*x*x-0.0436*y*y*y;
+    return [lat*100/36, lng*100/36];
+  }
+
+  function laden(){
+    return daten ? Promise.resolve(daten) : fetch(DATEN,{cache:'no-store'}).then(function(r){ return r.json(); })
+      .then(function(j){ daten=j; return j; });
+  }
+
+  function mapBauen(){
+    if(map || typeof L==='undefined') return;
+    map=L.map('map2d',{ zoomSnap:0.25, maxZoom:22, attributionControl:true });
+    map.attributionControl.setPrefix('');
+    L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg',
+      { maxNativeZoom:20, maxZoom:22, attribution:'© swisstopo' }).addTo(map);
+    L.control.scale({imperial:false, maxWidth:110}).addTo(map);
+    var cv=L.canvas({padding:0.3});
+    laden().then(function(j){
+      // übrige Tische blass im Canvas (nicht anklickbar, schont das Handy)
+      (j.kontext||[]).forEach(function(t){
+        L.polygon(t[5].map(function(p){ return ll(p[0],p[1]); }),
+          { renderer:cv, interactive:false, color:'#fff', weight:0.8, opacity:0.35, fillColor:'#9aa0a6', fillOpacity:0.22 }).addTo(map);
+      });
+      var alle=[];
+      j.tische.forEach(function(t){
+        var ring=t.ring.map(function(p){ return ll(p[0],p[1]); });
+        ring.forEach(function(q){ alle.push(q); });
+        var pg=L.polygon(ring,{ color:'#4a148c', weight:1.5, fillColor:'#8e24aa', fillOpacity:0.6 }).addTo(map);
+        pg.bindTooltip(String(t.id),{ permanent:true, direction:'center', className:'tlbl' });
+        pg.bindPopup('<b>Tisch '+t.id+'</b> · PZ4<br>zuerst bohren (BA 0274 A1)<br>'
+          +'<span style="color:#63676d">E '+t.E.toFixed(1)+' · N '+t.N.toFixed(1)+' · '+t.Z.toFixed(1)+' m ü. M.</span>');
+        lyrPrio[t.id]=pg;
+      });
+      var b=L.latLngBounds(alle);
+      map.fitBounds(b.pad(0.15));
+      function lbl(){ map.getContainer().classList.toggle('lblAus', map.getZoom()<17.5); }
+      map.on('zoomend', lbl); lbl();
+      var h=/tisch=(\d+)/.exec(location.hash); if(h) zeigeTisch(h[1]);
+    });
+  }
+
+  function zeigeTisch(id){
+    tab('k2d');
+    laden().then(function(){
+      var pg=lyrPrio[id]; if(!pg) return;
+      map.setView(pg.getBounds().getCenter(), Math.max(map.getZoom(),19));
+      pg.openPopup();
+    });
+  }
+  window.zeigeTisch=zeigeTisch;
+
+  window.gps=function(){
+    if(!navigator.geolocation || !map){ alert('Kein GPS verfügbar.'); return; }
+    navigator.geolocation.getCurrentPosition(function(p){
+      var pt=[p.coords.latitude,p.coords.longitude];
+      if(!gpsMarker) gpsMarker=L.circleMarker(pt,{radius:8,color:'#fff',weight:2,fillColor:'#1565c0',fillOpacity:1}).addTo(map);
+      gpsMarker.setLatLng(pt); map.setView(pt, Math.max(map.getZoom(),18));
+    }, function(){ alert('Standort nicht bestimmbar.'); }, {enableHighAccuracy:true, timeout:8000});
+  };
+
+  function listeBauen(j){
+    var ids=j.tische.map(function(t){ return t.id; }).sort(function(a,b){ return a-b; });
+    $('anz').textContent=ids.length;
+    $('chips').innerHTML=ids.map(function(i){ return '<span class="chip" onclick="zeigeTisch('+i+')">'+i+'</span>'; }).join('');
+    $('listeInfo').textContent=ids.length+' Tische · Stand der Daten '+(j.stand||'')+' · '+(j.quelle||'');
+  }
+
+  laden().then(listeBauen).catch(function(e){ console.warn('Daten',e); });
+  var start=(location.hash||'').replace('#','');
+  if(/^tisch=/.test(start)) tab('k2d');
+  else if(['k2d','k3d','liste'].indexOf(start)>=0) tab(start);
+})();
+if('serviceWorker' in navigator){ window.addEventListener('load',function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
+</script>
+</body>
+</html>

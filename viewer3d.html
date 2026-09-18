@@ -1972,6 +1972,38 @@ function flashMsg(text){
   flashMsg._t=setTimeout(function(){ h.classList.remove('show'); },1800);
 }
 
+// Wasserleitung PZ4 (Baustellenanweisung NalpSolar_51_BA_0274_A1, 03.09.2026):
+// viewer3d.html#wasserleitung zeigt die 44 priorisierten Tische violett und fliegt hin.
+// Daten: uploads/wasserleitung.json (gebaut aus bohrpunkte_koo.json), Seite: wasserleitung.html.
+// Gleiche Lage-/Drehregel wie loadTische (Ry(-az)*Rx(-60°), Höhe Z+4.2 = Unterkante Modulträger).
+async function ladeWasserleitung(){
+  var r=await fetch('uploads/wasserleitung.json',{cache:'no-store'}); if(!r.ok) return;
+  var j=await r.json(); if(!j.tische||!j.tische.length) return;
+  var g=new THREE.Group(); g.renderOrder=6;
+  var mat=new THREE.MeshPhongMaterial({color:0x9c27b0, emissive:0x3a0a4a, specular:0xd08ae0, shininess:70,
+    transparent:true, opacity:0.88, side:THREE.FrontSide});
+  var pfMat=new THREE.MeshPhongMaterial({color:0x4a148c, emissive:0x1a0530});
+  var TILT=60*Math.PI/180, ct=Math.cos(TILT), st=Math.sin(TILT);
+  var M=new THREE.Matrix4(), Q=new THREE.Quaternion(), c=new THREE.Vector3();
+  var geom=new THREE.BoxGeometry(12.394,0.25,3), pfGeom=new THREE.CylinderGeometry(0.16,0.16,3,6);
+  j.tische.forEach(function(t){
+    var azR=t.az*Math.PI/180, ca=Math.cos(azR), sa=Math.sin(azR);
+    var px=t.E-OE, py=(t.Z+4.2)-OZ, pz=-(t.N-ON);
+    M.set(ca,sa*st,-sa*ct,0, 0,ct,st,0, sa,-ca*st,ca*ct,0, 0,0,0,1); Q.setFromRotationMatrix(M);
+    var m=new THREE.Mesh(geom,mat); m.position.set(px,py,pz); m.quaternion.copy(Q); g.add(m);
+    c.add(m.position);
+    (t.ring||[]).forEach(function(p){        // die vier Bohrpunkte als Pfahlstummel
+      var z=new THREE.Mesh(pfGeom,pfMat); z.position.set(p[0]-OE, (t.Z-OZ)+1.5, -(p[1]-ON)); g.add(z);
+    });
+  });
+  scene.add(g);
+  c.multiplyScalar(1/j.tische.length);
+  controls.target.copy(c);
+  camera.position.set(c.x+70, c.y+60, c.z+70);
+  controls.update(); flyDone=true;
+  try{ flashMsg('💧 Wasserleitung PZ4: '+j.tische.length+' Tische zuerst bohren (BA 0274 A1)'); }catch(e){}
+}
+
 window.searchTisch=function(){
   var inp=document.getElementById('tischSearch');
   var q=(inp&&inp.value||'').trim();
@@ -6304,6 +6336,9 @@ async function init(){
         var fld=document.getElementById('tischSearch');
         if(fld){ fld.value=mt[1]; setTimeout(searchTisch,300); }
       }
+      // viewer3d.html#wasserleitung = die 44 priorisierten Tische PZ4 (BA 0274 A1) violett + hinfliegen
+      if(/wasserleitung/i.test(location.hash))
+        setTimeout(function(){ ladeWasserleitung().catch(function(e){ console.warn('Wasserleitung',e); }); }, 700);
       // viewer3d.html#alpstrasse = Strassenmodell gleich einschalten
       if(/alpstrasse|alpstrase|d1/i.test(location.hash))
         setTimeout(function(){ try{ toggleAlpstrasse(); }catch(e){} }, 600);
