@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NalpSolar · Altlasten</title>
+<meta name="theme-color" content="#ffffff">
+<script>
+  window.NALP_GATE_CODE  = '6460';
+  window.NALP_GATE_KEY   = 'nalp_portal_unlock_v1';
+  window.NALP_GATE_TITEL = 'Altlasten';
+  window.NALP_GATE_SUB   = 'Code eingeben / Enter code / Wpisz kod';
+</script>
+<script src="assets/js/nalp-gate.js"></script>
+<link rel="stylesheet" href="assets/js/leaflet/leaflet.css">
+<style>
+  /* Reiter «Altlasten» – Prio-Liste Fremdkörper (Axpo/Kathriner 04.09.2026, Aufnahme happyrtk 14.11.2025).
+     Punkte: uploads/altlasten.json (Tools\Altlasten_Bauen.py, WERKZEUGE.md §61).
+     Rückmeldungen: RTDB erfassung/altlasten_rueck/<nr>/<key>, Fotos getrennt in erfassung/altlasten_fotos/<fid>
+     (wie einkauf.html – die Liste lädt nur die Sätze, Fotos erst beim Antippen). Optik wie wasserleitung.html. */
+  :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
+         --gruen:#1e9e5a; --blau:#1565c0; --orange:#e08a00; --lila:#8e24aa; --grau:#8a8e94; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body{ margin:0; background:#eef0f3; min-height:100vh; color:var(--ink);
+        font-family:Arial,"Helvetica Neue",sans-serif; }
+  header{ position:sticky; top:0; z-index:10; display:flex; align-items:center; gap:8px;
+          padding:9px 10px; background:#fff; border-bottom:4px solid var(--rot); }
+  header a.home{ color:var(--ink); text-decoration:none; font-size:20px; }
+  header .logo img{ height:20px; display:block; }
+  header h1{ font-size:14.5px; margin:0; flex:1; font-weight:800; }
+  header .netz{ font-size:11px; font-weight:700; color:var(--gruen); white-space:nowrap; }
+  header .netz.off{ color:var(--rot); }
+  .tabs{ display:flex; background:#fff; border-bottom:1px solid var(--line); position:sticky; top:52px; z-index:9; }
+  .tabs button{ flex:1 1 0; min-width:0; border:none; background:none; padding:11px 2px; font-size:12.5px; font-weight:800;
+        white-space:nowrap; color:var(--mut); cursor:pointer; border-bottom:3px solid transparent; }
+  .tabs button.on{ color:var(--rot); border-bottom-color:var(--rot); }
+  .tabs .zahl{ display:inline-block; background:var(--rot); color:#fff; font-size:10.5px; border-radius:9px;
+        padding:0 6px; margin-left:4px; vertical-align:1px; }
+  main{ max-width:760px; margin:0 auto; padding:12px 12px 80px; }
+  section[hidden]{ display:none; }
+  .box{ background:#fff; border:1px solid var(--line); border-left:5px solid var(--rot);
+        border-radius:6px; padding:13px; margin-bottom:13px; box-shadow:0 1px 4px rgba(20,25,32,.07); }
+  .box.grau{ border-left-color:#9aa0a6; }
+  .box.gruen{ border-left-color:var(--gruen); }
+  .box h2{ margin:0 0 6px; font-size:15.5px; }
+  .box p{ margin:0 0 8px; font-size:14px; line-height:1.5; }
+  .sub{ font-size:12px; color:var(--mut); line-height:1.45; }
+  .big{ font-size:30px; font-weight:900; color:var(--rot); line-height:1; }
+  .btn{ display:inline-block; border:none; border-radius:6px; padding:12px 16px; font-size:14.5px;
+        font-weight:800; cursor:pointer; color:#fff; background:var(--rot); text-decoration:none; text-align:center; }
+  .btn.w{ background:#fff; color:var(--ink); border:1px solid #c9ccd2; }
+  .btn.gr{ background:var(--gruen); }
+  .btn[disabled]{ opacity:.45; cursor:default; }
+  .btnrow{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  /* ── Karte ── */
+  #map2d{ height:calc(100vh - 250px); min-height:380px; border-radius:6px; border:1px solid var(--line); background:#d9dde3; }
+  .gps{ position:absolute; right:10px; top:10px; z-index:900; }
+  .legende{ display:flex; flex-wrap:wrap; gap:10px 14px; font-size:12px; color:var(--mut); margin:8px 0 0; align-items:center; }
+  .legende i{ display:inline-block; width:16px; height:16px; border-radius:50%; vertical-align:-3px; margin-right:4px; border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.25); }
+  .leaflet-container{ font-family:inherit; }
+  .mk{ width:28px; height:28px; border-radius:50%; border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.5);
+       color:#fff; font-weight:900; font-size:12px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .mk.p1{ background:var(--rot); } .mk.p2{ background:var(--orange); } .mk.p3{ background:var(--grau); }
+  .mk.ok{ background:var(--gruen); } .mk.pr{ background:var(--lila); }
+  .mk.ok::after{ content:'✓'; position:absolute; right:-6px; top:-7px; background:#fff; color:var(--gruen); border-radius:50%;
+       width:15px; height:15px; font-size:11px; line-height:15px; text-align:center; box-shadow:0 0 0 1px rgba(0,0,0,.2); }
+  .mk.pr::after{ content:'!'; position:absolute; right:-6px; top:-7px; background:#fff; color:var(--lila); border-radius:50%;
+       width:15px; height:15px; font-size:11px; line-height:15px; text-align:center; font-weight:900; box-shadow:0 0 0 1px rgba(0,0,0,.2); }
+  .leaflet-marker-icon{ position:absolute; overflow:visible; }
+  .leaflet-marker-icon .mk{ position:relative; }
+  .schalter{ display:flex; gap:6px; flex-wrap:wrap; margin:0 0 8px; }
+  .schalter button{ border:1px solid var(--line); background:#fff; cursor:pointer; font:700 12px Arial; color:var(--mut);
+        padding:7px 12px; border-radius:14px; white-space:nowrap; }
+  .schalter button.on{ background:var(--rot); border-color:var(--rot); color:#fff; }
+  /* ── Liste ── */
+  .pos{ background:#fff; border:1px solid var(--line); border-left:5px solid var(--grau); border-radius:6px;
+        padding:10px 12px; margin-bottom:8px; box-shadow:0 1px 4px rgba(20,25,32,.07); display:flex; gap:10px; align-items:center; cursor:pointer; }
+  .pos.p1{ border-left-color:var(--rot); } .pos.p2{ border-left-color:var(--orange); } .pos.p3{ border-left-color:var(--grau); }
+  .pos.ok{ border-left-color:var(--gruen); background:#f3faf5; } .pos.pr{ border-left-color:var(--lila); }
+  .pos .nr{ flex:0 0 34px; height:34px; border-radius:50%; color:#fff; font-weight:900; font-size:13px;
+        display:flex; align-items:center; justify-content:center; background:var(--grau); }
+  .pos.p1 .nr{ background:var(--rot); } .pos.p2 .nr{ background:var(--orange); }
+  .pos.ok .nr{ background:var(--gruen); } .pos.pr .nr{ background:var(--lila); }
+  .pos .tx{ flex:1; min-width:0; }
+  .pos .was{ font-size:14px; font-weight:700; text-transform:capitalize; }
+  .pos .kom{ font-size:12px; color:var(--mut); line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pos .st{ font-size:11.5px; margin-top:3px; font-weight:700; }
+  .pos .st.ok{ color:var(--gruen); } .pos .st.pr{ color:var(--lila); }
+  .pos .bild{ flex:0 0 52px; width:52px; height:52px; border-radius:5px; object-fit:cover; background:#e9ebee; }
+  .chip{ display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:800; color:#fff; background:var(--grau); }
+  .chip.p1{ background:var(--rot); } .chip.p2{ background:var(--orange); } .chip.p3{ background:var(--grau); }
+  .chip.ok{ background:var(--gruen); } .chip.pr{ background:var(--lila); } .chip.no{ background:#6b7078; }
+  /* ── Detail-Blatt (von unten) ── */
+  #deckel{ position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1000; display:none; }
+  #sheet{ position:fixed; left:0; right:0; bottom:0; z-index:1001; background:#fff; border-radius:14px 14px 0 0;
+          max-height:90vh; overflow:auto; display:none; box-shadow:0 -4px 20px rgba(0,0,0,.25); padding-bottom:env(safe-area-inset-bottom); }
+  #sheet.an, #deckel.an{ display:block; }
+  .sk{ position:sticky; top:0; background:#fff; display:flex; align-items:center; gap:10px; padding:12px 14px;
+       border-bottom:1px solid var(--line); z-index:2; }
+  .sk .nr{ width:36px; height:36px; border-radius:50%; color:#fff; font-weight:900; font-size:14px; display:flex;
+       align-items:center; justify-content:center; background:var(--grau); flex:0 0 36px; }
+  .sk .t{ flex:1; min-width:0; }
+  .sk .t b{ font-size:16px; text-transform:capitalize; }
+  .sk .x{ border:none; background:#eef0f2; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer; flex:0 0 36px; }
+  .si{ padding:12px 14px; max-width:760px; margin:0 auto; }
+  .si .kom{ background:#fff8e6; border-left:3px solid var(--orange); padding:8px 10px; border-radius:0 4px 4px 0;
+       font-size:13.5px; line-height:1.5; margin:8px 0; }
+  .si img.gross{ width:100%; max-height:38vh; object-fit:cover; border-radius:6px; border:1px solid var(--line); display:block; margin-top:6px; background:#e9ebee; min-height:120px; cursor:zoom-in; }
+  .si img.gross.voll{ max-height:none; object-fit:contain; cursor:zoom-out; }
+  .si .koord{ font-size:12px; color:var(--mut); margin-top:6px; }
+  .hist{ margin:12px 0 4px; }
+  .hist .e{ border-top:1px solid var(--line); padding:8px 0; font-size:13px; line-height:1.45; }
+  .hist .e .w{ color:var(--mut); font-size:12px; }
+  .hist .fl{ display:inline-block; margin-top:4px; font-size:12.5px; font-weight:700; color:var(--rot); cursor:pointer; }
+  .hist img{ width:100%; border-radius:5px; margin-top:6px; display:block; }
+  /* ── Formular ── */
+  .form{ border-top:2px solid var(--line); margin-top:10px; padding-top:10px; }
+  .form h3{ margin:0 0 8px; font-size:15px; }
+  label.f{ display:block; font-size:13px; font-weight:700; margin:12px 0 5px; }
+  label.f span{ font-weight:400; color:var(--mut); font-size:12px; }
+  .wahl{ display:flex; gap:7px; flex-wrap:wrap; }
+  .wahl button{ flex:1 1 auto; border:1px solid var(--line); background:#fff; cursor:pointer; font:800 14px Arial; color:var(--mut);
+        padding:12px 10px; border-radius:8px; }
+  .wahl button.on.erledigt{ background:var(--gruen); border-color:var(--gruen); color:#fff; }
+  .wahl button.on.problem{ background:var(--lila); border-color:var(--lila); color:#fff; }
+  .wahl button.on.notiz{ background:#6b7078; border-color:#6b7078; color:#fff; }
+  textarea, input[type=text]{ width:100%; padding:11px; font-size:16px; font-family:inherit; border:1px solid #c9ccd2;
+        border-radius:5px; background:#fff; color:var(--ink); }
+  textarea{ min-height:64px; resize:vertical; line-height:1.45; }
+  textarea:focus, input:focus{ outline:2px solid var(--rot); outline-offset:-2px; }
+  .mik{ border:1px solid var(--line); background:#fff; border-radius:5px; padding:8px 12px; font-size:14px; cursor:pointer; margin-top:6px; }
+  .mik.lauf{ background:var(--rot); color:#fff; border-color:var(--rot); }
+  .fotoknoepfe{ display:flex; gap:8px; }
+  .fotoknoepfe .btn{ flex:1; }
+  input[type=file]{ display:none; }
+  .fotos{ display:flex; gap:8px; flex-wrap:wrap; margin-top:9px; }
+  .fotos .pg{ position:relative; width:82px; height:82px; border:1px solid var(--line); border-radius:5px; overflow:hidden; background:#f6f7f9; }
+  .fotos .pg img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .fotos .pg .del{ position:absolute; top:2px; right:2px; width:23px; height:23px; border:none; border-radius:50%;
+        background:rgba(0,0,0,.62); color:#fff; font-size:13px; cursor:pointer; line-height:23px; padding:0; }
+  #status{ font-size:13px; font-weight:700; color:var(--mut); margin-top:10px; min-height:18px; }
+  .gross{ width:100%; padding:15px; font-size:16px; margin-top:14px; }
+  .wieder{ font-size:12px; color:var(--mut); margin-top:10px; }
+  .wieder a{ color:var(--rot); font-weight:700; cursor:pointer; }
+</style>
+</head>
+<body>
+<header>
+  <a class="home" href="index.html" title="Portal">‹</a>
+  <div class="logo"><img src="assets/img/strabag-logo.png" alt="STRABAG"></div>
+  <h1>🧹 Altlasten</h1>
+  <div class="netz" id="netz">online</div>
+</header>
+
+<div class="tabs">
+  <button class="on" data-t="k2d" onclick="tab('k2d')">🗺 Karte</button>
+  <button data-t="liste" onclick="tab('liste')">📋 Liste<span class="zahl" id="zOffen">–</span></button>
+  <button data-t="info" onclick="tab('info')">ℹ️ Info</button>
+</div>
+
+<main>
+  <!-- ================= KARTE ================= -->
+  <section id="t-k2d">
+    <div class="schalter" id="schalterK"></div>
+    <div style="position:relative">
+      <div id="map2d"></div>
+      <button class="btn w gps" onclick="gps()" title="Mein Standort">📍</button>
+    </div>
+    <div class="legende">
+      <span><i style="background:#D72622"></i>Prio 1 – entfernen</span>
+      <span><i style="background:#e08a00"></i>Prio 2 – wenn im Budget</span>
+      <span><i style="background:#8a8e94"></i>Prio 3 – belassen</span>
+      <span><i style="background:#1e9e5a"></i>erledigt</span>
+      <span><i style="background:#8e24aa"></i>Problem gemeldet</span>
+      <span>Punkt antippen = Foto, Massnahme, Rückmeldung</span>
+    </div>
+  </section>
+
+  <!-- ================= LISTE ================= -->
+  <section id="t-liste" hidden>
+    <div class="schalter" id="schalterL"></div>
+    <div id="liste"><div class="box"><div class="sub">lade …</div></div></div>
+  </section>
+
+  <!-- ================= INFO ================= -->
+  <section id="t-info" hidden>
+    <div class="box">
+      <div class="big" id="anz">–</div>
+      <h2>Fremdkörper im Gelände – alte Rohre, Eisenstangen, Seile, Betonsockel</h2>
+      <p>Der Bauherr hat das ganze Gelände abgesucht und jede Altlast mit GPS und Foto aufgenommen (14.11.2025).
+         Die Prio-Liste sagt, was damit geschieht:</p>
+      <p><span class="chip p1">Prio 1</span> wird entfernt oder unter dem Boden abgeschnitten<br>
+         <span class="chip p2">Prio 2</span> wird verbessert, wenn es im Budget liegt<br>
+         <span class="chip p3">Prio 3</span> wird belassen</p>
+      <p><b>So geht es:</b> Punkt auf der Karte antippen → Foto und Massnahme anschauen → wenn erledigt: <b>✅ Erledigt</b> drücken,
+         Foto vom Resultat dazu, Name, senden. Geht etwas nicht (zu schwer, Beton, Abtransport unklar): <b>⚠️ Problem</b> melden.
+         Die Rückmeldung sehen alle sofort auf der Karte und in der Liste – auch die Bauleitung.</p>
+      <div class="sub">Achtung bei Nr. 13 (Blech): liegt auf einer archäologischen Wüstung – nur Metallteile entfernen, Steine belassen, nicht befahren.</div>
+    </div>
+    <div class="box grau">
+      <h2>Quelle</h2>
+      <p class="sub" id="quelle">Excel «Datentabelle Fremdkörper Nalps_prioliste_für KV.xlsx» – Severin Kathriner (Axpo) → Christian Schmuckle 04.09.2026
+         → François Borner → Victor Malt 21.09.2026. Aufnahme mit happyrtk (RTK FIX), 14.11.2025. Originalfotos liegen beim Bauherrn (CloudFront, je ~7 MB) –
+         hier sind Vorschaubilder, das Original öffnet sich auf Tipp.</p>
+    </div>
+  </section>
+</main>
+
+<!-- ================= DETAIL-BLATT ================= -->
+<div id="deckel" onclick="sheetZu()"></div>
+<div id="sheet" role="dialog">
+  <div class="sk">
+    <div class="nr" id="sNr">–</div>
+    <div class="t"><b id="sTyp">–</b><br><span class="sub" id="sPrio"></span></div>
+    <button class="x" onclick="sheetZu()" title="schliessen">✕</button>
+  </div>
+  <div class="si">
+    <div id="sKom" class="kom" style="display:none"></div>
+    <img class="gross" id="sBild" alt="Foto der Aufnahme" style="display:none" onclick="this.classList.toggle('voll')" title="Tippen = ganz zeigen">
+    <div class="koord" id="sKoord"></div>
+    <div class="btnrow">
+      <button class="btn w" onclick="aufKarte()">🗺 Auf der Karte</button>
+      <a class="btn w" id="sNav" target="_blank" rel="noopener">🧭 Hinführen</a>
+      <a class="btn w" id="sOrig" target="_blank" rel="noopener" style="display:none">🖼 Originalfoto (7 MB)</a>
+    </div>
+    <div class="hist" id="sHist"></div>
+
+    <div class="form">
+      <h3>Rückmeldung</h3>
+      <div class="wahl" id="wStatus">
+        <button type="button" class="erledigt" data-s="erledigt">✅ Erledigt</button>
+        <button type="button" class="problem" data-s="problem">⚠️ Problem</button>
+        <button type="button" class="notiz" data-s="notiz">💬 Nur Notiz</button>
+      </div>
+      <label class="f">Was wurde gemacht? <span>– kurz</span></label>
+      <textarea id="fText" placeholder="z. B. Rohr abgeflext, Stumpf mit Steinen gedeckt"></textarea>
+      <button class="mik" id="mText" style="display:none">🎤 diktieren</button>
+      <label class="f">Foto <span>– vom Resultat, bis 4</span></label>
+      <div class="fotoknoepfe">
+        <button type="button" class="btn w" onclick="document.getElementById('fCam').click()">📷 Foto</button>
+        <button type="button" class="btn w" onclick="document.getElementById('fDat').click()">🖼 Galerie</button>
+      </div>
+      <input type="file" id="fCam" accept="image/*" capture="environment" multiple>
+      <input type="file" id="fDat" accept="image/*" multiple>
+      <div class="fotos" id="prev"></div>
+      <label class="f">Dein Name</label>
+      <input type="text" id="fVon" placeholder="Vor- und Nachname" autocomplete="name">
+      <button class="btn gr gross" id="btnSend" onclick="senden()">Senden</button>
+      <div id="status"></div>
+      <div class="wieder" id="wieder" style="display:none">Aus Versehen abgehakt? <a onclick="wiederOffen()">wieder auf «offen» setzen</a></div>
+    </div>
+  </div>
+</div>
+
+<script src="assets/js/leaflet/leaflet.js"></script>
+<script>
+(function(){
+  'use strict';
+  var DATEN='uploads/altlasten.json';
+  var RTDB='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app/erfassung';
+  var P_RUECK='altlasten_rueck', P_FOT='altlasten_fotos';
+  var LS_VON='nalp_altlasten_von_v1', LS_CACHE='nalp_altlasten_rueck_v1';
+  var IDB_NAME='nalp_altlasten_v1', IDB_STORE='warteschlange', MAX_FOTOS=4;
+  var ST={ erledigt:{t:'Erledigt',k:'ok',sym:'✅'}, problem:{t:'Problem',k:'pr',sym:'⚠️'},
+           notiz:{t:'Notiz',k:'no',sym:'💬'}, offen:{t:'wieder offen',k:'no',sym:'↩'} };
+
+  var daten=null, P={}, R={}, map=null, MK={}, gpsMarker=null, aktiv=null, fotos=[], stat='erledigt';
+  var filtK='offen', filtL='alle';
+
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function heute(){ var d=new Date();
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  function deDat(iso){ if(!iso||iso.length<10) return iso||''; return iso.slice(8,10)+'.'+iso.slice(5,7)+'.'+iso.slice(0,4); }
+  function netzAn(){ return navigator.onLine!==false; }
+
+  /* ── Reiter ── */
+  window.tab=function(t){
+    document.querySelectorAll('.tabs button').forEach(function(b){ b.classList.toggle('on', b.dataset.t===t); });
+    ['k2d','liste','info'].forEach(function(k){ $('t-'+k).hidden=(k!==t); });
+    try{ history.replaceState(null,'','#'+t); }catch(e){}
+    if(t==='k2d'){ mapBauen(); setTimeout(function(){ if(map) map.invalidateSize(); },50); }
+    if(t==='liste') listeBauen();
+  };
+
+  /* ── Daten ── */
+  function laden(){
+    return daten ? Promise.resolve(daten) : fetch(DATEN,{cache:'no-store'}).then(function(r){ return r.json(); })
+      .then(function(j){ daten=j; j.punkte.forEach(function(p){ P[p.nr]=p; }); return j; });
+  }
+  /* Rückmeldungen: alle Sätze (ohne Fotos) in einem Zug – klein. Letzter Stand bleibt im localStorage,
+     damit die Karte im Tal ohne Netz die Häkchen zeigt. */
+  function rueckLaden(){
+    return fetch(RTDB+'/'+P_RUECK+'.json',{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; })
+      .then(function(j){ R=j||{}; try{ localStorage.setItem(LS_CACHE,JSON.stringify(R)); }catch(e){} })
+      .catch(function(){ try{ R=JSON.parse(localStorage.getItem(LS_CACHE)||'{}'); }catch(e){ R={}; } });
+  }
+  function eintraege(nr){
+    var o=R[nr]||{}; return Object.keys(o).map(function(k){ var e=o[k]; e._k=k; return e; })
+      .sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
+  }
+  /* Zustand = letzter Statuswechsel; eine Notiz ändert den Zustand nicht */
+  function zustand(nr){
+    var z={status:'offen', letzte:null}, es=eintraege(nr);
+    es.forEach(function(e){ if(e.status && e.status!=='notiz') z.status=e.status; z.letzte=e; });
+    if(z.status==='offen') z.status='offen';
+    return z;
+  }
+  function klasse(p){ var z=zustand(p.nr); return z.status==='erledigt'?'ok':(z.status==='problem'?'pr':'p'+p.prio); }
+
+  /* ── Filter (Karte + Liste teilen die Regel) ── */
+  var FILT=[{id:'offen',t:'Offen'},{id:'p1',t:'Prio 1'},{id:'p2',t:'Prio 2'},{id:'p3',t:'Prio 3'},
+            {id:'erledigt',t:'Erledigt'},{id:'problem',t:'Problem'},{id:'alle',t:'Alle'}];
+  function passt(p,f){
+    var z=zustand(p.nr).status;
+    if(f==='alle') return true;
+    if(f==='offen') return z!=='erledigt';
+    if(f==='erledigt') return z==='erledigt';
+    if(f==='problem') return z==='problem';
+    return ('p'+p.prio)===f;
+  }
+  function schalter(id,akt,cb){
+    $(id).innerHTML=FILT.map(function(f){
+      var n=daten?daten.punkte.filter(function(p){ return passt(p,f.id); }).length:'';
+      return '<button data-f="'+f.id+'"'+(akt===f.id?' class="on"':'')+'>'+f.t+(n!==''?' '+n:'')+'</button>';
+    }).join('');
+    Array.prototype.forEach.call($(id).querySelectorAll('button'),function(b){ b.onclick=function(){ cb(b.dataset.f); }; });
+  }
+
+  /* ── Karte ── */
+  function mapBauen(){
+    if(map || typeof L==='undefined') return;
+    map=L.map('map2d',{ zoomSnap:0.25, maxZoom:22, attributionControl:true });
+    map.attributionControl.setPrefix('');
+    L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg',
+      { maxNativeZoom:20, maxZoom:22, attribution:'© swisstopo' }).addTo(map);
+    L.control.scale({imperial:false, maxWidth:110}).addTo(map);
+    laden().then(function(j){
+      var alle=[];
+      j.punkte.forEach(function(p){
+        alle.push([p.lat,p.lon]);
+        var m=L.marker([p.lat,p.lon],{ icon:ikone(p), title:'Nr. '+p.nr+' '+p.typ }).addTo(map);
+        m.on('click',function(){ sheetAuf(p.nr); });
+        MK[p.nr]=m;
+      });
+      map.fitBounds(L.latLngBounds(alle).pad(0.08));
+      markerMalen();
+      var h=/nr=(\d+)/.exec(location.hash); if(h) zeige(+h[1]);
+    });
+  }
+  function ikone(p){
+    return L.divIcon({ className:'', html:'<div class="mk '+klasse(p)+'">'+p.nr+'</div>', iconSize:[28,28], iconAnchor:[14,14] });
+  }
+  function markerMalen(){
+    if(!map || !daten) return;
+    daten.punkte.forEach(function(p){
+      var m=MK[p.nr]; if(!m) return;
+      m.setIcon(ikone(p));
+      var soll=passt(p,filtK);
+      if(soll && !map.hasLayer(m)) m.addTo(map);
+      if(!soll && map.hasLayer(m)) map.removeLayer(m);
+    });
+    schalter('schalterK',filtK,function(f){ filtK=f; markerMalen(); });
+  }
+  function zeige(nr){
+    tab('k2d');
+    laden().then(function(){
+      var p=P[nr]; if(!p||!map) return;
+      if(!map.hasLayer(MK[nr])){ filtK='alle'; markerMalen(); }
+      map.setView([p.lat,p.lon], Math.max(map.getZoom(),19));
+    });
+  }
+  window.aufKarte=function(){ var nr=aktiv; sheetZu(); if(nr) zeige(nr); };
+  window.gps=function(){
+    if(!navigator.geolocation || !map){ alert('Kein GPS verfügbar.'); return; }
+    navigator.geolocation.getCurrentPosition(function(q){
+      var pt=[q.coords.latitude,q.coords.longitude];
+      if(!gpsMarker) gpsMarker=L.circleMarker(pt,{radius:8,color:'#fff',weight:2,fillColor:'#1565c0',fillOpacity:1}).addTo(map);
+      gpsMarker.setLatLng(pt); map.setView(pt, Math.max(map.getZoom(),18));
+    }, function(){ alert('Standort nicht bestimmbar.'); }, {enableHighAccuracy:true, timeout:8000});
+  };
+
+  /* ── Liste ── */
+  function listeBauen(){
+    laden().then(function(j){
+      schalter('schalterL',filtL,function(f){ filtL=f; listeBauen(); });
+      var ps=j.punkte.filter(function(p){ return passt(p,filtL); })
+        .sort(function(a,b){ return (a.prio-b.prio)||(a.nr-b.nr); });
+      if(!ps.length){ $('liste').innerHTML='<div class="box gruen"><div class="sub">Nichts in dieser Auswahl.</div></div>'; return; }
+      $('liste').innerHTML=ps.map(function(p){
+        var z=zustand(p.nr), k=klasse(p), st='';
+        if(z.letzte){
+          var s=ST[z.letzte.status]||ST.notiz;
+          st='<div class="st '+(z.status==='erledigt'?'ok':(z.status==='problem'?'pr':''))+'">'+s.sym+' '+esc(s.t)+' · '+esc(z.letzte.von||'')+' '+deDat(z.letzte.datum)+'</div>';
+        }
+        return '<div class="pos '+k+'" onclick="sheetAuf('+p.nr+')">'
+          +'<div class="nr">'+p.nr+'</div>'
+          +'<div class="tx"><div class="was">'+esc(p.typ)+' <span class="chip p'+p.prio+'">Prio '+p.prio+'</span></div>'
+          +(p.kommentar?'<div class="kom">'+esc(p.kommentar)+'</div>':'')+st+'</div>'
+          +(p.bild?'<img class="bild" src="'+esc(p.bild)+'" loading="lazy" alt="">':'')
+          +'</div>';
+      }).join('');
+    });
+  }
+  function zaehlen(){
+    if(!daten) return;
+    var offen=daten.punkte.filter(function(p){ return p.prio===1 && zustand(p.nr).status!=='erledigt'; }).length;
+    $('zOffen').textContent=offen;
+    $('anz').textContent=daten.punkte.length;
+  }
+
+  /* ── Detail-Blatt ── */
+  window.sheetAuf=function(nr){
+    var p=P[nr]; if(!p) return;
+    aktiv=nr; fotos=[]; fotosZeichnen(); $('fText').value=''; $('status').textContent=''; $('btnSend').disabled=false;
+    $('sNr').textContent=p.nr; $('sNr').style.background=farbe(klasse(p));
+    $('sTyp').textContent=p.typ;
+    $('sPrio').innerHTML='<span class="chip p'+p.prio+'">Prio '+p.prio+'</span> '+esc((daten.prio_text||{})[p.prio]||'');
+    $('sKom').style.display=p.kommentar?'block':'none'; $('sKom').textContent=p.kommentar||'';
+    var b=$('sBild'); b.classList.remove('voll'); if(p.bild){ b.style.display='block'; b.src=p.bild; } else { b.style.display='none'; b.removeAttribute('src'); }
+    $('sKoord').textContent='E '+p.E.toFixed(1)+' · N '+p.N.toFixed(1)+(p.Z?' · '+p.Z.toFixed(1)+' m ü. M.':'')+' · Nr. '+p.nr+' der Aufnahme 14.11.2025';
+    $('sNav').href='https://www.google.com/maps/dir/?api=1&destination='+p.lat+','+p.lon+'&travelmode=walking';
+    var o=$('sOrig'); if(p.foto){ o.style.display='inline-block'; o.href=p.foto; } else o.style.display='none';
+    var z=zustand(nr); stat=(z.status==='erledigt')?'notiz':'erledigt'; statusMalen();
+    $('wieder').style.display=(z.status==='erledigt')?'block':'none';
+    histMalen(nr);
+    try{ $('fVon').value=localStorage.getItem(LS_VON)||localStorage.getItem('nalp_einkauf_von_v1')||''; }catch(e){}
+    $('deckel').classList.add('an'); $('sheet').classList.add('an'); $('sheet').scrollTop=0;
+    try{ history.replaceState(null,'','#nr='+nr); }catch(e){}
+  };
+  window.sheetZu=function(){ $('deckel').classList.remove('an'); $('sheet').classList.remove('an'); aktiv=null;
+    try{ history.replaceState(null,'','#'+(document.querySelector('.tabs button.on')||{}).dataset.t||''); }catch(e){} };
+  function farbe(k){ return {ok:'#1e9e5a',pr:'#8e24aa',p1:'#D72622',p2:'#e08a00',p3:'#8a8e94'}[k]||'#8a8e94'; }
+  function histMalen(nr){
+    var es=eintraege(nr).reverse();
+    if(!es.length){ $('sHist').innerHTML='<div class="sub">Noch keine Rückmeldung.</div>'; return; }
+    $('sHist').innerHTML='<b style="font-size:13px">Rückmeldungen</b>'+es.map(function(e){
+      var s=ST[e.status]||ST.notiz, n=e.anzahl_fotos||0;
+      return '<div class="e"><span class="chip '+s.k+'">'+s.sym+' '+esc(s.t)+'</span> '
+        +'<span class="w">'+esc(e.von||'')+' · '+deDat(e.datum)+'</span>'
+        +(e.text?'<div>'+esc(e.text)+'</div>':'')
+        +(n?'<span class="fl" data-f="'+esc(Object.keys(e.fotos||{}).join(','))+'" onclick="fotoZeigen(this)">📷 '+n+' Foto'+(n>1?'s':'')+' anzeigen</span><div class="fb"></div>':'')
+        +'</div>';
+    }).join('');
+  }
+  /* Fotos einzeln über die im Satz gespeicherten IDs – braucht keinen Index in den RTDB-Regeln */
+  window.fotoZeigen=function(el){
+    var box=el.nextSibling, ids=(el.dataset.f||'').split(',').filter(Boolean); el.textContent='lade …';
+    Promise.all(ids.map(function(fid){ return fetch(RTDB+'/'+P_FOT+'/'+fid+'.json').then(function(r){ return r.json(); }); }))
+      .then(function(l){
+        box.innerHTML=l.filter(function(f){ return f&&f.data; }).map(function(f){ return '<img src="'+f.data+'" alt="">'; }).join('')
+          ||'<div class="sub">kein Foto gefunden</div>';
+        el.style.display='none';
+      }).catch(function(){ el.textContent='Foto laden ging nicht (Netz?)'; });
+  };
+
+  /* ── Formular ── */
+  function statusMalen(){
+    Array.prototype.forEach.call($('wStatus').querySelectorAll('button'),function(b){ b.classList.toggle('on',b.dataset.s===stat); });
+  }
+  Array.prototype.forEach.call($('wStatus').querySelectorAll('button'),function(b){ b.onclick=function(){ stat=b.dataset.s; statusMalen(); }; });
+
+  /* Foto: 1400 px wie in einkauf.html / ls.html */
+  function bildLesen(datei,fertig){
+    var img=new Image();
+    img.onload=function(){
+      var m=1400,w=img.width,h=img.height;
+      if(w>m||h>m){ if(w>h){ h=Math.round(h*m/w); w=m; } else { w=Math.round(w*m/h); h=m; } }
+      var c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      var d=c.toDataURL('image/jpeg',0.78);
+      if(d.length>1300000) d=c.toDataURL('image/jpeg',0.6);
+      URL.revokeObjectURL(img.src); fertig(d);
+    };
+    img.onerror=function(){ URL.revokeObjectURL(img.src); fertig(null); };
+    img.src=URL.createObjectURL(datei);
+  }
+  function fotosZeichnen(){
+    $('prev').innerHTML=fotos.map(function(f,i){
+      return '<div class="pg"><button class="del" onclick="fotoWeg('+i+')" title="entfernen">✕</button><img src="'+f+'" alt=""></div>';
+    }).join('');
+  }
+  window.fotoWeg=function(i){ fotos.splice(i,1); fotosZeichnen(); };
+  function dateienAnhaengen(fl){
+    var f=Array.prototype.slice.call(fl||[]); if(!f.length) return;
+    $('status').textContent='Foto wird vorbereitet …';
+    (function naechste(){
+      if(!f.length){ $('status').textContent=''; fotosZeichnen(); return; }
+      if(fotos.length>=MAX_FOTOS){ $('status').textContent=''; alert('Mehr als '+MAX_FOTOS+' Fotos gehen nicht.'); return; }
+      bildLesen(f.shift(),function(d){ if(d) fotos.push(d); fotosZeichnen(); naechste(); });
+    })();
+  }
+  $('fCam').addEventListener('change',function(){ dateienAnhaengen(this.files); this.value=''; });
+  $('fDat').addEventListener('change',function(){ dateienAnhaengen(this.files); this.value=''; });
+
+  /* Diktieren (Handschuhe) – nur wo der Browser es kann */
+  (function(){
+    var SR=window.SpeechRecognition||window.webkitSpeechRecognition; if(!SR) return;
+    var b=$('mText'); b.style.display='inline-block'; var rec=null;
+    b.onclick=function(){
+      if(rec){ rec.stop(); return; }
+      rec=new SR(); rec.lang='de-CH'; rec.interimResults=false;
+      rec.onresult=function(ev){ var t=ev.results[0][0].transcript; var z=$('fText'); z.value=(z.value?z.value+' ':'')+t; };
+      rec.onend=function(){ rec=null; b.classList.remove('lauf'); b.textContent='🎤 diktieren'; };
+      rec.onerror=rec.onend;
+      b.classList.add('lauf'); b.textContent='⏺ spricht … (tippen = stopp)'; rec.start();
+    };
+  })();
+
+  /* ── Warteschlange (IndexedDB) – wie einkauf.html ── */
+  var Q=(function(){
+    var kann=!!window.indexedDB, dbP=null;
+    function db(){
+      if(dbP) return dbP;
+      dbP=new Promise(function(ok,fehl){
+        var a=window.indexedDB.open(IDB_NAME,1);
+        a.onupgradeneeded=function(){ if(!a.result.objectStoreNames.contains(IDB_STORE)) a.result.createObjectStore(IDB_STORE,{keyPath:'k'}); };
+        a.onsuccess=function(){ ok(a.result); }; a.onerror=function(){ fehl(a.error); };
+      }).catch(function(){ kann=false; return null; });
+      return dbP;
+    }
+    function tx(modus,arbeit){
+      return db().then(function(d){
+        if(!d) return null;
+        return new Promise(function(ok,fehl){
+          var t=d.transaction(IDB_STORE,modus), s=t.objectStore(IDB_STORE); var r=arbeit(s);
+          t.oncomplete=function(){ ok(r&&r.result!==undefined?r.result:null); }; t.onerror=function(){ fehl(t.error); };
+        });
+      });
+    }
+    return {
+      add:function(job){ return tx('readwrite',function(s){ return s.put(job); }).catch(function(){ kann=false; return null; }); },
+      alle:function(){ return tx('readonly',function(s){ return s.getAll(); }).then(function(r){ return r||[]; }).catch(function(){ return []; }); },
+      weg:function(k){ return tx('readwrite',function(s){ return s.delete(k); }).catch(function(){}); }
+    };
+  })();
+  function netzMalen(){
+    Q.alle().then(function(a){
+      var e=$('netz'); e.className='netz'+(netzAn()?'':' off');
+      e.textContent=(netzAn()?'online':'offline')+(a.length?' · '+a.length+' offen':'');
+    });
+  }
+  window.addEventListener('online',function(){ netzMalen(); pendSenden(); });
+  window.addEventListener('offline',netzMalen);
+
+  /* Erst die Fotos (eigener Knoten), dann der Satz mit dem Verweis – kein Satz zeigt auf ein Foto, das nie ankam. */
+  var sendeLaeuft=false;
+  function pendSenden(){
+    if(!netzAn()||sendeLaeuft) return Promise.resolve();
+    sendeLaeuft=true;
+    return Q.alle().then(function(jobs){
+      return jobs.reduce(function(kette,j){
+        return kette.then(function(){
+          var rec={}; for(var s in j.rec) rec[s]=j.rec[s];
+          var bilder=j.fotos||[];
+          return bilder.reduce(function(k2,data,ix){
+            return k2.then(function(){
+              var fid='f_'+j.k+'_'+ix;
+              return fetch(RTDB+'/'+P_FOT+'/'+fid+'.json',{method:'PUT',
+                body:JSON.stringify({eintrag:j.k,punkt:j.nr,von:rec.von,ts:rec.ts,data:data,mime:'image/jpeg',nr:ix+1})})
+                .then(function(r){ if(!r.ok) throw 0; rec.fotos=rec.fotos||{}; rec.fotos[fid]=true; });
+            });
+          },Promise.resolve()).then(function(){
+            rec.anzahl_fotos=bilder.length;
+            return fetch(RTDB+'/'+P_RUECK+'/'+j.nr+'/'+j.k+'.json',{method:'PUT',body:JSON.stringify(rec)});
+          }).then(function(r){ if(r&&r.ok){ R[j.nr]=R[j.nr]||{}; R[j.nr][j.k]=rec; return Q.weg(j.k); } }).catch(function(){});
+        });
+      },Promise.resolve());
+    }).then(function(){ sendeLaeuft=false; netzMalen(); markerMalen(); zaehlen();
+      if(!$('t-liste').hidden) listeBauen(); })
+      .catch(function(){ sendeLaeuft=false; });
+  }
+
+  window.senden=function(){
+    if(!aktiv) return;
+    var text=$('fText').value.trim(), von=$('fVon').value.trim();
+    if(stat!=='erledigt' && !text){ alert('Bitte kurz aufschreiben, was los ist.'); $('fText').focus(); return; }
+    if(!von){ alert('Bitte deinen Namen angeben.'); $('fVon').focus(); return; }
+    try{ localStorage.setItem(LS_VON,von); }catch(e){}
+    var nr=aktiv, id='r_'+Date.now()+'_'+Math.round(Math.random()*1e6);
+    var rec={ ts:Date.now(), datum:heute(), status:stat, text:text, von:von, quelle:'web' };
+    $('btnSend').disabled=true; $('status').textContent='Wird gesendet …';
+    Q.add({k:id, nr:nr, rec:rec, fotos:fotos.slice()}).then(function(){ return pendSenden(); }).then(function(){ return Q.alle(); })
+      .then(function(rest){
+        var offen=rest.some(function(j){ return j.k===id; });
+        $('status').textContent=offen?'Kein Netz – gespeichert, geht raus, sobald wieder online.':'Gesendet – danke!';
+        // Ohne Netz den Satz lokal schon zeigen, damit das Häkchen sofort sichtbar ist
+        if(offen){ R[nr]=R[nr]||{}; R[nr][id]=rec; markerMalen(); zaehlen(); }
+        setTimeout(function(){ sheetZu(); if(!$('t-liste').hidden) listeBauen(); },900);
+      });
+  };
+  window.wiederOffen=function(){
+    if(!aktiv) return; stat='offen'; $('fText').value=$('fText').value||'aus Versehen abgehakt';
+    if(!$('fVon').value.trim()){ alert('Bitte deinen Namen angeben.'); $('fVon').focus(); return; }
+    senden();
+  };
+
+  /* ── Start ── */
+  Promise.all([laden(), rueckLaden()]).then(function(){
+    zaehlen(); netzMalen(); pendSenden();
+    var start=(location.hash||'').replace('#','');
+    if(/^nr=/.test(start)){ tab('k2d'); }
+    else if(['liste','info'].indexOf(start)>=0) tab(start);
+    else tab('k2d');
+    if(/^nr=/.test(start)) setTimeout(function(){ sheetAuf(+start.slice(3)); },300);
+  }).catch(function(e){ console.warn('Daten',e); $('liste').innerHTML='<div class="box"><div class="sub">Daten konnten nicht geladen werden.</div></div>'; });
+})();
+if('serviceWorker' in navigator){ window.addEventListener('load',function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
+</script>
+</body>
+</html>
