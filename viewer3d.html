@@ -119,6 +119,9 @@ html, body { width:100%; height:100%; overflow:hidden; background:#0d1117;
 .lbl-kb-sch { background:rgba(255,255,255,.92); border:1px solid #0b5fff; color:#0b3fa8;
            font-size:9px; font-weight:800; padding:1px 4px; border-radius:999px;
            transition:opacity .25s linear; will-change:opacity; }
+/* Baupiste Strang F: ein Schild in der Mitte der Achse, orange wie das Band */
+.lbl-pf  { background:rgba(255,140,0,.92); border-color:#c25e00; color:#fff;
+           font-size:9px; font-weight:800; padding:1px 4px; }
 .lbl-status { font-size:10px; font-weight:800; padding:1px 5px;
              box-shadow:0 0 0 1px rgba(0,0,0,.35), 0 2px 7px rgba(0,0,0,.45); }
 
@@ -541,6 +544,7 @@ body.ar-mode { background:transparent!important; }
   <button class="tb-btn active" id="btnSat"     onclick="toggleSat()">🛰 Satellit</button>
   <button class="tb-btn active" id="btnLeit"    onclick="toggleLayer('leitungen')">🟩 Werkleitungen PZ1–PZ3</button>
   <button class="tb-btn active" id="btnKabel"   onclick="toggleKabelblock()">🔵 Kabelblock C1–F1</button>
+  <button class="tb-btn active" id="btnPisteF"  onclick="togglePisteF()">🚧 Baupiste Strang F</button>
   <button class="tb-btn" id="btnBohr"           onclick="toggleBohr()">⛏ Bohrpunkte – grün = gebohrt</button>
   <button class="tb-btn active" id="btnErdung"  onclick="toggleLayer('erdung')">🟠 Erdung</button>
   <button class="tb-btn active" id="btnTische"  onclick="toggleTische()">🟨 Modultische</button>
@@ -1980,6 +1984,74 @@ function flashMsg(text){
   h.textContent=text; h.classList.add('show');
   clearTimeout(flashMsg._t);
   flashMsg._t=setTimeout(function(){ h.classList.remove('show'); },1800);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BAUPISTE STRANG F (PZ4 2027) – Achse aus der ILF-LandXML
+   (Auftrag Victor 22.09.2026). Daten: uploads/baupiste_f.json,
+   gebaut von Tools\Baupiste_F_Karte_Bauen.py; Breite 3 m aus
+   Plan PL 0489 A1. Band + Achse liegen auf max(ILF-Höhe, Viewer-
+   Terrain) + 0.3 m, weil das 22-m-Raster des Viewers die Linie
+   sonst stellenweise schluckt – die ILF-Höhen selbst stehen im
+   JSON. Direktlink: viewer3d.html#strangf
+═══════════════════════════════════════════════════════════ */
+var pfGroup=null, pfAn=true, pfDaten=null, pfMitte=null;
+
+async function ladePisteF(){
+  var r=await fetch('uploads/baupiste_f.json',{cache:'no-store'});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  pfDaten=await r.json();
+  var a=pfDaten.achse||[]; if(a.length<2) throw new Error('keine Achse');
+  var halb=(pfDaten.breite_m||3)/2, LIFT=0.3;
+  // Szene-Punkte [x, y, z] mit Anhebung über das Viewer-Terrain
+  var P=a.map(function(p){
+    var x=p[0]-OE, z=-(p[1]-ON);
+    var y=Math.max(p[2]-OZ, terraY(x,z))+LIFT;
+    return new THREE.Vector3(x,y,z);
+  });
+  pfGroup=new THREE.Group(); pfGroup.renderOrder=6;
+  // Band: je Punkt links/rechts senkrecht zur Achse (in der Ebene), 3 m breit
+  var pos=[], idx=[];
+  for(var i=0;i<P.length;i++){
+    var q=P[Math.max(i-1,0)], s=P[Math.min(i+1,P.length-1)];
+    var dx=s.x-q.x, dz=s.z-q.z, L=Math.hypot(dx,dz)||1;
+    var nx=-dz/L*halb, nz=dx/L*halb;
+    pos.push(P[i].x+nx, P[i].y, P[i].z+nz,  P[i].x-nx, P[i].y, P[i].z-nz);
+    if(i>0){ var k=(i-1)*2; idx.push(k,k+1,k+2, k+1,k+3,k+2); }
+  }
+  var g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(pos),3));
+  g.setIndex(idx); g.computeVertexNormals();
+  var band=new THREE.Mesh(g,new THREE.MeshPhongMaterial({color:0xff9a1f, emissive:0x4a2a00,
+    transparent:true, opacity:0.75, side:THREE.DoubleSide, polygonOffset:true, polygonOffsetFactor:-2}));
+  pfGroup.add(band);
+  // Achse als dünnes Rohr obendrauf
+  var tube=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(P),P.length*2,0.18,6,false),
+    new THREE.MeshPhongMaterial({color:0xc25e00, emissive:0x3a1a00}));
+  pfGroup.add(tube);
+  // ein Schild in der Mitte
+  var m=P[Math.floor(P.length/2)]; pfMitte=m.clone();
+  var div=document.createElement('div'); div.className='lbl lbl-pf';
+  div.textContent='🚧 Baupiste Strang F · max. 3 m · '+(pfDaten.laenge_m||'')+' m';
+  var lbl=new THREE.CSS2DObject(div); lbl.position.set(m.x,m.y+3,m.z); pfGroup.add(lbl);
+  scene.add(pfGroup);
+  console.info('Baupiste Strang F: '+a.length+' Punkte, '+pfDaten.laenge_m+' m');
+}
+
+window.togglePisteF=function(){
+  if(!pfGroup){ flashMsg('⚠ Baupiste Strang F fehlt'); return; }
+  pfAn=!pfAn; pfGroup.visible=pfAn;
+  var b=document.getElementById('btnPisteF'); if(b) b.classList.toggle('active',pfAn);
+  if(pfAn) flashMsg('🚧 Baupiste Strang F: '+pfDaten.laenge_m+' m, max. 3 m breit (PL 0489 A1, 21.09.2026)');
+};
+
+/* viewer3d.html#strangf – hinfliegen */
+function flyToPisteF(){
+  if(!pfMitte) return;
+  controls.target.copy(pfMitte);
+  camera.position.set(pfMitte.x+60, pfMitte.y+55, pfMitte.z+60);
+  controls.update(); flyDone=true;
+  flashMsg('🚧 Baupiste Strang F (PZ4 2027) – ILF 21.09.2026');
 }
 
 // Wasserleitung PZ4 (Baustellenanweisung NalpSolar_51_BA_0274_A1, 03.09.2026):
@@ -6408,6 +6480,10 @@ async function init(){
     catch(e){ console.warn('Kabelblock:',e);
               var kbB=document.getElementById('btnKabel');
               if(kbB) kbB.classList.remove('active'); }
+    try{ await ladePisteF(); }
+    catch(e){ console.warn('Baupiste F:',e);
+              var pfB=document.getElementById('btnPisteF');
+              if(pfB) pfB.classList.remove('active'); }
     pct(100);
 
     // Bounding box of IFC geometry
@@ -6442,8 +6518,12 @@ async function init(){
       // viewer3d.html#alpstrasse = Strassenmodell gleich einschalten
       if(/alpstrasse|alpstrase|d1/i.test(location.hash))
         setTimeout(function(){ try{ toggleAlpstrasse(); }catch(e){} }, 600);
+      // viewer3d.html#strangf = zur Baupiste Strang F fliegen (vor #baupiste prüfen –
+      // das Wort steckt sonst im Rückbau-Muster)
+      if(/strangf|pistef/i.test(location.hash))
+        setTimeout(function(){ try{ flyToPisteF(); }catch(e){} }, 800);
       // viewer3d.html#rueckbau = Rückbaumodell gleich einschalten
-      if(/rueckbau|rückbau|baupiste/i.test(location.hash))
+      else if(/rueckbau|rückbau|baupiste/i.test(location.hash))
         setTimeout(function(){ try{ toggleRueckbau(); }catch(e){} }, 600);
       // viewer3d.html#bohr = Bohrpunkte gleich einschalten
       else if(/bohr|pfahl/i.test(location.hash))
