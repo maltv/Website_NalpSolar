@@ -12,13 +12,14 @@
   window.NALP_GATE_SUB   = 'Code eingeben / Enter code / Wpisz kod';
 </script>
 <script src="assets/js/nalp-gate.js"></script>
+<link rel="stylesheet" href="assets/js/leaflet/leaflet.css">
 <style>
   /* Reiter «Altlasten» – Prio-Liste Fremdkörper (Axpo/Kathriner 04.09.2026, Aufnahme happyrtk 14.11.2025).
      Punkte: uploads/altlasten.json (Tools\Altlasten_Bauen.py, WERKZEUGE.md §61).
      Rückmeldungen: RTDB erfassung/altlasten_rueck/<nr>/<key>, Fotos getrennt in erfassung/altlasten_fotos/<fid>
      (wie einkauf.html – die Liste lädt nur die Sätze, Fotos erst beim Antippen). Optik wie wasserleitung.html.
-     Karte NUR 3D (Victor 22.09.2026): iframe viewer3d.html#altlasten, Marker/Zustand/Hinfliegen per postMessage –
-     der Viewer lädt dafür ein eigenes grosses Gelände (uploads/altlasten/gelaende.json + luftbild.jpg). */
+     22.09.2026 (Victor): Karte bleibt 2D (3D-Versuch verworfen, Modus #altlasten liegt nur noch im Viewer), KEIN Diktieren,
+     dafür Aufwand je Rückmeldung: Personal (Name, h) + Geräte (Gerät, h) → Reiter «Aufwand» rechnet je Prio, CSV. */
   :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
          --gruen:#1e9e5a; --blau:#1565c0; --orange:#e08a00; --lila:#8e24aa; --grau:#8a8e94; }
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -53,10 +54,22 @@
   .btn.gr{ background:var(--gruen); }
   .btn[disabled]{ opacity:.45; cursor:default; }
   .btnrow{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
-  /* ── Karte (3D-Viewer im iframe) ── */
-  #k3dFrame{ width:100%; height:calc(100vh - 250px); min-height:380px; border:1px solid var(--line); border-radius:6px; background:#111; display:block; }
+  /* ── Karte ── */
+  #map2d{ height:calc(100vh - 250px); min-height:380px; border-radius:6px; border:1px solid var(--line); background:#d9dde3; }
+  .gps{ position:absolute; right:10px; top:10px; z-index:900; }
   .legende{ display:flex; flex-wrap:wrap; gap:10px 14px; font-size:12px; color:var(--mut); margin:8px 0 0; align-items:center; }
   .legende i{ display:inline-block; width:16px; height:16px; border-radius:50%; vertical-align:-3px; margin-right:4px; border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.25); }
+  .leaflet-container{ font-family:inherit; }
+  .mk{ width:28px; height:28px; border-radius:50%; border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.5);
+       color:#fff; font-weight:900; font-size:12px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .mk.p1{ background:var(--rot); } .mk.p2{ background:var(--orange); } .mk.p3{ background:var(--grau); }
+  .mk.ok{ background:var(--gruen); } .mk.pr{ background:var(--lila); }
+  .mk.ok::after{ content:'✓'; position:absolute; right:-6px; top:-7px; background:#fff; color:var(--gruen); border-radius:50%;
+       width:15px; height:15px; font-size:11px; line-height:15px; text-align:center; box-shadow:0 0 0 1px rgba(0,0,0,.2); }
+  .mk.pr::after{ content:'!'; position:absolute; right:-6px; top:-7px; background:#fff; color:var(--lila); border-radius:50%;
+       width:15px; height:15px; font-size:11px; line-height:15px; text-align:center; font-weight:900; box-shadow:0 0 0 1px rgba(0,0,0,.2); }
+  .leaflet-marker-icon{ position:absolute; overflow:visible; }
+  .leaflet-marker-icon .mk{ position:relative; }
   .schalter{ display:flex; gap:6px; flex-wrap:wrap; margin:0 0 8px; }
   .schalter button{ border:1px solid var(--line); background:#fff; cursor:pointer; font:700 12px Arial; color:var(--mut);
         padding:7px 12px; border-radius:14px; white-space:nowrap; }
@@ -129,6 +142,22 @@
         background:rgba(0,0,0,.62); color:#fff; font-size:13px; cursor:pointer; line-height:23px; padding:0; }
   #status{ font-size:13px; font-weight:700; color:var(--mut); margin-top:10px; min-height:18px; }
   .gross{ width:100%; padding:15px; font-size:16px; margin-top:14px; }
+  /* Aufwand-Zeilen im Formular */
+  .aufw{ display:flex; gap:6px; margin-top:6px; align-items:center; }
+  .aufw input.n{ flex:1; min-width:0; }
+  .aufw input.h{ flex:0 0 74px; text-align:right; }
+  .aufw .x{ flex:0 0 36px; height:40px; border:1px solid var(--line); background:#fff; border-radius:5px; cursor:pointer; font-size:16px; }
+  .plus{ margin-top:6px; border:1px dashed #c9ccd2; background:#fff; border-radius:5px; padding:8px 12px; font:700 13px Arial; color:var(--mut); cursor:pointer; }
+  /* Reiter Aufwand */
+  table.aw{ width:100%; border-collapse:collapse; font-size:13px; margin-top:6px; }
+  table.aw th, table.aw td{ padding:6px 6px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap; }
+  table.aw th:first-child, table.aw td:first-child{ text-align:left; white-space:normal; }
+  table.aw th{ font-size:11.5px; color:var(--mut); font-weight:700; }
+  table.aw tr.sum td{ font-weight:800; border-top:2px solid var(--line); }
+  .kpi{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:8px; }
+  .kpi div{ background:#f6f7f9; border-radius:6px; padding:8px; text-align:center; }
+  .kpi b{ display:block; font-size:20px; }
+  .kpi span{ font-size:11px; color:var(--mut); }
   .wieder{ font-size:12px; color:var(--mut); margin-top:10px; }
   .wieder a{ color:var(--rot); font-weight:700; cursor:pointer; }
 </style>
@@ -142,31 +171,39 @@
 </header>
 
 <div class="tabs">
-  <button class="on" data-t="k3d" onclick="tab('k3d')">🏔 Karte 3D</button>
+  <button class="on" data-t="k2d" onclick="tab('k2d')">🗺 Karte</button>
   <button data-t="liste" onclick="tab('liste')">📋 Liste<span class="zahl" id="zOffen">–</span></button>
+  <button data-t="aufwand" onclick="tab('aufwand')">⏱ Aufwand</button>
   <button data-t="info" onclick="tab('info')">ℹ️ Info</button>
 </div>
 
 <main>
   <!-- ================= KARTE ================= -->
-  <section id="t-k3d">
+  <section id="t-k2d">
     <div class="schalter" id="schalterK"></div>
-    <iframe id="k3dFrame" title="3D-Gelände mit den Altlasten" allow="fullscreen; geolocation"></iframe>
+    <div style="position:relative">
+      <div id="map2d"></div>
+      <button class="btn w gps" onclick="gps()" title="Mein Standort">📍</button>
+    </div>
     <div class="legende">
       <span><i style="background:#D72622"></i>Prio 1 – entfernen</span>
       <span><i style="background:#e08a00"></i>Prio 2 – wenn im Budget</span>
       <span><i style="background:#8a8e94"></i>Prio 3 – belassen</span>
       <span><i style="background:#1e9e5a"></i>erledigt</span>
       <span><i style="background:#8e24aa"></i>Problem gemeldet</span>
-      <span>Nummer antippen = Foto, Massnahme, Rückmeldung · 📍 im Viewer = mein Standort</span>
+      <span>Punkt antippen = Foto, Massnahme, Rückmeldung</span>
     </div>
-    <div class="btnrow"><a class="btn w" href="viewer3d.html#altlasten" target="_blank">🏔 3D in eigenem Fenster öffnen</a></div>
   </section>
 
   <!-- ================= LISTE ================= -->
   <section id="t-liste" hidden>
     <div class="schalter" id="schalterL"></div>
     <div id="liste"><div class="box"><div class="sub">lade …</div></div></div>
+  </section>
+
+  <!-- ================= AUFWAND ================= -->
+  <section id="t-aufwand" hidden>
+    <div id="aufwand"><div class="box"><div class="sub">lade …</div></div></div>
   </section>
 
   <!-- ================= INFO ================= -->
@@ -181,7 +218,9 @@
          <span class="chip p3">Prio 3</span> wird belassen</p>
       <p><b>So geht es:</b> Punkt auf der Karte antippen → Foto und Massnahme anschauen → wenn erledigt: <b>✅ Erledigt</b> drücken,
          Foto vom Resultat dazu, Name, senden. Geht etwas nicht (zu schwer, Beton, Abtransport unklar): <b>⚠️ Problem</b> melden.
-         Die Rückmeldung sehen alle sofort auf der Karte und in der Liste – auch die Bauleitung.</p>
+         Die Rückmeldung sehen alle sofort auf der Karte und in der Liste – auch die Bauleitung.<br>
+         <b>Aufwand immer eintragen:</b> wer wie viele Stunden, welches Gerät wie viele Stunden. Der Reiter <b>⏱ Aufwand</b> zählt das je Prio zusammen –
+         das braucht es für die Abrechnung mit dem Bauherrn.</p>
       <div class="sub">Achtung bei Nr. 13 (Blech): liegt auf einer archäologischen Wüstung – nur Metallteile entfernen, Steine belassen, nicht befahren.</div>
     </div>
     <div class="box grau">
@@ -221,7 +260,14 @@
       </div>
       <label class="f">Was wurde gemacht? <span>– kurz</span></label>
       <textarea id="fText" placeholder="z. B. Rohr abgeflext, Stumpf mit Steinen gedeckt"></textarea>
-      <button class="mik" id="mText" style="display:none">🎤 diktieren</button>
+      <label class="f">Personal <span>– wer, wie viele Stunden</span></label>
+      <div id="fPers"></div>
+      <button type="button" class="plus" onclick="zeile('fPers')">+ Person</button>
+      <label class="f">Geräte <span>– welches Gerät, wie viele Stunden</span></label>
+      <div id="fGer"></div>
+      <button type="button" class="plus" onclick="zeile('fGer')">+ Gerät</button>
+      <datalist id="dlPers"></datalist>
+      <datalist id="dlGer"></datalist>
       <label class="f">Foto <span>– vom Resultat, bis 4</span></label>
       <div class="fotoknoepfe">
         <button type="button" class="btn w" onclick="document.getElementById('fCam').click()">📷 Foto</button>
@@ -239,6 +285,7 @@
   </div>
 </div>
 
+<script src="assets/js/leaflet/leaflet.js"></script>
 <script>
 (function(){
   'use strict';
@@ -250,8 +297,7 @@
   var ST={ erledigt:{t:'Erledigt',k:'ok',sym:'✅'}, problem:{t:'Problem',k:'pr',sym:'⚠️'},
            notiz:{t:'Notiz',k:'no',sym:'💬'}, offen:{t:'wieder offen',k:'no',sym:'↩'} };
 
-  var daten=null, P={}, R={}, aktiv=null, fotos=[], stat='erledigt';
-  var frame=null, frameBereit=false, fliegenWartet=null;
+  var daten=null, P={}, R={}, map=null, MK={}, gpsMarker=null, aktiv=null, fotos=[], stat='erledigt';
   var filtK='offen', filtL='alle';
 
   function $(id){ return document.getElementById(id); }
@@ -265,10 +311,11 @@
   /* ── Reiter ── */
   window.tab=function(t){
     document.querySelectorAll('.tabs button').forEach(function(b){ b.classList.toggle('on', b.dataset.t===t); });
-    ['k3d','liste','info'].forEach(function(k){ $('t-'+k).hidden=(k!==t); });
+    ['k2d','liste','aufwand','info'].forEach(function(k){ $('t-'+k).hidden=(k!==t); });
     try{ history.replaceState(null,'','#'+t); }catch(e){}
-    if(t==='k3d') frameBauen();
+    if(t==='k2d'){ mapBauen(); setTimeout(function(){ if(map) map.invalidateSize(); },50); }
     if(t==='liste') listeBauen();
+    if(t==='aufwand') aufwandBauen();
   };
 
   /* ── Daten ── */
@@ -315,33 +362,58 @@
     Array.prototype.forEach.call($(id).querySelectorAll('button'),function(b){ b.onclick=function(){ cb(b.dataset.f); }; });
   }
 
-  /* ── Karte = 3D-Viewer im iframe (viewer3d.html#altlasten) ── */
-  function frameBauen(){
-    if(frame) return;
-    frame=$('k3dFrame'); frame.src='viewer3d.html#altlasten';
+  /* ── Karte ── */
+  function mapBauen(){
+    if(map || typeof L==='undefined') return;
+    map=L.map('map2d',{ zoomSnap:0.25, maxZoom:22, attributionControl:true });
+    map.attributionControl.setPrefix('');
+    L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg',
+      { maxNativeZoom:20, maxZoom:22, attribution:'© swisstopo' }).addTo(map);
+    L.control.scale({imperial:false, maxWidth:110}).addTo(map);
+    laden().then(function(j){
+      var alle=[];
+      j.punkte.forEach(function(p){
+        alle.push([p.lat,p.lon]);
+        var m=L.marker([p.lat,p.lon],{ icon:ikone(p), title:'Nr. '+p.nr+' '+p.typ }).addTo(map);
+        m.on('click',function(){ sheetAuf(p.nr); });
+        MK[p.nr]=m;
+      });
+      map.fitBounds(L.latLngBounds(alle).pad(0.08));
+      markerMalen();
+      var h=/nr=(\d+)/.exec(location.hash); if(h) zeige(+h[1]);
+    });
+  }
+  function ikone(p){
+    return L.divIcon({ className:'', html:'<div class="mk '+klasse(p)+'">'+p.nr+'</div>', iconSize:[28,28], iconAnchor:[14,14] });
+  }
+  function markerMalen(){
+    if(!map || !daten) return;
+    daten.punkte.forEach(function(p){
+      var m=MK[p.nr]; if(!m) return;
+      m.setIcon(ikone(p));
+      var soll=passt(p,filtK);
+      if(soll && !map.hasLayer(m)) m.addTo(map);
+      if(!soll && map.hasLayer(m)) map.removeLayer(m);
+    });
     schalter('schalterK',filtK,function(f){ filtK=f; markerMalen(); });
   }
-  function post(m){ try{ if(frame && frame.contentWindow) frame.contentWindow.postMessage(m,'*'); }catch(e){} }
-  window.addEventListener('message',function(ev){
-    var d=ev.data||{}; if(typeof d!=='object'||!d.typ) return;
-    if(d.typ==='altlasten_bereit'){ frameBereit=true; markerMalen(); if(fliegenWartet){ post({typ:'altlasten_fliegen',nr:fliegenWartet}); fliegenWartet=null; } }
-    else if(d.typ==='altlast'){ sheetAuf(+d.nr); }
-  });
-  /* Zustand (Farbe) + Sichtbarkeit (Filter) aller Marker in den Viewer schicken */
-  function markerMalen(){
-    if(!daten) return;
-    if(frame) schalter('schalterK',filtK,function(f){ filtK=f; markerMalen(); });
-    if(!frameBereit) return;
-    var z={}, sichtbar={};
-    daten.punkte.forEach(function(p){ z[p.nr]=klasse(p); sichtbar[p.nr]=passt(p,filtK); });
-    post({typ:'altlasten_zustand', z:z, sichtbar:sichtbar});
-  }
   function zeige(nr){
-    tab('k3d');
-    if(!passt(P[nr]||{},filtK)){ filtK='alle'; markerMalen(); }
-    if(frameBereit) post({typ:'altlasten_fliegen',nr:nr}); else fliegenWartet=nr;
+    tab('k2d');
+    laden().then(function(){
+      var p=P[nr]; if(!p||!map) return;
+      if(!map.hasLayer(MK[nr])){ filtK='alle'; markerMalen(); }
+      map.setView([p.lat,p.lon], Math.max(map.getZoom(),19));
+    });
   }
   window.aufKarte=function(){ var nr=aktiv; sheetZu(); if(nr) zeige(nr); };
+  window.gps=function(){
+    if(!navigator.geolocation || !map){ alert('Kein GPS verfügbar.'); return; }
+    navigator.geolocation.getCurrentPosition(function(q){
+      var pt=[q.coords.latitude,q.coords.longitude];
+      if(!gpsMarker) gpsMarker=L.circleMarker(pt,{radius:8,color:'#fff',weight:2,fillColor:'#1565c0',fillOpacity:1}).addTo(map);
+      gpsMarker.setLatLng(pt); map.setView(pt, Math.max(map.getZoom(),18));
+    }, function(){ alert('Standort nicht bestimmbar.'); }, {enableHighAccuracy:true, timeout:8000});
+  };
 
   /* ── Liste ── */
   function listeBauen(){
@@ -376,6 +448,9 @@
   window.sheetAuf=function(nr){
     var p=P[nr]; if(!p) return;
     aktiv=nr; fotos=[]; fotosZeichnen(); $('fText').value=''; $('status').textContent=''; $('btnSend').disabled=false;
+    $('fPers').innerHTML=''; $('fGer').innerHTML=''; vorschlaege();
+    var vn=''; try{ vn=localStorage.getItem(LS_VON)||''; }catch(e){}
+    zeile('fPers',vn,null); zeile('fGer','',null);
     $('sNr').textContent=p.nr; $('sNr').style.background=farbe(klasse(p));
     $('sTyp').textContent=p.typ;
     $('sPrio').innerHTML='<span class="chip p'+p.prio+'">Prio '+p.prio+'</span> '+esc((daten.prio_text||{})[p.prio]||'');
@@ -401,7 +476,7 @@
       var s=ST[e.status]||ST.notiz, n=e.anzahl_fotos||0;
       return '<div class="e"><span class="chip '+s.k+'">'+s.sym+' '+esc(s.t)+'</span> '
         +'<span class="w">'+esc(e.von||'')+' · '+deDat(e.datum)+'</span>'
-        +(e.text?'<div>'+esc(e.text)+'</div>':'')
+        +(e.text?'<div>'+esc(e.text)+'</div>':'')+aufwandText(e)
         +(n?'<span class="fl" data-f="'+esc(Object.keys(e.fotos||{}).join(','))+'" onclick="fotoZeigen(this)">📷 '+n+' Foto'+(n>1?'s':'')+' anzeigen</span><div class="fb"></div>':'')
         +'</div>';
     }).join('');
@@ -456,19 +531,100 @@
   $('fCam').addEventListener('change',function(){ dateienAnhaengen(this.files); this.value=''; });
   $('fDat').addEventListener('change',function(){ dateienAnhaengen(this.files); this.value=''; });
 
-  /* Diktieren (Handschuhe) – nur wo der Browser es kann */
-  (function(){
-    var SR=window.SpeechRecognition||window.webkitSpeechRecognition; if(!SR) return;
-    var b=$('mText'); b.style.display='inline-block'; var rec=null;
-    b.onclick=function(){
-      if(rec){ rec.stop(); return; }
-      rec=new SR(); rec.lang='de-CH'; rec.interimResults=false;
-      rec.onresult=function(ev){ var t=ev.results[0][0].transcript; var z=$('fText'); z.value=(z.value?z.value+' ':'')+t; };
-      rec.onend=function(){ rec=null; b.classList.remove('lauf'); b.textContent='🎤 diktieren'; };
-      rec.onerror=rec.onend;
-      b.classList.add('lauf'); b.textContent='⏺ spricht … (tippen = stopp)'; rec.start();
+  /* ── Aufwand: Zeilen (Name/Gerät + Stunden) ── */
+  var GERAETE=['Menzi Muck','Bagger','Manitou','Pneukran','Polaris','Transporter','Flex / Trennschleifer','Schweissgerät','Motorsäge','Helikopter','Handwerkzeug'];
+  function zeile(id,name,h){
+    var box=$(id), ger=(id==='fGer');
+    var d=document.createElement('div'); d.className='aufw';
+    d.innerHTML='<input type="text" class="n" list="'+(ger?'dlGer':'dlPers')+'" placeholder="'+(ger?'Gerät':'Name')+'" value="'+esc(name||'')+'">'
+      +'<input type="number" class="h" inputmode="decimal" step="0.5" min="0" placeholder="h" value="'+(h!=null?h:'')+'">'
+      +'<button type="button" class="x" title="Zeile weg" onclick="this.parentNode.remove()">✕</button>';
+    box.appendChild(d); if(!name) d.querySelector('.n').focus();
+  }
+  window.zeile=zeile;
+  function zeilenLesen(id){
+    var out=[];
+    Array.prototype.forEach.call($(id).querySelectorAll('.aufw'),function(d){
+      var n=d.querySelector('.n').value.trim(), h=parseFloat(String(d.querySelector('.h').value).replace(',','.'));
+      if(!n && !(h>0)) return;
+      out.push({name:n, h:(h>0?Math.round(h*4)/4:0)});
+    });
+    return out;
+  }
+  function summe(l){ return (l||[]).reduce(function(a,x){ return a+(+x.h||0); },0); }
+  function hf(h){ return (Math.round(h*4)/4).toString().replace('.',',')+' h'; }
+  /* Vorschläge: alles, was schon einmal eingetragen wurde (+ feste Geräteliste) */
+  function vorschlaege(){
+    var pers={}, ger={};
+    GERAETE.forEach(function(g){ ger[g]=1; });
+    Object.keys(R).forEach(function(nr){ eintraege(nr).forEach(function(e){
+      (e.personal||[]).forEach(function(x){ if(x.name) pers[x.name]=1; });
+      (e.geraete||[]).forEach(function(x){ if(x.name) ger[x.name]=1; });
+      if(e.von) pers[e.von]=1;
+    }); });
+    $('dlPers').innerHTML=Object.keys(pers).sort().map(function(n){ return '<option value="'+esc(n)+'">'; }).join('');
+    $('dlGer').innerHTML=Object.keys(ger).sort().map(function(n){ return '<option value="'+esc(n)+'">'; }).join('');
+  }
+  function aufwandText(e){
+    var t=[];
+    if((e.personal||[]).length) t.push('👷 '+e.personal.map(function(x){ return esc(x.name)+' '+hf(x.h); }).join(' · '));
+    if((e.geraete||[]).length) t.push('🚜 '+e.geraete.map(function(x){ return esc(x.name)+' '+hf(x.h); }).join(' · '));
+    return t.length?'<div class="w">'+t.join('<br>')+'</div>':'';
+  }
+
+  /* ── Reiter Aufwand: Summen je Prio, je Gerät, je Person, je Punkt + CSV ── */
+  function aufwandBauen(){
+    if(!daten){ return; }
+    var prio={1:{pers:0,ger:0,punkte:{}},2:{pers:0,ger:0,punkte:{}},3:{pers:0,ger:0,punkte:{}}};
+    var jeGer={}, jePers={}, jePunkt={}, zeilen=[];
+    daten.punkte.forEach(function(p){
+      eintraege(p.nr).forEach(function(e){
+        var hp=summe(e.personal), hg=summe(e.geraete); if(!hp && !hg) return;
+        var pr=prio[p.prio]||prio[3]; pr.pers+=hp; pr.ger+=hg; pr.punkte[p.nr]=1;
+        (e.geraete||[]).forEach(function(x){ var k=x.name||'?'; jeGer[k]=jeGer[k]||{1:0,2:0,3:0}; jeGer[k][p.prio]=(jeGer[k][p.prio]||0)+x.h;
+          zeilen.push([e.datum,p.nr,p.typ,p.prio,e.status,e.von,'Gerät',x.name,x.h,e.text]); });
+        (e.personal||[]).forEach(function(x){ var k=x.name||'?'; jePers[k]=jePers[k]||{1:0,2:0,3:0}; jePers[k][p.prio]=(jePers[k][p.prio]||0)+x.h;
+          zeilen.push([e.datum,p.nr,p.typ,p.prio,e.status,e.von,'Personal',x.name,x.h,e.text]); });
+        jePunkt[p.nr]=jePunkt[p.nr]||{p:p,pers:0,ger:0}; jePunkt[p.nr].pers+=hp; jePunkt[p.nr].ger+=hg;
+      });
+    });
+    var erl={1:0,2:0,3:0}, alle={1:0,2:0,3:0};
+    daten.punkte.forEach(function(p){ alle[p.prio]=(alle[p.prio]||0)+1; if(zustand(p.nr).status==='erledigt') erl[p.prio]=(erl[p.prio]||0)+1; });
+    var h='';
+    [1,2,3].forEach(function(k){
+      var pr=prio[k];
+      h+='<div class="box '+(k===1?'':(k===2?'':'grau'))+'" style="border-left-color:'+({1:'#D72622',2:'#e08a00',3:'#8a8e94'})[k]+'">'
+        +'<h2><span class="chip p'+k+'">Prio '+k+'</span> '+esc((daten.prio_text||{})[k]||'')+'</h2>'
+        +'<div class="kpi"><div><b>'+erl[k]+' / '+alle[k]+'</b><span>Punkte erledigt</span></div>'
+        +'<div><b>'+hf(pr.pers)+'</b><span>Personal</span></div><div><b>'+hf(pr.ger)+'</b><span>Geräte</span></div></div></div>';
+    });
+    function tab3(titel,obj,ico){
+      var ks=Object.keys(obj).sort(); if(!ks.length) return '';
+      var t='<div class="box"><h2>'+ico+' '+titel+'</h2><table class="aw"><tr><th>'+titel+'</th><th>Prio 1</th><th>Prio 2</th><th>Prio 3</th><th>Total</th></tr>';
+      var s1=0,s2=0,s3=0;
+      ks.forEach(function(k){ var o=obj[k]; s1+=o[1]||0; s2+=o[2]||0; s3+=o[3]||0;
+        t+='<tr><td>'+esc(k)+'</td><td>'+(o[1]?hf(o[1]):'–')+'</td><td>'+(o[2]?hf(o[2]):'–')+'</td><td>'+(o[3]?hf(o[3]):'–')+'</td><td>'+hf((o[1]||0)+(o[2]||0)+(o[3]||0))+'</td></tr>'; });
+      t+='<tr class="sum"><td>Total</td><td>'+hf(s1)+'</td><td>'+hf(s2)+'</td><td>'+hf(s3)+'</td><td>'+hf(s1+s2+s3)+'</td></tr></table></div>';
+      return t;
+    }
+    h+=tab3('Gerät',jeGer,'🚜')+tab3('Person',jePers,'👷');
+    var pk=Object.keys(jePunkt).sort(function(a,b){ return a-b; });
+    if(pk.length){
+      h+='<div class="box"><h2>📍 Je Punkt</h2><table class="aw"><tr><th>Punkt</th><th>Prio</th><th>Stand</th><th>Personal</th><th>Geräte</th></tr>';
+      pk.forEach(function(nr){ var o=jePunkt[nr], z=zustand(nr), st=ST[z.status]||{sym:'',t:'offen'};
+        h+='<tr onclick="sheetAuf('+nr+')" style="cursor:pointer"><td>'+nr+' '+esc(o.p.typ)+'</td><td>'+o.p.prio+'</td><td>'+st.sym+'</td><td>'+hf(o.pers)+'</td><td>'+hf(o.ger)+'</td></tr>'; });
+      h+='</table></div>';
+    }
+    if(!zeilen.length) h+='<div class="box grau"><div class="sub">Noch kein Aufwand eingetragen. Er wird bei jeder Rückmeldung mit erfasst (Personal + Geräte, Stunden).</div></div>';
+    else h+='<div class="btnrow"><button class="btn w" onclick="csv()">⬇ CSV (alle Einträge)</button></div><div class="sub" style="margin-top:6px">'+zeilen.length+' Aufwand-Zeilen · Stunden gerundet auf ¼ h</div>';
+    $('aufwand').innerHTML=h;
+    window.csv=function(){
+      var kopf=['Datum','Nr','Typ','Prio','Status','Gemeldet von','Art','Name/Gerät','Stunden','Text'];
+      var txt=[kopf].concat(zeilen).map(function(r){ return r.map(function(v){ v=(v==null?'':String(v)).replace(/"/g,'""'); return /[;"\n]/.test(v)?'"'+v+'"':v; }).join(';'); }).join('\r\n');
+      var bl=new Blob(['\ufeff'+txt],{type:'text/csv;charset=utf-8'}), a=document.createElement('a');
+      a.href=URL.createObjectURL(bl); a.download='Altlasten_Aufwand_'+heute()+'.csv'; document.body.appendChild(a); a.click(); a.remove();
     };
-  })();
+  }
 
   /* ── Warteschlange (IndexedDB) – wie einkauf.html ── */
   var Q=(function(){
@@ -539,9 +695,14 @@
     var text=$('fText').value.trim(), von=$('fVon').value.trim();
     if(stat!=='erledigt' && !text){ alert('Bitte kurz aufschreiben, was los ist.'); $('fText').focus(); return; }
     if(!von){ alert('Bitte deinen Namen angeben.'); $('fVon').focus(); return; }
+    var pers=zeilenLesen('fPers'), ger=zeilenLesen('fGer');
+    var fehlt=pers.concat(ger).filter(function(x){ return !x.name || !(x.h>0); });
+    if(fehlt.length){ alert('Beim Aufwand fehlt ein Name/Gerät oder die Stunden.'); return; }
+    if(stat==='erledigt' && !pers.length && !confirm('Kein Aufwand eingetragen (wer, wie viele Stunden)? Trotzdem senden?')) return;
     try{ localStorage.setItem(LS_VON,von); }catch(e){}
     var nr=aktiv, id='r_'+Date.now()+'_'+Math.round(Math.random()*1e6);
-    var rec={ ts:Date.now(), datum:heute(), status:stat, text:text, von:von, quelle:'web' };
+    var rec={ ts:Date.now(), datum:heute(), status:stat, text:text, von:von, quelle:'web',
+              personal:pers, geraete:ger, h_personal:summe(pers), h_geraete:summe(ger) };
     $('btnSend').disabled=true; $('status').textContent='Wird gesendet …';
     Q.add({k:id, nr:nr, rec:rec, fotos:fotos.slice()}).then(function(){ return pendSenden(); }).then(function(){ return Q.alle(); })
       .then(function(rest){
@@ -549,7 +710,7 @@
         $('status').textContent=offen?'Kein Netz – gespeichert, geht raus, sobald wieder online.':'Gesendet – danke!';
         // Ohne Netz den Satz lokal schon zeigen, damit das Häkchen sofort sichtbar ist
         if(offen){ R[nr]=R[nr]||{}; R[nr][id]=rec; markerMalen(); zaehlen(); }
-        setTimeout(function(){ sheetZu(); if(!$('t-liste').hidden) listeBauen(); },900);
+        setTimeout(function(){ sheetZu(); if(!$('t-liste').hidden) listeBauen(); if(!$('t-aufwand').hidden) aufwandBauen(); },900);
       });
   };
   window.wiederOffen=function(){
@@ -562,9 +723,9 @@
   Promise.all([laden(), rueckLaden()]).then(function(){
     zaehlen(); netzMalen(); pendSenden();
     var start=(location.hash||'').replace('#','');
-    if(/^nr=/.test(start)){ tab('k3d'); fliegenWartet=+start.slice(3); }
-    else if(['liste','info'].indexOf(start)>=0) tab(start);
-    else tab('k3d');
+    if(/^nr=/.test(start)){ tab('k2d'); }
+    else if(['liste','aufwand','info'].indexOf(start)>=0) tab(start);
+    else tab('k2d');
     if(/^nr=/.test(start)) setTimeout(function(){ sheetAuf(+start.slice(3)); },300);
   }).catch(function(e){ console.warn('Daten',e); $('liste').innerHTML='<div class="box"><div class="sub">Daten konnten nicht geladen werden.</div></div>'; });
 })();
