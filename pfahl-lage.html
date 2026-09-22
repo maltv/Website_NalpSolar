@@ -131,22 +131,11 @@
     <div class="sublbl" style="margin-top:0;">Tischtyp</div>
     <div class="pick" id="pTyp"></div>
 
-    <div class="sublbl">Serie (bestimmt nur das Langloch-Spiel)</div>
-    <div class="pick two" id="pSerie">
-      <button data-v="2026">Serie 2026</button>
-      <button data-v="2025">Serie 2025</button>
-    </div>
-
     <div class="inrow" style="margin-top:12px;">
-      <div class="fld">
+      <div class="fld" style="max-width:260px;">
         <label>Pfahlneigung ε</label>
         <input id="iEps" inputmode="decimal" value="30">
         <div class="u">Grad zur Lotrechten · Typenplan, überschreibbar</div>
-      </div>
-      <div class="fld">
-        <label>Langloch-Spiel längs</label>
-        <input id="iSpiel" inputmode="decimal" value="26.5">
-        <div class="u">± mm · Langloch/Schraube, überschreibbar</div>
       </div>
     </div>
     <div class="hint" id="stuetzeInfo" style="margin-top:10px;"></div>
@@ -166,7 +155,7 @@
       <div class="fld">
         <label>Lageabweichung längs der Achse</label>
         <input id="iLage" inputmode="decimal" placeholder="0 = genau unter dem SOLL-Punkt">
-        <div class="u">mm · in der Tischachse Tal→Berg · leer oder 0 = keine</div>
+        <div class="u">cm · in der Tischachse Tal→Berg · leer oder 0 = keine</div>
       </div>
     </div>
 
@@ -214,7 +203,7 @@
         beim Ziehen bis auf die SOLL-Höhe. Der Kopf bleibt dann ¼ des Höhenfehlers unter SOLL und sitzt 0.43 × Höhenfehler
         talwärts; die Stütze behält ihre Nennlänge und dreht nur etwas.</div>
       <div class="f" style="margin-top:12px;">Rausziehen: Kopf steigt × <b>cos ε</b>, wandert talwärts × <b>sin ε</b></div>
-      <div class="n">Bei 30°: 100 mm Auszug = 87 mm höher, 50 mm talwärts. Deshalb landet ein lotrecht projizierter Pfahl nach
+      <div class="n">Bei 30°: 10 cm Auszug = 8.7 cm höher, 5 cm talwärts. Deshalb landet ein lotrecht projizierter Pfahl nach
         dem Ziehen näher beim Talpfahl.</div>
     </div>
     <div class="tblwrap" style="margin-top:12px;">
@@ -269,6 +258,8 @@
   function rad(g){ return g*Math.PI/180; }
   function vz(v,d){ return (v>=0?'+':'−') + Math.abs(v).toFixed(d===undefined?0:d); }
   function ab(v,d){ return Math.abs(v).toFixed(d===undefined?0:d); }
+  function cm(v){ return (Math.abs(v)/10).toFixed(1)+' cm'; }               // mm → cm, eine Dezimale
+  function cmv(v){ return (v>=0?'+':'−')+(Math.abs(v)/10).toFixed(1)+' cm'; }
 
   // ---- Kern: Kopf auf den Stützenkreis ziehen ------------------------------------------
   // u + = bergwärts, z + = hoch, SOLL-Kopf = (0,0), alles mm. e = Lage IST-Kopf (+ bergwärts), dz = Höhe IST-Kopf (+ höher).
@@ -298,29 +289,31 @@
     box.addEventListener('click', function(ev){ var b=ev.target.closest?ev.target.closest('button'):null; if(!b||!box.contains(b)) return;
       S[feld]=b.getAttribute('data-v'); markiere(box,S[feld]); if(nachher) nachher(); rechne(); });
   }
-  function vorgabenSetzen(){ var t=TYP[S.typ]; $('iEps').value=t.eps; $('iSpiel').value=t.spiel[S.serie]; }
-  bindePick('pTyp','typ', vorgabenSetzen); bindePick('pSerie','serie', vorgabenSetzen); bindePick('pRicht','richt', null);
-  ['iEps','iSpiel','iLage','iHSoll','iHIst','iOkt'].forEach(function(id){ $(id).addEventListener('input', rechne); });
+  function vorgabenSetzen(){ $('iEps').value=TYP[S.typ].eps; }
+  bindePick('pTyp','typ', vorgabenSetzen); bindePick('pRicht','richt', null);
+  ['iEps','iLage','iHSoll','iHIst','iOkt'].forEach(function(id){ $(id).addEventListener('input', rechne); });
 
   // ---- Merktabelle ----------------------------------------------------------------------
   (function(){
     var h='';
     ['A','B','C','D','E'].forEach(function(k){ var T=TYP[k], r=rechneKreis(T.eps,T.eps,T.R*1000,0,-100);
-      h+='<tr><td><b>'+k+'</b></td><td>'+T.eps+'°</td><td>'+T.R.toFixed(1)+' m</td><td><b>'+(r?r.t.toFixed(0):'–')+' mm</b></td><td>'+(r?r.tFull.toFixed(0):'–')+' mm</td></tr>'; });
+      h+='<tr><td><b>'+k+'</b></td><td>'+T.eps+'°</td><td>'+T.R.toFixed(1)+' m</td><td><b>'+(r?cm(r.t):'–')+'</b></td><td>'+(r?cm(r.tFull):'–')+'</td></tr>'; });
     $('tbMerk').innerHTML=h;
   })();
 
   // ---- Rechnung -------------------------------------------------------------------------
-  // Stützenneigung = Pfahlneigung (Konstruktion, MAAG-Plan) – keine Eingabe, vor dem Stellen nicht messbar.
-  // Radius = mittlere Stützenlänge je Typ (S.R nur als Adress-Override zum Prüfen).
+  // Konstruktionskonstanten, keine Eingaben: Stützenneigung = Pfahlneigung (MAAG-Plan, vor dem Stellen nicht messbar),
+  // Radius = mittlere Stützenlänge je Typ, Langloch-Spiel = Serie 2026 (konservativ; 2025er Platten haben mehr).
+  // S.R / S.spiel nur als Adress-Override zum Prüfen.
   function rechne(){
-    var eps=num('iEps'), spiel=num('iSpiel'), beta=eps, Rm=(S.R||TYP[S.typ].R);
+    var eps=num('iEps'), beta=eps, Rm=(S.R||TYP[S.typ].R), spiel=(S.spiel||TYP[S.typ].spiel['2026']);
     var lage=num('iLage'), hSoll=num('iHSoll'), hIst=num('iHIst'), okt=num('iOkt');
     $('stuetzeInfo').innerHTML='<b>Bergstütze:</b> '+(eps!==null?(90-eps).toFixed(0):'–')+'° zur Waagrechten, gleiche Richtung wie der Pfahl (MAAG-Plan) · '
-      +'<b>Radius</b> = mittlere Stützenlänge Typ '+S.typ+' <b>'+Rm.toFixed(1)+' m</b> – für kleine Abweichungen genügt der Mittelwert.';
+      +'<b>Radius</b> = mittlere Stützenlänge Typ '+S.typ+' <b>'+Rm.toFixed(1)+' m</b> · '
+      +'<b>Langloch</b> Fussplatte ±'+(spiel/10).toFixed(1)+' cm längs (Serie 2026).';
     if(eps===null||eps<=0||eps>=90){
       $('out').innerHTML='<div class="res err"><div class="sub">Pfahlneigung zwischen 0 und 90° eingeben.</div></div>'; $('skizzen').innerHTML=''; return; }
-    var e=(lage===null?0:Math.abs(lage))*(S.richt==='berg'?1:-1);
+    var e=(lage===null?0:Math.abs(lage)*10)*(S.richt==='berg'?1:-1);   // Eingabe cm
     var dz=(hSoll!==null&&hIst!==null)?(hIst-hSoll)*1000:null;
     $('skWarum').innerHTML = skQuerschnitt('warum', eps, beta, Rm*1000, 0, 0, null);
 
@@ -333,28 +326,28 @@
 
     var raus=r.t>=0, reichtLangloch=spiel!==null&&r.lam!==null&&Math.abs(r.lam)<=spiel, h='';
     if(Math.abs(r.t)<1){
-      h+='<div class="res ok"><div class="act">Nichts zu tun</div><div class="bigv">0 <small>mm</small></div><div class="sub">Der Kopf liegt auf dem Stützenradius – die Stütze passt mit Nennlänge.</div></div>';
+      h+='<div class="res ok"><div class="act">Nichts zu tun</div><div class="bigv">0 <small>cm</small></div><div class="sub">Der Kopf liegt auf dem Stützenradius – die Stütze passt mit Nennlänge.</div></div>';
     } else if(reichtLangloch){
-      h+='<div class="res ok"><div class="act">Pfahl lassen – Langloch reicht</div><div class="bigv">'+ab(r.lam)+' <small>mm über die Lasche</small></div>'
-        +'<div class="sub">Fussplatte im Langloch um '+ab(r.lam)+' mm '+(r.lam>0?'bergwärts':'talwärts')+' versetzen (Spiel ±'+spiel.toFixed(1)+' mm), dann trifft der Stützenfuss den Radius. '
-        +'Wer es mittig will: '+(raus?'rausziehen':'einschieben')+' um '+ab(r.t)+' mm.</div></div>';
+      h+='<div class="res ok"><div class="act">Pfahl lassen – Langloch reicht</div><div class="bigv">'+(Math.abs(r.lam)/10).toFixed(1)+' <small>cm über die Lasche</small></div>'
+        +'<div class="sub">Fussplatte im Langloch um '+cm(r.lam)+' '+(r.lam>0?'bergwärts':'talwärts')+' versetzen (Spiel ±'+(spiel/10).toFixed(1)+' cm), dann trifft der Stützenfuss den Radius. '
+        +'Wer es mittig will: '+(raus?'rausziehen':'einschieben')+' um '+cm(r.t)+'.</div></div>';
     } else {
-      h+='<div class="res warn"><div class="act">Pfahl '+(raus?'rausziehen':'einschieben (tiefer setzen)')+'</div><div class="bigv">'+ab(r.t)+' <small>mm entlang der Pfahlachse</small></div>'
+      h+='<div class="res warn"><div class="act">Pfahl '+(raus?'rausziehen':'einschieben (tiefer setzen)')+'</div><div class="bigv">'+(Math.abs(r.t)/10).toFixed(1)+' <small>cm entlang der Pfahlachse</small></div>'
         +'<div class="sub">Bis der Kopf auf dem Stützenradius liegt – die Stütze passt dann mit Nennlänge und dreht nur um '+ab(r.delta*180/Math.PI,1)+'°.'
-        +(spiel!==null&&r.lam!==null?' Das Langloch allein reicht nicht ('+ab(r.lam)+' mm gegen ±'+spiel.toFixed(1)+' mm).':'')+'</div></div>';
+        +(spiel!==null&&r.lam!==null?' Das Langloch allein reicht nicht ('+cm(r.lam)+' gegen ±'+(spiel/10).toFixed(1)+' cm).':'')+'</div></div>';
     }
     h+='<div style="margin-top:12px;">';
     var flL=Math.abs(r.H.u)<=TOL_LAGE?'g':'a', flH=Math.abs(r.H.z)<=TOL_HOEHE?'g':'a';
-    h+=zeile('Kopf danach: Lage zum SOLL-Punkt', ab(r.H.u)+' mm '+(r.H.u>0?'bergwärts':'talwärts'), '<span class="flag '+flL+'">'+(flL==='g'?'in ±30 mm':'über ±30 mm')+'</span>');
-    h+=zeile('Kopf danach: Höhe zum SOLL', vz(r.H.z)+' mm', '<span class="flag '+flH+'">'+(flH==='g'?'in ±50 mm':'über ±50 mm')+'</span>');
+    h+=zeile('Kopf danach: Lage zum SOLL-Punkt', cm(r.H.u)+' '+(r.H.u>0?'bergwärts':'talwärts'), '<span class="flag '+flL+'">'+(flL==='g'?'in ±3 cm':'über ±3 cm')+'</span>');
+    h+=zeile('Kopf danach: Höhe zum SOLL', cmv(r.H.z), '<span class="flag '+flH+'">'+(flH==='g'?'in ±5 cm':'über ±5 cm')+'</span>');
     if(hIst!==null) h+=zeile('Kopfhöhe danach', (hIst+(r.t*r.ce)/1000).toFixed(3)+' m', null);
-    h+=zeile('Stütze', 'Nennlänge passt', '<span style="font-size:11.5px;color:#5b6b7c;">dreht um '+ab(r.delta*180/Math.PI,1)+'° · Fuss '+ab(r.bogen)+' mm auf dem Bogen</span>');
-    if(dz!==null&&Math.abs(dz)>=1) h+=zeile('Ohne Radius', ab(r.tFull)+' mm '+(r.tFull>=0?'ziehen':'einschieben'), '<span style="font-size:11.5px;color:#5b6b7c;">bis SOLL-Höhe · Kopf dann '+ab(r.uFull)+' mm '+(r.uFull>0?'bergwärts':'talwärts')+' neben SOLL</span>');
-    if(Math.abs(e)>=1) h+=zeile('Ursache-Gegenprobe', ab(e/Math.tan(rad(eps)))+' mm', '<span style="font-size:11.5px;color:#5b6b7c;">Höhenfehler, der diesen Lageversatz erklärt</span>');
-    if(flL!=='g'||flH!=='g') h+='<div class="warnbox a">Der Kopf liegt nach der Korrektur ausserhalb der ILF-Toleranz (Lage ±30 / Höhe ±50 mm). Die Stütze passt trotzdem – die Abweichung gehört ins Bohrprotokoll und zur Bauleitung.</div>';
+    h+=zeile('Stütze', 'Nennlänge passt', '<span style="font-size:11.5px;color:#5b6b7c;">dreht um '+ab(r.delta*180/Math.PI,1)+'° · Fuss '+cm(r.bogen)+' auf dem Bogen</span>');
+    if(dz!==null&&Math.abs(dz)>=1) h+=zeile('Ohne Radius', cm(r.tFull)+' '+(r.tFull>=0?'ziehen':'einschieben'), '<span style="font-size:11.5px;color:#5b6b7c;">bis SOLL-Höhe · Kopf dann '+cm(r.uFull)+' '+(r.uFull>0?'bergwärts':'talwärts')+' neben SOLL</span>');
+    if(Math.abs(e)>=1) h+=zeile('Ursache-Gegenprobe', cm(e/Math.tan(rad(eps))), '<span style="font-size:11.5px;color:#5b6b7c;">Höhenfehler, der diesen Lageversatz erklärt</span>');
+    if(flL!=='g'||flH!=='g') h+='<div class="warnbox a">Der Kopf liegt nach der Korrektur ausserhalb der ILF-Toleranz (Lage ±3 / Höhe ±5 cm). Die Stütze passt trotzdem – die Abweichung gehört ins Bohrprotokoll und zur Bauleitung.</div>';
     if(okt!==null&&hIst!==null){
       var ueNeu=(hIst+(r.t*r.ce)/1000-okt)*1000, einb=TYP[S.typ].len*1000-ueNeu/r.ce, flU=ueNeu>MAX_UEBER?'r':(ueNeu<0?'a':'g');
-      h+=zeile('Überstand danach', ueNeu.toFixed(0)+' mm', '<span class="flag '+flU+'">'+(flU==='g'?'unter 150 mm':flU==='r'?'über 150 mm':'unter Terrain')+'</span>');
+      h+=zeile('Überstand danach', cm(ueNeu), '<span class="flag '+flU+'">'+(flU==='g'?'unter 15 cm':flU==='r'?'über 15 cm':'unter Terrain')+'</span>');
       h+=zeile('Einbindelänge danach', (einb/1000).toFixed(2)+' m', null);
       if(ueNeu>MAX_UEBER) h+='<div class="warnbox r">Der Überstand der Kopfplatte überschreitet nach dem Rausziehen die 15-cm-Grenze (Typenplan 2026+). So nicht ausführen – mit der Bauleitung klären.</div>';
       else if(ueNeu<0) h+='<div class="warnbox a">Rechnerisch liegt die Kopfplatte dann unter Terrain – Eingaben prüfen (OKT und IST-Höhe am selben Punkt?).</div>';
@@ -445,10 +438,10 @@
     if(mode==='loesung' && r){
       var Hn={u:Hs.u+r.H.u, z:Hs.z+r.H.z};
       s+=profil(X(Hn.u),Y(Hn.z),X(A.u),Y(A.z),9,'#1c8a4a'); s+=C(X(Hn.u),Y(Hn.z),6,'#fff','#1c8a4a');
-      s+=T(14,44,'▶ Pfahl '+(r.t>=0?'rausziehen ':'einschieben ')+ab(r.t)+' mm','#14532d','start',14);
+      s+=T(14,44,'▶ Pfahl '+(r.t>=0?'rausziehen ':'einschieben ')+cm(r.t),'#14532d','start',14);
       s+=T(14,60,'Kopf trifft den Kreis · Stütze behält ihre Länge, dreht '+ab(r.delta*180/Math.PI,1)+'°','#14532d','start',11.5,false);
     } else {
-      s+=T(14,44,'▶ Pfahl sitzt '+(Math.abs(dz)>=1?ab(dz)+' mm '+(dz<0?'zu tief':'zu hoch'):'')+(Math.abs(dz)>=1&&Math.abs(e)>=1?', ':'')+(Math.abs(e)>=1?ab(e)+' mm zu weit '+(e>0?'bergwärts':'talwärts'):''),'#8f1d1d','start',14);
+      s+=T(14,44,'▶ Pfahl sitzt '+(Math.abs(dz)>=1?cm(dz)+' '+(dz<0?'zu tief':'zu hoch'):'')+(Math.abs(dz)>=1&&Math.abs(e)>=1?', ':'')+(Math.abs(e)>=1?cm(e)+' zu weit '+(e>0?'bergwärts':'talwärts'):''),'#8f1d1d','start',14);
       s+=T(14,60,'Achse parallel neben dem SOLL – Stütze passt so nicht','#8f1d1d','start',11.5,false);
     }
     // Lupe oben rechts
@@ -485,13 +478,13 @@
   (function(){
     var q={}; (location.search||'').replace(/^\?/,'').split('&').forEach(function(p){ if(!p) return; var kv=p.split('='); q[decodeURIComponent(kv[0])]=decodeURIComponent(kv[1]||''); });
     if(q.typ && TYP[q.typ.toUpperCase()]) S.typ=q.typ.toUpperCase();
-    if(q.serie==='2025'||q.serie==='2026') S.serie=q.serie;
     if(q.richt==='tal'||q.richt==='berg') S.richt=q.richt;
-    markiere($('pTyp'),S.typ); markiere($('pSerie'),S.serie); markiere($('pRicht'),S.richt);
+    markiere($('pTyp'),S.typ); markiere($('pRicht'),S.richt);
     vorgabenSetzen();
-    var M={eps:'iEps',spiel:'iSpiel',lage:'iLage',hsoll:'iHSoll',hist:'iHIst',okt:'iOkt'};
+    var M={eps:'iEps',lage:'iLage',hsoll:'iHSoll',hist:'iHIst',okt:'iOkt'};
     for(var kk in M){ if(q[kk]!==undefined) $(M[kk]).value=q[kk]; }
     if(q.r && isFinite(parseFloat(q.r)) && parseFloat(q.r)>0) S.R=parseFloat(q.r);
+    if(q.spiel && isFinite(parseFloat(q.spiel)) && parseFloat(q.spiel)>0) S.spiel=parseFloat(q.spiel);
     if(q.okt) $('dOkt').open=true;
   })();
   rechne();
