@@ -4,91 +4,111 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>NalpSolar · Baustellen-Portal</title>
+<!-- Webapp (22.09.2026, Auftrag Victor): das Portal ist aufs Handy installierbar.
+     manifest.json zeigt seit dem Umbau HIERHER (vorher auf den 3D-Viewer, der hat
+     jetzt manifest-3d.json). Icons: Tools\Portal_Icons_Bauen.py. -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#ffffff">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="NalpSolar">
+<link rel="apple-touch-icon" href="assets/img/ico-portal-180.png">
+<link rel="icon" type="image/png" href="assets/img/ico-portal-192.png">
 <!-- Startseite offen (kein Gate) – die einzelnen Reiter fragen ihren Code selbst ab
      (alle Feldreiter: 6460).
-     Design: STRABAG-CI – Weiss, STRABAG-Rot #D72622, Arial (vgl. strabag.com) -->
+     Design: STRABAG-CI – Weiss, STRABAG-Rot #D72622, Arial (vgl. strabag.com).
+     Kacheln: Piktogramme aus assets/img/ico/ (Tools\Website_Piktogramme.py, 20.08./22.09.2026),
+     je Kachel EINE Zeile – nur die Handlung, keine Begründung. -->
+<script src="assets/js/nalp-install.js"></script>
+<script>NalpInstall.start({name:'Baustellen-Portal', icon:'assets/img/ico-portal-192.png'});</script>
 <style>
-  :root { color-scheme: light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8; }
+  :root { color-scheme: light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8; --bg:#eef0f3; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; }
   body {
     min-height: 100vh;
     font-family: Arial, "Helvetica Neue", sans-serif;
     color: var(--ink);
-    background: #4a5a66;
+    background: var(--bg);
     display: flex; flex-direction: column;
-  }
-  /* Nalps-Panorama als Hintergrund der ganzen Seite (fixed-Layer, iOS-tauglich) */
-  body::before {
-    content: ""; position: fixed; inset: 0; z-index: -1;
-    background: url('assets/img/hero.jpg') center 40% / cover no-repeat;
   }
 
   /* ── Kopfleiste ───────────────────────────── */
   .topbar {
     background: #fff;
     border-bottom: 4px solid var(--rot);
-    padding: 12px max(18px, env(safe-area-inset-left));
-    display: flex; align-items: baseline; gap: 14px;
+    padding: 10px max(16px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left));
+    padding-top: calc(10px + env(safe-area-inset-top));
+    display: flex; align-items: center; gap: 12px;
+    position: sticky; top: 0; z-index: 5;
   }
-  .topbar { align-items: center; }
-  .logo img { height: 30px; display: block; }
-  .losnr { font-size: 12.5px; color: var(--mut); font-weight: 700; letter-spacing: .06em; }
+  .logo img { height: 26px; display: block; }
+  .losnr { font-size: 12px; color: var(--mut); font-weight: 700; letter-spacing: .06em; }
 
-  /* ── Titelbereich über dem Panorama ── */
+  /* ── Schmaler Panorama-Streifen mit Titel ── */
   .hero {
-    position: relative;
-    min-height: 30vh;
+    position: relative; height: 128px;
+    background: url('assets/img/hero.jpg') center 40% / cover no-repeat #4a5a66;
   }
-  .hero .shade {
-    position: absolute; inset: 0;
-    background: linear-gradient(180deg, rgba(10,16,24,.02) 30%, rgba(10,16,24,.45) 100%);
-  }
+  .hero .shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,16,24,.05), rgba(10,16,24,.55)); }
   .hero .txt {
-    position: relative; z-index: 1;
-    max-width: 860px; margin: 0 auto;
-    padding: 19vh 20px 20px;
-    color: #fff;
+    position: absolute; left: 0; right: 0; bottom: 0;
+    max-width: 900px; margin: 0 auto; padding: 0 16px 12px; color: #fff;
   }
-  .hero h1 { margin: 0; font-size: clamp(26px, 6vw, 40px); font-weight: 900; text-shadow: 0 2px 14px rgba(0,0,0,.55); }
-  .hero .sub { font-size: 14.5px; opacity: .92; margin-top: 4px; text-shadow: 0 1px 8px rgba(0,0,0,.6); }
+  .hero h1 { margin: 0; font-size: clamp(24px, 6vw, 34px); font-weight: 900; text-shadow: 0 2px 12px rgba(0,0,0,.6); }
+  .hero .sub { font-size: 13.5px; opacity: .95; margin-top: 2px; text-shadow: 0 1px 8px rgba(0,0,0,.6); }
 
   /* ── Kacheln ──────────────────────────────── */
-  .wrap { width: 100%; max-width: 860px; margin: 0 auto; padding: 20px 16px 30px; flex: 1; }
-  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
-  .card {
-    display: flex; flex-direction: column; justify-content: flex-end;
-    min-height: 150px; padding: 16px 18px;
-    background: #fff; border: 1px solid var(--line); border-left: 5px solid var(--rot);
-    border-radius: 6px;
+  .wrap { width: 100%; max-width: 900px; margin: 0 auto; padding: 14px 16px 26px; flex: 1; }
+  .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .k {
+    position: relative; min-width: 0;
+    display: flex; flex-direction: column;
+    min-height: 150px; padding: 14px 14px 13px;
+    background: #fff; border: 1px solid var(--line); border-radius: 10px;
     text-decoration: none; color: var(--ink);
-    box-shadow: 0 1px 4px rgba(20,25,32,.07);
-    transition: transform .13s ease, box-shadow .13s ease;
+    box-shadow: 0 1px 3px rgba(20,25,32,.06);
+    transition: transform .12s ease, box-shadow .12s ease;
   }
-  .card:hover, .card:active {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 22px rgba(20,25,32,.16);
+  .k:hover, .k:active { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(20,25,32,.16); }
+  .k img { width: 54px; height: 54px; display: block; margin-bottom: auto; }
+  .k b { display: block; font-size: 17px; font-weight: 900; margin-top: 12px; line-height: 1.2; }
+  .k b::after { content: " →"; color: var(--rot); }
+  .k small { display: block; font-size: 12.5px; color: var(--mut); margin-top: 3px; line-height: 1.4; }
+  .k .neu {
+    position: absolute; top: 12px; right: 12px;
+    font-size: 10.5px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase;
+    color: #fff; background: var(--rot); border-radius: 999px; padding: 3px 8px;
   }
-  .card .ico { font-size: 38px; line-height: 1; margin-bottom: auto; }
-  .card .ttl { font-size: 19px; font-weight: 900; margin-top: 12px; }
-  .card .ttl::after { content: " →"; color: var(--rot); font-weight: 900; }
-  .card .desc { font-size: 12.5px; color: var(--mut); margin-top: 3px; line-height: 1.45; }
-  .card.breit { grid-column: 1 / -1; min-height: 104px; }
 
-  .wrap { background: linear-gradient(180deg, rgba(242,243,245,.0), rgba(242,243,245,.25)); }
+  /* Sicherheit: eine Zeile quer, Piktogramm links – immer zuoberst */
+  .k.breit { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 14px; min-height: 0; border-left: 6px solid var(--rot); }
+  .k.breit img { margin: 0; width: 50px; height: 50px; flex: none; }
+  .k.breit span { min-width: 0; }
+  .k.breit b { margin-top: 0; }
+
+  /* Spiele: klein und unauffällig ganz unten */
+  .k.klein { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 12px; min-height: 0; padding: 10px 14px; background: transparent; border-color: transparent; box-shadow: none; }
+  .k.klein img { margin: 0; width: 30px; height: 30px; opacity: .8; }
+  .k.klein b { margin-top: 0; font-size: 14px; color: var(--mut); }
+  .k.klein small { display: none; }
+  .k.klein:hover, .k.klein:active { transform: none; box-shadow: none; }
+
   .foot {
     background: #fff; border-top: 1px solid var(--line);
     padding: 14px 18px calc(14px + env(safe-area-inset-bottom));
-    font-size: 11.5px; color: var(--mut); text-align: center; line-height: 1.6;
+    font-size: 11.5px; color: var(--mut); text-align: center; line-height: 1.7;
   }
-  .foot a { color: var(--rot); font-weight: 700; }
+  .foot a { color: var(--rot); font-weight: 700; text-decoration: none; }
+  .foot .sep { margin: 0 6px; color: #b8bcc3; }
 
-  @media (max-width: 520px) {
-    .grid { grid-template-columns: 1fr; gap: 11px; }
-    .card { min-height: 116px; }
-    .hero .txt { padding-top: 16vh; }
+  @media (max-width: 640px) {
+    .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .k { min-height: 138px; padding: 12px 12px 11px; }
+    .k img { width: 48px; height: 48px; }
+    .k b { font-size: 16px; }
+    .hero { height: 104px; }
   }
 </style>
 </head>
@@ -102,139 +122,93 @@
     <div class="shade"></div>
     <div class="txt">
       <h1>Baustellen-Portal</h1>
-      <div class="sub">Hochalpine PV-Anlage Nalps · Was möchtest du öffnen?</div>
+      <div class="sub">Was möchtest du öffnen?</div>
     </div>
   </div>
 
   <div class="wrap">
   <div class="grid">
-    <a class="card breit" href="sicherheit.html">
-      <div class="ico">🦺</div>
-      <div class="ttl">Sicherheit</div>
-      <div class="desc">Notruf &amp; Notfall-Infrastruktur, Sicherheits- &amp; Rettungskonzepte (PSAgA, Notfallkonzepte Berg/Tal), Gefahren- &amp; Massnahmenplanung – DE / EN / IT / PL</div>
+    <a class="k breit" href="sicherheit.html">
+      <img src="assets/img/ico/sicherheit.png" alt="">
+      <span><b>Sicherheit</b>
+      <small>Notruf · Rettung · Konzepte · DE EN IT PL</small></span>
     </a>
 
-    <a class="card" href="karte.html">
-      <div class="ico">🗺️</div>
-      <div class="ttl">Pläne 2D &amp; 3D</div>
-      <div class="desc">Karte mit Tischen, Typen &amp; ID-Suche – auf der Karte umschaltbar zum 3D-Geländemodell</div>
+    <a class="k" href="altlasten.html">
+      <img src="assets/img/ico/altlasten.png" alt="">
+      <span class="neu">Neu</span>
+      <b>Altlasten</b>
+      <small>55 Fremdkörper auf der Karte – entfernen, abhaken, Foto</small>
     </a>
 
-    <a class="card breit" href="verschrauben.html">
-      <div class="ico">⚙️</div>
-      <div class="ttl">Team Verschrauben</div>
-      <div class="desc">Karte mit allen Konstruktionen: fertig Verschraubtes abhaken, Probleme mit Foto
-        direkt als Nalpi-Mangel melden, Stahlbauplan zum Tisch öffnen und Arbeitsanweisungen
-        (z. B. «Stützen anpassen») sehen</div>
+    <a class="k" href="wasserleitung.html">
+      <img src="assets/img/ico/wasserleitung.png" alt="">
+      <b>Wasserleitung PZ4</b>
+      <small>44 Tische zuerst bohren – Karte und Liste</small>
     </a>
 
-    <a class="card" href="stahlbau.html">
-      <div class="ico">🏗️</div>
-      <div class="ttl">Stahlbau</div>
-      <div class="desc">Schrauben &amp; Drehmomente, Montagekonzept, Pläne nach Typ &amp; Baujahr – neu mit dem 🏗️ 3D-Modell der Primärkonstruktion</div>
+    <a class="k" href="vormontage.html">
+      <img src="assets/img/ico/vormontage.png" alt="">
+      <b>Vormontage</b>
+      <small>Etikett fotografieren, Lager, Karte, Einführung</small>
     </a>
 
-    <a class="card" href="schrauben.html">
-      <div class="ico">🔩</div>
-      <div class="ttl">Schrauben je Bereich</div>
-      <div class="desc">Bereich antippen: Karte mit allen Konstruktionen, Typ je Tisch und die Gesamtzahl Schrauben für den Berg – zum Vorbereiten des Anhängers</div>
+    <a class="k" href="stahlbau.html">
+      <img src="assets/img/ico/stahlbau.png" alt="">
+      <b>Stahlbau</b>
+      <small>Schrauben &amp; Drehmomente, Pläne, 3D-Modell je Typ</small>
     </a>
 
-    <a class="card" href="vormontage.html">
-      <div class="ico">🔧</div>
-      <div class="ttl">Vormontage</div>
-      <div class="desc">Stützen-Etikett fotografieren, Fortschritt melden, Auftrag &amp; Tabellen – inkl. 📘 Einführung für neue Mitarbeitende</div>
+    <a class="k" href="einkauf.html">
+      <img src="assets/img/ico/einkauf.png" alt="">
+      <b>Einkauf</b>
+      <small>Fehlt etwas? Mit Foto melden – Stand in der Liste</small>
     </a>
 
-    <a class="card" href="wasserleitung.html">
-      <div class="ico">💧</div>
-      <div class="ttl">Wasserleitung PZ4</div>
-      <div class="desc">Baustellenanweisung 03.09.2026: 44 Tische im Bereich der Wasserleitungen Alphütte/KVR zuerst bohren – was zu tun ist, Karte 2D &amp; 3D, Liste</div>
+    <a class="k" href="logistik.html">
+      <img src="assets/img/ico/transporte.png" alt="">
+      <b>Transporte</b>
+      <small>Fuhre bei Schuoler bestellen – was, wohin, bis wann</small>
     </a>
 
-    <a class="card" href="altlasten.html">
-      <div class="ico">🧹</div>
-      <div class="ttl">Altlasten</div>
-      <div class="desc">Prio-Liste des Bauherrn: 55 Fremdkörper (Rohre, Eisenstangen, Seile, Beton) auf der Karte mit Foto und Massnahme – erledigt abhaken, Foto und Rückmeldung senden</div>
+    <a class="k" href="karte.html">
+      <img src="assets/img/ico/karte.png" alt="">
+      <b>Pläne 2D &amp; 3D</b>
+      <small>Karte mit Tischen und ID-Suche, 3D-Gelände</small>
     </a>
 
-    <!-- Kachel abgeschaltet 28.08.2026 (Auftrag Victor) - die Seite bleibt liegen,
-         zum Wiedereinschalten einfach diese Klammer entfernen.
-    <a class="card" href="pfahlkopf.html">
-      <div class="ico">🔩</div>
-      <div class="ttl">Pfahlköpfe &amp; Gewinde</div>
-      <div class="desc">Je Pfahl (S1–S4): Kopf montiert? Gewinde 5 / 6.35 mm? Dazu Lagerorte auf der Karte &amp; Typen-Masse zum Bestimmen</div>
+    <a class="k klein" href="game.html">
+      <img src="assets/img/ico/spiele.png" alt="">
+      <b>Spiele</b>
+      <small>Birkhuhn-Jagd &amp; Creeper-Nacht</small>
     </a>
+
+    <!-- Sechs Kacheln abgeschaltet 22.09.2026 (Auftrag Victor: «weg können») – die Seiten
+         bleiben liegen und sind per Adresse weiter erreichbar (lieferscheine.html/ls.html
+         hängen an den QR-Aushängen und der Lieferschein-Sammelmail). Zum Wiedereinschalten
+         die Kachel aus dieser Klammer herausnehmen.
+    <a class="k" href="verschrauben.html">  <img src="assets/img/ico/verschrauben.png" alt=""><b>Team Verschrauben</b><small>Fertig Verschraubtes abhaken, Probleme mit Foto melden</small></a>
+    <a class="k" href="schrauben.html">     <img src="assets/img/ico/schrauben.png" alt=""><b>Schrauben je Bereich</b><small>Gesamtzahl Schrauben je Bereich – für den Anhänger</small></a>
+    <a class="k" href="lieferscheine.html"> <img src="assets/img/ico/lieferschein.png" alt=""><b>Lieferscheine &amp; Unterweisungen</b><small>Papierbelege abfotografieren und ablegen</small></a>
+    <a class="k" href="5w-programm.html">   <img src="assets/img/ico/programm.png" alt=""><b>5W-Programm</b><small>KW 36–40 als PDF/Excel und Animation</small></a>
+    <a class="k" href="bauprogramm.html">   <img src="assets/img/ico/animation.png" alt=""><b>Bauprogramm-Animation</b><small>Woche für Woche auf der Karte (Stand 03.08.2026)</small></a>
+    <a class="k" href="betonspur.html">     <img src="assets/img/ico/betonspur.png" alt=""><b>Betonspurfertiger</b><small>Zeichnung, Bemessung, Vorbildfotos Rehetobel</small></a>
     -->
 
-    <!-- Kachel abgeschaltet 28.08.2026 (Auftrag Victor) - die Seite bleibt liegen,
-         zum Wiedereinschalten einfach diese Klammer entfernen.
-    <a class="card" href="pfahlueberstand.html">
-      <div class="ico">📏</div>
-      <div class="ttl">Pfahlüberstand</div>
-      <div class="desc">Welche Pfähle stehen mehr als 15 cm über dem Urgelände und müssen eingedeckt werden – Karte und Arbeitsliste nach Bereich</div>
-    </a>
+    <!-- Kacheln abgeschaltet 28.08.2026 (Auftrag Victor) – Seiten bleiben liegen.
+    <a class="k" href="pfahlkopf.html">      <img src="assets/img/ico/pfahlkopf.png" alt=""><b>Pfahlköpfe &amp; Gewinde</b><small>Je Pfahl: Kopf montiert? Gewinde 5 / 6.35 mm?</small></a>
+    <a class="k" href="pfahlueberstand.html"><img src="assets/img/ico/ueberstand.png" alt=""><b>Pfahlüberstand</b><small>Pfähle über 15 cm über Urgelände – eindecken</small></a>
+    <a class="k" href="skizze.html">         <img src="assets/img/ico/skizze.png" alt=""><b>Skizzenblock</b><small>Zeichnen, bemassen, auf Fotos annotieren</small></a>
     -->
-
-    <a class="card" href="logistik.html">
-      <div class="ico">🚚</div>
-      <div class="ttl">Transporte bestellen</div>
-      <div class="desc">Fuhre bei Schuoler bestellen &ndash; was, von wo nach wo, bis wann. Der Auftrag ist der Beleg, wann bestellt wurde</div>
-    </a>
-
-    <a class="card" href="lieferscheine.html">
-      <div class="ico">📄</div>
-      <div class="ttl">Lieferscheine &amp; Unterweisungen</div>
-      <div class="desc">Papierbelege abfotografieren und ablegen – mehrseitig, mit Prüf-Workflow und CSV-Export</div>
-    </a>
-
-    <a class="card breit" href="einkauf.html">
-      <div class="ico">🛒</div>
-      <div class="ttl">Einkauf</div>
-      <div class="desc">Werkzeug oder Material, das fehlt, direkt melden – mit Foto, deinem Namen
-        und wofür du es brauchst. In der Liste siehst du, was die Bauleitung daraus gemacht hat
-        (gesehen / bestellt / geliefert)</div>
-    </a>
-
-    <a class="card" href="5w-programm.html">
-      <div class="ico">🗓️</div>
-      <div class="ttl">5W-Programm</div>
-      <div class="desc">KW 36–40: Programm als PDF/Excel – und die Animation, wo in welcher Woche gebohrt, montiert und verschraubt wird</div>
-    </a>
-
-    <a class="card" href="bauprogramm.html">
-      <div class="ico">🎬</div>
-      <div class="ttl">Bauprogramm-Animation</div>
-      <div class="desc">Gesamtbauprogramm 2026+ Woche für Woche auf der Karte: wo wird gebohrt, wo läuft der Stahlbau (Stand 03.08.2026)</div>
-    </a>
-
-    <a class="card breit" href="betonspur.html">
-      <div class="ico">🛤️</div>
-      <div class="ttl">Betonspurfertiger</div>
-      <div class="desc">Betonspur 3.00 m × 16 cm für die Piste: Zeichnung, Bemessung und die drei Stellen, an denen so ein Schlitten bricht – dazu die Vorbildfotos aus Rehetobel</div>
-    </a>
-
-    <!-- Kachel abgeschaltet 28.08.2026 (Auftrag Victor) - die Seite bleibt liegen,
-         zum Wiedereinschalten einfach diese Klammer entfernen.
-    <a class="card breit" href="skizze.html">
-      <div class="ico">✏️</div>
-      <div class="ttl">Skizzenblock</div>
-      <div class="desc">Selber zeichnen und bemassen – auf leerem Blatt, auf Raster oder direkt auf einem Foto. Als Bild speichern, drucken oder auf dem Server ablegen (am Handy zeichnen, am PC drucken)</div>
-    </a>
-    -->
-
-    <a class="card breit" href="game.html">
-      <div class="ico">🎮</div>
-      <div class="ttl">Spiele</div>
-      <div class="desc">Birkhuhn-Jagd &amp; Creeper-Nacht im 3D-Gelände</div>
-    </a>
   </div>
   </div>
 
   <div class="foot">
     Interner Baustellen-Zugang · Victor Malt, STRABAG B8-13<br>
-    Code ändern/abmelden: <a href="#" onclick="try{localStorage.removeItem('nalp_portal_unlock_v1');localStorage.removeItem('nalp_logistik_unlock_v1');}catch(e){};alert('Abgemeldet – die Reiter fragen den Code wieder ab.');return false">Abmelden</a>
-    <div style="margin-top:6px"><a href="admin.html" style="color:#b8bcc3;font-weight:400;font-size:10px;text-decoration:none">admin</a></div>
+    <a href="#" onclick="NalpInstall.manuell({name:'Baustellen-Portal', icon:'assets/img/ico-portal-192.png'});return false">Als App aufs Handy</a>
+    <span class="sep">·</span>
+    <a href="#" onclick="try{localStorage.removeItem('nalp_portal_unlock_v1');localStorage.removeItem('nalp_logistik_unlock_v1');}catch(e){};alert('Abgemeldet – die Reiter fragen den Code wieder ab.');return false">Abmelden</a>
+    <div style="margin-top:4px"><a href="admin.html" style="color:#b8bcc3;font-weight:400;font-size:10px">admin</a></div>
   </div>
 
   <script>

@@ -41,6 +41,7 @@
 
   var ereignis = null;           // das aufgehobene beforeinstallprompt
   var gezeigt = false;
+  var erzwungen = false;         // true = von Hand ausgeloest (manuell())
   var opt = {};
 
   // Das Ereignis kommt frueh - der Listener muss stehen, bevor irgendetwas
@@ -82,7 +83,9 @@
   }
 
   function darfFragen() {
-    if (gezeigt || alsAppOffen()) return false;
+    if (alsAppOffen()) return false;
+    if (erzwungen) return true;                  // Link im Fuss: der Nutzer will es
+    if (gezeigt) return false;
     var s = stand();
     if (s.nie) return false;
     if ((s.mal || 0) >= MAX_ABLEHNUNGEN) return false;
@@ -107,6 +110,9 @@
     gezeigt = true;
     var ios = apple();
     var name = opt.name || 'Diese Seite';
+    // Android ohne aufgehobenes Ereignis (nur beim Aufruf von Hand moeglich):
+    // Chrome bietet es dann nur ueber sein eigenes Menue an.
+    var ohneEreignis = !ios && !ereignis;
 
     var css = document.createElement('style');
     css.textContent =
@@ -139,12 +145,16 @@
         ? 'Unten auf das Teilen-Symbol tippen (Pfeil aus dem Kasten), dann ' +
           '<b>«Zum Home-Bildschirm»</b>. Danach startet ' + name + ' mit einem Tipp – ' +
           'ohne Browser, ohne Code.'
+        : ohneEreignis
+        ? 'Oben rechts im Browser-Menü (⋮) auf <b>«App installieren»</b> oder ' +
+          '<b>«Zum Startbildschirm hinzufügen»</b> tippen. Steht das nicht da, ' +
+          'ist ' + name + ' schon installiert.'
         : 'Als App auf dem Startbildschirm: ein Tipp und die Liste ist da – ' +
           'ohne Browser, ohne Code, auch bei schlechtem Empfang.') +
       '</div>' +
       '<div class="ni-akt">' +
-        (ios ? '' : '<button class="ni-ja" id="niJa">Installieren</button>') +
-        '<button id="niSpaeter">' + (ios ? 'Verstanden' : 'Später') + '</button>' +
+        ((ios || ohneEreignis) ? '' : '<button class="ni-ja" id="niJa">Installieren</button>') +
+        '<button id="niSpaeter">' + ((ios || ohneEreignis) ? 'Verstanden' : 'Später') + '</button>' +
       '</div>';
     document.body.appendChild(box);
 
@@ -190,5 +200,16 @@
     else los();
   }
 
-  global.NalpInstall = { start: start, zeigen: zeigen, weg: weg };
+  // Von Hand ausgeloest - Link «Als App installieren» im Fuss der Startseite
+  // (22.09.2026). Die Nicht-nerven-Regeln gelten hier nicht: wer den Link
+  // antippt, will es. Ein «Später» hier zaehlt trotzdem als Ablehnung.
+  function manuell(einstellungen) {
+    if (einstellungen) { for (var k in einstellungen) opt[k] = einstellungen[k]; }
+    if (alsAppOffen()) { global.alert(((opt.name || 'Die Seite') + ' läuft schon als App.')); return; }
+    weg();
+    erzwungen = true;
+    try { zeigen(); } finally { erzwungen = false; }
+  }
+
+  global.NalpInstall = { start: start, zeigen: zeigen, weg: weg, manuell: manuell };
 })(window);

@@ -1,7 +1,23 @@
 'use strict';
-var CACHE = 'nalpsolar-v182';
+var CACHE = 'nalpsolar-v183';
 var PRECACHE = [
   './index.html',
+  // Webapp-Manifest + Icons des Portals (22.09.2026, Tools\Portal_Icons_Bauen.py) und die
+  // Kachel-Piktogramme der Startseite (Tools\Website_Piktogramme.py)
+  './manifest.json',
+  './assets/img/ico-portal-192.png',
+  './assets/img/ico-portal-512.png',
+  './assets/img/ico-portal-maskable-512.png',
+  './assets/img/ico-portal-180.png',
+  './assets/img/ico/sicherheit.png',
+  './assets/img/ico/altlasten.png',
+  './assets/img/ico/wasserleitung.png',
+  './assets/img/ico/vormontage.png',
+  './assets/img/ico/stahlbau.png',
+  './assets/img/ico/einkauf.png',
+  './assets/img/ico/transporte.png',
+  './assets/img/ico/karte.png',
+  './assets/img/ico/spiele.png',
   './protokoll.html',
   './assets/js/nalp-protokoll.js',
   './assets/js/nalp-scan-parse.js',
@@ -96,17 +112,17 @@ var PRECACHE = [
   './pk-modell.html',
   './uploads/road.json',
   './uploads/bauablauf.json',
-  './bauprogramm.html',
-  './5w-programm.html',
-  './uploads/5w.json',
-  './uploads/bauprogramm_gantt.json',
+  // './bauprogramm.html',   Kachel abgeschaltet 22.09.2026 (Auftrag Victor)
+  // './5w-programm.html',   Kachel abgeschaltet 22.09.2026 (Auftrag Victor)
+  // './uploads/5w.json',   Kachel abgeschaltet 22.09.2026 (Auftrag Victor)
+  // './uploads/bauprogramm_gantt.json',   Kachel abgeschaltet 22.09.2026 (Auftrag Victor)
   './game.html',
   './manifest-game.json',
   // Betonspurfertiger (14.08.2026): Seite offline halten, die PDFs bewusst NICHT
   // vorladen (1.4 MB) - die holt man sich im Tal ueber WLAN
-  './betonspur.html',
+  // './betonspur.html',   Kachel abgeschaltet 22.09.2026 (Auftrag Victor)
   // 3D-Modell (18.08.2026): Seite offline halten, die STL (131 KB) laedt sie selbst nach
-  './betonspur-3d.html',
+  // './betonspur-3d.html',   Kachel abgeschaltet 22.09.2026 (Auftrag Victor)
   // Skizzenblock (17.08.2026): Zeichnen muss auch ohne Empfang gehen; der Stand
   // liegt im localStorage, Speichern auf dem Server braucht dann Netz.
   // './skizze.html',   abgeschaltet 28.08.2026 (Auftrag Victor)
@@ -119,7 +135,7 @@ var PRECACHE = [
   './uploads/stoerungen/stoerungen.json',
   // Team Verschrauben (18.08.2026): muss am Berg ohne Empfang laufen -
   // Abhaken und Mangelmeldung wandern dann in die Warteschlange.
-  './verschrauben.html',
+  // './verschrauben.html',   Kachel abgeschaltet 22.09.2026 (Auftrag Victor)
   './uploads/pfaehle.json',
   './uploads/tables/bereiche.json',
   // Einkauf (26.08.2026): Bedarf melden muss am Berg ohne Empfang gehen -
