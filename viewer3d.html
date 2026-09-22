@@ -95,6 +95,16 @@ html, body { width:100%; height:100%; overflow:hidden; background:#0d1117;
 .lbl-gps { background:rgba(33,150,243,.9); border-color:#2196F3; font-size:11px; }
 .lbl-stahl { background:rgba(255,138,61,.92); border-color:#ff8a3d; color:#111; font-size:10.5px; font-weight:800; }
 .lbl-menzi { background:rgba(30,30,34,.88); border-color:#f2b705; color:#ffe89a; font-size:10.5px; font-weight:800; }
+/* Altlasten (#altlasten, altlasten.html): nummerierte Marker, Farbe = Prio bzw. Zustand */
+.altmk { width:30px; height:30px; border-radius:50%; border:2px solid #fff; color:#fff; font:900 12px Arial;
+  display:flex; align-items:center; justify-content:center; box-shadow:0 1px 5px rgba(0,0,0,.65);
+  pointer-events:auto; cursor:pointer; position:relative; user-select:none; }
+.altmk.p1 { background:#D72622; } .altmk.p2 { background:#e08a00; } .altmk.p3 { background:#8a8e94; }
+.altmk.ok { background:#1e9e5a; } .altmk.pr { background:#8e24aa; }
+.altmk.ok::after, .altmk.pr::after { content:'✓'; position:absolute; right:-7px; top:-8px; width:15px; height:15px;
+  border-radius:50%; background:#fff; color:#1e9e5a; font-size:11px; line-height:15px; text-align:center;
+  box-shadow:0 0 0 1px rgba(0,0,0,.25); }
+.altmk.pr::after { content:'!'; color:#8e24aa; font-weight:900; }
 .lbl-menzi.rot { border-color:#d8232a; color:#ffb3b6; }
 .lbl-stahl.pk { background:rgba(11,95,255,.92); border-color:#0b5fff; color:#fff; }
 .lbl-tisch { background:rgba(255,220,0,.85); color:#111; border-color:#ffd700; font-size:9px; padding:1px 4px;
@@ -2003,6 +2013,93 @@ async function ladeWasserleitung(){
   controls.update(); flyDone=true;
   try{ flashMsg('💧 Wasserleitung PZ4: '+j.tische.length+' Tische zuerst bohren (BA 0274 A1)'); }catch(e){}
 }
+
+
+// Altlasten (Prio-Liste Fremdkörper Axpo/Kathriner 04.09.2026, Aufnahme 14.11.2025):
+// viewer3d.html#altlasten – Seite: altlasten.html (iframe). Die 55 Punkte liegen bis 3 km südlich
+// des Bauperimeters, darum ein eigenes grosses Gelände (uploads/altlasten/gelaende.json, 16-m-Raster,
+// + luftbild.jpg gecacht) mit Loch über dem normalen Terrain (±EXTENT), damit nichts flimmert.
+// Marker = CSS2D-Label (antippbar) + Stange. Zustand/Sichtbarkeit/Hinfliegen kommen per postMessage
+// von altlasten.html; ein Tipp geht als {typ:'altlast', nr} zurück. Doku: WERKZEUGE.md §61.
+var altGroup=null, altMarker={}, altPending=null, altDaten=null;
+var ALT_FARBE={p1:0xD72622, p2:0xe08a00, p3:0x8a8e94, ok:0x1e9e5a, pr:0x8e24aa};
+async function ladeAltlasten(){
+  var rg=await fetch('uploads/altlasten/gelaende.json',{cache:'no-store'});
+  var altMesh=null;
+  if(rg.ok){
+    var g=await rg.json(), C=g.cols, R=g.rows, st=g.step;
+    var pos=new Float32Array(C*R*3), uv=new Float32Array(C*R*2), h=g.heights, last=OZ;
+    for(var r=0;r<R;r++) for(var c=0;c<C;c++){
+      var i=r*C+c, hv=(h[i]==null)?last:h[i]; last=hv;
+      pos[i*3]=(g.e0+c*st)-OE; pos[i*3+1]=hv-OZ; pos[i*3+2]=-((g.n0+r*st)-ON);
+      uv[i*2]=c/(C-1); uv[i*2+1]=r/(R-1);            // Zeile 0 = Süden = Bildunterkante
+    }
+    var idx=[], lim=EXTENT-st;                          // Loch: Zellen ganz im normalen Terrain weglassen
+    for(var r2=0;r2<R-1;r2++) for(var c2=0;c2<C-1;c2++){
+      var a=r2*C+c2, b=a+1, d=(r2+1)*C+c2, e=d+1;
+      var x0=pos[a*3], x1=pos[b*3], z0=pos[a*3+2], z1=pos[d*3+2];
+      if(Math.max(Math.abs(x0),Math.abs(x1))<lim && Math.max(Math.abs(z0),Math.abs(z1))<lim) continue;
+      idx.push(a,b,d, b,e,d);
+    }
+    var geom=new THREE.BufferGeometry();
+    geom.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    geom.setAttribute('uv',new THREE.BufferAttribute(uv,2));
+    geom.setIndex(idx); geom.computeVertexNormals();
+    var mat=new THREE.MeshPhongMaterial({color:0x8fb58f, specular:0x223322, shininess:4, side:THREE.DoubleSide});
+    altMesh=new THREE.Mesh(geom,mat); altMesh.renderOrder=5; altMesh.name='altlasten_gelaende';
+    scene.add(altMesh);
+    var ld=new THREE.TextureLoader(); ld.load('uploads/altlasten/luftbild.jpg',function(tex){
+      tex.wrapS=tex.wrapT=THREE.ClampToEdgeWrapping; tex.encoding=THREE.sRGBEncoding; tex.anisotropy=4;
+      mat.map=tex; mat.color.set(0xffffff); mat.needsUpdate=true; });
+  }
+  var r=await fetch('uploads/altlasten.json',{cache:'no-store'}); if(!r.ok) return;
+  var j=await r.json(); altDaten=j;
+  altGroup=new THREE.Group(); altGroup.renderOrder=7;
+  var down=new THREE.Vector3(0,-1,0), boden=[]; if(terrainMesh) boden.push(terrainMesh); if(altMesh) boden.push(altMesh);
+  var stGeom=new THREE.CylinderGeometry(0.22,0.22,5,8), mitte=new THREE.Vector3(), n=0;
+  j.punkte.forEach(function(p){
+    var x=p.E-OE, z=-(p.N-ON), y=(p.Z||OZ)-OZ;
+    var ray=new THREE.Raycaster(new THREE.Vector3(x,1500,z),down), hits=boden.length?ray.intersectObjects(boden,false):[];   // 1500 = 3450 m ü. M., über jedem Gipfel im Raster
+    if(hits.length) y=hits[0].point.y;              // erster Treffer = höchstes Gelände unter dem Strahl
+    var k='p'+p.prio;
+    var stange=new THREE.Mesh(stGeom,new THREE.MeshPhongMaterial({color:ALT_FARBE[k]||0x8a8e94, emissive:0x101010}));
+    stange.position.set(x,y+2.5,z); altGroup.add(stange);
+    var wrap=document.createElement('div'), div=document.createElement('div');
+    div.className='altmk '+k; div.textContent=p.nr; div.title='Nr. '+p.nr+' '+p.typ;
+    div.addEventListener('click',function(ev){ ev.stopPropagation(); altlastTipp(p.nr); });
+    wrap.appendChild(div);
+    var lbl=new THREE.CSS2DObject(wrap); lbl.position.set(x,y+5.6,z); altGroup.add(lbl);
+    altMarker[p.nr]={div:div, stange:stange, lbl:lbl, pos:new THREE.Vector3(x,y,z), p:p};
+    mitte.add(altMarker[p.nr].pos); n++;
+  });
+  scene.add(altGroup);
+  if(n){ mitte.multiplyScalar(1/n); controls.target.copy(mitte); camera.position.set(mitte.x+300, mitte.y+2300, mitte.z+2100); controls.update(); }
+  flyDone=true;
+  if(altPending){ altlastenZustand(altPending.z, altPending.sichtbar); altPending=null; }
+  try{ flashMsg('🧹 Altlasten: '+n+' Punkte – antippen für Foto und Rückmeldung'); }catch(e){}
+  try{ if(window.parent && window.parent!==window) window.parent.postMessage({typ:'altlasten_bereit', anzahl:n},'*'); }catch(e){}
+}
+function altlastTipp(nr){
+  try{ if(window.parent && window.parent!==window){ window.parent.postMessage({typ:'altlast', nr:nr},'*'); return; } }catch(e){}
+  var m=altMarker[nr]; if(m) flashMsg('Nr. '+nr+' · '+m.p.typ+' · Prio '+m.p.prio+(m.p.kommentar?' – '+m.p.kommentar:''));
+}
+function altlastenZustand(z,sichtbar){
+  if(!altGroup){ altPending={z:z,sichtbar:sichtbar}; return; }
+  Object.keys(altMarker).forEach(function(nr){
+    var m=altMarker[nr], k=(z&&z[nr])||('p'+m.p.prio);
+    m.div.className='altmk '+k; m.stange.material.color.set(ALT_FARBE[k]||0x8a8e94);
+    var v=!sichtbar || sichtbar[nr]!==false; m.lbl.visible=v; m.stange.visible=v;
+  });
+}
+function altlastenFliegen(nr){
+  var m=altMarker[nr]; if(!m) return;
+  controls.target.copy(m.pos); camera.position.set(m.pos.x+55, m.pos.y+45, m.pos.z+55); controls.update();
+}
+window.addEventListener('message',function(ev){
+  var d=ev.data||{}; if(typeof d!=='object'||!d.typ) return;
+  if(d.typ==='altlasten_zustand') altlastenZustand(d.z||{}, d.sichtbar||null);
+  else if(d.typ==='altlasten_fliegen') altlastenFliegen(d.nr);
+});
 
 window.searchTisch=function(){
   var inp=document.getElementById('tischSearch');
@@ -6339,6 +6436,9 @@ async function init(){
       // viewer3d.html#wasserleitung = die 44 priorisierten Tische PZ4 (BA 0274 A1) violett + hinfliegen
       if(/wasserleitung/i.test(location.hash))
         setTimeout(function(){ ladeWasserleitung().catch(function(e){ console.warn('Wasserleitung',e); }); }, 700);
+      // viewer3d.html#altlasten = Prio-Liste Fremdkörper mit grossem Gelände (altlasten.html)
+      if(/altlasten/i.test(location.hash))
+        setTimeout(function(){ ladeAltlasten().catch(function(e){ console.warn('Altlasten',e); }); }, 700);
       // viewer3d.html#alpstrasse = Strassenmodell gleich einschalten
       if(/alpstrasse|alpstrase|d1/i.test(location.hash))
         setTimeout(function(){ try{ toggleAlpstrasse(); }catch(e){} }, 600);

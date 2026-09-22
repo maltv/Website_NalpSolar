@@ -12,12 +12,13 @@
   window.NALP_GATE_SUB   = 'Code eingeben / Enter code / Wpisz kod';
 </script>
 <script src="assets/js/nalp-gate.js"></script>
-<link rel="stylesheet" href="assets/js/leaflet/leaflet.css">
 <style>
   /* Reiter «Altlasten» – Prio-Liste Fremdkörper (Axpo/Kathriner 04.09.2026, Aufnahme happyrtk 14.11.2025).
      Punkte: uploads/altlasten.json (Tools\Altlasten_Bauen.py, WERKZEUGE.md §61).
      Rückmeldungen: RTDB erfassung/altlasten_rueck/<nr>/<key>, Fotos getrennt in erfassung/altlasten_fotos/<fid>
-     (wie einkauf.html – die Liste lädt nur die Sätze, Fotos erst beim Antippen). Optik wie wasserleitung.html. */
+     (wie einkauf.html – die Liste lädt nur die Sätze, Fotos erst beim Antippen). Optik wie wasserleitung.html.
+     Karte NUR 3D (Victor 22.09.2026): iframe viewer3d.html#altlasten, Marker/Zustand/Hinfliegen per postMessage –
+     der Viewer lädt dafür ein eigenes grosses Gelände (uploads/altlasten/gelaende.json + luftbild.jpg). */
   :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
          --gruen:#1e9e5a; --blau:#1565c0; --orange:#e08a00; --lila:#8e24aa; --grau:#8a8e94; }
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -52,22 +53,10 @@
   .btn.gr{ background:var(--gruen); }
   .btn[disabled]{ opacity:.45; cursor:default; }
   .btnrow{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
-  /* ── Karte ── */
-  #map2d{ height:calc(100vh - 250px); min-height:380px; border-radius:6px; border:1px solid var(--line); background:#d9dde3; }
-  .gps{ position:absolute; right:10px; top:10px; z-index:900; }
+  /* ── Karte (3D-Viewer im iframe) ── */
+  #k3dFrame{ width:100%; height:calc(100vh - 250px); min-height:380px; border:1px solid var(--line); border-radius:6px; background:#111; display:block; }
   .legende{ display:flex; flex-wrap:wrap; gap:10px 14px; font-size:12px; color:var(--mut); margin:8px 0 0; align-items:center; }
   .legende i{ display:inline-block; width:16px; height:16px; border-radius:50%; vertical-align:-3px; margin-right:4px; border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.25); }
-  .leaflet-container{ font-family:inherit; }
-  .mk{ width:28px; height:28px; border-radius:50%; border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.5);
-       color:#fff; font-weight:900; font-size:12px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
-  .mk.p1{ background:var(--rot); } .mk.p2{ background:var(--orange); } .mk.p3{ background:var(--grau); }
-  .mk.ok{ background:var(--gruen); } .mk.pr{ background:var(--lila); }
-  .mk.ok::after{ content:'✓'; position:absolute; right:-6px; top:-7px; background:#fff; color:var(--gruen); border-radius:50%;
-       width:15px; height:15px; font-size:11px; line-height:15px; text-align:center; box-shadow:0 0 0 1px rgba(0,0,0,.2); }
-  .mk.pr::after{ content:'!'; position:absolute; right:-6px; top:-7px; background:#fff; color:var(--lila); border-radius:50%;
-       width:15px; height:15px; font-size:11px; line-height:15px; text-align:center; font-weight:900; box-shadow:0 0 0 1px rgba(0,0,0,.2); }
-  .leaflet-marker-icon{ position:absolute; overflow:visible; }
-  .leaflet-marker-icon .mk{ position:relative; }
   .schalter{ display:flex; gap:6px; flex-wrap:wrap; margin:0 0 8px; }
   .schalter button{ border:1px solid var(--line); background:#fff; cursor:pointer; font:700 12px Arial; color:var(--mut);
         padding:7px 12px; border-radius:14px; white-space:nowrap; }
@@ -153,27 +142,25 @@
 </header>
 
 <div class="tabs">
-  <button class="on" data-t="k2d" onclick="tab('k2d')">🗺 Karte</button>
+  <button class="on" data-t="k3d" onclick="tab('k3d')">🏔 Karte 3D</button>
   <button data-t="liste" onclick="tab('liste')">📋 Liste<span class="zahl" id="zOffen">–</span></button>
   <button data-t="info" onclick="tab('info')">ℹ️ Info</button>
 </div>
 
 <main>
   <!-- ================= KARTE ================= -->
-  <section id="t-k2d">
+  <section id="t-k3d">
     <div class="schalter" id="schalterK"></div>
-    <div style="position:relative">
-      <div id="map2d"></div>
-      <button class="btn w gps" onclick="gps()" title="Mein Standort">📍</button>
-    </div>
+    <iframe id="k3dFrame" title="3D-Gelände mit den Altlasten" allow="fullscreen; geolocation"></iframe>
     <div class="legende">
       <span><i style="background:#D72622"></i>Prio 1 – entfernen</span>
       <span><i style="background:#e08a00"></i>Prio 2 – wenn im Budget</span>
       <span><i style="background:#8a8e94"></i>Prio 3 – belassen</span>
       <span><i style="background:#1e9e5a"></i>erledigt</span>
       <span><i style="background:#8e24aa"></i>Problem gemeldet</span>
-      <span>Punkt antippen = Foto, Massnahme, Rückmeldung</span>
+      <span>Nummer antippen = Foto, Massnahme, Rückmeldung · 📍 im Viewer = mein Standort</span>
     </div>
+    <div class="btnrow"><a class="btn w" href="viewer3d.html#altlasten" target="_blank">🏔 3D in eigenem Fenster öffnen</a></div>
   </section>
 
   <!-- ================= LISTE ================= -->
@@ -252,7 +239,6 @@
   </div>
 </div>
 
-<script src="assets/js/leaflet/leaflet.js"></script>
 <script>
 (function(){
   'use strict';
@@ -264,7 +250,8 @@
   var ST={ erledigt:{t:'Erledigt',k:'ok',sym:'✅'}, problem:{t:'Problem',k:'pr',sym:'⚠️'},
            notiz:{t:'Notiz',k:'no',sym:'💬'}, offen:{t:'wieder offen',k:'no',sym:'↩'} };
 
-  var daten=null, P={}, R={}, map=null, MK={}, gpsMarker=null, aktiv=null, fotos=[], stat='erledigt';
+  var daten=null, P={}, R={}, aktiv=null, fotos=[], stat='erledigt';
+  var frame=null, frameBereit=false, fliegenWartet=null;
   var filtK='offen', filtL='alle';
 
   function $(id){ return document.getElementById(id); }
@@ -278,9 +265,9 @@
   /* ── Reiter ── */
   window.tab=function(t){
     document.querySelectorAll('.tabs button').forEach(function(b){ b.classList.toggle('on', b.dataset.t===t); });
-    ['k2d','liste','info'].forEach(function(k){ $('t-'+k).hidden=(k!==t); });
+    ['k3d','liste','info'].forEach(function(k){ $('t-'+k).hidden=(k!==t); });
     try{ history.replaceState(null,'','#'+t); }catch(e){}
-    if(t==='k2d'){ mapBauen(); setTimeout(function(){ if(map) map.invalidateSize(); },50); }
+    if(t==='k3d') frameBauen();
     if(t==='liste') listeBauen();
   };
 
@@ -328,58 +315,33 @@
     Array.prototype.forEach.call($(id).querySelectorAll('button'),function(b){ b.onclick=function(){ cb(b.dataset.f); }; });
   }
 
-  /* ── Karte ── */
-  function mapBauen(){
-    if(map || typeof L==='undefined') return;
-    map=L.map('map2d',{ zoomSnap:0.25, maxZoom:22, attributionControl:true });
-    map.attributionControl.setPrefix('');
-    L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg',
-      { maxNativeZoom:20, maxZoom:22, attribution:'© swisstopo' }).addTo(map);
-    L.control.scale({imperial:false, maxWidth:110}).addTo(map);
-    laden().then(function(j){
-      var alle=[];
-      j.punkte.forEach(function(p){
-        alle.push([p.lat,p.lon]);
-        var m=L.marker([p.lat,p.lon],{ icon:ikone(p), title:'Nr. '+p.nr+' '+p.typ }).addTo(map);
-        m.on('click',function(){ sheetAuf(p.nr); });
-        MK[p.nr]=m;
-      });
-      map.fitBounds(L.latLngBounds(alle).pad(0.08));
-      markerMalen();
-      var h=/nr=(\d+)/.exec(location.hash); if(h) zeige(+h[1]);
-    });
-  }
-  function ikone(p){
-    return L.divIcon({ className:'', html:'<div class="mk '+klasse(p)+'">'+p.nr+'</div>', iconSize:[28,28], iconAnchor:[14,14] });
-  }
-  function markerMalen(){
-    if(!map || !daten) return;
-    daten.punkte.forEach(function(p){
-      var m=MK[p.nr]; if(!m) return;
-      m.setIcon(ikone(p));
-      var soll=passt(p,filtK);
-      if(soll && !map.hasLayer(m)) m.addTo(map);
-      if(!soll && map.hasLayer(m)) map.removeLayer(m);
-    });
+  /* ── Karte = 3D-Viewer im iframe (viewer3d.html#altlasten) ── */
+  function frameBauen(){
+    if(frame) return;
+    frame=$('k3dFrame'); frame.src='viewer3d.html#altlasten';
     schalter('schalterK',filtK,function(f){ filtK=f; markerMalen(); });
   }
+  function post(m){ try{ if(frame && frame.contentWindow) frame.contentWindow.postMessage(m,'*'); }catch(e){} }
+  window.addEventListener('message',function(ev){
+    var d=ev.data||{}; if(typeof d!=='object'||!d.typ) return;
+    if(d.typ==='altlasten_bereit'){ frameBereit=true; markerMalen(); if(fliegenWartet){ post({typ:'altlasten_fliegen',nr:fliegenWartet}); fliegenWartet=null; } }
+    else if(d.typ==='altlast'){ sheetAuf(+d.nr); }
+  });
+  /* Zustand (Farbe) + Sichtbarkeit (Filter) aller Marker in den Viewer schicken */
+  function markerMalen(){
+    if(!daten) return;
+    if(frame) schalter('schalterK',filtK,function(f){ filtK=f; markerMalen(); });
+    if(!frameBereit) return;
+    var z={}, sichtbar={};
+    daten.punkte.forEach(function(p){ z[p.nr]=klasse(p); sichtbar[p.nr]=passt(p,filtK); });
+    post({typ:'altlasten_zustand', z:z, sichtbar:sichtbar});
+  }
   function zeige(nr){
-    tab('k2d');
-    laden().then(function(){
-      var p=P[nr]; if(!p||!map) return;
-      if(!map.hasLayer(MK[nr])){ filtK='alle'; markerMalen(); }
-      map.setView([p.lat,p.lon], Math.max(map.getZoom(),19));
-    });
+    tab('k3d');
+    if(!passt(P[nr]||{},filtK)){ filtK='alle'; markerMalen(); }
+    if(frameBereit) post({typ:'altlasten_fliegen',nr:nr}); else fliegenWartet=nr;
   }
   window.aufKarte=function(){ var nr=aktiv; sheetZu(); if(nr) zeige(nr); };
-  window.gps=function(){
-    if(!navigator.geolocation || !map){ alert('Kein GPS verfügbar.'); return; }
-    navigator.geolocation.getCurrentPosition(function(q){
-      var pt=[q.coords.latitude,q.coords.longitude];
-      if(!gpsMarker) gpsMarker=L.circleMarker(pt,{radius:8,color:'#fff',weight:2,fillColor:'#1565c0',fillOpacity:1}).addTo(map);
-      gpsMarker.setLatLng(pt); map.setView(pt, Math.max(map.getZoom(),18));
-    }, function(){ alert('Standort nicht bestimmbar.'); }, {enableHighAccuracy:true, timeout:8000});
-  };
 
   /* ── Liste ── */
   function listeBauen(){
@@ -600,9 +562,9 @@
   Promise.all([laden(), rueckLaden()]).then(function(){
     zaehlen(); netzMalen(); pendSenden();
     var start=(location.hash||'').replace('#','');
-    if(/^nr=/.test(start)){ tab('k2d'); }
+    if(/^nr=/.test(start)){ tab('k3d'); fliegenWartet=+start.slice(3); }
     else if(['liste','info'].indexOf(start)>=0) tab(start);
-    else tab('k2d');
+    else tab('k3d');
     if(/^nr=/.test(start)) setTimeout(function(){ sheetAuf(+start.slice(3)); },300);
   }).catch(function(e){ console.warn('Daten',e); $('liste').innerHTML='<div class="box"><div class="sub">Daten konnten nicht geladen werden.</div></div>'; });
 })();
