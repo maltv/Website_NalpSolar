@@ -78,7 +78,7 @@
   .legende{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px;}
   .legende span::before{content:"";display:inline-block;width:18px;height:6px;border-radius:3px;margin-right:6px;vertical-align:middle;}
   .legende .l-soll::before{background:#9aa7b4;} .legende .l-ist::before{background:#e0691b;} .legende .l-neu::before{background:#1c8a4a;}
-  .legende .l-st::before{background:#0b5fff;} .legende .l-rad::before{background:#7a1fa2;}
+  .legende .l-st::before{background:#3d4a5c;} .legende .l-rad::before{background:#7a1fa2;}
 
   .formel{background:linear-gradient(135deg,#12304f,#0b1826);color:#e8eef7;border-radius:14px;padding:14px;}
   .formel .f{font-size:18px;font-weight:900;margin:6px 0;}
@@ -89,6 +89,7 @@
   table.st{border-collapse:collapse;width:100%;font-size:13px;}
   table.st th{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);text-align:left;
     padding:6px 8px;border-bottom:2px solid var(--line);}
+  table.st th i{font-style:normal;text-transform:none;}
   table.st td{padding:7px 8px;border-bottom:1px solid var(--line);}
   table.st td b{font-size:15px;}
   .tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
@@ -111,13 +112,23 @@
 
 <div class="wrap">
 
+  <!-- ============ Warum (zuerst, damit man das Bild vor Augen hat) ============ -->
+  <div class="card">
+    <h2>Worum es geht</h2>
+    <div class="lead" style="margin-bottom:8px;">Bergseitig stehen Pfahl und Stütze in <b>derselben Richtung</b>: Pfahl 30° zur
+      Lotrechten, Stütze 60° zur Waagrechten. Die Stütze hängt an zwei Gelenken – Lasche auf der Fussplatte unten, ein Bolzen
+      am Modulträger oben. Darum darf ihr Fuss überall auf dem <b>Kreis mit Radius = Stützenlänge</b> um das obere Gelenk liegen.</div>
+    <div class="sk" id="skWarum"></div>
+    <div class="hint">Wird die Höhe der zurückgebauten Piste im Plan falsch angenommen und der SOLL-Punkt <b>lotrecht</b> statt
+      entlang der Pfahlachse projiziert, sitzt die Bohrung zu tief und die Achse parallel daneben. Zieht man den Pfahl
+      hoch, wandert der Kopf talwärts. Gezogen werden muss aber nur, bis der Kopf den Kreis trifft – die Stütze
+      dreht das Übrige weg.</div>
+  </div>
+
   <!-- ============ 1. Pfahl + Stütze ============ -->
   <div class="card">
     <h2>1 · Welcher Pfahl</h2>
-    <div class="lead">Nur die <b>bergseitigen</b> Pfähle S2/S3 sind geneigt. Talseitig (S1/S4) gibt es kein Lageproblem –
-      dort zählen nur Nord/Ost und die Höhe.</div>
-
-    <div class="sublbl">Tischtyp</div>
+    <div class="sublbl" style="margin-top:0;">Tischtyp</div>
     <div class="pick" id="pTyp"></div>
 
     <div class="sublbl">Serie (bestimmt nur das Langloch-Spiel)</div>
@@ -128,7 +139,7 @@
 
     <div class="inrow" style="margin-top:12px;">
       <div class="fld">
-        <label>Pfahlneigung</label>
+        <label>Pfahlneigung ε</label>
         <input id="iEps" inputmode="decimal" value="30">
         <div class="u">Grad zur Lotrechten · Typenplan, überschreibbar</div>
       </div>
@@ -138,25 +149,14 @@
         <div class="u">± mm · Langloch/Schraube, überschreibbar</div>
       </div>
     </div>
-    <div class="inrow" style="margin-top:8px;">
-      <div class="fld">
-        <label>Bergstütze: Neigung</label>
-        <input id="iBeta" inputmode="decimal" value="50">
-        <div class="u">Grad zur Lotrechten, Kopf talwärts · aus ILF-Daten</div>
-      </div>
-      <div class="fld">
-        <label>Bergstütze: Länge (Radius)</label>
-        <input id="iR" inputmode="decimal" value="5.0">
-        <div class="u">m · Mittel je Typ, für den Radius genügt das</div>
-      </div>
-    </div>
+    <div class="hint" id="stuetzeInfo" style="margin-top:10px;"></div>
   </div>
 
   <!-- ============ 2. Messung ============ -->
   <div class="card">
     <h2>2 · Was gemessen wurde</h2>
 
-    <div class="sublbl">Der Pfahlkopf steht …</div>
+    <div class="sublbl" style="margin-top:0;">Der Pfahlkopf steht …</div>
     <div class="pick two" id="pRicht">
       <button data-v="berg">⬆ zu weit BERGWÄRTS<br><span style="font-weight:600;font-size:11px;">(zu weit in den Hang)</span></button>
       <button data-v="tal">⬇ zu weit TALWÄRTS<br><span style="font-weight:600;font-size:11px;">(zu weit hangabwärts)</span></button>
@@ -209,54 +209,38 @@
   <div class="card">
     <h2>Die Gleichung zum Merken</h2>
     <div class="formel">
-      <div class="f">Auszug bis auf den Radius ≈ Höhenfehler × <b>cos β</b> ÷ <b>cos(ε − β)</b></div>
-      <div class="n">ε = Pfahlneigung, β = Stützenneigung. Bei 30° / 50°: Auszug ≈ Höhenfehler × <b>0.68</b> –
-        nicht × 1.15, wie es ohne Radius wäre. Der Kopf bleibt dann ≈ 0.41 × Höhenfehler unter SOLL und sitzt
-        ≈ 0.34 × Höhenfehler talwärts – die Stütze dreht das mit ihrer Nennlänge weg.</div>
+      <div class="f">Auszug bis auf den Radius ≈ Höhenfehler × <b>cos ε</b></div>
+      <div class="n">Weil die Stütze in der Pfahlrichtung liegt. Bei 30°: Auszug ≈ Höhenfehler × <b>0.87</b> – nicht × 1.15 wie
+        beim Ziehen bis auf die SOLL-Höhe. Der Kopf bleibt dann ¼ des Höhenfehlers unter SOLL und sitzt 0.43 × Höhenfehler
+        talwärts; die Stütze behält ihre Nennlänge und dreht nur etwas.</div>
       <div class="f" style="margin-top:12px;">Rausziehen: Kopf steigt × <b>cos ε</b>, wandert talwärts × <b>sin ε</b></div>
-      <div class="n">Bei 30°: 100 mm Auszug = 87 mm höher, 50 mm talwärts. Deshalb landet ein lotrecht projizierter
-        Pfahl nach dem Ziehen näher beim Talpfahl.</div>
+      <div class="n">Bei 30°: 100 mm Auszug = 87 mm höher, 50 mm talwärts. Deshalb landet ein lotrecht projizierter Pfahl nach
+        dem Ziehen näher beim Talpfahl.</div>
     </div>
     <div class="tblwrap" style="margin-top:12px;">
       <table class="st">
-        <thead><tr><th>Typ</th><th>Pfahl <span style="text-transform:none">ε</span></th><th>Stütze <span style="text-transform:none">β</span></th><th>Radius</th><th>Auszug je 10 cm Höhenfehler</th><th>ohne Radius</th></tr></thead>
+        <thead><tr><th>Typ</th><th>Pfahl <i>ε</i></th><th>Radius</th><th>Auszug je 10 cm Höhenfehler</th><th>ohne Radius</th></tr></thead>
         <tbody id="tbMerk"></tbody>
       </table>
     </div>
-    <div class="hint">Gilt für den Fall «SOLL-Punkt lotrecht nach unten projiziert und dort gebohrt». Die Seite oben rechnet
-      den allgemeinen Fall (Lage + Höhe) exakt am Kreis.</div>
-  </div>
-
-  <!-- ============ Warum ============ -->
-  <div class="card">
-    <h2>Warum das passiert – und warum der Radius hilft</h2>
-    <div class="lead" style="margin-bottom:10px;">Ein abgesteckter Nord/Ost-Punkt gilt bei einem schrägen Pfahl nur für
-      <b>genau eine Höhe</b>. Liegt die zurückgebaute Piste tiefer als im Plan angenommen und wird der SOLL-Punkt
-      lotrecht statt entlang der Pfahlachse projiziert, sitzt die Bohrung zwar sauber, aber die Achse ist parallel
-      verschoben. Zieht man den Pfahl danach hoch, wandert der Kopf talwärts.</div>
-    <div class="sk" id="skWarum"></div>
-    <div class="hint">Die Bergstütze hängt an zwei Gelenken (Lasche am Stützenfuss auf der Fussplatte, Lasche am
-      Knieträger). Ihr Fuss darf deshalb überall auf dem <b>Kreis mit Radius = Stützenlänge</b> um das obere Gelenk
-      liegen – die Stütze dreht nur ein wenig. Der Pfahl muss also nur bis auf diesen Kreis gezogen werden.</div>
+    <div class="hint">Gilt für «SOLL-Punkt lotrecht projiziert und dort gebohrt». Die Seite oben rechnet den allgemeinen Fall
+      (Lage + Höhe) exakt am Kreis.</div>
     <details>
       <summary>Quellen & Grenzen</summary>
       <div class="inner quelle">
-        <b>Pfahlgeometrie:</b> Typenplan <i>NalpSolar_51_PL_0289_A1_MT-Pfahl-PL_260122</i> (ILF, 22.01.2026).
-        Neigung bergseitig 30° (Typ A–D) bzw. 35° (Typ E) zur Lotrechten, Fuss bergwärts, Kopf hängt talwärts über.
-        Toleranzen: Lage ±30 mm situativ · Höhenlage ±50 mm · Winkel 2 % lotrecht / 4 % schräg.<br>
-        <b>Bergstütze:</b> aus der ILF-Datenliste <i>51_LI_0301_A9_Daten-2025_260710</i> (Typ B, 49 Tische): Fuss S2
-        3.06 m bergwärts vom Talfuss und 0.95 m höher, ILF-Referenzlänge S2 4.91 m, davon 3.16 m lotrecht →
-        Neigung ≈ 50° (Typ D ≈ 55°), Kopf talwärts vom Fuss. Länge je Typ = Median der ILF-Referenzlängen S2/S3
-        über alle Zonen (A 5.5 · B 5.0 · C 5.7 · D 4.5 · E 4.6 m, 824 Tische). Das Tekla-Modell (PL 0351 A1) enthält
-        die Bergstütze nicht (nur Talstützen + Modulträger).<br>
-        <b>Gelenke:</b> Stützenfuss = Lasche + Bolzen auf der Fussplatte (MAAG-Fusspunktdetails, «wo Kontermutter,
-        wird nicht vorgespannt – der Fusspunkt ist ein Gelenk»); oben Knieträger-Lasche.<br>
-        <b>Überstand:</b> Kopfplatte max. 15 cm ab OKT (Typenplan 2026+, Mail F. Nothdurfter 22.01.2026); Einbindelänge
-        = Pfahllänge − Überstand/cos ε.<br>
-        <b>Langloch-Spiel längs</b> = (Langloch − Schrauben-Ø)/2: Serie 2026 A/B 26.5 · C/D 24.5 · E 22.5 mm ·
-        Serie 2025 A/B 35 · C/D 37 · E 35 mm; liegt in der Falllinie, quer kein Spiel.<br>
-        <b>Nicht enthalten:</b> die Passstücklänge – rechnet das Nalpi. Liegt der Kopf auf dem Radius, bleibt die
-        Stützenlänge bei der Nennlänge.
+        <b>Konstruktion:</b> MAAG/Mauchle-Plan <i>24027-S-0-M-009-B Primärkonstruktion Typ B – Typ 2026, Schnitt A-A mit
+        Mikropfahl 1:20</i>: Talstütze B/1005 lotrecht (3645 ohne Verlängerung), Bergstütze B/1008 in Pfahlrichtung (4225 ohne
+        Verlängerung, 60° zur Waagrechten); oben DET 3 am Modulträger HEA140 (1236 über dem Talstützenkopf) mit 1 Bolzen M24 +
+        Kontermutter, unten DET 5 Lasche/Fussplatte mit 1 Bolzen M24 + Kontermutter (= Gelenke); Fussabstand 2920 mm, Gelände 20°.
+        Radius Typ B = 4225 + Passstück ≈ 4.5 m; übrige Typen im Verhältnis der ILF-Referenzlängen S2/S3
+        (Median über 824 Tische: A 5.5 · B 5.0 · C 5.7 · D 4.5 · E 4.6 m ab Absteckpunkt).<br>
+        <b>Pfahl:</b> Typenplan <i>NalpSolar_51_PL_0289_A1_MT-Pfahl-PL_260122</i> (ILF): 30° (A–D) bzw. 35° (E), Fuss bergwärts.
+        Toleranzen Lage ±30 mm · Höhe ±50 mm · Winkel 2 % lotrecht / 4 % schräg. Überstand Kopfplatte max. 15 cm ab OKT.<br>
+        <b>Langloch-Spiel längs</b> = (Langloch − Schrauben-Ø)/2: 2026 A/B 26.5 · C/D 24.5 · E 22.5 mm · 2025 A/B 35 ·
+        C/D 37 · E 35 mm (Falllinie; quer kein Spiel).<br>
+        <b>Annahme:</b> Stütze in Pfahlrichtung bei allen Typen (im Plan nur Typ B geprüft). Die Stützenneigung ist keine
+        Eingabe – sie ergibt sich aus der Konstruktion und ist erst am gestellten Tisch messbar.
+        <b>Nicht enthalten:</b> die Passstücklänge (Nalpi).
       </div>
     </details>
   </div>
@@ -268,19 +252,16 @@
   'use strict';
 
   // ---- Typendaten ----------------------------------------------------------------------
-  // eps  = Pfahlneigung bergseitig (Typenplan PL 0289 A1) · len = Pfahllänge
-  // beta = Neigung Bergstütze zur Lotrechten, Kopf talwärts (ILF-Datenliste 0301 A9, zurückgerechnet)
-  // R    = mittlere Länge Bergstütze [m] = Median ILF-Referenzlänge S2/S3 (824 Tische)
-  // spiel = Langloch-Spiel längs je Serie [mm]
+  // eps = Pfahlneigung (Typenplan PL 0289 A1) · beta = Stützenneigung (MAAG-Plan Typ B: = Pfahl) · R = Stützenlänge [m]
+  // (B aus dem Plan 4325 + Passstück; übrige im Verhältnis der ILF-Referenzlängen) · spiel = Langloch längs [mm]
   var TYP = {
-    A:{eps:30, len:2.00, beta:50, R:5.5, spiel:{'2026':26.5,'2025':35.0}},
-    B:{eps:30, len:2.00, beta:50, R:5.0, spiel:{'2026':26.5,'2025':35.0}},
-    C:{eps:30, len:2.50, beta:50, R:5.7, spiel:{'2026':24.5,'2025':37.0}},
-    D:{eps:30, len:2.50, beta:55, R:4.5, spiel:{'2026':24.5,'2025':37.0}},
-    E:{eps:35, len:3.00, beta:55, R:4.6, spiel:{'2026':22.5,'2025':35.0}}
+    A:{eps:30, len:2.00, beta:30, R:4.9, spiel:{'2026':26.5,'2025':35.0}},
+    B:{eps:30, len:2.00, beta:30, R:4.5, spiel:{'2026':26.5,'2025':35.0}},
+    C:{eps:30, len:2.50, beta:30, R:5.1, spiel:{'2026':24.5,'2025':37.0}},
+    D:{eps:30, len:2.50, beta:30, R:4.0, spiel:{'2026':24.5,'2025':37.0}},
+    E:{eps:35, len:3.00, beta:35, R:4.1, spiel:{'2026':22.5,'2025':35.0}}
   };
   var TOL_HOEHE = 50, TOL_LAGE = 30, MAX_UEBER = 150;
-
   var S = { typ:'B', serie:'2026', richt:'berg' };
 
   function $(id){ return document.getElementById(id); }
@@ -289,229 +270,218 @@
   function vz(v,d){ return (v>=0?'+':'−') + Math.abs(v).toFixed(d===undefined?0:d); }
   function ab(v,d){ return Math.abs(v).toFixed(d===undefined?0:d); }
 
-  // ---- Kern: Kopf auf den Stützenkreis ziehen -------------------------------------------
-  // Koordinaten in der Tischachse: u + = bergwärts, z + = hoch, SOLL-Kopf = (0,0). Alles mm.
-  // e = Lageabweichung IST-Kopf (+ bergwärts), dz = Höhenabweichung IST-Kopf (+ höher).
+  // ---- Kern: Kopf auf den Stützenkreis ziehen ------------------------------------------
+  // u + = bergwärts, z + = hoch, SOLL-Kopf = (0,0), alles mm. e = Lage IST-Kopf (+ bergwärts), dz = Höhe IST-Kopf (+ höher).
   function rechneKreis(eps, beta, Rmm, e, dz){
     var se=Math.sin(rad(eps)), ce=Math.cos(rad(eps)), sb=Math.sin(rad(beta)), cb=Math.cos(rad(beta));
-    var A = {u:-Rmm*sb, z:Rmm*cb};       // oberes Gelenk (Knieträger), talwärts-oben vom SOLL-Kopf
-    var d = {u:-se, z:ce};                // Achsrichtung beim Rausziehen (nach oben, talwärts)
-    var n = {u:ce, z:se};                 // quer zur Achse = Ebene der Kopfplatte (Langloch)
+    var A = {u:-Rmm*sb, z:Rmm*cb};       // oberes Gelenk am Modulträger
+    var d = {u:-se, z:ce};                // Achsrichtung beim Rausziehen
+    var n = {u:ce, z:se};                 // quer zur Achse = Kopfplattenebene (Langloch)
     var P = {u:e-A.u, z:dz-A.z};
-    function schnitt(dir){                // Parameter t mit |P + t·dir| = R, Lösung nahe 0
-      var pd=P.u*dir.u+P.z*dir.z, pp=P.u*P.u+P.z*P.z, disc=pd*pd-(pp-Rmm*Rmm);
-      if(disc<0) return null;
-      var r=Math.sqrt(disc), t1=-pd-r, t2=-pd+r; return Math.abs(t1)<Math.abs(t2)?t1:t2;
-    }
+    function schnitt(dir){ var pd=P.u*dir.u+P.z*dir.z, pp=P.u*P.u+P.z*P.z, disc=pd*pd-(pp-Rmm*Rmm);
+      if(disc<0) return null; var r=Math.sqrt(disc), t1=-pd-r, t2=-pd+r; return Math.abs(t1)<Math.abs(t2)?t1:t2; }
     var t = schnitt(d), lam = schnitt(n);
     if(t===null) return null;
     var H = {u:e+t*d.u, z:dz+t*d.z};
     var v0={u:-A.u, z:-A.z}, v1={u:H.u-A.u, z:H.z-A.z};
-    var delta = Math.atan2(v0.u*v1.z-v0.z*v1.u, v0.u*v1.u+v0.z*v1.z);   // Drehung der Stütze
-    var tFull = -dz/ce;                   // Auszug bis auf SOLL-Höhe (ohne Radius)
+    var delta = Math.atan2(v0.u*v1.z-v0.z*v1.u, v0.u*v1.u+v0.z*v1.z);
+    var tFull = -dz/ce;
     return { A:A, t:t, lam:lam, H:H, delta:delta, bogen:Rmm*delta, tFull:tFull, uFull:e+tFull*d.u, se:se, ce:ce };
   }
 
-  // ---- Knöpfe -------------------------------------------------------------------------
+  // ---- Knöpfe ---------------------------------------------------------------------------
   var ht=''; for(var k in TYP){ ht += '<button data-v="'+k+'">'+k+'</button>'; }
   $('pTyp').innerHTML = ht;
-  function markiere(box, wert){
-    var bs = box.querySelectorAll('button');
-    for(var i=0;i<bs.length;i++){ bs[i].className = (bs[i].getAttribute('data-v')===wert) ? 'on' : ''; }
-  }
+  function markiere(box, wert){ var bs=box.querySelectorAll('button'); for(var i=0;i<bs.length;i++){ bs[i].className=(bs[i].getAttribute('data-v')===wert)?'on':''; } }
   function bindePick(boxId, feld, nachher){
-    var box = $(boxId);
-    box.addEventListener('click', function(ev){
-      var b = ev.target.closest ? ev.target.closest('button') : null;
-      if(!b || !box.contains(b)) return;
-      S[feld] = b.getAttribute('data-v'); markiere(box, S[feld]);
-      if(nachher) nachher(); rechne();
-    });
+    var box=$(boxId);
+    box.addEventListener('click', function(ev){ var b=ev.target.closest?ev.target.closest('button'):null; if(!b||!box.contains(b)) return;
+      S[feld]=b.getAttribute('data-v'); markiere(box,S[feld]); if(nachher) nachher(); rechne(); });
   }
-  function vorgabenSetzen(){
-    var t = TYP[S.typ];
-    $('iEps').value = t.eps; $('iSpiel').value = t.spiel[S.serie]; $('iBeta').value = t.beta; $('iR').value = t.R.toFixed(1);
-  }
-  bindePick('pTyp','typ', vorgabenSetzen);
-  bindePick('pSerie','serie', vorgabenSetzen);
-  bindePick('pRicht','richt', null);
-  ['iEps','iSpiel','iBeta','iR','iLage','iHSoll','iHIst','iOkt'].forEach(function(id){ $(id).addEventListener('input', rechne); });
+  function vorgabenSetzen(){ var t=TYP[S.typ]; $('iEps').value=t.eps; $('iSpiel').value=t.spiel[S.serie]; }
+  bindePick('pTyp','typ', vorgabenSetzen); bindePick('pSerie','serie', vorgabenSetzen); bindePick('pRicht','richt', null);
+  ['iEps','iSpiel','iLage','iHSoll','iHIst','iOkt'].forEach(function(id){ $(id).addEventListener('input', rechne); });
 
-  // ---- Merktabelle -----------------------------------------------------------------------
+  // ---- Merktabelle ----------------------------------------------------------------------
   (function(){
     var h='';
-    ['A','B','C','D','E'].forEach(function(k){
-      var T=TYP[k], r=rechneKreis(T.eps, T.beta, T.R*1000, 0, -100);
-      h += '<tr><td><b>'+k+'</b></td><td>'+T.eps+'°</td><td>'+T.beta+'°</td><td>'+T.R.toFixed(1)+' m</td>'
-         + '<td><b>'+(r?r.t.toFixed(0):'–')+' mm</b></td><td>'+(r?r.tFull.toFixed(0):'–')+' mm</td></tr>';
-    });
-    $('tbMerk').innerHTML = h;
+    ['A','B','C','D','E'].forEach(function(k){ var T=TYP[k], r=rechneKreis(T.eps,T.eps,T.R*1000,0,-100);
+      h+='<tr><td><b>'+k+'</b></td><td>'+T.eps+'°</td><td>'+T.R.toFixed(1)+' m</td><td><b>'+(r?r.t.toFixed(0):'–')+' mm</b></td><td>'+(r?r.tFull.toFixed(0):'–')+' mm</td></tr>'; });
+    $('tbMerk').innerHTML=h;
   })();
 
-  // ---- Rechnung --------------------------------------------------------------------------
+  // ---- Rechnung -------------------------------------------------------------------------
+  // Stützenneigung = Pfahlneigung (Konstruktion, MAAG-Plan) – keine Eingabe, vor dem Stellen nicht messbar.
+  // Radius = mittlere Stützenlänge je Typ (S.R nur als Adress-Override zum Prüfen).
   function rechne(){
-    var eps=num('iEps'), spiel=num('iSpiel'), beta=num('iBeta'), Rm=num('iR');
+    var eps=num('iEps'), spiel=num('iSpiel'), beta=eps, Rm=(S.R||TYP[S.typ].R);
     var lage=num('iLage'), hSoll=num('iHSoll'), hIst=num('iHIst'), okt=num('iOkt');
-
-    if(eps===null||eps<=0||eps>=90||beta===null||beta<0||beta>=90||Rm===null||Rm<=0){
-      $('out').innerHTML='<div class="res err"><div class="sub">Neigungen zwischen 0 und 90°, Stützenlänge > 0 eingeben.</div></div>';
-      $('skizzen').innerHTML=''; return;
-    }
-    var e  = (lage===null?0:Math.abs(lage)) * (S.richt==='berg'?1:-1);
-    var dz = (hSoll!==null && hIst!==null) ? (hIst-hSoll)*1000 : null;
+    $('stuetzeInfo').innerHTML='<b>Bergstütze:</b> '+(eps!==null?(90-eps).toFixed(0):'–')+'° zur Waagrechten, gleiche Richtung wie der Pfahl (MAAG-Plan) · '
+      +'<b>Radius</b> = mittlere Stützenlänge Typ '+S.typ+' <b>'+Rm.toFixed(1)+' m</b> – für kleine Abweichungen genügt der Mittelwert.';
+    if(eps===null||eps<=0||eps>=90){
+      $('out').innerHTML='<div class="res err"><div class="sub">Pfahlneigung zwischen 0 und 90° eingeben.</div></div>'; $('skizzen').innerHTML=''; return; }
+    var e=(lage===null?0:Math.abs(lage))*(S.richt==='berg'?1:-1);
+    var dz=(hSoll!==null&&hIst!==null)?(hIst-hSoll)*1000:null;
+    $('skWarum').innerHTML = skQuerschnitt('warum', eps, beta, Rm*1000, 0, 0, null);
 
     if(dz===null && lage===null){
-      $('out').innerHTML='<div class="res neutral"><div class="act">Bereit</div>'
-        +'<div class="sub">Lageabweichung und/oder SOLL- und IST-Höhe eingeben. Typischer Fall Baupiste: Lage leer lassen, '
-        +'nur die Höhen – dann steht hier, wie weit der Pfahl bis auf den Stützenradius zu ziehen ist.</div></div>';
-      skizzen(eps,beta,Rm*1000,0,0,null); return;
-    }
-    var dzr = dz===null?0:dz;
-    var r = rechneKreis(eps, beta, Rm*1000, e, dzr);
+      $('out').innerHTML='<div class="res neutral"><div class="act">Bereit</div><div class="sub">Lageabweichung und/oder SOLL- und IST-Höhe eingeben. '
+        +'Typischer Fall Baupiste: Lage leer lassen, nur die Höhen – dann steht hier, wie weit der Pfahl bis auf den Stützenradius zu ziehen ist.</div></div>';
+      $('skizzen').innerHTML=''; return; }
+    var dzr=dz===null?0:dz, r=rechneKreis(eps,beta,Rm*1000,e,dzr);
     if(!r){ $('out').innerHTML='<div class="res err"><div class="sub">Die Pfahlachse trifft den Stützenkreis nicht – Eingaben prüfen.</div></div>'; $('skizzen').innerHTML=''; return; }
 
-    var raus = r.t>=0, reichtLangloch = spiel!==null && r.lam!==null && Math.abs(r.lam)<=spiel;
-    var h='';
+    var raus=r.t>=0, reichtLangloch=spiel!==null&&r.lam!==null&&Math.abs(r.lam)<=spiel, h='';
     if(Math.abs(r.t)<1){
-      h+='<div class="res ok"><div class="act">Nichts zu tun</div><div class="bigv">0 <small>mm</small></div>'
-        +'<div class="sub">Der Kopf liegt auf dem Stützenradius – die Stütze passt mit Nennlänge.</div></div>';
+      h+='<div class="res ok"><div class="act">Nichts zu tun</div><div class="bigv">0 <small>mm</small></div><div class="sub">Der Kopf liegt auf dem Stützenradius – die Stütze passt mit Nennlänge.</div></div>';
     } else if(reichtLangloch){
-      h+='<div class="res ok"><div class="act">Pfahl lassen – Langloch reicht</div>'
-        +'<div class="bigv">'+ab(r.lam)+' <small>mm über die Lasche</small></div>'
-        +'<div class="sub">Fussplatte im Langloch um '+ab(r.lam)+' mm '+(r.lam>0?'bergwärts':'talwärts')+' versetzen (Spiel ±'+spiel.toFixed(1)+' mm), '
-        +'dann trifft der Stützenfuss den Radius. Wer es lieber mittig will: '+(raus?'rausziehen':'einschieben')+' um '+ab(r.t)+' mm.</div></div>';
+      h+='<div class="res ok"><div class="act">Pfahl lassen – Langloch reicht</div><div class="bigv">'+ab(r.lam)+' <small>mm über die Lasche</small></div>'
+        +'<div class="sub">Fussplatte im Langloch um '+ab(r.lam)+' mm '+(r.lam>0?'bergwärts':'talwärts')+' versetzen (Spiel ±'+spiel.toFixed(1)+' mm), dann trifft der Stützenfuss den Radius. '
+        +'Wer es mittig will: '+(raus?'rausziehen':'einschieben')+' um '+ab(r.t)+' mm.</div></div>';
     } else {
-      h+='<div class="res warn"><div class="act">Pfahl '+(raus?'rausziehen':'einschieben (tiefer setzen)')+'</div>'
-        +'<div class="bigv">'+ab(r.t)+' <small>mm entlang der Pfahlachse</small></div>'
-        +'<div class="sub">Bis der Kopf auf dem Stützenradius liegt – die Stütze passt dann mit Nennlänge und dreht nur um '
-        +ab(r.delta*180/Math.PI,1)+'°.'+(spiel!==null&&r.lam!==null?' Das Langloch allein reicht nicht ('+ab(r.lam)+' mm gegen ±'+spiel.toFixed(1)+' mm).':'')+'</div></div>';
+      h+='<div class="res warn"><div class="act">Pfahl '+(raus?'rausziehen':'einschieben (tiefer setzen)')+'</div><div class="bigv">'+ab(r.t)+' <small>mm entlang der Pfahlachse</small></div>'
+        +'<div class="sub">Bis der Kopf auf dem Stützenradius liegt – die Stütze passt dann mit Nennlänge und dreht nur um '+ab(r.delta*180/Math.PI,1)+'°.'
+        +(spiel!==null&&r.lam!==null?' Das Langloch allein reicht nicht ('+ab(r.lam)+' mm gegen ±'+spiel.toFixed(1)+' mm).':'')+'</div></div>';
     }
-
     h+='<div style="margin-top:12px;">';
-    var flL = Math.abs(r.H.u)<=TOL_LAGE?'g':'a', flH = Math.abs(r.H.z)<=TOL_HOEHE?'g':'a';
-    h+=zeile('Kopf danach: Lage zum SOLL-Punkt', ab(r.H.u)+' mm '+(r.H.u>0?'bergwärts':'talwärts'),
-             '<span class="flag '+flL+'">'+(flL==='g'?'in ±30 mm':'über ±30 mm')+'</span>');
+    var flL=Math.abs(r.H.u)<=TOL_LAGE?'g':'a', flH=Math.abs(r.H.z)<=TOL_HOEHE?'g':'a';
+    h+=zeile('Kopf danach: Lage zum SOLL-Punkt', ab(r.H.u)+' mm '+(r.H.u>0?'bergwärts':'talwärts'), '<span class="flag '+flL+'">'+(flL==='g'?'in ±30 mm':'über ±30 mm')+'</span>');
     h+=zeile('Kopf danach: Höhe zum SOLL', vz(r.H.z)+' mm', '<span class="flag '+flH+'">'+(flH==='g'?'in ±50 mm':'über ±50 mm')+'</span>');
     if(hIst!==null) h+=zeile('Kopfhöhe danach', (hIst+(r.t*r.ce)/1000).toFixed(3)+' m', null);
     h+=zeile('Stütze', 'Nennlänge passt', '<span style="font-size:11.5px;color:#5b6b7c;">dreht um '+ab(r.delta*180/Math.PI,1)+'° · Fuss '+ab(r.bogen)+' mm auf dem Bogen</span>');
-    if(dz!==null && Math.abs(dz)>=1){
-      h+=zeile('Ohne Radius', ab(r.tFull)+' mm '+(r.tFull>=0?'ziehen':'einschieben'),
-               '<span style="font-size:11.5px;color:#5b6b7c;">bis SOLL-Höhe · Kopf dann '+ab(r.uFull)+' mm '+(r.uFull>0?'bergwärts':'talwärts')+' neben SOLL</span>');
-    }
+    if(dz!==null&&Math.abs(dz)>=1) h+=zeile('Ohne Radius', ab(r.tFull)+' mm '+(r.tFull>=0?'ziehen':'einschieben'), '<span style="font-size:11.5px;color:#5b6b7c;">bis SOLL-Höhe · Kopf dann '+ab(r.uFull)+' mm '+(r.uFull>0?'bergwärts':'talwärts')+' neben SOLL</span>');
     if(Math.abs(e)>=1) h+=zeile('Ursache-Gegenprobe', ab(e/Math.tan(rad(eps)))+' mm', '<span style="font-size:11.5px;color:#5b6b7c;">Höhenfehler, der diesen Lageversatz erklärt</span>');
-    if(flL!=='g'||flH!=='g'){
-      h+='<div class="warnbox a">Der Kopf liegt nach der Korrektur ausserhalb der ILF-Toleranz (Lage ±30 / Höhe ±50 mm). '
-        +'Die Stütze passt trotzdem – aber die Abweichung gehört ins Bohrprotokoll und zur Bauleitung.</div>';
-    }
-    if(okt!==null && hIst!==null){
-      var ueNeu=(hIst+(r.t*r.ce)/1000-okt)*1000, einb=TYP[S.typ].len*1000-ueNeu/r.ce;
-      var flU = ueNeu>MAX_UEBER?'r':(ueNeu<0?'a':'g');
+    if(flL!=='g'||flH!=='g') h+='<div class="warnbox a">Der Kopf liegt nach der Korrektur ausserhalb der ILF-Toleranz (Lage ±30 / Höhe ±50 mm). Die Stütze passt trotzdem – die Abweichung gehört ins Bohrprotokoll und zur Bauleitung.</div>';
+    if(okt!==null&&hIst!==null){
+      var ueNeu=(hIst+(r.t*r.ce)/1000-okt)*1000, einb=TYP[S.typ].len*1000-ueNeu/r.ce, flU=ueNeu>MAX_UEBER?'r':(ueNeu<0?'a':'g');
       h+=zeile('Überstand danach', ueNeu.toFixed(0)+' mm', '<span class="flag '+flU+'">'+(flU==='g'?'unter 150 mm':flU==='r'?'über 150 mm':'unter Terrain')+'</span>');
       h+=zeile('Einbindelänge danach', (einb/1000).toFixed(2)+' m', null);
       if(ueNeu>MAX_UEBER) h+='<div class="warnbox r">Der Überstand der Kopfplatte überschreitet nach dem Rausziehen die 15-cm-Grenze (Typenplan 2026+). So nicht ausführen – mit der Bauleitung klären.</div>';
       else if(ueNeu<0) h+='<div class="warnbox a">Rechnerisch liegt die Kopfplatte dann unter Terrain – Eingaben prüfen (OKT und IST-Höhe am selben Punkt?).</div>';
     }
-    h+='</div>';
-    h+='<div class="hint" style="margin-top:12px;"><b>Merke:</b> rausziehen schiebt den Kopf talwärts, einschieben zieht ihn bergwärts. '
-      +'Quer zur Tischachse lässt sich nichts korrigieren – dort hat weder Langloch noch Stütze Spiel.</div>';
+    h+='</div><div class="hint" style="margin-top:12px;"><b>Merke:</b> rausziehen schiebt den Kopf talwärts, einschieben zieht ihn bergwärts. Quer zur Tischachse lässt sich nichts korrigieren – dort hat weder Langloch noch Stütze Spiel.</div>';
     $('out').innerHTML=h;
-    skizzen(eps,beta,Rm*1000,e,dzr,r);
+
+    var sk='<div class="sk">'+skQuerschnitt('problem',eps,beta,Rm*1000,e,dzr,r)+'</div>';
+    if(Math.abs(r.t)>=1) sk+='<div class="sk">'+skQuerschnitt('loesung',eps,beta,Rm*1000,e,dzr,r)+'</div>';
+    sk+='<div class="legende"><span class="l-st">Stahlbau SOLL</span><span class="l-ist">gebohrter Pfahl (IST)</span><span class="l-rad">Stützenradius</span><span class="l-neu">Korrektur</span></div>'
+      +'<div class="hint">Querschnitt in der Tischachse Tal→Berg, massstäblich (Typ B nach MAAG-Plan). Die Lupe zeigt den Pfahlkopf vergrössert: '
+      +'der Kopf kann sich nur entlang der Pfahlachse bewegen; gezogen wird, bis er den violetten Kreis trifft.</div>';
+    $('skizzen').innerHTML=sk;
   }
   function zeile(lb,v,extra){ return '<div class="zeile"><span class="lb">'+lb+'</span>'+(extra||'')+'<span class="vv">'+v+'</span></div>'; }
 
-  // ---- Skizzen ---------------------------------------------------------------------------
-  // Bild: links = Tal, rechts = Berg. u + = bergwärts (nach rechts), z + = hoch (nach oben).
-  function T(x,y,txt,farbe,anchor,size,bold){
-    return '<text x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" font-size="'+(size||12)+'" font-weight="'+(bold===false?'700':'900')+'" fill="'+farbe+'" text-anchor="'+(anchor||'start')+'">'+txt+'</text>';
-  }
+  // ---- Querschnitt (massstäblich, Typ B nach MAAG-Plan 24027-S-0-M-009) + Lupe am Pfahlkopf ------------
+  // Geometrie im Plan: Talstütze lotrecht 3645, Bergstütze 30° (4325), Füsse 2920 auseinander, Bergfuss ~0.95 m höher
+  // (ILF-Liste), Modulträger 60° zur Horizontalen ab Talstützenkopf (1078 unten / 2582 oben).
+  function T(x,y,txt,farbe,anchor,size,bold){ return '<text x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" font-size="'+(size||12)+'" font-weight="'+(bold===false?'700':'900')+'" fill="'+farbe+'" text-anchor="'+(anchor||'start')+'">'+txt+'</text>'; }
   function L(x1,y1,x2,y2,farbe,w,dash){ return '<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+'" stroke="'+farbe+'" stroke-width="'+w+'" stroke-linecap="round"'+(dash?' stroke-dasharray="'+dash+'"':'')+'/>'; }
-  function C(x,y,r,farbe){ return '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+r+'" fill="'+farbe+'"/>'; }
-  function bogen(cx,cy,Rpx,phi0,span,farbe,w){   // Kreisbogen um (cx,cy) als Polylinie, Winkel in Bildkoordinaten
-    var pts=[]; for(var i=0;i<=32;i++){ var p=phi0-span/2+span*i/32; pts.push((cx+Rpx*Math.cos(p)).toFixed(1)+','+(cy+Rpx*Math.sin(p)).toFixed(1)); }
-    return '<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+farbe+'" stroke-width="'+w+'" stroke-dasharray="6 5"/>';
-  }
+  function C(x,y,r,fill,stroke){ return '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+r+'" fill="'+fill+'"'+(stroke?' stroke="'+stroke+'" stroke-width="2"':'')+'/>'; }
+  function bogen(cx,cy,Rpx,phi0,span,farbe,w){ var p=[]; for(var i=0;i<=40;i++){ var a=phi0-span/2+span*i/40; p.push((cx+Rpx*Math.cos(a)).toFixed(1)+','+(cy+Rpx*Math.sin(a)).toFixed(1)); }
+    return '<polyline points="'+p.join(' ')+'" fill="none" stroke="'+farbe+'" stroke-width="'+w+'" stroke-dasharray="7 5"/>'; }
+  function profil(x1,y1,x2,y2,w,farbe){ // Stahlprofil als Balken mit heller Kante
+    return L(x1,y1,x2,y2,farbe,w)+L(x1,y1,x2,y2,'#8d9bb0',Math.max(1,w-5)); }
 
-  // Detailskizze (überhöht): Kopf-Umgebung mit Stützenkreis, IST-Achse, Ziel
-  function skDetail(titel, eps, beta, Rmm, e, dz, r, mitLoesung){
-    var W=560,H=330;
-    // Massstab adaptiv: der grösste Versatz wird ~110 px, höchstens 0.9 px/mm; SOLL und IST mittig im Bild
-    var span=Math.max(60, Math.abs(e), Math.abs(dz), r?Math.abs(r.t):0);
-    var k=Math.min(0.9, 110/span), cx=300-e*k/2, cy=185+dz*k/2;
-    var X=function(u){return cx+u*k;}, Y=function(z){return cy-z*k;};
+  function skQuerschnitt(mode, eps, beta, Rmm, e, dz, r){
+    var W=600,H=400, k=0.044;                       // px je mm (44 px/m), massstäblich
+    var ox=112, oy=336;                              // Talfuss (OK Kopfplatte Talpfahl)
+    var X=function(u){return ox+u*k;}, Y=function(z){return oy-z*k;};
     var se=Math.sin(rad(eps)), ce=Math.cos(rad(eps)), sb=Math.sin(rad(beta)), cb=Math.cos(rad(beta));
-    var s='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="'+titel+'"><rect width="'+W+'" height="'+H+'" fill="#f7f9fc"/>';
-    s+=T(14,24,titel,'#14202e','start',13);
-    // Stützenkreis um A (weit oben links) – nur der Bogen durchs Bild; Beschriftung am unteren Bogenende (talwärts, frei)
-    var A={u:-Rmm*sb, z:Rmm*cb}, Rpx=Rmm*k, phi0=Math.atan2(cy-Y(A.z), cx-X(A.u)), sp=Math.min(1.2,560/Rpx);
-    s+=bogen(X(A.u),Y(A.z),Rpx,phi0,sp,'#7a1fa2',2.5);
-    var lp=phi0-sp*0.32, lx=Math.max(14,Math.min(W-120,X(A.u)+Rpx*Math.cos(lp)+10)), ly=Math.max(44,Math.min(H-34,Y(A.z)+Rpx*Math.sin(lp)+4));
-    s+=T(lx, ly, 'Stützenradius','#7a1fa2','start',12);
-    // Stütze SOLL (nach oben-links, bis zum Bildrand) und Pfahl SOLL
-    var Ls=Math.min(400/k, (Y(0)-40)/(cb*k)); s+=L(X(0),Y(0),X(-Ls*sb),Y(Ls*cb),'#0b5fff',5);
-    s+=T(X(-Ls*0.55*sb)+10,Y(Ls*0.55*cb)+4,'Stütze → Gelenk','#0b3ea8','start',11.5,false);
-    s+=L(X(0),Y(0),X(150/k*se),Y(-150/k*ce),'#9aa7b4',7,'9 7');
-    s+='<rect x="'+(X(0)-22).toFixed(1)+'" y="'+(Y(0)-9).toFixed(1)+'" width="44" height="9" rx="2" fill="#9aa7b4"/>';
-    s+=T(X(0)+(e>=0?-28:28),Y(0)-16,'SOLL','#6b7986',e>=0?'end':'start');
-    // IST-Pfahl
-    var Hu=e, Hz=dz;
-    s+=L(X(Hu),Y(Hz),X(Hu+150/k*se),Y(Hz-150/k*ce),'#e0691b',7);
-    s+='<rect x="'+(X(Hu)-22).toFixed(1)+'" y="'+(Y(Hz)-9).toFixed(1)+'" width="44" height="9" rx="2" fill="#e0691b"/>';
-    s+=T(X(Hu)+(e>=0?28:-28),Y(Hz)+(dz<-5?20:-16),'IST (gebohrt)','#b5510f',e>=0?'start':'end');
-    if(Math.abs(e)>=1){ var ay=Math.min(Y(0),Y(Hz))-40; s+=L(X(0),ay,X(Hu),ay,'#d63a3f',2.5); s+=C(X(0),ay,3.5,'#d63a3f'); s+=C(X(Hu),ay,3.5,'#d63a3f');
-      s+=T((X(0)+X(Hu))/2,ay-9,ab(e)+' mm '+(e>0?'bergwärts':'talwärts'),'#d63a3f','middle',12.5); }
-    if(Math.abs(dz)>=1){ var dxm=X(Math.max(0,Hu))+70; s+=L(dxm,Y(0),dxm,Y(Hz),'#d63a3f',2.5); s+=C(dxm,Y(0),3.5,'#d63a3f'); s+=C(dxm,Y(Hz),3.5,'#d63a3f');
-      s+=T(dxm+8,(Y(0)+Y(Hz))/2+4,ab(dz)+' mm '+(dz<0?'zu tief':'zu hoch'),'#d63a3f','start',12.5); }
-    if(mitLoesung && r){
-      // Ziel auf dem Kreis + Auszug entlang der Achse; Text als Fusszeile, damit nichts kollidiert
-      s+=L(X(Hu),Y(Hz),X(r.H.u),Y(r.H.z),'#1c8a4a',5); s+=C(X(r.H.u),Y(r.H.z),6,'#1c8a4a');
-      s+='<rect x="'+(X(r.H.u)-22).toFixed(1)+'" y="'+(Y(r.H.z)-9).toFixed(1)+'" width="44" height="9" rx="2" fill="#1c8a4a"/>';
-      s+=T(X(r.H.u)-30,Y(r.H.z)+22,'auf dem Radius ✓','#14532d','end',12.5);
-      s+=T(14,H-12,'▶ '+(r.t>=0?'rausziehen ':'einschieben ')+ab(r.t)+' mm entlang der Achse, bis der Kopf den Kreis trifft','#14532d','start',12.5);
-      // gedrehte Stütze (Nennlänge) vom neuen Fuss zum Gelenk
-      s+=L(X(r.H.u),Y(r.H.z),X(r.H.u+(A.u-r.H.u)*(Ls/Rmm)),Y(r.H.z+(A.z-r.H.z)*(Ls/Rmm)),'#1c8a4a',3,'4 4');
+    // MAAG-Plan Typ B: Talstütze 3645 (+ Passstück), Modulträger 60° zur Waagrechten durch den Talstützenkopf,
+    // Gelenk DET 3 1236 mm über dem Talstützenkopf auf dem Modulträger; Bergstütze von dort in Pfahlrichtung, Länge R
+    var TS=3645+150;
+    var D2={u:0, z:TS};                                      // Talstützenkopf DET 2
+    var mt=function(sm){ return {u:D2.u+sm*0.5, z:D2.z+sm*0.866}; };
+    var A=mt(1236);                                          // oberes Gelenk DET 3
+    var Hs={u:A.u+Rmm*sb, z:A.z-Rmm*cb};                     // SOLL-Kopf Bergpfahl = unteres Gelenk DET 5
+    var m0=mt(-160), m1=mt(2420);                            // Modulträger-Enden (2580 lang)
+    var st='#3d4a5c';
+    var s='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Querschnitt Modultisch mit Bergpfahl">'
+      +'<rect width="'+W+'" height="'+H+'" fill="#f7f9fc"/>';
+    // Gelände durch beide Fusspunkte (Plan: 20°)
+    var tan=Hs.z/Hs.u;
+    s+='<path d="M'+X(-2600)+','+Y(-2600*tan)+' L'+X(Hs.u+9000)+','+Y(Hs.z+9000*tan)+' L'+X(Hs.u+9000)+','+(H-4)+' L'+X(-2600)+','+(H-4)+' Z" fill="#e6ded2" stroke="#b9a98f" stroke-width="1.5"/>';
+    s+=T(14,22,mode==='problem'?'PROBLEM':mode==='loesung'?'LÖSUNG':'MODULTISCH TYP B – SCHNITT IN DER TISCHACHSE (MAAG-PLAN)','#14202e','start',13);
+    s+=T(X(-2400),H-14,'TAL','#7a6a52','start',13); s+=T(X(Hs.u+3800),Y(Hs.z+3800*tan)+30,'BERG','#7a6a52','start',13);
+    // Talpfahl (lotrecht, im Boden) + Talstütze + Fussplatte
+    s+=L(X(0),Y(0),X(0),Y(-2000),'#8a8f97',6,'8 6');
+    s+=profil(X(0),Y(0),X(D2.u),Y(D2.z),9,st);
+    s+='<rect x="'+(X(0)-10)+'" y="'+(Y(0)-3)+'" width="20" height="5" fill="'+st+'"/>';
+    // Modulträger + Modulfeld (0.19 m vor dem Träger, Normale talwärts-oben)
+    s+=profil(X(m0.u),Y(m0.z),X(m1.u),Y(m1.z),8,st);
+    var nx=-0.866*190, nz=0.5*190;
+    s+=L(X(m0.u+nx),Y(m0.z+nz),X(m1.u+nx),Y(m1.z+nz),'#1e3a5f',7);
+    s+=L(X(m0.u+nx),Y(m0.z+nz),X(m1.u+nx),Y(m1.z+nz),'#5f9bff',2);
+    // B/1015 ab DET 4 (1500 unter dem Gelenk) bergwärts-oben, wie im Schnitt
+    var d4={u:A.u+1500*sb, z:A.z-1500*cb};
+    s+=profil(X(d4.u),Y(d4.z),X(d4.u+1250),Y(d4.z+620),6,'#8d9bb0');
+    // Bergpfahl SOLL (im Boden) + Bergstütze SOLL
+    s+=L(X(Hs.u),Y(Hs.z),X(Hs.u+2000*se),Y(Hs.z-2000*ce),'#8a8f97',6,'8 6');
+    var stFarbe = mode==='loesung' ? '#9aa7b4' : st;
+    s+=profil(X(Hs.u),Y(Hs.z),X(A.u),Y(A.z),9,stFarbe);
+    s+='<rect x="'+(X(Hs.u)-10)+'" y="'+(Y(Hs.z)-3)+'" width="20" height="5" fill="'+st+'" transform="rotate('+(-eps).toFixed(1)+' '+X(Hs.u).toFixed(1)+' '+Y(Hs.z).toFixed(1)+')"/>';
+    // Gelenke
+    s+=C(X(A.u),Y(A.z),6,'#fff','#14202e'); s+=C(X(Hs.u),Y(Hs.z),6,'#fff','#14202e');
+    // Radius um das obere Gelenk
+    var Rpx=Rmm*k, phi0=Math.atan2(Y(Hs.z)-Y(A.z), X(Hs.u)-X(A.u));
+    s+=bogen(X(A.u),Y(A.z),Rpx,phi0,0.36,'#7a1fa2',2.5);
+    if(mode==='warum'){
+      s+=T(X(0)-12,Y(1900),'Talstütze S1','#14202e','end',12); s+=T(X(0)-12,Y(1600),'lotrecht','#5b6b7c','end',11,false);
+      s+=T(X(m1.u)+10,Y(m1.z)+4,'Modulträger 60°','#14202e','start',12);
+      s+=T(X(A.u)+14,Y(A.z)-8,'Gelenk oben (Bolzen)','#0b3ea8','start',12);
+      var mid={u:(Hs.u+A.u)/2, z:(Hs.z+A.z)/2};
+      s+=T(X(mid.u)+16,Y(mid.z)+18,'Bergstütze S2','#14202e','start',12); s+=T(X(mid.u)+16,Y(mid.z)+32,(90-beta).toFixed(0)+'° zur Waagrechten','#5b6b7c','start',10.5,false);
+      s+=T(X(Hs.u)+16,Y(Hs.z)+16,'Gelenk unten','#0b3ea8','start',12); s+=T(X(Hs.u)+16,Y(Hs.z)+29,'(Lasche auf der Fussplatte)','#5b6b7c','start',10.5,false);
+      s+=T(X(Hs.u+2000*se)+8,Y(Hs.z-2000*ce)+4,'Mikropfahl '+eps.toFixed(0)+'°','#5b6b7c','start',12);
+      s+=T(X(0)+8,Y(-1300),'Mikropfahl lotrecht','#5b6b7c','start',11,false);
+      var rl={x:X(Hs.u)+34, y:Y(Hs.z)-108};
+      s+=T(rl.x,rl.y,'Radius = Stützenlänge','#7a1fa2','start',12); s+=T(rl.x,rl.y+14,'hier darf der Fuss überall liegen','#7a1fa2','start',11,false);
+      s+=L(rl.x+40,rl.y+20,X(Hs.u)+Rpx*0.16*Math.cos(phi0+0.12),Y(Hs.z)-6,'#7a1fa2',1,'3 3');
+      s+='</svg>'; return s;
     }
+    // ---- Problem / Lösung: IST-Pfahl im Massstab + Lupe ----
+    var Hi={u:Hs.u+e, z:Hs.z+dz};
+    s+=L(X(Hi.u),Y(Hi.z),X(Hi.u+2000*se),Y(Hi.z-2000*ce),'#e0691b',5);
+    if(mode==='loesung' && r){
+      var Hn={u:Hs.u+r.H.u, z:Hs.z+r.H.z};
+      s+=profil(X(Hn.u),Y(Hn.z),X(A.u),Y(A.z),9,'#1c8a4a'); s+=C(X(Hn.u),Y(Hn.z),6,'#fff','#1c8a4a');
+      s+=T(14,44,'▶ Pfahl '+(r.t>=0?'rausziehen ':'einschieben ')+ab(r.t)+' mm','#14532d','start',14);
+      s+=T(14,60,'Kopf trifft den Kreis · Stütze behält ihre Länge, dreht '+ab(r.delta*180/Math.PI,1)+'°','#14532d','start',11.5,false);
+    } else {
+      s+=T(14,44,'▶ Pfahl sitzt '+(Math.abs(dz)>=1?ab(dz)+' mm '+(dz<0?'zu tief':'zu hoch'):'')+(Math.abs(dz)>=1&&Math.abs(e)>=1?', ':'')+(Math.abs(e)>=1?ab(e)+' mm zu weit '+(e>0?'bergwärts':'talwärts'):''),'#8f1d1d','start',14);
+      s+=T(14,60,'Achse parallel neben dem SOLL – Stütze passt so nicht','#8f1d1d','start',11.5,false);
+    }
+    // Lupe oben rechts
+    var lx=455, ly=108, lr=96;
+    s+=L(lx-lr*0.55,ly+lr*0.82,X(Hs.u)+8,Y(Hs.z)-10,'#5b6b7c',1.2,'3 4');
+    s+='<clipPath id="lupe'+mode+'"><circle cx="'+lx+'" cy="'+ly+'" r="'+(lr-2)+'"/></clipPath>';
+    s+=C(lx,ly,lr,'#fff','#5b6b7c');
+    var span=Math.max(60, Math.abs(e), Math.abs(dz), r?Math.abs(r.t):0), ki=Math.min(0.5, 62/span);
+    var Xi=function(u){return lx-e*ki/2+u*ki;}, Yi=function(z){return ly+dz*ki/2-z*ki;};
+    var g='<g clip-path="url(#lupe'+mode+')">';
+    // Bergstütze SOLL + Pfahl SOLL (grau), Kreis
+    g+=L(Xi(0),Yi(0),Xi(-600/ki*sb),Yi(600/ki*cb),'#9aa7b4',7); g+=L(Xi(0),Yi(0),Xi(600/ki*se),Yi(-600/ki*ce),'#9aa7b4',7,'9 7');
+    var Ai={u:-Rmm*sb, z:Rmm*cb}, Rpi=Rmm*ki, ph=Math.atan2(Yi(0)-Yi(Ai.z), Xi(0)-Xi(Ai.u));
+    g+=bogen(Xi(Ai.u),Yi(Ai.z),Rpi,ph,Math.min(1.5,600/Rpi),'#7a1fa2',2.5);
+    g+='<rect x="'+(Xi(0)-16)+'" y="'+(Yi(0)-7)+'" width="32" height="7" rx="2" fill="#9aa7b4"/>';
+    g+=T(Xi(0)+(e>=0?-22:22),Yi(0)-12,'SOLL','#6b7986',e>=0?'end':'start',11);
+    // IST
+    g+=L(Xi(e),Yi(dz),Xi(e+600/ki*se),Yi(dz-600/ki*ce),'#e0691b',7);
+    g+='<rect x="'+(Xi(e)-16)+'" y="'+(Yi(dz)-7)+'" width="32" height="7" rx="2" fill="#e0691b"/>';
+    g+=T(Xi(e)+(e>=0?22:-22),Yi(dz)+(dz<-5?16:-12),'IST','#b5510f',e>=0?'start':'end',11);
+    if(mode==='loesung' && r){
+      g+=L(Xi(e),Yi(dz),Xi(r.H.u),Yi(r.H.z),'#1c8a4a',5);
+      g+=L(Xi(r.H.u),Yi(r.H.z),Xi(r.H.u+(Ai.u-r.H.u)*(600/ki/Rmm)),Yi(r.H.z+(Ai.z-r.H.z)*(600/ki/Rmm)),'#1c8a4a',4,'5 4');
+      g+='<rect x="'+(Xi(r.H.u)-16)+'" y="'+(Yi(r.H.z)-7)+'" width="32" height="7" rx="2" fill="#1c8a4a"/>';
+      g+=T(Xi(r.H.u)-22,Yi(r.H.z)+18,'auf dem Kreis ✓','#14532d','end',11);
+    }
+    g+='</g>';
+    s+=g;
+    s+=T(lx,ly+lr+16,'Lupe: Pfahlkopf','#5b6b7c','middle',11,false);
     s+='</svg>'; return s;
   }
 
-  // Übersicht (massstäblich): Talstütze, Rahmen, Bergstütze, Pfahl, Kreis
-  function skUebersicht(eps,beta,Rmm){
-    var W=560,H=330, k=0.05, cx=330, cy=215;   // 0.05 px je mm = 50 px je m
-    var X=function(u){return cx+u*k;}, Y=function(z){return cy-z*k;};
-    var se=Math.sin(rad(eps)), ce=Math.cos(rad(eps)), sb=Math.sin(rad(beta)), cb=Math.cos(rad(beta));
-    var A={u:-Rmm*sb, z:Rmm*cb};
-    var s='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Übersicht Bergpfahl mit Stütze und Radius"><rect width="'+W+'" height="'+H+'" fill="#f7f9fc"/>';
-    // Gelände: Talfuss 3.06 m talwärts, 0.95 m tiefer (ILF Typ B)
-    var tu=-3060, tz=-950;
-    s+='<path d="M'+X(tu-1800).toFixed(1)+','+Y(tz-560).toFixed(1)+' L'+X(tu).toFixed(1)+','+Y(tz).toFixed(1)+' L'+X(0).toFixed(1)+','+Y(0).toFixed(1)+' L'+X(3200).toFixed(1)+','+Y(1000).toFixed(1)+' L'+X(3200).toFixed(1)+','+(H-6)+' L'+X(tu-1800).toFixed(1)+','+(H-6)+' Z" fill="#e6ded2" stroke="#b9a98f" stroke-width="1.5"/>';
-    s+=T(X(tu-1700),H-14,'TAL','#7a6a52','start',13); s+=T(X(2600),Y(1000)+24,'BERG','#7a6a52','start',13);
-    // Talpfahl + Talstütze (lotrecht), Rahmen bis zum Gelenk A
-    s+=L(X(tu),Y(tz),X(tu),Y(tz-1900),'#9aa7b4',5,'6 5'); s+=L(X(tu),Y(tz),X(tu),Y(A.z),'#0b5fff',5);
-    s+=L(X(tu)-10,Y(A.z),X(A.u)+40,Y(A.z),'#14202e',6); s+=T(X(tu)+12,Y(A.z)-10,'Rahmen / Knieträger','#14202e','start',11.5,false);
-    // Bergstütze + Gelenke
-    s+=L(X(0),Y(0),X(A.u),Y(A.z),'#0b5fff',5); s+=C(X(A.u),Y(A.z),6,'#0b5fff'); s+=C(X(0),Y(0),6,'#0b5fff');
-    s+=T(X(A.u)-10,Y(A.z)+18,'Gelenk (Lasche)','#0b3ea8','end',11.5,false); s+=T(X(0)+12,Y(0)+16,'Gelenk (Lasche am Fuss)','#0b3ea8','start',11.5,false);
-    s+=T((X(0)+X(A.u))/2+14,(Y(0)+Y(A.z))/2,'Stütze '+(Rmm/1000).toFixed(1)+' m · '+beta.toFixed(0)+'°','#0b3ea8','start',12);
-    // Bergpfahl
-    s+=L(X(0),Y(0),X(2000*se),Y(-2000*ce),'#9aa7b4',7); s+=T(X(2000*se)+8,Y(-2000*ce)+4,'Pfahl '+eps.toFixed(0)+'°','#6b7986','start',12);
-    // Kreis
-    var Rpx=Rmm*k, phi0=Math.atan2(cy-Y(A.z),cx-X(A.u));
-    s+=bogen(X(A.u),Y(A.z),Rpx,phi0,0.5,'#7a1fa2',2.5);
-    s+=T(W-14,26,'Radius = Stützenlänge:','#7a1fa2','end',12); s+=T(W-14,41,'hier darf der Fuss überall liegen','#7a1fa2','end',11.5,false);
-    s+=L(W-150,48,X(0)+Rpx*0.12,Y(0)-Rpx*0.16,'#7a1fa2',1,'3 3');
-    s+='</svg>'; return s;
-  }
-
-  function skizzen(eps,beta,Rmm,e,dz,r){
-    var h='<div class="sk">'+skDetail(Math.abs(e)>=1||Math.abs(dz)>=1?'PROBLEM':'SOLL-LAGE',eps,beta,Rmm,e,dz,r,false)+'</div>';
-    if(r && Math.abs(r.t)>=1) h+='<div class="sk">'+skDetail('LÖSUNG',eps,beta,Rmm,e,dz,r,true)+'</div>';
-    h+='<div class="legende"><span class="l-soll">SOLL</span><span class="l-ist">gebohrter Pfahl</span><span class="l-st">Stütze</span><span class="l-rad">Stützenradius</span><span class="l-neu">Korrektur</span></div>';
-    h+='<div class="hint">Schnitt in der Tischachse Tal→Berg, Abweichungen überhöht. Der Kopf kann sich nur <b>entlang der Pfahlachse</b> bewegen; '
-     +'gezogen wird, bis er den violetten Kreis trifft – dort passt die Stütze mit ihrer Nennlänge.</div>';
-    $('skizzen').innerHTML=h;
-    $('skWarum').innerHTML = skUebersicht(eps,beta,Rmm);
-  }
-
-  // ---- Vorbelegung aus der Adresse -------------------------------------------------------
+  // ---- Vorbelegung aus der Adresse ------------------------------------------------------
   (function(){
     var q={}; (location.search||'').replace(/^\?/,'').split('&').forEach(function(p){ if(!p) return; var kv=p.split('='); q[decodeURIComponent(kv[0])]=decodeURIComponent(kv[1]||''); });
     if(q.typ && TYP[q.typ.toUpperCase()]) S.typ=q.typ.toUpperCase();
@@ -519,7 +489,9 @@
     if(q.richt==='tal'||q.richt==='berg') S.richt=q.richt;
     markiere($('pTyp'),S.typ); markiere($('pSerie'),S.serie); markiere($('pRicht'),S.richt);
     vorgabenSetzen();
-    ['eps','spiel','beta','r','lage','hsoll','hist','okt'].forEach(function(k){ if(q[k]!==undefined){ $({eps:'iEps',spiel:'iSpiel',beta:'iBeta',r:'iR',lage:'iLage',hsoll:'iHSoll',hist:'iHIst',okt:'iOkt'}[k]).value=q[k]; } });
+    var M={eps:'iEps',spiel:'iSpiel',lage:'iLage',hsoll:'iHSoll',hist:'iHIst',okt:'iOkt'};
+    for(var kk in M){ if(q[kk]!==undefined) $(M[kk]).value=q[kk]; }
+    if(q.r && isFinite(parseFloat(q.r)) && parseFloat(q.r)>0) S.R=parseFloat(q.r);
     if(q.okt) $('dOkt').open=true;
   })();
   rechne();
