@@ -136,6 +136,22 @@ var tafelWahl=null;        /* am Handy angetippte Person – wartet auf den Bere
 function $(id){ return document.getElementById(id); }
 function h(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+/* Auszeichnung in den Ablaufboxen (Victor 23.09.2026): *fett* und
+   [rot]…[/rot] · [orange] · [gruen] · [blau]. Die Knöpfe über dem Feld setzen
+   die Zeichen; im Protokoll/PDF erscheinen sie fett bzw. farbig. EINE Stelle –
+   Bildschirm-Vorschau und Protokoll laufen beide über fmt(). */
+var FARBEN={ rot:'#D72622', orange:'#e08a00', gruen:'#2e9e46', blau:'#1a5fb4' };
+function fmt(t){
+  var o=h(t);
+  o=o.replace(/\[(rot|orange|gruen|blau)\]([\s\S]*?)\[\/\1\]/g,function(m,f,x){
+    return '<span style="color:'+FARBEN[f]+';font-weight:700">'+x+'</span>'; });
+  o=o.replace(/\*([^*\n]+)\*/g,'<b>$1</b>');
+  return o;
+}
+/* Für die Textfassung und «Pendenz daraus»: Farbzeichen weg, *fett* bleibt lesbar. */
+function ohneFarbe(t){ return String(t||'').replace(/\[\/?(rot|orange|gruen|blau)\]/g,''); }
+function hatAuszeichnung(t){ return /\*[^*\n]+\*|\[(rot|orange|gruen|blau)\]/.test(t||''); }
+
 function z2(n){ return String(n).padStart(2,'0'); }
 function heute(){ var d=new Date(); return d.getFullYear()+'-'+z2(d.getMonth()+1)+'-'+z2(d.getDate()); }
 function deDat(iso){ if(!iso||iso.length<10) return iso||''; return iso.slice(8,10)+'.'+iso.slice(5,7)+'.'+iso.slice(0,4); }
@@ -205,6 +221,11 @@ var CSS=[
 '.si-box>.k .min.ueber{background:#FBE9E7;border-color:#f0bdb8;color:#a3231f}',
 '.si-box>.k .min.fertig{background:#E8F6EC;border-color:#9fd5b0;color:#1c6b34}',
 '.si-box .inn{padding:11px 13px}',
+'.si-fmt{display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-bottom:5px}',
+'.si-fmt .si-kn.mini{padding:4px 9px;min-width:30px}',
+'.si-vorschau{font-size:13px;line-height:1.55;white-space:pre-wrap;background:#fafbfc;border:1px dashed #e3e5e8;',
+'  border-radius:5px;padding:7px 10px;margin-top:5px;color:#14181d}',
+'.si-vorschau[hidden]{display:none}',
 '.si-box .hilfe{font-size:11.5px;color:#63676d;margin-bottom:7px;line-height:1.5}',
 /* Die Textfelder wachsen mit dem Text mit (siehe taWachsen) – darum kein
    Scrollbalken und kein Ziehgriff: beim Protokollieren soll alles auf einen
@@ -237,6 +258,11 @@ var CSS=[
 '  padding:7px 8px;border-bottom:1px solid #e3e5e8;background:#f6f7f9;white-space:nowrap}',
 '.si-tab td{padding:7px 8px;border-bottom:1px solid #eef0f2;vertical-align:top;line-height:1.45}',
 '.si-tab tr:last-child td{border-bottom:0}',
+'.si-tab tr.si-ab1 td{border-bottom:0;padding-bottom:3px}',
+'.si-tab tr.si-ab2 td{padding-top:0;border-bottom:1px solid #e3e5e8}',
+'.si-abkom{width:100%;box-sizing:border-box;font:inherit;font-size:12.5px;padding:5px 8px;resize:none;',
+'  border:1px dashed #c9ccd2;border-radius:5px;background:#fafbfc;overflow:hidden;min-height:30px}',
+'.si-abkom:focus{border-style:solid;border-color:#1a5fb4;background:#fff;outline:none}',
 '.si-amp{display:inline-block;border-radius:11px;padding:2px 9px;font-size:11.5px;font-weight:700}',
 
 '.si-neu{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;background:#f6f7f9;border:1px solid #e3e5e8;',
@@ -568,10 +594,26 @@ function neueSitzung(datum){
           abgleich:{}, zahlen: LIVE?JSON.parse(JSON.stringify(LIVE)):null,
           angelegt:Date.now(), geaendert:Date.now(), von:wer() };
   RUNDE.forEach(function(p){ s.teilnehmer[p.id]= p.fest?'da':'?'; });
+  /* Teilnehmer der Vorsitzung übernehmen (Victor 23.09.2026): wer dort da/fehlt
+     war, steht wieder so drin, samt der dazugenommenen Personen. Antippen
+     korrigiert wie gewohnt. Gäste-Freitext bleibt leer – das sind Einmalbesuche. */
+  var v=vorSitzung(datum);
+  if(v){
+    s.extra=(v.extra||[]).map(function(e){ return { id:e.id, name:e.name }; });
+    RUNDE.concat(s.extra).forEach(function(p){
+      var st=(v.teilnehmer||{})[p.id];
+      if(st==='da'||st==='fehlt') s.teilnehmer[p.id]=st;
+    });
+  }
   ABLAUF.forEach(function(b){ s.boxen[b.id]={ text:'', gebraucht:0 }; });
   return s;
 }
 function sitz(){ return AKTIV?SITZUNGEN[AKTIV]:null; }
+/* Die jüngste Sitzung vor diesem Datum – Quelle für Teilnehmer und «↺ Text letztes Protokoll». */
+function vorSitzung(datum){
+  var vor=Object.keys(SITZUNGEN).filter(function(x){ return x<datum; }).sort().pop();
+  return vor?SITZUNGEN[vor]:null;
+}
 
 /* Alle Pendenzen aller Sitzungen, mit Statusüberlagerung. */
 function allePendenzen(){
@@ -959,13 +1001,17 @@ function abgleichBlock(s){
   if(!offen.length) return '';
   var r=offen.map(function(p){
     var st=PSTATUS.filter(function(x){ return x.id===(p.status||'offen'); })[0]||PSTATUS[0];
-    return '<tr><td>'+h(p.was)+'<div style="font-size:11px;color:#63676d">aus '+deDat(p.sitzung)
-      +(p.bemerkung?' · '+h(p.bemerkung):'')+'</div></td>'
+    /* Zeile 1: Punkt/Wer/Bis/Stand · Zeile 2: Kommentar über die ganze Breite
+       (Victor 23.09.2026). Gleiches Feld «bemerkung» wie im Blatt Pendenzen. */
+    return '<tr class="si-ab1"><td>'+h(p.was)+'<div style="font-size:11px;color:#63676d">aus '
+      +deDat(p.sitzung)+'</div></td>'
       +'<td style="white-space:nowrap">'+h(p.wer||'?')+'</td>'
       +'<td style="white-space:nowrap">'+deDat(p.bis||'')+'</td>'
       +'<td style="background:'+st.f+'">'+PSTATUS.map(function(x){
           return '<button class="si-kn mini'+(x.id===st.id?' rot':'')+'" data-ab="'+p.id
-            +'" data-st="'+x.id+'">'+x.n+'</button>'; }).join(' ')+'</td></tr>';
+            +'" data-st="'+x.id+'">'+x.n+'</button>'; }).join(' ')+'</td></tr>'
+      +'<tr class="si-ab2"><td colspan="4"><textarea class="si-abkom" data-abk="'+p.id
+      +'" rows="1" placeholder="Kommentar zum Stand …">'+h(p.bemerkung||'')+'</textarea></td></tr>';
   }).join('');
   return '<div class="si-kopf" style="border-left-color:#1a5fb4">'
     +'<h2>Abgleich zur letzten Sitzung</h2>'
@@ -982,6 +1028,16 @@ function abgleichBinden(){
       pendMerken(id,{ status:st, bemerkung:(PUEBER[id]||{}).bemerkung||'',
                       ts:Date.now(), von:wer(), sitzung:AKTIV });
       zeichnen();
+    };
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-abk]'),function(t){
+    var hoch=function(){ t.style.height='auto'; t.style.height=t.scrollHeight+'px'; };
+    hoch();
+    t.oninput=function(){
+      var id=t.getAttribute('data-abk'), alt=PUEBER[id]||{};
+      pendMerken(id,{ status:alt.status||'offen', bemerkung:t.value,
+                      ts:Date.now(), von:wer(), sitzung:AKTIV });
+      hoch();
     };
   });
 }
@@ -1002,8 +1058,20 @@ function boxenZeichnen(){
       +'<div class="inn">'
         +'<div class="hilfe">'+h(b.hilfe)+'</div>'
         +(b.id==='personal'? personalKurz() : '')
-        +'<textarea data-txt="'+b.id+'" placeholder="Stichworte – kurze Zeilen, keine Absätze">'
+        +'<div class="si-fmt">'
+          +'<button class="si-kn mini" data-fmt="fett" data-fb="'+b.id+'" title="*fett*"><b>F</b></button>'
+          +Object.keys(FARBEN).map(function(f){
+            return '<button class="si-kn mini" data-fmt="'+f+'" data-fb="'+b.id+'" title="['+f+']…[/'+f+']" '
+              +'style="color:'+FARBEN[f]+'">●</button>'; }).join('')
+          +'<span style="flex:1"></span>'
+          +(vorText(s,b.id)
+            ?'<button class="si-kn mini" data-vor="'+b.id+'">↺ Text letztes Protokoll ('
+              +deDat(vorSitzung(s.datum).datum)+')</button>':'')
+        +'</div>'
+        +'<textarea data-txt="'+b.id+'" placeholder="Stichworte – kurze Zeilen, keine Absätze. *fett*">'
           +h(d.text||'')+'</textarea>'
+        +'<div class="si-vorschau" id="siVs-'+b.id+'"'+(hatAuszeichnung(d.text)?'':' hidden')+'>'
+          +fmt(d.text||'')+'</div>'
         +'<div class="zeilen">'
           +'<button class="si-kn mini" data-bild="'+b.id+'">📷 Bild</button>'
           +'<button class="si-kn mini" data-daraus="'+b.id+'">→ Pendenz daraus</button>'
@@ -1017,7 +1085,33 @@ function boxenZeichnen(){
     el.oninput=function(){
       var id=el.getAttribute('data-txt');
       if(!s.boxen[id]) s.boxen[id]={text:'',gebraucht:0};
-      s.boxen[id].text=el.value; merken(); taWachsen(el);
+      s.boxen[id].text=el.value; merken(); taWachsen(el); vorschau(id,el.value);
+    };
+  });
+  /* F / Farbe: markierten Text einpacken; ohne Markierung die Zeichen setzen
+     und den Cursor dazwischen stellen. */
+  Array.prototype.forEach.call($('siBoxen').querySelectorAll('[data-fmt]'),function(k){
+    k.onmousedown=function(e){ e.preventDefault(); };   /* Markierung im Feld behalten */
+    k.onclick=function(){
+      var id=k.getAttribute('data-fb'), art=k.getAttribute('data-fmt');
+      var el=$('siBoxen').querySelector('[data-txt="'+id+'"]'); if(!el) return;
+      var a=el.selectionStart, e=el.selectionEnd, v=el.value;
+      var vorn= art==='fett'?'*':'['+art+']', hint= art==='fett'?'*':'[/'+art+']';
+      el.value=v.slice(0,a)+vorn+v.slice(a,e)+hint+v.slice(e);
+      el.focus();
+      if(a===e) el.selectionStart=el.selectionEnd=a+vorn.length;
+      else { el.selectionStart=a; el.selectionEnd=e+vorn.length+hint.length; }
+      el.oninput();
+    };
+  });
+  /* Text der Vorsitzung übernehmen (Victor 23.09.2026). Leeres Feld: direkt
+     einsetzen; steht schon etwas drin, wird darunter angehängt. */
+  Array.prototype.forEach.call($('siBoxen').querySelectorAll('[data-vor]'),function(k){
+    k.onclick=function(){
+      var id=k.getAttribute('data-vor'), alt=vorText(s,id); if(!alt) return;
+      var el=$('siBoxen').querySelector('[data-txt="'+id+'"]'); if(!el) return;
+      el.value= el.value.trim()? el.value.replace(/\s+$/,'')+'\n\n'+alt : alt;
+      el.oninput(); el.focus();
     };
   });
   Array.prototype.forEach.call($('siBoxen').querySelectorAll('[data-timer]'),function(b){
@@ -1027,7 +1121,7 @@ function boxenZeichnen(){
     b.onclick=function(){
       var id=b.getAttribute('data-daraus');
       var t=(s.boxen[id]&&s.boxen[id].text||'').split('\n').filter(function(x){ return x.trim(); });
-      $('siPnWas').value=t.length?t[t.length-1].replace(/^[-•*\s]+/,''):'';
+      $('siPnWas').value=t.length?ohneFarbe(t[t.length-1]).replace(/^[-•*\s]+/,'').replace(/\*/g,''):'';
       $('siPnWas').focus();
       $('siPnWas').scrollIntoView({behavior:'smooth',block:'center'});
     };
@@ -1042,6 +1136,16 @@ function boxenZeichnen(){
 /* Textfeld auf die Höhe seines Inhalts ziehen – kein Scrollen im Feld,
    die ganze Mitschrift steht sichtbar da (Vorgabe Victor 28.08.2026).
    Erst auf 'auto', sonst schrumpft das Feld beim Löschen nie zurück. */
+function vorText(s,id){
+  var v=vorSitzung(s.datum);
+  var t=(((v&&v.boxen)||{})[id]||{}).text||'';
+  return t.trim()?t.replace(/\s+$/,''):'';
+}
+function vorschau(id,t){
+  var v=$('siVs-'+id); if(!v) return;
+  v.hidden=!hatAuszeichnung(t);
+  if(!v.hidden) v.innerHTML=fmt(t);
+}
 function taWachsen(el){
   if(!el) return;
   el.style.height='auto';
@@ -2186,7 +2290,7 @@ function protokollHtml(s){
        Ausfälle, Anstellungswünsche und offener Bedarf – internes Führungswissen.
        Ein Protokoll geht an den Bauherrn und an Dritte; was davon hineingehört,
        schreibt die Bauleitung selbst in die Box (Vorfall 27.08.2026). */
-    if(hatText) o+='<div class="txt">'+h(d.text.trim())+'</div>';
+    if(hatText) o+='<div class="txt">'+fmt(d.text.trim())+'</div>';
     if(bilder.length) o+='<div class="bilder">'+bilder.map(function(x){
       var quelle=(vorrat[x.id]||{}).b;
       if(!quelle) return '';
@@ -2261,7 +2365,7 @@ function alsTextKopieren(){
     var bi=(s.bilder||[]).filter(function(x){ return x.box===b.id; });
     if((!d.text||!d.text.trim()) && !bi.length) return;
     t+=b.titel.toUpperCase()+'\n';
-    if(d.text&&d.text.trim()) t+=d.text.trim().split('\n').map(function(z){
+    if(d.text&&d.text.trim()) t+=ohneFarbe(d.text.trim()).split('\n').map(function(z){
       return '  '+z; }).join('\n')+'\n';
     bi.forEach(function(x){ t+='  [Bild'+(x.text?': '+x.text:'')+']\n'; });
     t+='\n';
