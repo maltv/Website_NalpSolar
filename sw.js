@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v192';
+var CACHE = 'nalpsolar-v193';
 var PRECACHE = [
   './index.html',
   // Webapp-Manifest + Icons des Portals (22.09.2026, Tools\Portal_Icons_Bauen.py) und die
@@ -10,6 +10,7 @@ var PRECACHE = [
   './assets/img/ico-portal-maskable-512.png',
   './assets/img/ico-portal-180.png',
   './assets/img/ico/sicherheit.png',
+  './assets/img/ico/tagesrapport.png',  // Kachel Tagesrapport (23.09.2026)
   './assets/img/ico/ueberstand.png',   // Kachel Schrägpfahl (22.09.2026)
   './assets/img/ico/altlasten.png',
   './assets/img/ico/wasserleitung.png',
@@ -61,6 +62,7 @@ var PRECACHE = [
   './assets/data/bpc.enc',
   './assets/js/nalp-terrain.js',
   './passstueck.html',
+  './tagesrapport.html',  // digitaler Tagesrapport (23.09.2026)
   './pfahl-lage.html',   // Schrägpfahl Lage & Auszug (22.09.2026, WERKZEUGE §64)
   './assets/js/nalp-passstueck-daten.js',
   // Laufende Normteil-Inventur im Tal - muss offline laufen
