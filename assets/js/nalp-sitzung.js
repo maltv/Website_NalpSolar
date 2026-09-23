@@ -136,15 +136,16 @@ var tafelWahl=null;        /* am Handy angetippte Person – wartet auf den Bere
 function $(id){ return document.getElementById(id); }
 function h(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
-/* Auszeichnung in den Ablaufboxen (Victor 23.09.2026): *fett* und
-   [rot]…[/rot] · [orange] · [gruen] · [blau]. Die Knöpfe über dem Feld setzen
-   die Zeichen; im Protokoll/PDF erscheinen sie fett bzw. farbig. EINE Stelle –
-   Bildschirm-Vorschau und Protokoll laufen beide über fmt(). */
+/* Auszeichnung in den Ablaufboxen (Victor 23.09.2026): Text markieren, dann
+   F oder Farbe klicken – das Feld zeigt es sofort so an (kein Code, keine
+   Vorschau; Victor: «katastrophe»). Gespeichert wird weiter als Text mit
+   *fett* und [rot]…[/rot] · [orange] · [gruen] · [blau]; fmt() macht daraus
+   HTML für Feld UND Protokoll/PDF, edText() liest das Feld zurück. */
 var FARBEN={ rot:'#D72622', orange:'#e08a00', gruen:'#2e9e46', blau:'#1a5fb4' };
 function fmt(t){
   var o=h(t);
   o=o.replace(/\[(rot|orange|gruen|blau)\]([\s\S]*?)\[\/\1\]/g,function(m,f,x){
-    return '<span style="color:'+FARBEN[f]+';font-weight:700">'+x+'</span>'; });
+    return '<span style="color:'+FARBEN[f]+'">'+x+'</span>'; });
   o=o.replace(/\*([^*\n]+)\*/g,'<b>$1</b>');
   return o;
 }
@@ -223,9 +224,11 @@ var CSS=[
 '.si-box .inn{padding:11px 13px}',
 '.si-fmt{display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-bottom:5px}',
 '.si-fmt .si-kn.mini{padding:4px 9px;min-width:30px}',
-'.si-vorschau{font-size:13px;line-height:1.55;white-space:pre-wrap;background:#fafbfc;border:1px dashed #e3e5e8;',
-'  border-radius:5px;padding:7px 10px;margin-top:5px;color:#14181d}',
-'.si-vorschau[hidden]{display:none}',
+'.si-ed{width:100%;box-sizing:border-box;min-height:78px;font-size:14px;line-height:1.55;padding:9px 10px;',
+'  border:1px solid #c9ccd2;border-radius:5px;background:#fff;color:#1a1a1a;white-space:pre-wrap;',
+'  word-wrap:break-word;outline:none;cursor:text}',
+'.si-ed:focus{border-color:#1a5fb4;box-shadow:0 0 0 2px rgba(26,95,180,.12)}',
+'.si-ed:empty:before{content:attr(data-ph);color:#9aa0a6}',
 '.si-box .hilfe{font-size:11.5px;color:#63676d;margin-bottom:7px;line-height:1.5}',
 /* Die Textfelder wachsen mit dem Text mit (siehe taWachsen) – darum kein
    Scrollbalken und kein Ziehgriff: beim Protokollieren soll alles auf einen
@@ -1059,19 +1062,18 @@ function boxenZeichnen(){
         +'<div class="hilfe">'+h(b.hilfe)+'</div>'
         +(b.id==='personal'? personalKurz() : '')
         +'<div class="si-fmt">'
-          +'<button class="si-kn mini" data-fmt="fett" data-fb="'+b.id+'" title="*fett*"><b>F</b></button>'
+          +'<button class="si-kn mini" data-fmt="fett" data-fb="'+b.id+'" title="Markierten Text fett"><b>F</b></button>'
           +Object.keys(FARBEN).map(function(f){
-            return '<button class="si-kn mini" data-fmt="'+f+'" data-fb="'+b.id+'" title="['+f+']…[/'+f+']" '
+            return '<button class="si-kn mini" data-fmt="'+f+'" data-fb="'+b.id+'" title="Markierten Text '+f+'" '
               +'style="color:'+FARBEN[f]+'">●</button>'; }).join('')
+          +'<button class="si-kn mini" data-fmt="weg" data-fb="'+b.id+'" title="Fett und Farbe entfernen">✕</button>'
           +'<span style="flex:1"></span>'
           +(vorText(s,b.id)
             ?'<button class="si-kn mini" data-vor="'+b.id+'">↺ Text letztes Protokoll ('
               +deDat(vorSitzung(s.datum).datum)+')</button>':'')
         +'</div>'
-        +'<textarea data-txt="'+b.id+'" placeholder="Stichworte – kurze Zeilen, keine Absätze. *fett*">'
-          +h(d.text||'')+'</textarea>'
-        +'<div class="si-vorschau" id="siVs-'+b.id+'"'+(hatAuszeichnung(d.text)?'':' hidden')+'>'
-          +fmt(d.text||'')+'</div>'
+        +'<div class="si-ed" contenteditable="true" spellcheck="true" data-txt="'+b.id+'" '
+          +'data-ph="Stichworte – kurze Zeilen, keine Absätze">'+fmt(d.text||'')+'</div>'
         +'<div class="zeilen">'
           +'<button class="si-kn mini" data-bild="'+b.id+'">📷 Bild</button>'
           +'<button class="si-kn mini" data-daraus="'+b.id+'">→ Pendenz daraus</button>'
@@ -1081,26 +1083,35 @@ function boxenZeichnen(){
   }).join('');
 
   Array.prototype.forEach.call($('siBoxen').querySelectorAll('[data-txt]'),function(el){
-    taWachsen(el);
     el.oninput=function(){
       var id=el.getAttribute('data-txt');
       if(!s.boxen[id]) s.boxen[id]={text:'',gebraucht:0};
-      s.boxen[id].text=el.value; merken(); taWachsen(el); vorschau(id,el.value);
+      s.boxen[id].text=edText(el); merken();
+    };
+    /* Enter = neue Zeile (keine <div>-Blöcke), Einfügen nur als reiner Text.
+       Bilder aus der Zwischenablage laufen weiter über einfuegenBinden(). */
+    el.onkeydown=function(e){
+      if(e.key==='Enter' && !e.isComposing){ e.preventDefault();
+        document.execCommand('insertLineBreak'); }
+    };
+    el.onpaste=function(e){
+      var d=e.clipboardData; if(!d) return;
+      for(var i=0;i<(d.items||[]).length;i++) if(d.items[i].kind==='file') return;
+      e.preventDefault();
+      document.execCommand('insertText',false,d.getData('text/plain'));
     };
   });
-  /* F / Farbe: markierten Text einpacken; ohne Markierung die Zeichen setzen
-     und den Cursor dazwischen stellen. */
+  /* F / Farbe / ✕: wirkt auf den markierten Text im Feld, direkt sichtbar. */
   Array.prototype.forEach.call($('siBoxen').querySelectorAll('[data-fmt]'),function(k){
     k.onmousedown=function(e){ e.preventDefault(); };   /* Markierung im Feld behalten */
     k.onclick=function(){
       var id=k.getAttribute('data-fb'), art=k.getAttribute('data-fmt');
       var el=$('siBoxen').querySelector('[data-txt="'+id+'"]'); if(!el) return;
-      var a=el.selectionStart, e=el.selectionEnd, v=el.value;
-      var vorn= art==='fett'?'*':'['+art+']', hint= art==='fett'?'*':'[/'+art+']';
-      el.value=v.slice(0,a)+vorn+v.slice(a,e)+hint+v.slice(e);
-      el.focus();
-      if(a===e) el.selectionStart=el.selectionEnd=a+vorn.length;
-      else { el.selectionStart=a; el.selectionEnd=e+vorn.length+hint.length; }
+      if(document.activeElement!==el) el.focus();
+      try { document.execCommand('styleWithCSS',false,false); } catch(x){}
+      if(art==='fett') document.execCommand('bold');
+      else if(art==='weg') document.execCommand('removeFormat');
+      else document.execCommand('foreColor',false,FARBEN[art]);
       el.oninput();
     };
   });
@@ -1110,7 +1121,8 @@ function boxenZeichnen(){
     k.onclick=function(){
       var id=k.getAttribute('data-vor'), alt=vorText(s,id); if(!alt) return;
       var el=$('siBoxen').querySelector('[data-txt="'+id+'"]'); if(!el) return;
-      el.value= el.value.trim()? el.value.replace(/\s+$/,'')+'\n\n'+alt : alt;
+      var jetzt=edText(el);
+      el.innerHTML=fmt(jetzt.trim()? jetzt.replace(/\s+$/,'')+'\n\n'+alt : alt);
       el.oninput(); el.focus();
     };
   });
@@ -1141,10 +1153,41 @@ function vorText(s,id){
   var t=(((v&&v.boxen)||{})[id]||{}).text||'';
   return t.trim()?t.replace(/\s+$/,''):'';
 }
-function vorschau(id,t){
-  var v=$('siVs-'+id); if(!v) return;
-  v.hidden=!hatAuszeichnung(t);
-  if(!v.hidden) v.innerHTML=fmt(t);
+/* Feldinhalt -> gespeicherter Text. Liest die TATSÄCHLICHE Darstellung je
+   Textstück (fett? welche Farbe?) – egal welches HTML der Browser beim
+   Formatieren erzeugt (<b>, <font>, <span style>). Unbekannte Farben fallen weg. */
+function edText(el){
+  var laeufe=[], basis=getComputedStyle(el).color;
+  function farbe(c){
+    if(c===basis) return '';
+    for(var f in FARBEN){ var p=document.createElement('span'); p.style.color=FARBEN[f];
+      if(p.style.color===c) return f; }
+    return '';
+  }
+  function dazu(t,b,f){
+    var l=laeufe[laeufe.length-1];
+    if(l && l.b===b && l.f===f) l.t+=t; else laeufe.push({t:t,b:b,f:f});
+  }
+  (function gehe(n){
+    for(var k=n.firstChild;k;k=k.nextSibling){
+      if(k.nodeType===3){
+        var cs=getComputedStyle(k.parentElement);
+        dazu(k.nodeValue.replace(/ /g,' '), parseInt(cs.fontWeight,10)>=600, farbe(cs.color));
+      } else if(k.nodeName==='BR'){ dazu('\n',false,'');
+      } else if(k.nodeType===1){
+        var block=/^(DIV|P)$/.test(k.nodeName);
+        if(block && laeufe.length && !/\n$/.test(laeufe[laeufe.length-1].t)) dazu('\n',false,'');
+        gehe(k);
+      }
+    }
+  })(el);
+  return laeufe.map(function(l){
+    var t=l.t;
+    if(l.b) t=t.split('\n').map(function(z){
+      var m=z.match(/^(\s*)(.*?)(\s*)$/); return m[2]?m[1]+'*'+m[2]+'*'+m[3]:z; }).join('\n');
+    if(l.f && t.trim()) t='['+l.f+']'+t+'[/'+l.f+']';
+    return t;
+  }).join('').replace(/\n$/,'');
 }
 function taWachsen(el){
   if(!el) return;
