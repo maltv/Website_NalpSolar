@@ -100,6 +100,10 @@
   .stoss.na{color:var(--muted);background:#f1f3f6;border-color:var(--line);font-weight:700;}
   .open{margin-top:auto;border:0;border-radius:10px;padding:10px;font-weight:800;font-size:13.5px;color:#fff;
     background:linear-gradient(135deg,#233b54,#12304f);cursor:pointer;text-align:center;text-decoration:none;display:block;}
+  .kx{font-size:11.5px;line-height:1.35;background:#fff6e5;border:1px solid #ffd28a;border-radius:8px;padding:6px 8px;}
+  .kx b{color:#9a4b00;}
+  .open.kxo{margin-top:0;background:linear-gradient(135deg,#ff8a3d,#c85a12);}
+  .kxbanner{background:#fff6e5;border:2px solid #ffb877;border-radius:12px;padding:10px 12px;margin:0 0 12px;font-size:13px;line-height:1.4;}
   .pcard.montage{grid-column:1/-1;border-color:#ffb877;}
   .pcard.montage .open{background:linear-gradient(135deg,#ff8a3d,#c85a12);}
   .stellen-card{display:flex;align-items:center;gap:12px;text-decoration:none;color:#fff;border-radius:14px;padding:16px 18px;margin-bottom:6px;
@@ -249,6 +253,9 @@
   <div class="lead">Zuerst der Plan: Montagekonzept und die Primärkonstruktion je Typ und Baujahr.
     Auf der Karte steht die Stosslänge der Bergstütze; die Schrauben sind farbig nach
     <b>Tal</b> (vormontiert) und <b>Berg</b> (Montage) markiert.</div>
+  <div class="kxbanner">🔩 <b>ILF-Korrex Kontermuttern – gilt ab sofort</b> (B. Ruede, ILF, Mail 23.09.2026):
+    Die Angaben zu den Kontermuttern im Korrex der 10er-Tische 2026 gelten jetzt – <b>auch für die 8er-Tische 2026
+    und die 2025er Serie</b>. Revidierte Mauchle-Pläne folgen. Korrex je Typ: oranger Knopf auf der Karte.</div>
   <div class="plans" id="plans"></div>
 
   <!-- SCHRITT 2: Schraube erkennen -->
@@ -398,23 +405,33 @@ const TYPEN = [
   {typ:'A', jahr:'2025', cls:'jstd', nr:'24027-S-0-M-002 · Rev B', file:'stahlbau/Primaerkonstruktion_TypA.pdf',
     innen:['M20×70','M20×90','M12×45','M10×35'], hv:['M20×75'], stoss:3566},
   {typ:'A', jahr:'2026', cls:'j2026', nr:'24027-S-0-M-008 · Rev B', file:'stahlbau/Primaerkonstruktion_TypA_2026.pdf',
-    innen:['M24×100','M24×75','M20×70','M12×50'], hv:['M20×75'], stoss:3107},
+    innen:['M24×100','M24×75','M20×70','M12×50'], hv:['M20×75'], stoss:3107,
+    korrex:{file:'stahlbau/Primaerkonstruktion_TypA_2026_ILF-Korrex_260923.pdf', stand:'23.09.2026', plan:'M-008 Rev D',
+      text:'«ok». Die 5 Vermerke «mit Kontermutter» vom 17.09. (Fuss: M24 8.8 + HV M20×75) sind entfernt.'}},
   {typ:'B', jahr:'2025', cls:'jstd', nr:'24027-S-0-M-001 · Rev G', file:'stahlbau/Primaerkonstruktion_TypB.pdf',
     innen:['M24×100','M24×90','M24×80','M24×75','M16×65','M16×55','M12×45','M10×40'], hv:['M20×90'], stoss:3043},
   {typ:'B', jahr:'2026', cls:'j2026', nr:'24027-S-0-M-009 · Rev B', file:'stahlbau/Primaerkonstruktion_TypB_2026.pdf',
-    innen:['M24×100','M16×65','M12×50'], hv:['M20×75'], stoss:2535},
+    innen:['M24×100','M16×65','M12×50'], hv:['M20×75'], stoss:2535,
+    korrex:{file:'stahlbau/Primaerkonstruktion_TypB_2026_ILF-Korrex_260917.pdf', stand:'17.09.2026', plan:'M-009 Rev D',
+      text:'6× «mit Kontermutter» am Fuss: M24×100 8.8 (Talstütze) und HV M20×75 10.9 (Bergfuss). Am 23.09. nicht geändert.'}},
   {typ:'B', jahr:'8er Modultisch', cls:'j8er', nr:'24027-S-0-P-005', file:'stahlbau/Primaerkonstruktion_TypB_8er.pdf',
     innen:['M24×100','M24×90','M24×80','M24×75','M16×65','M16×55','M12×45','M10×40'], hv:['M20×90'], stoss:null},
   {typ:'C', jahr:'2026', cls:'j2026', nr:'24027-S-0-M-010 · Rev B', file:'stahlbau/Primaerkonstruktion_TypC_2026.pdf',
-    innen:['M30×120','M24×110','M24×75','M20×80','M12×50'], hv:['M24×85'], stoss:2220},
+    innen:['M30×120','M24×110','M24×75','M20×80','M12×50'], hv:['M24×85'], stoss:2220,
+    korrex:{file:'stahlbau/Primaerkonstruktion_TypC_2026_ILF-Korrex_260917.pdf', stand:'17.09.2026', plan:'M-010 Rev C',
+      text:'Nur «Beschriftung ergänzen» – keine Kontermutter-Angabe.'}},
   {typ:'D', jahr:'2025', cls:'jstd', nr:'Plan Typ D', file:'stahlbau/Primaerkonstruktion_TypD.pdf',
     innen:['M30×130','M30×120','M24×90','M12×45','M10×40'], hv:['M24×90'], stoss:2623},
   {typ:'D', jahr:'2026', cls:'j2026', nr:'Plan Typ D · 2026', file:'stahlbau/Primaerkonstruktion_TypD_2026.pdf',
-    innen:['M30×130','M24×90','M12×50'], hv:['M24×85'], stoss:2127},
+    innen:['M30×130','M24×90','M12×50'], hv:['M24×85'], stoss:2127,
+    korrex:{file:'stahlbau/Primaerkonstruktion_TypD_2026_ILF-Korrex_260917.pdf', stand:'17.09.2026', plan:'M-006 Rev C',
+      text:'Keine Anmerkung von ILF.'}},
   {typ:'E', jahr:'2025', cls:'jstd', nr:'Plan Typ E', file:'stahlbau/Primaerkonstruktion_TypE.pdf',
     innen:['M36×150','M27×120','M27×100','M12×45','M10×40'], hv:['M30×105'], stoss:2575},
   {typ:'E', jahr:'2026', cls:'j2026', nr:'Plan Typ E · 2026', file:'stahlbau/Primaerkonstruktion_TypE_2026.pdf',
-    innen:['M36×150','M30×130','M27×120','M12×55'], hv:['M27×100'], stoss:1923},
+    innen:['M36×150','M30×130','M27×120','M12×55'], hv:['M27×100'], stoss:1923,
+    korrex:{file:'stahlbau/Primaerkonstruktion_TypE_2026_ILF-Korrex_260917.pdf', stand:'17.09.2026', plan:'M-007 Rev C',
+      text:'Keine Anmerkung von ILF.'}},
 ];
 
 // Chip-Farbe nach Verschraub-Ort: gruen = Tal (Vormontage), blau = Berg (Montage).
@@ -447,7 +464,10 @@ TYPEN.forEach(function(p){
       '<div class="clab">HV Fuss/Kopf (10.9 → Tab. 2)</div><div class="chips">'+chips(p.hv,true)+'</div>'+
       '<div class="clab">Stosslänge Bergstütze (reines Rohr)</div>'+
       (p.stoss ? '<div class="stoss">'+p.stoss+' mm</div>' : '<div class="stoss na">– nicht erfasst</div>')+
-      '<a class="open" href="'+p.file+'" target="_blank" rel="noopener">Plan öffnen (PDF)</a>'+
+      (p.korrex ? '<div class="kx"><b>ILF-Korrex '+p.korrex.stand+'</b> · '+p.korrex.plan+'<br>'+p.korrex.text+'</div>'+
+        '<a class="open kxo" href="'+p.korrex.file+'" target="_blank" rel="noopener">Aktueller Plan + ILF-Korrex (PDF)</a>' : '')+
+      '<a class="open"'+(p.korrex ? ' style="margin-top:0"' : '')+' href="'+p.file+'" target="_blank" rel="noopener">'+
+        (p.korrex ? 'Plan mit Stosslänge (PDF)' : 'Plan öffnen (PDF)')+'</a>'+
     '</div>');
 });
 
@@ -457,6 +477,7 @@ document.getElementById('src').innerHTML =
   'Schrauben je Typ: Primärkonstruktions-Pläne 24027-S-0-M-001/002/008/009/010, -P-005 sowie Pläne Typ D/E. '+
   'Stosslängen Bergstütze (reine Rohrlänge, ohne Fussplatte): Tabelle V. Malt, Stand 15.07.2026 – in den Plan-PDFs als rote Box eingezeichnet; '+
   'Typ B 8er-Modultisch noch nicht erfasst, Typ C existiert nur als 2026er. '+
+  'ILF-Korrex: ACC 52_Ausfuehrung/10_Dokumente_UN/02_Mauchle/Serie_2026/…/02_Korref (Typ A 23.09., B–E 17.09.2026), Mail B. Ruede 23.09.2026 23:22. '+
   'Zusammenstellung Stand 10.07.2026. Bei Unklarheit oder Sonderfall (z. B. 10.9-Schraube ausserhalb Fuss-/Kopfplatte): Bauleitung / Statik fragen.';
 
 if('serviceWorker' in navigator){ window.addEventListener('load',function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
