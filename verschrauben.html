@@ -318,15 +318,17 @@ var TYPFARBE = { A:'#1565c0', B:'#D72622', C:'#8a8e94', D:'#1e9e5a', E:'#e0a800'
 /* Stahlbaupläne je Grundtyp und Baujahr – Dateien liegen in stahlbau/ */
 var PLAN = {
   'A_2025':['Primaerkonstruktion_TypA.pdf','24027-S-0-M-002 · Rev B'],
-  'A_2026':['Primaerkonstruktion_TypA_2026.pdf','24027-S-0-M-008 · Rev B'],
+  'A_2026':['Primaerkonstruktion_TypA_2026_ILF-Korrex_260923.pdf','24027-S-0-M-008 · Rev D + ILF-Korrex 23.09.'],
   'B_2025':['Primaerkonstruktion_TypB.pdf','24027-S-0-M-001 · Rev G'],
-  'B_2026':['Primaerkonstruktion_TypB_2026.pdf','24027-S-0-M-009 · Rev B'],
-  'C_2026':['Primaerkonstruktion_TypC_2026.pdf','24027-S-0-M-010 · Rev B'],
-  'D_2025':['Primaerkonstruktion_TypD.pdf','Plan Typ D'],
-  'D_2026':['Primaerkonstruktion_TypD_2026.pdf','Plan Typ D · 2026'],
-  'E_2025':['Primaerkonstruktion_TypE.pdf','Plan Typ E'],
-  'E_2026':['Primaerkonstruktion_TypE_2026.pdf','Plan Typ E · 2026']
+  'B_2026':['Primaerkonstruktion_TypB_2026_ILF-Korrex_260917.pdf','24027-S-0-M-009 · Rev D + ILF-Korrex 17.09.'],
+  'C_2026':['Primaerkonstruktion_TypC_2026_ILF-Korrex_260917.pdf','24027-S-0-M-010 · Rev C + ILF-Korrex 17.09.'],
+  'D_2025':['Primaerkonstruktion_TypD.pdf','24027-S-0-M-004 · Rev B'],
+  'D_2026':['Primaerkonstruktion_TypD_2026_ILF-Korrex_260917.pdf','24027-S-0-M-006 · Rev C'],
+  'E_2025':['Primaerkonstruktion_TypE.pdf','24027-S-0-M-003 · Rev E'],
+  'E_2026':['Primaerkonstruktion_TypE_2026_ILF-Korrex_260917.pdf','24027-S-0-M-007 · Rev C']
 };
+/* 2026: aktuelle Mauchle-Revision mit den ILF-Korrex-Vermerken (ACC 02_Korref, 24.09.2026).
+   Die alten Rev-B-Dateien mit Stosslänge bleiben nur in stahlbau.html verlinkt. */
 
 var TISCHE = {};        /* id -> {id, typ, grund, jahr, ber, mt, mtDat, pkDat, pts:[[lat,lon]…]} */
 var VERSCHRAUBT = {};   /* id -> {am, von, ts} */

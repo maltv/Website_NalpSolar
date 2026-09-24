@@ -404,34 +404,44 @@ const MONTAGE = { file:'stahlbau/Montagekonzept_MT-Montage.pdf', nr:'NalpSolar_5
 const TYPEN = [
   {typ:'A', jahr:'2025', cls:'jstd', nr:'24027-S-0-M-002 · Rev B', file:'stahlbau/Primaerkonstruktion_TypA.pdf',
     innen:['M20×70','M20×90','M12×45','M10×35'], hv:['M20×75'], stoss:3566},
-  {typ:'A', jahr:'2026', cls:'j2026', nr:'24027-S-0-M-008 · Rev B', file:'stahlbau/Primaerkonstruktion_TypA_2026.pdf',
+  {typ:'A', jahr:'2026', cls:'j2026', nr:'24027-S-0-M-008 · aktuell Rev D', file:'stahlbau/Primaerkonstruktion_TypA_2026.pdf', alt:'Rev B',
     innen:['M24×100','M24×75','M20×70','M12×50'], hv:['M20×75'], stoss:3107,
     korrex:{file:'stahlbau/Primaerkonstruktion_TypA_2026_ILF-Korrex_260923.pdf', stand:'23.09.2026', plan:'M-008 Rev D',
-      text:'«ok». Die 5 Vermerke «mit Kontermutter» vom 17.09. (Fuss: M24 8.8 + HV M20×75) sind entfernt.'}},
+      text:'«ok». Die 5 Vermerke «mit Kontermutter» am Stützenfuss vom 17.09. sind entfernt.'}},
+  {typ:'A', jahr:'8er 2026', cls:'j8er', nr:'24027-S-0-M-013 · 13.07.2026', file:'stahlbau/Primaerkonstruktion_TypA_8er_2026.pdf',
+    innen:[], hv:[], stoss:null},
   {typ:'B', jahr:'2025', cls:'jstd', nr:'24027-S-0-M-001 · Rev G', file:'stahlbau/Primaerkonstruktion_TypB.pdf',
     innen:['M24×100','M24×90','M24×80','M24×75','M16×65','M16×55','M12×45','M10×40'], hv:['M20×90'], stoss:3043},
-  {typ:'B', jahr:'2026', cls:'j2026', nr:'24027-S-0-M-009 · Rev B', file:'stahlbau/Primaerkonstruktion_TypB_2026.pdf',
+  {typ:'B', jahr:'2026', cls:'j2026', nr:'24027-S-0-M-009 · aktuell Rev D', file:'stahlbau/Primaerkonstruktion_TypB_2026.pdf', alt:'Rev B',
     innen:['M24×100','M16×65','M12×50'], hv:['M20×75'], stoss:2535,
     korrex:{file:'stahlbau/Primaerkonstruktion_TypB_2026_ILF-Korrex_260917.pdf', stand:'17.09.2026', plan:'M-009 Rev D',
-      text:'6× «mit Kontermutter» am Fuss: M24×100 8.8 (Talstütze) und HV M20×75 10.9 (Bergfuss). Am 23.09. nicht geändert.'}},
-  {typ:'B', jahr:'8er Modultisch', cls:'j8er', nr:'24027-S-0-P-005', file:'stahlbau/Primaerkonstruktion_TypB_8er.pdf',
+      text:'Gelenkbolzen M24×100 8.8 am talseitigen Stützenfuss (S1/S4) «mit Kontermutter» (6 Vermerke, alle an diesem Bolzen). Bergseitig (S2/S3) steht es schon im Plan. Am 23.09. nicht geändert.'}},
+  {typ:'B', jahr:'8er 2026', cls:'j8er', nr:'24027-S-0-M-014 · 13.07.2026', file:'stahlbau/Primaerkonstruktion_TypB_8er_2026.pdf',
+    innen:[], hv:[], stoss:null},
+  {typ:'B', jahr:'8er 2025', cls:'j8er', nr:'24027-S-0-P-005', file:'stahlbau/Primaerkonstruktion_TypB_8er.pdf',
     innen:['M24×100','M24×90','M24×80','M24×75','M16×65','M16×55','M12×45','M10×40'], hv:['M20×90'], stoss:null},
-  {typ:'C', jahr:'2026', cls:'j2026', nr:'24027-S-0-M-010 · Rev B', file:'stahlbau/Primaerkonstruktion_TypC_2026.pdf',
+  {typ:'C', jahr:'2026', cls:'j2026', nr:'24027-S-0-M-010 · aktuell Rev C', file:'stahlbau/Primaerkonstruktion_TypC_2026.pdf', alt:'Rev B',
     innen:['M30×120','M24×110','M24×75','M20×80','M12×50'], hv:['M24×85'], stoss:2220,
     korrex:{file:'stahlbau/Primaerkonstruktion_TypC_2026_ILF-Korrex_260917.pdf', stand:'17.09.2026', plan:'M-010 Rev C',
       text:'Nur «Beschriftung ergänzen» – keine Kontermutter-Angabe.'}},
-  {typ:'D', jahr:'2025', cls:'jstd', nr:'Plan Typ D', file:'stahlbau/Primaerkonstruktion_TypD.pdf',
+  {typ:'C', jahr:'8er 2026', cls:'j8er', nr:'24027-S-0-M-015 · 13.07.2026', file:'stahlbau/Primaerkonstruktion_TypC_8er_2026.pdf',
+    innen:[], hv:[], stoss:null},
+  {typ:'D', jahr:'2025', cls:'jstd', nr:'24027-S-0-M-004 · Rev B', file:'stahlbau/Primaerkonstruktion_TypD.pdf',
     innen:['M30×130','M30×120','M24×90','M12×45','M10×40'], hv:['M24×90'], stoss:2623},
-  {typ:'D', jahr:'2026', cls:'j2026', nr:'Plan Typ D · 2026', file:'stahlbau/Primaerkonstruktion_TypD_2026.pdf',
+  {typ:'D', jahr:'2026', cls:'j2026', nr:'24027-S-0-M-006 · aktuell Rev C', file:'stahlbau/Primaerkonstruktion_TypD_2026.pdf', alt:'Rev B',
     innen:['M30×130','M24×90','M12×50'], hv:['M24×85'], stoss:2127,
     korrex:{file:'stahlbau/Primaerkonstruktion_TypD_2026_ILF-Korrex_260917.pdf', stand:'17.09.2026', plan:'M-006 Rev C',
       text:'Keine Anmerkung von ILF.'}},
-  {typ:'E', jahr:'2025', cls:'jstd', nr:'Plan Typ E', file:'stahlbau/Primaerkonstruktion_TypE.pdf',
+  {typ:'D', jahr:'8er 2026', cls:'j8er', nr:'24027-S-0-M-011 · 13.07.2026', file:'stahlbau/Primaerkonstruktion_TypD_8er_2026.pdf',
+    innen:[], hv:[], stoss:null},
+  {typ:'E', jahr:'2025', cls:'jstd', nr:'24027-S-0-M-003 · Rev E', file:'stahlbau/Primaerkonstruktion_TypE.pdf',
     innen:['M36×150','M27×120','M27×100','M12×45','M10×40'], hv:['M30×105'], stoss:2575},
-  {typ:'E', jahr:'2026', cls:'j2026', nr:'Plan Typ E · 2026', file:'stahlbau/Primaerkonstruktion_TypE_2026.pdf',
+  {typ:'E', jahr:'2026', cls:'j2026', nr:'24027-S-0-M-007 · aktuell Rev C', file:'stahlbau/Primaerkonstruktion_TypE_2026.pdf', alt:'Rev B',
     innen:['M36×150','M30×130','M27×120','M12×55'], hv:['M27×100'], stoss:1923,
     korrex:{file:'stahlbau/Primaerkonstruktion_TypE_2026_ILF-Korrex_260917.pdf', stand:'17.09.2026', plan:'M-007 Rev C',
       text:'Keine Anmerkung von ILF.'}},
+  {typ:'E', jahr:'8er 2026', cls:'j8er', nr:'24027-S-0-M-012 · 13.07.2026', file:'stahlbau/Primaerkonstruktion_TypE_8er_2026.pdf',
+    innen:[], hv:[], stoss:null},
 ];
 
 // Chip-Farbe nach Verschraub-Ort: gruen = Tal (Vormontage), blau = Berg (Montage).
@@ -467,7 +477,7 @@ TYPEN.forEach(function(p){
       (p.korrex ? '<div class="kx"><b>ILF-Korrex '+p.korrex.stand+'</b> · '+p.korrex.plan+'<br>'+p.korrex.text+'</div>'+
         '<a class="open kxo" href="'+p.korrex.file+'" target="_blank" rel="noopener">Aktueller Plan + ILF-Korrex (PDF)</a>' : '')+
       '<a class="open"'+(p.korrex ? ' style="margin-top:0"' : '')+' href="'+p.file+'" target="_blank" rel="noopener">'+
-        (p.korrex ? 'Plan mit Stosslänge (PDF)' : 'Plan öffnen (PDF)')+'</a>'+
+        (p.alt ? 'Alter Plan '+p.alt+' – nur Stosslänge (PDF)' : 'Plan öffnen (PDF)')+'</a>'+
     '</div>');
 });
 
