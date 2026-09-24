@@ -9,7 +9,7 @@
   window.NALP_GATE_CODE  = '6460';
   window.NALP_GATE_KEY   = 'nalp_portal_unlock_v1';
   window.NALP_GATE_TITEL = 'Altlasten';
-  window.NALP_GATE_SUB   = 'Code eingeben / Enter code / Wpisz kod';
+  window.NALP_GATE_SUB   = 'Code eingeben / Introduzir código / Enter code';
 </script>
 <script src="assets/js/nalp-gate.js"></script>
 <link rel="stylesheet" href="assets/js/leaflet/leaflet.css">
@@ -29,7 +29,11 @@
           padding:9px 10px; background:#fff; border-bottom:4px solid var(--rot); }
   header a.home{ color:var(--ink); text-decoration:none; font-size:20px; }
   header .logo img{ height:20px; display:block; }
-  header h1{ font-size:14.5px; margin:0; flex:1; font-weight:800; }
+  header h1{ font-size:14.5px; margin:0; flex:1; min-width:0; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  /* Sprachwahl DE/PT/EN (Victor 24.09.2026) – Texte im Objekt TXT, Stammdaten-Übersetzung in TYP/KOM */
+  .lang{ display:flex; flex:0 0 auto; border:1px solid #c9ccd2; border-radius:7px; overflow:hidden; }
+  .lang button{ border:0; background:#fff; font:800 11.5px Arial; color:var(--mut); padding:5px 7px; cursor:pointer; }
+  .lang button.on{ background:var(--rot); color:#fff; }
   header .netz{ font-size:11px; font-weight:700; color:var(--gruen); white-space:nowrap; }
   header .netz.off{ color:var(--rot); }
   .tabs{ display:flex; background:#fff; border-bottom:1px solid var(--line); position:sticky; top:52px; z-index:9; }
@@ -166,14 +170,15 @@
 <header>
   <a class="home" href="index.html" title="Portal">‹</a>
   <div class="logo"><img src="assets/img/strabag-logo.png" alt="STRABAG"></div>
-  <h1>🧹 Altlasten</h1>
+  <h1 data-i="h1">🧹 Altlasten</h1>
   <div class="netz" id="netz">online</div>
+  <div class="lang" id="lang"><button data-l="de">DE</button><button data-l="pt">PT</button><button data-l="en">EN</button></div>
 </header>
 
 <div class="tabs">
-  <button class="on" data-t="k2d" onclick="tab('k2d')">🗺 Karte</button>
-  <button data-t="liste" onclick="tab('liste')">📋 Liste<span class="zahl" id="zOffen">–</span></button>
-  <button data-t="aufwand" onclick="tab('aufwand')">⏱ Aufwand</button>
+  <button class="on" data-t="k2d" onclick="tab('k2d')" data-i="tab_k">🗺 Karte</button>
+  <button data-t="liste" onclick="tab('liste')"><span data-i="tab_l">📋 Liste</span><span class="zahl" id="zOffen">–</span></button>
+  <button data-t="aufwand" onclick="tab('aufwand')" data-i="tab_a">⏱ Aufwand</button>
   <button data-t="info" onclick="tab('info')">ℹ️ Info</button>
 </div>
 
@@ -183,51 +188,43 @@
     <div class="schalter" id="schalterK"></div>
     <div style="position:relative">
       <div id="map2d"></div>
-      <button class="btn w gps" onclick="gps()" title="Mein Standort">📍</button>
+      <button class="btn w gps" onclick="gps()" title="Mein Standort" data-iti="gps">📍</button>
     </div>
     <div class="legende">
-      <span><i style="background:#D72622"></i>Prio 1 – entfernen</span>
-      <span><i style="background:#e08a00"></i>Prio 2 – wenn im Budget</span>
-      <span><i style="background:#8a8e94"></i>Prio 3 – belassen</span>
-      <span><i style="background:#1e9e5a"></i>erledigt</span>
-      <span><i style="background:#8e24aa"></i>Problem gemeldet</span>
-      <span>Punkt antippen = Foto, Massnahme, Rückmeldung</span>
+      <span><i style="background:#D72622"></i><span data-i="leg1">Prio 1 – entfernen</span></span>
+      <span><i style="background:#e08a00"></i><span data-i="leg2">Prio 2 – wenn im Budget</span></span>
+      <span><i style="background:#8a8e94"></i><span data-i="leg3">Prio 3 – belassen</span></span>
+      <span><i style="background:#1e9e5a"></i><span data-i="leg_ok">erledigt</span></span>
+      <span><i style="background:#8e24aa"></i><span data-i="leg_pr">Problem gemeldet</span></span>
+      <span data-i="leg_tip">Punkt antippen = Foto, Massnahme, Rückmeldung</span>
     </div>
   </section>
 
   <!-- ================= LISTE ================= -->
   <section id="t-liste" hidden>
     <div class="schalter" id="schalterL"></div>
-    <div id="liste"><div class="box"><div class="sub">lade …</div></div></div>
+    <div id="liste"><div class="box"><div class="sub" data-i="lade">lade …</div></div></div>
   </section>
 
   <!-- ================= AUFWAND ================= -->
   <section id="t-aufwand" hidden>
-    <div id="aufwand"><div class="box"><div class="sub">lade …</div></div></div>
+    <div id="aufwand"><div class="box"><div class="sub" data-i="lade">lade …</div></div></div>
   </section>
 
   <!-- ================= INFO ================= -->
   <section id="t-info" hidden>
     <div class="box">
       <div class="big" id="anz">–</div>
-      <h2>Fremdkörper im Gelände – alte Rohre, Eisenstangen, Seile, Betonsockel</h2>
-      <p>Der Bauherr hat das ganze Gelände abgesucht und jede Altlast mit GPS und Foto aufgenommen (14.11.2025).
+      <h2 data-i="info_h">Fremdkörper im Gelände – alte Rohre, Eisenstangen, Seile, Betonsockel</h2>
+      <p data-i="info_p1">Der Bauherr hat das ganze Gelände abgesucht und jede Altlast mit GPS und Foto aufgenommen (14.11.2025).
          Die Prio-Liste sagt, was damit geschieht:</p>
-      <p><span class="chip p1">Prio 1</span> wird entfernt oder unter dem Boden abgeschnitten<br>
-         <span class="chip p2">Prio 2</span> wird verbessert, wenn es im Budget liegt<br>
-         <span class="chip p3">Prio 3</span> wird belassen</p>
-      <p><b>So geht es:</b> Punkt auf der Karte antippen → Foto und Massnahme anschauen → wenn erledigt: <b>✅ Erledigt</b> drücken,
-         Foto vom Resultat dazu, Name, senden. Geht etwas nicht (zu schwer, Beton, Abtransport unklar): <b>⚠️ Problem</b> melden.
-         Die Rückmeldung sehen alle sofort auf der Karte und in der Liste – auch die Bauleitung.<br>
-         <b>Aufwand immer eintragen:</b> wer wie viele Stunden, welches Gerät wie viele Stunden. Der Reiter <b>⏱ Aufwand</b> zählt das je Prio zusammen –
-         das braucht es für die Abrechnung mit dem Bauherrn.</p>
-      <div class="sub">Achtung bei Nr. 13 (Blech): liegt auf einer archäologischen Wüstung – nur Metallteile entfernen, Steine belassen, nicht befahren.</div>
+      <p id="infoPrio"></p>
+      <p data-i="info_p3"></p>
+      <div class="sub" data-i="info_13"></div>
     </div>
     <div class="box grau">
-      <h2>Quelle</h2>
-      <p class="sub" id="quelle">Excel «Datentabelle Fremdkörper Nalps_prioliste_für KV.xlsx» – Severin Kathriner (Axpo) → Christian Schmuckle 04.09.2026
-         → François Borner → Victor Malt 21.09.2026. Aufnahme mit happyrtk (RTK FIX), 14.11.2025. Originalfotos liegen beim Bauherrn (CloudFront, je ~7 MB) –
-         hier sind Vorschaubilder, das Original öffnet sich auf Tipp.</p>
+      <h2 data-i="q_h">Quelle</h2>
+      <p class="sub" id="quelle" data-i="q_t"></p>
     </div>
   </section>
 </main>
@@ -238,49 +235,49 @@
   <div class="sk">
     <div class="nr" id="sNr">–</div>
     <div class="t"><b id="sTyp">–</b><br><span class="sub" id="sPrio"></span></div>
-    <button class="x" onclick="sheetZu()" title="schliessen">✕</button>
+    <button class="x" onclick="sheetZu()" title="schliessen" data-iti="zu">✕</button>
   </div>
   <div class="si">
     <div id="sKom" class="kom" style="display:none"></div>
-    <img class="gross" id="sBild" alt="Foto der Aufnahme" style="display:none" onclick="this.classList.toggle('voll')" title="Tippen = ganz zeigen">
+    <img class="gross" id="sBild" alt="" style="display:none" onclick="this.classList.toggle('voll')" title="Tippen = ganz zeigen" data-iti="bild_ti">
     <div class="koord" id="sKoord"></div>
     <div class="btnrow">
-      <button class="btn w" onclick="aufKarte()">🗺 Auf der Karte</button>
-      <a class="btn w" id="sNav" target="_blank" rel="noopener">🧭 Hinführen</a>
-      <a class="btn w" id="sOrig" target="_blank" rel="noopener" style="display:none">🖼 Originalfoto (7 MB)</a>
+      <button class="btn w" onclick="aufKarte()" data-i="b_karte">🗺 Auf der Karte</button>
+      <a class="btn w" id="sNav" target="_blank" rel="noopener" data-i="b_nav">🧭 Hinführen</a>
+      <a class="btn w" id="sOrig" target="_blank" rel="noopener" style="display:none" data-i="b_orig">🖼 Originalfoto (7 MB)</a>
     </div>
     <div class="hist" id="sHist"></div>
 
     <div class="form">
-      <h3>Rückmeldung</h3>
+      <h3 data-i="f_h">Rückmeldung</h3>
       <div class="wahl" id="wStatus">
-        <button type="button" class="erledigt" data-s="erledigt">✅ Erledigt</button>
-        <button type="button" class="problem" data-s="problem">⚠️ Problem</button>
-        <button type="button" class="notiz" data-s="notiz">💬 Nur Notiz</button>
+        <button type="button" class="erledigt" data-s="erledigt" data-i="w_erl">✅ Erledigt</button>
+        <button type="button" class="problem" data-s="problem" data-i="w_pr">⚠️ Problem</button>
+        <button type="button" class="notiz" data-s="notiz" data-i="w_no">💬 Nur Notiz</button>
       </div>
-      <label class="f">Was wurde gemacht? <span>– kurz</span></label>
-      <textarea id="fText" placeholder="z. B. Rohr abgeflext, Stumpf mit Steinen gedeckt"></textarea>
-      <label class="f">Personal <span>– wer, wie viele Stunden</span></label>
+      <label class="f" data-i="l_text">Was wurde gemacht? <span>– kurz</span></label>
+      <textarea id="fText" placeholder="z. B. Rohr abgeflext, Stumpf mit Steinen gedeckt" data-iph="ph_text"></textarea>
+      <label class="f" data-i="l_pers">Personal <span>– wer, wie viele Stunden</span></label>
       <div id="fPers"></div>
-      <button type="button" class="plus" onclick="zeile('fPers')">+ Person</button>
-      <label class="f">Geräte <span>– welches Gerät, wie viele Stunden</span></label>
+      <button type="button" class="plus" onclick="zeile('fPers')" data-i="b_pers">+ Person</button>
+      <label class="f" data-i="l_ger">Geräte <span>– welches Gerät, wie viele Stunden</span></label>
       <div id="fGer"></div>
-      <button type="button" class="plus" onclick="zeile('fGer')">+ Gerät</button>
+      <button type="button" class="plus" onclick="zeile('fGer')" data-i="b_ger">+ Gerät</button>
       <datalist id="dlPers"></datalist>
       <datalist id="dlGer"></datalist>
-      <label class="f">Foto <span>– vom Resultat, bis 4</span></label>
+      <label class="f" data-i="l_foto">Foto <span>– vom Resultat, bis 4</span></label>
       <div class="fotoknoepfe">
-        <button type="button" class="btn w" onclick="document.getElementById('fCam').click()">📷 Foto</button>
-        <button type="button" class="btn w" onclick="document.getElementById('fDat').click()">🖼 Galerie</button>
+        <button type="button" class="btn w" onclick="document.getElementById('fCam').click()" data-i="b_cam">📷 Foto</button>
+        <button type="button" class="btn w" onclick="document.getElementById('fDat').click()" data-i="b_gal">🖼 Galerie</button>
       </div>
       <input type="file" id="fCam" accept="image/*" capture="environment" multiple>
       <input type="file" id="fDat" accept="image/*" multiple>
       <div class="fotos" id="prev"></div>
-      <label class="f">Dein Name</label>
-      <input type="text" id="fVon" placeholder="Vor- und Nachname" autocomplete="name">
-      <button class="btn gr gross" id="btnSend" onclick="senden()">Senden</button>
+      <label class="f" data-i="l_von">Dein Name</label>
+      <input type="text" id="fVon" placeholder="Vor- und Nachname" autocomplete="name" data-iph="ph_von">
+      <button class="btn gr gross" id="btnSend" onclick="senden()" data-i="b_send">Senden</button>
       <div id="status"></div>
-      <div class="wieder" id="wieder" style="display:none">Aus Versehen abgehakt? <a onclick="wiederOffen()">wieder auf «offen» setzen</a></div>
+      <div class="wieder" id="wieder" style="display:none" data-i="wieder">Aus Versehen abgehakt? <a onclick="wiederOffen()">wieder auf «offen» setzen</a></div>
     </div>
   </div>
 </div>
@@ -294,11 +291,170 @@
   var P_RUECK='altlasten_rueck', P_FOT='altlasten_fotos';
   var LS_VON='nalp_altlasten_von_v1', LS_CACHE='nalp_altlasten_rueck_v1';
   var IDB_NAME='nalp_altlasten_v1', IDB_STORE='warteschlange', MAX_FOTOS=4;
-  var ST={ erledigt:{t:'Erledigt',k:'ok',sym:'✅'}, problem:{t:'Problem',k:'pr',sym:'⚠️'},
-           notiz:{t:'Notiz',k:'no',sym:'💬'}, offen:{t:'wieder offen',k:'no',sym:'↩'} };
+  var ST={ erledigt:{t:'st_erl',k:'ok',sym:'✅'}, problem:{t:'st_pr',k:'pr',sym:'⚠️'},
+           notiz:{t:'st_no',k:'no',sym:'💬'}, offen:{t:'st_off',k:'no',sym:'↩'} };
 
   var daten=null, P={}, R={}, map=null, MK={}, gpsMarker=null, aktiv=null, fotos=[], stat='erledigt';
   var filtK='offen', filtL='alle';
+
+  /* ── Sprache DE / PT / EN (Victor 24.09.2026) ──
+     Gespeichert wird immer deutsch (Status-Schlüssel, Gerätenamen aus GERAETE) – übersetzt wird nur die Anzeige.
+     Typ + Kommentar kommen deutsch aus der Bauherren-Excel; TYP/KOM übersetzen sie nach dem genauen Wortlaut
+     (Tippfehler inklusive). Neue Excel mit neuem Wortlaut → erscheint deutsch, bis hier nachgetragen. */
+  var LS_LANG='nalp_altlasten_lang_v1', LANG='de';
+  var TXT={
+    de:{ doc:'NalpSolar · Altlasten', h1:'🧹 Altlasten', tab_k:'🗺 Karte', tab_l:'📋 Liste', tab_a:'⏱ Aufwand',
+      gps:'Mein Standort', leg1:'Prio 1 – entfernen', leg2:'Prio 2 – wenn im Budget', leg3:'Prio 3 – belassen',
+      leg_ok:'erledigt', leg_pr:'Problem gemeldet', leg_tip:'Punkt antippen = Foto, Massnahme, Rückmeldung', lade:'lade …',
+      info_h:'Fremdkörper im Gelände – alte Rohre, Eisenstangen, Seile, Betonsockel',
+      info_p1:'Der Bauherr hat das ganze Gelände abgesucht und jede Altlast mit GPS und Foto aufgenommen (14.11.2025). Die Prio-Liste sagt, was damit geschieht:',
+      info_p3:'<b>So geht es:</b> Punkt auf der Karte antippen → Foto und Massnahme anschauen → wenn erledigt: <b>✅ Erledigt</b> drücken, Foto vom Resultat dazu, Name, senden. Geht etwas nicht (zu schwer, Beton, Abtransport unklar): <b>⚠️ Problem</b> melden. Die Rückmeldung sehen alle sofort auf der Karte und in der Liste – auch die Bauleitung.<br><b>Aufwand immer eintragen:</b> wer wie viele Stunden, welches Gerät wie viele Stunden. Der Reiter <b>⏱ Aufwand</b> zählt das je Prio zusammen – das braucht es für die Abrechnung mit dem Bauherrn.',
+      info_13:'Achtung bei Nr. 13 (Blech): liegt auf einer archäologischen Wüstung – nur Metallteile entfernen, Steine belassen, nicht befahren.',
+      q_h:'Quelle',
+      q_t:'Excel «Datentabelle Fremdkörper Nalps_prioliste_für KV.xlsx» – Severin Kathriner (Axpo) → Christian Schmuckle 04.09.2026 → François Borner → Victor Malt 21.09.2026. Aufnahme mit happyrtk (RTK FIX), 14.11.2025. Originalfotos liegen beim Bauherrn (CloudFront, je ~7 MB) – hier sind Vorschaubilder, das Original öffnet sich auf Tipp.',
+      prio1:'wird entfernt oder unter dem Boden abgeschnitten', prio2:'wird verbessert, wenn es im Budget liegt', prio3:'wird belassen',
+      zu:'schliessen', bild_ti:'Tippen = ganz zeigen', b_karte:'🗺 Auf der Karte', b_nav:'🧭 Hinführen', b_orig:'🖼 Originalfoto (7 MB)',
+      f_h:'Rückmeldung', w_erl:'✅ Erledigt', w_pr:'⚠️ Problem', w_no:'💬 Nur Notiz',
+      l_text:'Was wurde gemacht? <span>– kurz</span>', ph_text:'z. B. Rohr abgeflext, Stumpf mit Steinen gedeckt',
+      l_pers:'Personal <span>– wer, wie viele Stunden</span>', b_pers:'+ Person',
+      l_ger:'Geräte <span>– welches Gerät, wie viele Stunden</span>', b_ger:'+ Gerät',
+      l_foto:'Foto <span>– vom Resultat, bis 4</span>', b_cam:'📷 Foto', b_gal:'🖼 Galerie',
+      l_von:'Dein Name', ph_von:'Vor- und Nachname', b_send:'Senden',
+      wieder:'Aus Versehen abgehakt? <a onclick="wiederOffen()">wieder auf «offen» setzen</a>',
+      st_erl:'Erledigt', st_pr:'Problem', st_no:'Notiz', st_off:'wieder offen', offen:'offen',
+      f_offen:'Offen', f_erl:'Erledigt', f_pr:'Problem', f_alle:'Alle', nr:'Nr.',
+      kein_gps:'Kein GPS verfügbar.', kein_ort:'Standort nicht bestimmbar.', nichts:'Nichts in dieser Auswahl.',
+      aufn:'Nr. {n} der Aufnahme 14.11.2025', masl:'m ü. M.', orig:'Original', keine_rm:'Noch keine Rückmeldung.', rms:'Rückmeldungen',
+      foto1:'📷 1 Foto anzeigen', foton:'📷 {n} Fotos anzeigen', kein_foto:'kein Foto gefunden', foto_fehl:'Foto laden ging nicht (Netz?)',
+      entf:'entfernen', foto_vorb:'Foto wird vorbereitet …', max_fotos:'Mehr als {n} Fotos gehen nicht.',
+      ph_ger:'Gerät', ph_name:'Name', zeile_weg:'Zeile weg',
+      a_erl:'Punkte erledigt', a_pers:'Personal', a_ger:'Geräte', a_geraet:'Gerät', a_person:'Person', a_total:'Total',
+      a_jep:'📍 Je Punkt', a_punkt:'Punkt', a_stand:'Stand',
+      a_leer:'Noch kein Aufwand eingetragen. Er wird bei jeder Rückmeldung mit erfasst (Personal + Geräte, Stunden).',
+      a_csv:'⬇ CSV (alle Einträge)', a_zeilen:'{n} Aufwand-Zeilen · Stunden gerundet auf ¼ h',
+      m_text:'Bitte kurz aufschreiben, was los ist.', m_name:'Bitte deinen Namen angeben.',
+      m_aufw:'Beim Aufwand fehlt ein Name/Gerät oder die Stunden.', m_kein:'Kein Aufwand eingetragen (wer, wie viele Stunden)? Trotzdem senden?',
+      m_send:'Wird gesendet …', m_offl:'Kein Netz – gespeichert, geht raus, sobald wieder online.', m_ok:'Gesendet – danke!',
+      m_versehen:'aus Versehen abgehakt', n_offen:' · {n} offen', m_fehl:'Daten konnten nicht geladen werden.' },
+    pt:{ doc:'NalpSolar · Resíduos antigos', h1:'🧹 Resíduos antigos', tab_k:'🗺 Mapa', tab_l:'📋 Lista', tab_a:'⏱ Horas',
+      gps:'A minha posição', leg1:'Prio 1 – retirar', leg2:'Prio 2 – se houver orçamento', leg3:'Prio 3 – deixar ficar',
+      leg_ok:'feito', leg_pr:'problema comunicado', leg_tip:'Tocar no ponto = foto, medida, resposta', lade:'a carregar …',
+      info_h:'Objetos estranhos no terreno – tubos velhos, barras de ferro, cabos, bases de betão',
+      info_p1:'O dono da obra percorreu todo o terreno e registou cada resíduo com GPS e fotografia (14.11.2025). A lista de prioridades diz o que se faz com cada um:',
+      info_p3:'<b>Como fazer:</b> tocar no ponto no mapa → ver a foto e a medida → quando estiver feito: carregar em <b>✅ Feito</b>, juntar foto do resultado, nome, enviar. Se algo não der (pesado demais, betão, transporte pouco claro): comunicar <b>⚠️ Problema</b>. Todos veem a resposta logo no mapa e na lista – também a direção da obra.<br><b>Registar sempre as horas:</b> quem e quantas horas, que máquina e quantas horas. O separador <b>⏱ Horas</b> soma tudo por prioridade – é preciso para a faturação ao dono da obra.',
+      info_13:'Atenção no n.º 13 (chapa): está num sítio arqueológico – retirar só as peças de metal, deixar as pedras, não passar por cima com veículos.',
+      q_h:'Fonte',
+      q_t:'Excel «Datentabelle Fremdkörper Nalps_prioliste_für KV.xlsx» – Severin Kathriner (Axpo) → Christian Schmuckle 04.09.2026 → François Borner → Victor Malt 21.09.2026. Levantamento com happyrtk (RTK FIX), 14.11.2025. As fotos originais estão com o dono da obra (CloudFront, ~7 MB cada) – aqui há miniaturas, o original abre com um toque. Tipos e comentários traduzidos do original em alemão.',
+      prio1:'é retirado ou cortado abaixo do nível do solo', prio2:'é melhorado, se houver orçamento', prio3:'fica no local',
+      zu:'fechar', bild_ti:'Tocar = ver inteira', b_karte:'🗺 No mapa', b_nav:'🧭 Ir até lá', b_orig:'🖼 Foto original (7 MB)',
+      f_h:'Resposta', w_erl:'✅ Feito', w_pr:'⚠️ Problema', w_no:'💬 Só nota',
+      l_text:'O que foi feito? <span>– curto</span>', ph_text:'p. ex. tubo cortado com rebarbadora, resto coberto com pedras',
+      l_pers:'Pessoal <span>– quem, quantas horas</span>', b_pers:'+ Pessoa',
+      l_ger:'Máquinas <span>– que máquina, quantas horas</span>', b_ger:'+ Máquina',
+      l_foto:'Foto <span>– do resultado, até 4</span>', b_cam:'📷 Foto', b_gal:'🖼 Galeria',
+      l_von:'O teu nome', ph_von:'Nome e apelido', b_send:'Enviar',
+      wieder:'Marcado por engano? <a onclick="wiederOffen()">voltar a pôr «aberto»</a>',
+      st_erl:'Feito', st_pr:'Problema', st_no:'Nota', st_off:'reaberto', offen:'aberto',
+      f_offen:'Abertos', f_erl:'Feitos', f_pr:'Problema', f_alle:'Todos', nr:'N.º',
+      kein_gps:'GPS não disponível.', kein_ort:'Não foi possível determinar a posição.', nichts:'Nada nesta seleção.',
+      aufn:'N.º {n} do levantamento de 14.11.2025', masl:'m de altitude', orig:'Original', keine_rm:'Ainda sem resposta.', rms:'Respostas',
+      foto1:'📷 ver 1 foto', foton:'📷 ver {n} fotos', kein_foto:'nenhuma foto encontrada', foto_fehl:'Não foi possível carregar a foto (rede?)',
+      entf:'remover', foto_vorb:'A preparar a foto …', max_fotos:'Não dá para mais de {n} fotos.',
+      ph_ger:'Máquina', ph_name:'Nome', zeile_weg:'apagar linha',
+      a_erl:'pontos feitos', a_pers:'Pessoal', a_ger:'Máquinas', a_geraet:'Máquina', a_person:'Pessoa', a_total:'Total',
+      a_jep:'📍 Por ponto', a_punkt:'Ponto', a_stand:'Estado',
+      a_leer:'Ainda não há horas registadas. São registadas em cada resposta (pessoal + máquinas, horas).',
+      a_csv:'⬇ CSV (todos os registos)', a_zeilen:'{n} linhas de horas · horas arredondadas a ¼ h',
+      m_text:'Escreve em poucas palavras o que se passa.', m_name:'Indica o teu nome, por favor.',
+      m_aufw:'Nas horas falta um nome/máquina ou as horas.', m_kein:'Não registaste horas (quem, quantas horas). Enviar mesmo assim?',
+      m_send:'A enviar …', m_offl:'Sem rede – guardado, é enviado assim que houver rede.', m_ok:'Enviado – obrigado!',
+      m_versehen:'marcado por engano', n_offen:' · {n} por enviar', m_fehl:'Não foi possível carregar os dados.' },
+    en:{ doc:'NalpSolar · Old debris', h1:'🧹 Old debris', tab_k:'🗺 Map', tab_l:'📋 List', tab_a:'⏱ Hours',
+      gps:'My location', leg1:'Prio 1 – remove', leg2:'Prio 2 – if within budget', leg3:'Prio 3 – leave in place',
+      leg_ok:'done', leg_pr:'problem reported', leg_tip:'Tap a point = photo, action, feedback', lade:'loading …',
+      info_h:'Foreign objects on site – old pipes, iron bars, cables, concrete bases',
+      info_p1:'The client searched the whole site and recorded every piece of debris with GPS and a photo (14.11.2025). The priority list says what happens to it:',
+      info_p3:'<b>How it works:</b> tap the point on the map → look at the photo and the action → when done: press <b>✅ Done</b>, add a photo of the result, your name, send. If something doesn\'t work (too heavy, concrete, unclear how to haul it away): report <b>⚠️ Problem</b>. Everyone sees the feedback right away on the map and in the list – site management too.<br><b>Always enter the hours:</b> who and how many hours, which machine and how many hours. The <b>⏱ Hours</b> tab adds it up per priority – this is needed for billing the client.',
+      info_13:'Caution at no. 13 (sheet metal): lies on an archaeological site – remove only the metal parts, leave the stones, do not drive over it.',
+      q_h:'Source',
+      q_t:'Excel «Datentabelle Fremdkörper Nalps_prioliste_für KV.xlsx» – Severin Kathriner (Axpo) → Christian Schmuckle 04.09.2026 → François Borner → Victor Malt 21.09.2026. Surveyed with happyrtk (RTK FIX), 14.11.2025. The original photos are held by the client (CloudFront, ~7 MB each) – shown here are previews, the original opens on tap. Types and comments translated from the German original.',
+      prio1:'is removed or cut off below ground', prio2:'is improved if within budget', prio3:'is left in place',
+      zu:'close', bild_ti:'Tap = show full', b_karte:'🗺 On the map', b_nav:'🧭 Take me there', b_orig:'🖼 Original photo (7 MB)',
+      f_h:'Feedback', w_erl:'✅ Done', w_pr:'⚠️ Problem', w_no:'💬 Note only',
+      l_text:'What was done? <span>– briefly</span>', ph_text:'e.g. pipe cut off with grinder, stump covered with stones',
+      l_pers:'Crew <span>– who, how many hours</span>', b_pers:'+ Person',
+      l_ger:'Equipment <span>– which machine, how many hours</span>', b_ger:'+ Machine',
+      l_foto:'Photo <span>– of the result, up to 4</span>', b_cam:'📷 Photo', b_gal:'🖼 Gallery',
+      l_von:'Your name', ph_von:'First and last name', b_send:'Send',
+      wieder:'Ticked by mistake? <a onclick="wiederOffen()">set back to «open»</a>',
+      st_erl:'Done', st_pr:'Problem', st_no:'Note', st_off:'reopened', offen:'open',
+      f_offen:'Open', f_erl:'Done', f_pr:'Problem', f_alle:'All', nr:'No.',
+      kein_gps:'No GPS available.', kein_ort:'Location could not be determined.', nichts:'Nothing in this selection.',
+      aufn:'No. {n} of the survey of 14.11.2025', masl:'m a.s.l.', orig:'Original', keine_rm:'No feedback yet.', rms:'Feedback',
+      foto1:'📷 show 1 photo', foton:'📷 show {n} photos', kein_foto:'no photo found', foto_fehl:'Could not load the photo (network?)',
+      entf:'remove', foto_vorb:'Preparing photo …', max_fotos:'No more than {n} photos.',
+      ph_ger:'Machine', ph_name:'Name', zeile_weg:'remove line',
+      a_erl:'points done', a_pers:'Crew', a_ger:'Equipment', a_geraet:'Machine', a_person:'Person', a_total:'Total',
+      a_jep:'📍 Per point', a_punkt:'Point', a_stand:'Status',
+      a_leer:'No hours entered yet. They are recorded with every feedback (crew + equipment, hours).',
+      a_csv:'⬇ CSV (all entries)', a_zeilen:'{n} hour lines · hours rounded to ¼ h',
+      m_text:'Please write briefly what is going on.', m_name:'Please enter your name.',
+      m_aufw:'An hours line is missing a name/machine or the hours.', m_kein:'No hours entered (who, how many hours). Send anyway?',
+      m_send:'Sending …', m_offl:'No network – saved, will be sent once back online.', m_ok:'Sent – thank you!',
+      m_versehen:'ticked by mistake', n_offen:' · {n} pending', m_fehl:'Data could not be loaded.' }
+  };
+  /* Typ + Kommentar aus der Excel (Schlüssel = deutscher Wortlaut genau wie in altlasten.json) */
+  var TYP={
+    pt:{ 'eisenseil':'cabo de aço', 'eisenstange':'barra de ferro', 'eisenstangen':'barras de ferro', 'eisenrohr':'tubo de ferro',
+      'pfosten':'poste', 'betonsockel':'base de betão', 'wasserrohr':'tubo de água', '(ohne Beschreibung)':'(sem descrição)',
+      'rohr':'tubo', 'betonloch':'buraco no betão', 'kupferband':'fita de cobre', 'blech':'chapa', 'pfahl':'estaca',
+      'eisenteil':'peça de ferro', 'seil':'cabo', 'wasserdurchlass':'passagem de água', 'stahlrohr':'tubo de aço' },
+    en:{ 'eisenseil':'steel cable', 'eisenstange':'iron bar', 'eisenstangen':'iron bars', 'eisenrohr':'iron pipe',
+      'pfosten':'post', 'betonsockel':'concrete base', 'wasserrohr':'water pipe', '(ohne Beschreibung)':'(no description)',
+      'rohr':'pipe', 'betonloch':'hole in concrete', 'kupferband':'copper strip', 'blech':'sheet metal', 'pfahl':'stake',
+      'eisenteil':'iron part', 'seil':'cable', 'wasserdurchlass':'culvert', 'stahlrohr':'steel pipe' }
+  };
+  var KOM={
+    pt:{ 'inkl. Betonteile':'incl. peças de betão',
+      'mit Beton enfernbar?':'dá para retirar juntamente com o betão?',
+      'achtung liegt auf archälogischer Wüstung, nur Metallteile entfernen, Steine belassen. Nicht befahren!':'Atenção: está num sítio arqueológico. Retirar só as peças de metal, deixar as pedras. Não passar por cima com veículos!',
+      'Fehlborhung NalpSolar':'furo falhado NalpSolar',
+      'Rohre mit scharfen Kanten/Anschnitten werden zurückgeschnitten oder wenn möglich ganz entfernt und zurückbleibende Teile werden wieder mit Steinen bedeckt. Rohre ohne unmittelbare Verletzungsgefahr werden belassen.':'Tubos com arestas/cortes afiados são cortados rente ou, se possível, retirados por completo; as partes que ficam voltam a ser cobertas com pedras. Tubos sem perigo imediato de ferimento ficam no local.',
+      'gefählich und unangemessen aufwändig, dies zu entfernen':'perigoso e trabalhoso demais para retirar',
+      'Klärung wie abtransportieren':'por esclarecer: como levar daqui',
+      'Mit Aushub auffüllen, Gefahr entschärfen':'encher com terra de escavação, eliminar o perigo',
+      'Keine unmittelbare Gefahr; liegt aber neben Wanderweg.':'Sem perigo imediato; mas fica junto a um caminho pedestre.',
+      'scharfe Kanten; entfernen und allfällige Abschnitte bedecken':'arestas afiadas; retirar e cobrir eventuais restos cortados',
+      'abflexen, keine scharfen Kanten':'cortar com rebarbadora, sem arestas afiadas',
+      'möglichst ganz entfernen, inkl Beton. Falls nicht möglich, abfelxen, entschärfen.':'retirar por completo se possível, incl. betão. Se não der, cortar com rebarbadora e eliminar o perigo.' },
+    en:{ 'inkl. Betonteile':'incl. concrete parts',
+      'mit Beton enfernbar?':'can it be removed together with the concrete?',
+      'achtung liegt auf archälogischer Wüstung, nur Metallteile entfernen, Steine belassen. Nicht befahren!':'Caution: lies on an archaeological site. Remove only the metal parts, leave the stones. Do not drive over it!',
+      'Fehlborhung NalpSolar':'failed drill hole NalpSolar',
+      'Rohre mit scharfen Kanten/Anschnitten werden zurückgeschnitten oder wenn möglich ganz entfernt und zurückbleibende Teile werden wieder mit Steinen bedeckt. Rohre ohne unmittelbare Verletzungsgefahr werden belassen.':'Pipes with sharp edges/cuts are cut back or, if possible, removed completely; remaining parts are covered with stones again. Pipes without immediate risk of injury are left in place.',
+      'gefählich und unangemessen aufwändig, dies zu entfernen':'dangerous and disproportionate effort to remove',
+      'Klärung wie abtransportieren':'to be clarified: how to haul it away',
+      'Mit Aushub auffüllen, Gefahr entschärfen':'fill with excavated material, remove the hazard',
+      'Keine unmittelbare Gefahr; liegt aber neben Wanderweg.':'No immediate danger; but lies next to a hiking trail.',
+      'scharfe Kanten; entfernen und allfällige Abschnitte bedecken':'sharp edges; remove and cover any cut-off remains',
+      'abflexen, keine scharfen Kanten':'cut off with a grinder, no sharp edges',
+      'möglichst ganz entfernen, inkl Beton. Falls nicht möglich, abfelxen, entschärfen.':'remove completely if possible, incl. concrete. If not possible, cut off with a grinder and make safe.' }
+  };
+  /* Gerätenamen: gespeichert deutsch (Summen je Gerät bleiben eins), angezeigt übersetzt */
+  var GER={
+    pt:{ 'Menzi Muck':'Menzi Muck (escavadora aranha)', 'Bagger':'Escavadora', 'Manitou':'Manitou (telescópico)', 'Pneukran':'Grua de pneus',
+      'Transporter':'Carrinha', 'Flex / Trennschleifer':'Rebarbadora', 'Schweissgerät':'Máquina de soldar', 'Motorsäge':'Motosserra',
+      'Helikopter':'Helicóptero', 'Handwerkzeug':'Ferramenta manual' },
+    en:{ 'Menzi Muck':'Menzi Muck (walking excavator)', 'Bagger':'Excavator', 'Manitou':'Manitou (telehandler)', 'Pneukran':'Mobile crane',
+      'Transporter':'Van', 'Flex / Trennschleifer':'Angle grinder', 'Schweissgerät':'Welder', 'Motorsäge':'Chainsaw',
+      'Helikopter':'Helicopter', 'Handwerkzeug':'Hand tools' }
+  };
+  function t(k,v){ var d=TXT[LANG]||TXT.de, s=(d[k]!==undefined?d[k]:(TXT.de[k]!==undefined?TXT.de[k]:k));
+    if(v) Object.keys(v).forEach(function(x){ s=s.split('{'+x+'}').join(v[x]); }); return s; }
+  function typ(p){ return LANG==='de'?p.typ:((TYP[LANG]||{})[p.typ]||p.typ); }
+  function kom(p){ return (LANG==='de'||!p.kommentar)?p.kommentar:((KOM[LANG]||{})[p.kommentar]||p.kommentar); }
+  function gerName(n){ return LANG==='de'?n:((GER[LANG]||{})[n]||n); }
+  function prioText(k){ return LANG==='de'?((daten&&daten.prio_text||{})[k]||t('prio'+k)):t('prio'+k); }
 
   function $(id){ return document.getElementById(id); }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){
@@ -344,8 +500,8 @@
   function klasse(p){ var z=zustand(p.nr); return z.status==='erledigt'?'ok':(z.status==='problem'?'pr':'p'+p.prio); }
 
   /* ── Filter (Karte + Liste teilen die Regel) ── */
-  var FILT=[{id:'offen',t:'Offen'},{id:'p1',t:'Prio 1'},{id:'p2',t:'Prio 2'},{id:'p3',t:'Prio 3'},
-            {id:'erledigt',t:'Erledigt'},{id:'problem',t:'Problem'},{id:'alle',t:'Alle'}];
+  var FILT=[{id:'offen',t:'f_offen'},{id:'p1',t:'Prio 1'},{id:'p2',t:'Prio 2'},{id:'p3',t:'Prio 3'},
+            {id:'erledigt',t:'f_erl'},{id:'problem',t:'f_pr'},{id:'alle',t:'f_alle'}];
   function passt(p,f){
     var z=zustand(p.nr).status;
     if(f==='alle') return true;
@@ -357,7 +513,7 @@
   function schalter(id,akt,cb){
     $(id).innerHTML=FILT.map(function(f){
       var n=daten?daten.punkte.filter(function(p){ return passt(p,f.id); }).length:'';
-      return '<button data-f="'+f.id+'"'+(akt===f.id?' class="on"':'')+'>'+f.t+(n!==''?' '+n:'')+'</button>';
+      return '<button data-f="'+f.id+'"'+(akt===f.id?' class="on"':'')+'>'+t(f.t)+(n!==''?' '+n:'')+'</button>';
     }).join('');
     Array.prototype.forEach.call($(id).querySelectorAll('button'),function(b){ b.onclick=function(){ cb(b.dataset.f); }; });
   }
@@ -374,7 +530,7 @@
       var alle=[];
       j.punkte.forEach(function(p){
         alle.push([p.lat,p.lon]);
-        var m=L.marker([p.lat,p.lon],{ icon:ikone(p), title:'Nr. '+p.nr+' '+p.typ }).addTo(map);
+        var m=L.marker([p.lat,p.lon],{ icon:ikone(p), title:t('nr')+' '+p.nr+' '+typ(p) }).addTo(map);
         m.on('click',function(){ sheetAuf(p.nr); });
         MK[p.nr]=m;
       });
@@ -407,12 +563,12 @@
   }
   window.aufKarte=function(){ var nr=aktiv; sheetZu(); if(nr) zeige(nr); };
   window.gps=function(){
-    if(!navigator.geolocation || !map){ alert('Kein GPS verfügbar.'); return; }
+    if(!navigator.geolocation || !map){ alert(t('kein_gps')); return; }
     navigator.geolocation.getCurrentPosition(function(q){
       var pt=[q.coords.latitude,q.coords.longitude];
       if(!gpsMarker) gpsMarker=L.circleMarker(pt,{radius:8,color:'#fff',weight:2,fillColor:'#1565c0',fillOpacity:1}).addTo(map);
       gpsMarker.setLatLng(pt); map.setView(pt, Math.max(map.getZoom(),18));
-    }, function(){ alert('Standort nicht bestimmbar.'); }, {enableHighAccuracy:true, timeout:8000});
+    }, function(){ alert(t('kein_ort')); }, {enableHighAccuracy:true, timeout:8000});
   };
 
   /* ── Liste ── */
@@ -421,17 +577,17 @@
       schalter('schalterL',filtL,function(f){ filtL=f; listeBauen(); });
       var ps=j.punkte.filter(function(p){ return passt(p,filtL); })
         .sort(function(a,b){ return (a.prio-b.prio)||(a.nr-b.nr); });
-      if(!ps.length){ $('liste').innerHTML='<div class="box gruen"><div class="sub">Nichts in dieser Auswahl.</div></div>'; return; }
+      if(!ps.length){ $('liste').innerHTML='<div class="box gruen"><div class="sub">'+t('nichts')+'</div></div>'; return; }
       $('liste').innerHTML=ps.map(function(p){
         var z=zustand(p.nr), k=klasse(p), st='';
         if(z.letzte){
           var s=ST[z.letzte.status]||ST.notiz;
-          st='<div class="st '+(z.status==='erledigt'?'ok':(z.status==='problem'?'pr':''))+'">'+s.sym+' '+esc(s.t)+' · '+esc(z.letzte.von||'')+' '+deDat(z.letzte.datum)+'</div>';
+          st='<div class="st '+(z.status==='erledigt'?'ok':(z.status==='problem'?'pr':''))+'">'+s.sym+' '+esc(t(s.t))+' · '+esc(z.letzte.von||'')+' '+deDat(z.letzte.datum)+'</div>';
         }
         return '<div class="pos '+k+'" onclick="sheetAuf('+p.nr+')">'
           +'<div class="nr">'+p.nr+'</div>'
-          +'<div class="tx"><div class="was">'+esc(p.typ)+' <span class="chip p'+p.prio+'">Prio '+p.prio+'</span></div>'
-          +(p.kommentar?'<div class="kom">'+esc(p.kommentar)+'</div>':'')+st+'</div>'
+          +'<div class="tx"><div class="was">'+esc(typ(p))+' <span class="chip p'+p.prio+'">Prio '+p.prio+'</span></div>'
+          +(p.kommentar?'<div class="kom">'+esc(kom(p))+'</div>':'')+st+'</div>'
           +(p.bild?'<img class="bild" src="'+esc(p.bild)+'" loading="lazy" alt="">':'')
           +'</div>';
       }).join('');
@@ -452,11 +608,8 @@
     var vn=''; try{ vn=localStorage.getItem(LS_VON)||''; }catch(e){}
     zeile('fPers',vn,null); zeile('fGer','',null);
     $('sNr').textContent=p.nr; $('sNr').style.background=farbe(klasse(p));
-    $('sTyp').textContent=p.typ;
-    $('sPrio').innerHTML='<span class="chip p'+p.prio+'">Prio '+p.prio+'</span> '+esc((daten.prio_text||{})[p.prio]||'');
-    $('sKom').style.display=p.kommentar?'block':'none'; $('sKom').textContent=p.kommentar||'';
+    sheetTexte(p);
     var b=$('sBild'); b.classList.remove('voll'); if(p.bild){ b.style.display='block'; b.src=p.bild; } else { b.style.display='none'; b.removeAttribute('src'); }
-    $('sKoord').textContent='E '+p.E.toFixed(1)+' · N '+p.N.toFixed(1)+(p.Z?' · '+p.Z.toFixed(1)+' m ü. M.':'')+' · Nr. '+p.nr+' der Aufnahme 14.11.2025';
     $('sNav').href='https://www.google.com/maps/dir/?api=1&destination='+p.lat+','+p.lon+'&travelmode=walking';
     var o=$('sOrig'); if(p.foto){ o.style.display='inline-block'; o.href=p.foto; } else o.style.display='none';
     var z=zustand(nr); stat=(z.status==='erledigt')?'notiz':'erledigt'; statusMalen();
@@ -466,30 +619,39 @@
     $('deckel').classList.add('an'); $('sheet').classList.add('an'); $('sheet').scrollTop=0;
     try{ history.replaceState(null,'','#nr='+nr); }catch(e){}
   };
+  /* Sprachabhängiger Teil des Blatts – auch beim Sprachwechsel mit offenem Blatt (Formular bleibt stehen) */
+  function sheetTexte(p){
+    $('sTyp').textContent=typ(p);
+    $('sPrio').innerHTML='<span class="chip p'+p.prio+'">Prio '+p.prio+'</span> '+esc(prioText(p.prio));
+    var k=kom(p);
+    $('sKom').style.display=p.kommentar?'block':'none';
+    $('sKom').innerHTML=esc(k||'')+(k&&k!==p.kommentar?'<div class="sub" style="margin-top:5px">'+t('orig')+' (DE): '+esc(p.kommentar)+'</div>':'');
+    $('sKoord').textContent='E '+p.E.toFixed(1)+' · N '+p.N.toFixed(1)+(p.Z?' · '+p.Z.toFixed(1)+' '+t('masl'):'')+' · '+t('aufn',{n:p.nr});
+  }
   window.sheetZu=function(){ $('deckel').classList.remove('an'); $('sheet').classList.remove('an'); aktiv=null;
     try{ history.replaceState(null,'','#'+(document.querySelector('.tabs button.on')||{}).dataset.t||''); }catch(e){} };
   function farbe(k){ return {ok:'#1e9e5a',pr:'#8e24aa',p1:'#D72622',p2:'#e08a00',p3:'#8a8e94'}[k]||'#8a8e94'; }
   function histMalen(nr){
     var es=eintraege(nr).reverse();
-    if(!es.length){ $('sHist').innerHTML='<div class="sub">Noch keine Rückmeldung.</div>'; return; }
-    $('sHist').innerHTML='<b style="font-size:13px">Rückmeldungen</b>'+es.map(function(e){
+    if(!es.length){ $('sHist').innerHTML='<div class="sub">'+t('keine_rm')+'</div>'; return; }
+    $('sHist').innerHTML='<b style="font-size:13px">'+t('rms')+'</b>'+es.map(function(e){
       var s=ST[e.status]||ST.notiz, n=e.anzahl_fotos||0;
-      return '<div class="e"><span class="chip '+s.k+'">'+s.sym+' '+esc(s.t)+'</span> '
+      return '<div class="e"><span class="chip '+s.k+'">'+s.sym+' '+esc(t(s.t))+'</span> '
         +'<span class="w">'+esc(e.von||'')+' · '+deDat(e.datum)+'</span>'
         +(e.text?'<div>'+esc(e.text)+'</div>':'')+aufwandText(e)
-        +(n?'<span class="fl" data-f="'+esc(Object.keys(e.fotos||{}).join(','))+'" onclick="fotoZeigen(this)">📷 '+n+' Foto'+(n>1?'s':'')+' anzeigen</span><div class="fb"></div>':'')
+        +(n?'<span class="fl" data-f="'+esc(Object.keys(e.fotos||{}).join(','))+'" onclick="fotoZeigen(this)">'+t(n>1?'foton':'foto1',{n:n})+'</span><div class="fb"></div>':'')
         +'</div>';
     }).join('');
   }
   /* Fotos einzeln über die im Satz gespeicherten IDs – braucht keinen Index in den RTDB-Regeln */
   window.fotoZeigen=function(el){
-    var box=el.nextSibling, ids=(el.dataset.f||'').split(',').filter(Boolean); el.textContent='lade …';
+    var box=el.nextSibling, ids=(el.dataset.f||'').split(',').filter(Boolean); el.textContent=t('lade');
     Promise.all(ids.map(function(fid){ return fetch(RTDB+'/'+P_FOT+'/'+fid+'.json').then(function(r){ return r.json(); }); }))
       .then(function(l){
         box.innerHTML=l.filter(function(f){ return f&&f.data; }).map(function(f){ return '<img src="'+f.data+'" alt="">'; }).join('')
-          ||'<div class="sub">kein Foto gefunden</div>';
+          ||'<div class="sub">'+t('kein_foto')+'</div>';
         el.style.display='none';
-      }).catch(function(){ el.textContent='Foto laden ging nicht (Netz?)'; });
+      }).catch(function(){ el.textContent=t('foto_fehl'); });
   };
 
   /* ── Formular ── */
@@ -515,16 +677,16 @@
   }
   function fotosZeichnen(){
     $('prev').innerHTML=fotos.map(function(f,i){
-      return '<div class="pg"><button class="del" onclick="fotoWeg('+i+')" title="entfernen">✕</button><img src="'+f+'" alt=""></div>';
+      return '<div class="pg"><button class="del" onclick="fotoWeg('+i+')" title="'+t('entf')+'">✕</button><img src="'+f+'" alt=""></div>';
     }).join('');
   }
   window.fotoWeg=function(i){ fotos.splice(i,1); fotosZeichnen(); };
   function dateienAnhaengen(fl){
     var f=Array.prototype.slice.call(fl||[]); if(!f.length) return;
-    $('status').textContent='Foto wird vorbereitet …';
+    $('status').textContent=t('foto_vorb');
     (function naechste(){
       if(!f.length){ $('status').textContent=''; fotosZeichnen(); return; }
-      if(fotos.length>=MAX_FOTOS){ $('status').textContent=''; alert('Mehr als '+MAX_FOTOS+' Fotos gehen nicht.'); return; }
+      if(fotos.length>=MAX_FOTOS){ $('status').textContent=''; alert(t('max_fotos',{n:MAX_FOTOS})); return; }
       bildLesen(f.shift(),function(d){ if(d) fotos.push(d); fotosZeichnen(); naechste(); });
     })();
   }
@@ -536,9 +698,9 @@
   function zeile(id,name,h){
     var box=$(id), ger=(id==='fGer');
     var d=document.createElement('div'); d.className='aufw';
-    d.innerHTML='<input type="text" class="n" list="'+(ger?'dlGer':'dlPers')+'" placeholder="'+(ger?'Gerät':'Name')+'" value="'+esc(name||'')+'">'
+    d.innerHTML='<input type="text" class="n" list="'+(ger?'dlGer':'dlPers')+'" placeholder="'+t(ger?'ph_ger':'ph_name')+'" value="'+esc(name||'')+'">'
       +'<input type="number" class="h" inputmode="decimal" step="0.5" min="0" placeholder="h" value="'+(h!=null?h:'')+'">'
-      +'<button type="button" class="x" title="Zeile weg" onclick="this.parentNode.remove()">✕</button>';
+      +'<button type="button" class="x" title="'+t('zeile_weg')+'" onclick="this.parentNode.remove()">✕</button>';
     box.appendChild(d); if(!name) d.querySelector('.n').focus();
   }
   window.zeile=zeile;
@@ -552,7 +714,7 @@
     return out;
   }
   function summe(l){ return (l||[]).reduce(function(a,x){ return a+(+x.h||0); },0); }
-  function hf(h){ return (Math.round(h*4)/4).toString().replace('.',',')+' h'; }
+  function hf(h){ var s=(Math.round(h*4)/4).toString(); return (LANG==='en'?s:s.replace('.',','))+' h'; }
   /* Vorschläge: alles, was schon einmal eingetragen wurde (+ feste Geräteliste) */
   function vorschlaege(){
     var pers={}, ger={};
@@ -563,13 +725,15 @@
       if(e.von) pers[e.von]=1;
     }); });
     $('dlPers').innerHTML=Object.keys(pers).sort().map(function(n){ return '<option value="'+esc(n)+'">'; }).join('');
-    $('dlGer').innerHTML=Object.keys(ger).sort().map(function(n){ return '<option value="'+esc(n)+'">'; }).join('');
+    /* value bleibt deutsch (Summe je Gerät), label zeigt die Übersetzung */
+    $('dlGer').innerHTML=Object.keys(ger).sort().map(function(n){ var l=gerName(n);
+      return '<option value="'+esc(n)+'"'+(l!==n?' label="'+esc(l)+'"':'')+'>'; }).join('');
   }
   function aufwandText(e){
-    var t=[];
-    if((e.personal||[]).length) t.push('👷 '+e.personal.map(function(x){ return esc(x.name)+' '+hf(x.h); }).join(' · '));
-    if((e.geraete||[]).length) t.push('🚜 '+e.geraete.map(function(x){ return esc(x.name)+' '+hf(x.h); }).join(' · '));
-    return t.length?'<div class="w">'+t.join('<br>')+'</div>':'';
+    var z=[];
+    if((e.personal||[]).length) z.push('👷 '+e.personal.map(function(x){ return esc(x.name)+' '+hf(x.h); }).join(' · '));
+    if((e.geraete||[]).length) z.push('🚜 '+e.geraete.map(function(x){ return esc(gerName(x.name))+' '+hf(x.h); }).join(' · '));
+    return z.length?'<div class="w">'+z.join('<br>')+'</div>':'';
   }
 
   /* ── Reiter Aufwand: Summen je Prio, je Gerät, je Person, je Punkt + CSV ── */
@@ -594,30 +758,31 @@
     [1,2,3].forEach(function(k){
       var pr=prio[k];
       h+='<div class="box '+(k===1?'':(k===2?'':'grau'))+'" style="border-left-color:'+({1:'#D72622',2:'#e08a00',3:'#8a8e94'})[k]+'">'
-        +'<h2><span class="chip p'+k+'">Prio '+k+'</span> '+esc((daten.prio_text||{})[k]||'')+'</h2>'
-        +'<div class="kpi"><div><b>'+erl[k]+' / '+alle[k]+'</b><span>Punkte erledigt</span></div>'
-        +'<div><b>'+hf(pr.pers)+'</b><span>Personal</span></div><div><b>'+hf(pr.ger)+'</b><span>Geräte</span></div></div></div>';
+        +'<h2><span class="chip p'+k+'">Prio '+k+'</span> '+esc(prioText(k))+'</h2>'
+        +'<div class="kpi"><div><b>'+erl[k]+' / '+alle[k]+'</b><span>'+t('a_erl')+'</span></div>'
+        +'<div><b>'+hf(pr.pers)+'</b><span>'+t('a_pers')+'</span></div><div><b>'+hf(pr.ger)+'</b><span>'+t('a_ger')+'</span></div></div></div>';
     });
-    function tab3(titel,obj,ico){
+    function tab3(titel,obj,ico,name){
       var ks=Object.keys(obj).sort(); if(!ks.length) return '';
-      var t='<div class="box"><h2>'+ico+' '+titel+'</h2><table class="aw"><tr><th>'+titel+'</th><th>Prio 1</th><th>Prio 2</th><th>Prio 3</th><th>Total</th></tr>';
+      var s='<div class="box"><h2>'+ico+' '+titel+'</h2><table class="aw"><tr><th>'+titel+'</th><th>Prio 1</th><th>Prio 2</th><th>Prio 3</th><th>'+t('a_total')+'</th></tr>';
       var s1=0,s2=0,s3=0;
       ks.forEach(function(k){ var o=obj[k]; s1+=o[1]||0; s2+=o[2]||0; s3+=o[3]||0;
-        t+='<tr><td>'+esc(k)+'</td><td>'+(o[1]?hf(o[1]):'–')+'</td><td>'+(o[2]?hf(o[2]):'–')+'</td><td>'+(o[3]?hf(o[3]):'–')+'</td><td>'+hf((o[1]||0)+(o[2]||0)+(o[3]||0))+'</td></tr>'; });
-      t+='<tr class="sum"><td>Total</td><td>'+hf(s1)+'</td><td>'+hf(s2)+'</td><td>'+hf(s3)+'</td><td>'+hf(s1+s2+s3)+'</td></tr></table></div>';
-      return t;
+        s+='<tr><td>'+esc(name(k))+'</td><td>'+(o[1]?hf(o[1]):'–')+'</td><td>'+(o[2]?hf(o[2]):'–')+'</td><td>'+(o[3]?hf(o[3]):'–')+'</td><td>'+hf((o[1]||0)+(o[2]||0)+(o[3]||0))+'</td></tr>'; });
+      s+='<tr class="sum"><td>'+t('a_total')+'</td><td>'+hf(s1)+'</td><td>'+hf(s2)+'</td><td>'+hf(s3)+'</td><td>'+hf(s1+s2+s3)+'</td></tr></table></div>';
+      return s;
     }
-    h+=tab3('Gerät',jeGer,'🚜')+tab3('Person',jePers,'👷');
+    h+=tab3(t('a_geraet'),jeGer,'🚜',gerName)+tab3(t('a_person'),jePers,'👷',function(n){ return n; });
     var pk=Object.keys(jePunkt).sort(function(a,b){ return a-b; });
     if(pk.length){
-      h+='<div class="box"><h2>📍 Je Punkt</h2><table class="aw"><tr><th>Punkt</th><th>Prio</th><th>Stand</th><th>Personal</th><th>Geräte</th></tr>';
-      pk.forEach(function(nr){ var o=jePunkt[nr], z=zustand(nr), st=ST[z.status]||{sym:'',t:'offen'};
-        h+='<tr onclick="sheetAuf('+nr+')" style="cursor:pointer"><td>'+nr+' '+esc(o.p.typ)+'</td><td>'+o.p.prio+'</td><td>'+st.sym+'</td><td>'+hf(o.pers)+'</td><td>'+hf(o.ger)+'</td></tr>'; });
+      h+='<div class="box"><h2>'+t('a_jep')+'</h2><table class="aw"><tr><th>'+t('a_punkt')+'</th><th>Prio</th><th>'+t('a_stand')+'</th><th>'+t('a_pers')+'</th><th>'+t('a_ger')+'</th></tr>';
+      pk.forEach(function(nr){ var o=jePunkt[nr], z=zustand(nr), st=ST[z.status]||{sym:''};
+        h+='<tr onclick="sheetAuf('+nr+')" style="cursor:pointer"><td>'+nr+' '+esc(typ(o.p))+'</td><td>'+o.p.prio+'</td><td>'+st.sym+'</td><td>'+hf(o.pers)+'</td><td>'+hf(o.ger)+'</td></tr>'; });
       h+='</table></div>';
     }
-    if(!zeilen.length) h+='<div class="box grau"><div class="sub">Noch kein Aufwand eingetragen. Er wird bei jeder Rückmeldung mit erfasst (Personal + Geräte, Stunden).</div></div>';
-    else h+='<div class="btnrow"><button class="btn w" onclick="csv()">⬇ CSV (alle Einträge)</button></div><div class="sub" style="margin-top:6px">'+zeilen.length+' Aufwand-Zeilen · Stunden gerundet auf ¼ h</div>';
+    if(!zeilen.length) h+='<div class="box grau"><div class="sub">'+t('a_leer')+'</div></div>';
+    else h+='<div class="btnrow"><button class="btn w" onclick="csv()">'+t('a_csv')+'</button></div><div class="sub" style="margin-top:6px">'+t('a_zeilen',{n:zeilen.length})+'</div>';
     $('aufwand').innerHTML=h;
+    /* CSV bleibt deutsch – ist die Abrechnungsgrundlage fürs Büro */
     window.csv=function(){
       var kopf=['Datum','Nr','Typ','Prio','Status','Gemeldet von','Art','Name/Gerät','Stunden','Text'];
       var txt=[kopf].concat(zeilen).map(function(r){ return r.map(function(v){ v=(v==null?'':String(v)).replace(/"/g,'""'); return /[;"\n]/.test(v)?'"'+v+'"':v; }).join(';'); }).join('\r\n');
@@ -656,7 +821,7 @@
   function netzMalen(){
     Q.alle().then(function(a){
       var e=$('netz'); e.className='netz'+(netzAn()?'':' off');
-      e.textContent=(netzAn()?'online':'offline')+(a.length?' · '+a.length+' offen':'');
+      e.textContent=(netzAn()?'online':'offline')+(a.length?t('n_offen',{n:a.length}):'');
     });
   }
   window.addEventListener('online',function(){ netzMalen(); pendSenden(); });
@@ -693,41 +858,66 @@
   window.senden=function(){
     if(!aktiv) return;
     var text=$('fText').value.trim(), von=$('fVon').value.trim();
-    if(stat!=='erledigt' && !text){ alert('Bitte kurz aufschreiben, was los ist.'); $('fText').focus(); return; }
-    if(!von){ alert('Bitte deinen Namen angeben.'); $('fVon').focus(); return; }
+    if(stat!=='erledigt' && !text){ alert(t('m_text')); $('fText').focus(); return; }
+    if(!von){ alert(t('m_name')); $('fVon').focus(); return; }
     var pers=zeilenLesen('fPers'), ger=zeilenLesen('fGer');
     var fehlt=pers.concat(ger).filter(function(x){ return !x.name || !(x.h>0); });
-    if(fehlt.length){ alert('Beim Aufwand fehlt ein Name/Gerät oder die Stunden.'); return; }
-    if(stat==='erledigt' && !pers.length && !confirm('Kein Aufwand eingetragen (wer, wie viele Stunden)? Trotzdem senden?')) return;
+    if(fehlt.length){ alert(t('m_aufw')); return; }
+    if(stat==='erledigt' && !pers.length && !confirm(t('m_kein'))) return;
     try{ localStorage.setItem(LS_VON,von); }catch(e){}
     var nr=aktiv, id='r_'+Date.now()+'_'+Math.round(Math.random()*1e6);
     var rec={ ts:Date.now(), datum:heute(), status:stat, text:text, von:von, quelle:'web',
               personal:pers, geraete:ger, h_personal:summe(pers), h_geraete:summe(ger) };
-    $('btnSend').disabled=true; $('status').textContent='Wird gesendet …';
+    $('btnSend').disabled=true; $('status').textContent=t('m_send');
     Q.add({k:id, nr:nr, rec:rec, fotos:fotos.slice()}).then(function(){ return pendSenden(); }).then(function(){ return Q.alle(); })
       .then(function(rest){
         var offen=rest.some(function(j){ return j.k===id; });
-        $('status').textContent=offen?'Kein Netz – gespeichert, geht raus, sobald wieder online.':'Gesendet – danke!';
+        $('status').textContent=t(offen?'m_offl':'m_ok');
         // Ohne Netz den Satz lokal schon zeigen, damit das Häkchen sofort sichtbar ist
         if(offen){ R[nr]=R[nr]||{}; R[nr][id]=rec; markerMalen(); zaehlen(); }
         setTimeout(function(){ sheetZu(); if(!$('t-liste').hidden) listeBauen(); if(!$('t-aufwand').hidden) aufwandBauen(); },900);
       });
   };
   window.wiederOffen=function(){
-    if(!aktiv) return; stat='offen'; $('fText').value=$('fText').value||'aus Versehen abgehakt';
-    if(!$('fVon').value.trim()){ alert('Bitte deinen Namen angeben.'); $('fVon').focus(); return; }
+    if(!aktiv) return; stat='offen'; $('fText').value=$('fText').value||t('m_versehen');
+    if(!$('fVon').value.trim()){ alert(t('m_name')); $('fVon').focus(); return; }
     senden();
   };
 
+  /* ── Sprache umschalten: feste Texte (data-i / data-iph / data-iti) neu setzen, dann alles Gezeichnete neu ── */
+  function sprache(l,merken){
+    LANG=(l==='pt'||l==='en')?l:'de';
+    if(merken){ try{ localStorage.setItem(LS_LANG,LANG); }catch(e){} }
+    document.documentElement.lang=LANG; document.title=t('doc');
+    Array.prototype.forEach.call(document.querySelectorAll('[data-i]'),function(el){ el.innerHTML=t(el.dataset.i); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-iph]'),function(el){ el.placeholder=t(el.dataset.iph); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-iti]'),function(el){ el.title=t(el.dataset.iti); });
+    Array.prototype.forEach.call($('lang').querySelectorAll('button'),function(b){ b.classList.toggle('on',b.dataset.l===LANG); });
+    $('infoPrio').innerHTML=[1,2,3].map(function(k){ return '<span class="chip p'+k+'">Prio '+k+'</span> '+esc(prioText(k)); }).join('<br>');
+    Array.prototype.forEach.call(document.querySelectorAll('.aufw .n'),function(el){ el.placeholder=t(el.getAttribute('list')==='dlGer'?'ph_ger':'ph_name'); });
+    statusMalen(); netzMalen();
+    if(!daten) return;
+    vorschlaege(); markerMalen();
+    daten.punkte.forEach(function(p){ var m=MK[p.nr], el=m&&m.getElement&&m.getElement(); if(el) el.title=t('nr')+' '+p.nr+' '+typ(p); });
+    if(!$('t-liste').hidden) listeBauen();
+    if(!$('t-aufwand').hidden) aufwandBauen();
+    if(aktiv && P[aktiv]){ sheetTexte(P[aktiv]); histMalen(aktiv); }
+  }
+  Array.prototype.forEach.call($('lang').querySelectorAll('button'),function(b){ b.onclick=function(){ sprache(b.dataset.l,true); }; });
+  (function(){ var l=''; try{ l=localStorage.getItem(LS_LANG)||''; }catch(e){}
+    if(!l){ var n=String(navigator.language||'').toLowerCase(); l=/^pt/.test(n)?'pt':(/^en/.test(n)?'en':'de'); }
+    sprache(l,false); })();
+
   /* ── Start ── */
   Promise.all([laden(), rueckLaden()]).then(function(){
+    sprache(LANG,false);
     zaehlen(); netzMalen(); pendSenden();
     var start=(location.hash||'').replace('#','');
     if(/^nr=/.test(start)){ tab('k2d'); }
     else if(['liste','aufwand','info'].indexOf(start)>=0) tab(start);
     else tab('k2d');
     if(/^nr=/.test(start)) setTimeout(function(){ sheetAuf(+start.slice(3)); },300);
-  }).catch(function(e){ console.warn('Daten',e); $('liste').innerHTML='<div class="box"><div class="sub">Daten konnten nicht geladen werden.</div></div>'; });
+  }).catch(function(e){ console.warn('Daten',e); $('liste').innerHTML='<div class="box"><div class="sub">'+t('m_fehl')+'</div></div>'; });
 })();
 if('serviceWorker' in navigator){ window.addEventListener('load',function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
