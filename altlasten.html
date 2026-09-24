@@ -221,6 +221,7 @@
       <p id="infoPrio"></p>
       <p data-i="info_p3"></p>
       <div class="sub" data-i="info_13"></div>
+      <p data-i="info_grenze"></p>
     </div>
     <div class="box grau">
       <h2 data-i="q_h">Quelle</h2>
@@ -308,16 +309,17 @@
       leg_ok:'erledigt', leg_pr:'Problem gemeldet', leg_tip:'Punkt antippen = Foto, Massnahme, Rückmeldung', lade:'lade …',
       info_h:'Fremdkörper im Gelände – alte Rohre, Eisenstangen, Seile, Betonsockel',
       info_p1:'Der Bauherr hat das ganze Gelände abgesucht und jede Altlast mit GPS und Foto aufgenommen (14.11.2025). Die Prio-Liste sagt, was damit geschieht:',
-      info_p3:'<b>So geht es:</b> Punkt auf der Karte antippen → Foto und Massnahme anschauen → wenn erledigt: <b>✅ Erledigt</b> drücken, Foto vom Resultat dazu, Name, senden. Geht etwas nicht (zu schwer, Beton, Abtransport unklar): <b>⚠️ Problem</b> melden. Die Rückmeldung sehen alle sofort auf der Karte und in der Liste – auch die Bauleitung.<br><b>Aufwand immer eintragen:</b> wer wie viele Stunden, welches Gerät wie viele Stunden. Der Reiter <b>⏱ Aufwand</b> zählt das je Prio zusammen – das braucht es für die Abrechnung mit dem Bauherrn.',
+      info_p3:'<b>So geht es:</b> Punkt auf der Karte antippen → Foto und Massnahme anschauen → wenn erledigt: <b>✅ Erledigt</b> drücken, Foto vom Resultat dazu, Name, senden. Geht etwas nicht (zu schwer, Beton, Abtransport unklar): <b>⚠️ Problem</b> melden. Die Rückmeldung sehen alle sofort auf der Karte und in der Liste – auch die Bauleitung.<br><b>Stunden sind freiwillig:</b> wer sie einträgt (wer wie viele Stunden, welches Gerät wie viele Stunden), dem zählt der Reiter <b>⏱ Aufwand</b> sie je Prio zusammen.',
       info_13:'Achtung bei Nr. 13 (Blech): liegt auf einer archäologischen Wüstung – nur Metallteile entfernen, Steine belassen, nicht befahren.',
+      info_grenze:'<b>Wir räumen nur bis Nr. 14</b> (oberhalb des Bachs). Alles südlich davon macht seit 24.09.2026 eine andere Firma – diese Punkte sind nicht mehr in der Liste.',
       q_h:'Quelle',
       q_t:'Excel «Datentabelle Fremdkörper Nalps_prioliste_für KV.xlsx» – Severin Kathriner (Axpo) → Christian Schmuckle 04.09.2026 → François Borner → Victor Malt 21.09.2026. Aufnahme mit happyrtk (RTK FIX), 14.11.2025. Originalfotos liegen beim Bauherrn (CloudFront, je ~7 MB) – hier sind Vorschaubilder, das Original öffnet sich auf Tipp.',
       prio1:'wird entfernt oder unter dem Boden abgeschnitten', prio2:'wird verbessert, wenn es im Budget liegt', prio3:'wird belassen',
       zu:'schliessen', bild_ti:'Tippen = ganz zeigen', b_karte:'🗺 Auf der Karte', b_nav:'🧭 Hinführen', b_orig:'🖼 Originalfoto (7 MB)',
       f_h:'Rückmeldung', w_erl:'✅ Erledigt', w_pr:'⚠️ Problem', w_no:'💬 Nur Notiz',
       l_text:'Was wurde gemacht? <span>– kurz</span>', ph_text:'z. B. Rohr abgeflext, Stumpf mit Steinen gedeckt',
-      l_pers:'Personal <span>– wer, wie viele Stunden</span>', b_pers:'+ Person',
-      l_ger:'Geräte <span>– welches Gerät, wie viele Stunden</span>', b_ger:'+ Gerät',
+      l_pers:'Personal <span>– wer, wie viele Stunden (freiwillig)</span>', b_pers:'+ Person',
+      l_ger:'Geräte <span>– welches Gerät, wie viele Stunden (freiwillig)</span>', b_ger:'+ Gerät',
       l_foto:'Foto <span>– vom Resultat, bis 4</span>', b_cam:'📷 Foto', b_gal:'🖼 Galerie',
       l_von:'Dein Name', ph_von:'Vor- und Nachname', b_send:'Senden',
       wieder:'Aus Versehen abgehakt? <a onclick="wiederOffen()">wieder auf «offen» setzen</a>',
@@ -333,7 +335,7 @@
       a_leer:'Noch kein Aufwand eingetragen. Er wird bei jeder Rückmeldung mit erfasst (Personal + Geräte, Stunden).',
       a_csv:'⬇ CSV (alle Einträge)', a_zeilen:'{n} Aufwand-Zeilen · Stunden gerundet auf ¼ h',
       m_text:'Bitte kurz aufschreiben, was los ist.', m_name:'Bitte deinen Namen angeben.',
-      m_aufw:'Beim Aufwand fehlt ein Name/Gerät oder die Stunden.', m_kein:'Kein Aufwand eingetragen (wer, wie viele Stunden)? Trotzdem senden?',
+      m_aufw:'Bei einer Stunden-Zeile fehlt der Name bzw. das Gerät.',
       m_send:'Wird gesendet …', m_offl:'Kein Netz – gespeichert, geht raus, sobald wieder online.', m_ok:'Gesendet – danke!',
       m_versehen:'aus Versehen abgehakt', n_offen:' · {n} offen', m_fehl:'Daten konnten nicht geladen werden.' },
     pt:{ doc:'NalpSolar · Resíduos antigos', h1:'🧹 Resíduos antigos', tab_k:'🗺 Mapa', tab_l:'📋 Lista', tab_a:'⏱ Horas',
@@ -341,16 +343,17 @@
       leg_ok:'feito', leg_pr:'problema comunicado', leg_tip:'Tocar no ponto = foto, medida, resposta', lade:'a carregar …',
       info_h:'Objetos estranhos no terreno – tubos velhos, barras de ferro, cabos, bases de betão',
       info_p1:'O dono da obra percorreu todo o terreno e registou cada resíduo com GPS e fotografia (14.11.2025). A lista de prioridades diz o que se faz com cada um:',
-      info_p3:'<b>Como fazer:</b> tocar no ponto no mapa → ver a foto e a medida → quando estiver feito: carregar em <b>✅ Feito</b>, juntar foto do resultado, nome, enviar. Se algo não der (pesado demais, betão, transporte pouco claro): comunicar <b>⚠️ Problema</b>. Todos veem a resposta logo no mapa e na lista – também a direção da obra.<br><b>Registar sempre as horas:</b> quem e quantas horas, que máquina e quantas horas. O separador <b>⏱ Horas</b> soma tudo por prioridade – é preciso para a faturação ao dono da obra.',
+      info_p3:'<b>Como fazer:</b> tocar no ponto no mapa → ver a foto e a medida → quando estiver feito: carregar em <b>✅ Feito</b>, juntar foto do resultado, nome, enviar. Se algo não der (pesado demais, betão, transporte pouco claro): comunicar <b>⚠️ Problema</b>. Todos veem a resposta logo no mapa e na lista – também a direção da obra.<br><b>As horas são opcionais:</b> quem as registar (quem e quantas horas, que máquina e quantas horas) vê-as somadas por prioridade no separador <b>⏱ Horas</b>.',
       info_13:'Atenção no n.º 13 (chapa): está num sítio arqueológico – retirar só as peças de metal, deixar as pedras, não passar por cima com veículos.',
+      info_grenze:'<b>Nós só limpamos até ao n.º 14</b> (acima do riacho). Tudo o que fica a sul é feito por outra empresa desde 24.09.2026 – esses pontos já não estão na lista.',
       q_h:'Fonte',
       q_t:'Excel «Datentabelle Fremdkörper Nalps_prioliste_für KV.xlsx» – Severin Kathriner (Axpo) → Christian Schmuckle 04.09.2026 → François Borner → Victor Malt 21.09.2026. Levantamento com happyrtk (RTK FIX), 14.11.2025. As fotos originais estão com o dono da obra (CloudFront, ~7 MB cada) – aqui há miniaturas, o original abre com um toque. Tipos e comentários traduzidos do original em alemão.',
       prio1:'é retirado ou cortado abaixo do nível do solo', prio2:'é melhorado, se houver orçamento', prio3:'fica no local',
       zu:'fechar', bild_ti:'Tocar = ver inteira', b_karte:'🗺 No mapa', b_nav:'🧭 Ir até lá', b_orig:'🖼 Foto original (7 MB)',
       f_h:'Resposta', w_erl:'✅ Feito', w_pr:'⚠️ Problema', w_no:'💬 Só nota',
       l_text:'O que foi feito? <span>– curto</span>', ph_text:'p. ex. tubo cortado com rebarbadora, resto coberto com pedras',
-      l_pers:'Pessoal <span>– quem, quantas horas</span>', b_pers:'+ Pessoa',
-      l_ger:'Máquinas <span>– que máquina, quantas horas</span>', b_ger:'+ Máquina',
+      l_pers:'Pessoal <span>– quem, quantas horas (opcional)</span>', b_pers:'+ Pessoa',
+      l_ger:'Máquinas <span>– que máquina, quantas horas (opcional)</span>', b_ger:'+ Máquina',
       l_foto:'Foto <span>– do resultado, até 4</span>', b_cam:'📷 Foto', b_gal:'🖼 Galeria',
       l_von:'O teu nome', ph_von:'Nome e apelido', b_send:'Enviar',
       wieder:'Marcado por engano? <a onclick="wiederOffen()">voltar a pôr «aberto»</a>',
@@ -366,7 +369,7 @@
       a_leer:'Ainda não há horas registadas. São registadas em cada resposta (pessoal + máquinas, horas).',
       a_csv:'⬇ CSV (todos os registos)', a_zeilen:'{n} linhas de horas · horas arredondadas a ¼ h',
       m_text:'Escreve em poucas palavras o que se passa.', m_name:'Indica o teu nome, por favor.',
-      m_aufw:'Nas horas falta um nome/máquina ou as horas.', m_kein:'Não registaste horas (quem, quantas horas). Enviar mesmo assim?',
+      m_aufw:'Numa linha de horas falta o nome ou a máquina.',
       m_send:'A enviar …', m_offl:'Sem rede – guardado, é enviado assim que houver rede.', m_ok:'Enviado – obrigado!',
       m_versehen:'marcado por engano', n_offen:' · {n} por enviar', m_fehl:'Não foi possível carregar os dados.' },
     en:{ doc:'NalpSolar · Old debris', h1:'🧹 Old debris', tab_k:'🗺 Map', tab_l:'📋 List', tab_a:'⏱ Hours',
@@ -374,16 +377,17 @@
       leg_ok:'done', leg_pr:'problem reported', leg_tip:'Tap a point = photo, action, feedback', lade:'loading …',
       info_h:'Foreign objects on site – old pipes, iron bars, cables, concrete bases',
       info_p1:'The client searched the whole site and recorded every piece of debris with GPS and a photo (14.11.2025). The priority list says what happens to it:',
-      info_p3:'<b>How it works:</b> tap the point on the map → look at the photo and the action → when done: press <b>✅ Done</b>, add a photo of the result, your name, send. If something doesn\'t work (too heavy, concrete, unclear how to haul it away): report <b>⚠️ Problem</b>. Everyone sees the feedback right away on the map and in the list – site management too.<br><b>Always enter the hours:</b> who and how many hours, which machine and how many hours. The <b>⏱ Hours</b> tab adds it up per priority – this is needed for billing the client.',
+      info_p3:'<b>How it works:</b> tap the point on the map → look at the photo and the action → when done: press <b>✅ Done</b>, add a photo of the result, your name, send. If something doesn\'t work (too heavy, concrete, unclear how to haul it away): report <b>⚠️ Problem</b>. Everyone sees the feedback right away on the map and in the list – site management too.<br><b>Hours are optional:</b> if you enter them (who and how many hours, which machine and how many hours), the <b>⏱ Hours</b> tab adds them up per priority.',
       info_13:'Caution at no. 13 (sheet metal): lies on an archaeological site – remove only the metal parts, leave the stones, do not drive over it.',
+      info_grenze:'<b>We only clear up to no. 14</b> (above the stream). Everything south of it is done by another company since 24.09.2026 – those points are no longer in the list.',
       q_h:'Source',
       q_t:'Excel «Datentabelle Fremdkörper Nalps_prioliste_für KV.xlsx» – Severin Kathriner (Axpo) → Christian Schmuckle 04.09.2026 → François Borner → Victor Malt 21.09.2026. Surveyed with happyrtk (RTK FIX), 14.11.2025. The original photos are held by the client (CloudFront, ~7 MB each) – shown here are previews, the original opens on tap. Types and comments translated from the German original.',
       prio1:'is removed or cut off below ground', prio2:'is improved if within budget', prio3:'is left in place',
       zu:'close', bild_ti:'Tap = show full', b_karte:'🗺 On the map', b_nav:'🧭 Take me there', b_orig:'🖼 Original photo (7 MB)',
       f_h:'Feedback', w_erl:'✅ Done', w_pr:'⚠️ Problem', w_no:'💬 Note only',
       l_text:'What was done? <span>– briefly</span>', ph_text:'e.g. pipe cut off with grinder, stump covered with stones',
-      l_pers:'Crew <span>– who, how many hours</span>', b_pers:'+ Person',
-      l_ger:'Equipment <span>– which machine, how many hours</span>', b_ger:'+ Machine',
+      l_pers:'Crew <span>– who, how many hours (optional)</span>', b_pers:'+ Person',
+      l_ger:'Equipment <span>– which machine, how many hours (optional)</span>', b_ger:'+ Machine',
       l_foto:'Photo <span>– of the result, up to 4</span>', b_cam:'📷 Photo', b_gal:'🖼 Gallery',
       l_von:'Your name', ph_von:'First and last name', b_send:'Send',
       wieder:'Ticked by mistake? <a onclick="wiederOffen()">set back to «open»</a>',
@@ -399,7 +403,7 @@
       a_leer:'No hours entered yet. They are recorded with every feedback (crew + equipment, hours).',
       a_csv:'⬇ CSV (all entries)', a_zeilen:'{n} hour lines · hours rounded to ¼ h',
       m_text:'Please write briefly what is going on.', m_name:'Please enter your name.',
-      m_aufw:'An hours line is missing a name/machine or the hours.', m_kein:'No hours entered (who, how many hours). Send anyway?',
+      m_aufw:'An hours line is missing the name or the machine.',
       m_send:'Sending …', m_offl:'No network – saved, will be sent once back online.', m_ok:'Sent – thank you!',
       m_versehen:'ticked by mistake', n_offen:' · {n} pending', m_fehl:'Data could not be loaded.' }
   };
@@ -513,6 +517,7 @@
   function schalter(id,akt,cb){
     $(id).innerHTML=FILT.map(function(f){
       var n=daten?daten.punkte.filter(function(p){ return passt(p,f.id); }).length:'';
+      if(n===0 && /^p\d$/.test(f.id)) return '';   // Prio ohne Punkte (seit Grenze Nr. 14 nur noch Prio 1)
       return '<button data-f="'+f.id+'"'+(akt===f.id?' class="on"':'')+'>'+t(f.t)+(n!==''?' '+n:'')+'</button>';
     }).join('');
     Array.prototype.forEach.call($(id).querySelectorAll('button'),function(b){ b.onclick=function(){ cb(b.dataset.f); }; });
@@ -757,6 +762,7 @@
     var h='';
     [1,2,3].forEach(function(k){
       var pr=prio[k];
+      if(!alle[k]) return;
       h+='<div class="box '+(k===1?'':(k===2?'':'grau'))+'" style="border-left-color:'+({1:'#D72622',2:'#e08a00',3:'#8a8e94'})[k]+'">'
         +'<h2><span class="chip p'+k+'">Prio '+k+'</span> '+esc(prioText(k))+'</h2>'
         +'<div class="kpi"><div><b>'+erl[k]+' / '+alle[k]+'</b><span>'+t('a_erl')+'</span></div>'
@@ -861,9 +867,9 @@
     if(stat!=='erledigt' && !text){ alert(t('m_text')); $('fText').focus(); return; }
     if(!von){ alert(t('m_name')); $('fVon').focus(); return; }
     var pers=zeilenLesen('fPers'), ger=zeilenLesen('fGer');
-    var fehlt=pers.concat(ger).filter(function(x){ return !x.name || !(x.h>0); });
+    // Stunden sind freiwillig (Victor 24.09.2026) – nur Stunden ohne Name/Gerät wären wertlos
+    var fehlt=pers.concat(ger).filter(function(x){ return !x.name; });
     if(fehlt.length){ alert(t('m_aufw')); return; }
-    if(stat==='erledigt' && !pers.length && !confirm(t('m_kein'))) return;
     try{ localStorage.setItem(LS_VON,von); }catch(e){}
     var nr=aktiv, id='r_'+Date.now()+'_'+Math.round(Math.random()*1e6);
     var rec={ ts:Date.now(), datum:heute(), status:stat, text:text, von:von, quelle:'web',
