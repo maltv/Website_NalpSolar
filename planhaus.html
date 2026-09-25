@@ -96,8 +96,8 @@
   .plots .karte { display: flex; flex-direction: column; }
   .plotkopf { display: flex; align-items: baseline; }
   .plotkopf .name { font-size: 1.25rem; font-weight: 700; flex: 1; white-space: nowrap; }
-  .legende { font-size: 0.85rem; color: var(--ink2); flex: none; }
-  .legende span { margin-left: 1rem; white-space: nowrap; }
+  .legende { font-size: 0.8rem; color: var(--ink2); flex: none; }
+  .legende span { margin-left: 0.8rem; white-space: nowrap; }
   .legende i { display: inline-block; vertical-align: middle; margin-right: 0.35rem; }
   .plot { flex: 1; min-height: 0; margin-top: 0.4rem; }
   .plot svg { display: block; width: 100%; height: 100%; }
@@ -137,7 +137,7 @@
       <div class="plot" id="plotBohr"></div>
     </div>
     <div class="karte">
-      <div class="plotkopf"><div class="name">Montage pro Tag</div><div class="legende" id="legTische"></div></div>
+      <div class="plotkopf"><div class="name">Tische pro Tag</div><div class="legende" id="legTische"></div></div>
       <div class="plot" id="plotTische"></div>
     </div>
   </div>
@@ -150,7 +150,7 @@
   var QUELLE = 'https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app/erfassung/planhaus/stand.json';
   var ABFRAGE_MS = 60 * 1000;           // jede Minute nachsehen
   var NEU_LADEN_MS = 6 * 3600 * 1000;   // alle 6 h die ganze Seite neu (TV-Browser laufen sonst voll)
-  var SPEICHER = 'nalp_planhaus_stand_v2';   // v2: Stand mit schnitt_montage + ziele.montage_pro_at
+  var SPEICHER = 'nalp_planhaus_stand_v3';   // v3: Stand mit schnitt_montage (in Tischen) + ziele.anteil
   var TAGE = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
   var MONATE = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
 
@@ -238,8 +238,10 @@
   // ---------------------------------------------------------------- Plot
   // Balken = Tageswert, bei mehreren Feldern gestapelt (erstes Feld unten), Linie = gleitender
   // Schnitt je Arbeitstag ueber die Summe (wie Nalpi), punktiert = Ziel pro Arbeitstag.
-  // Heute ist nie fertig: Balken blass.  felder = [[feld, farbe], ...]
+  // Heute ist nie fertig: Balken blass.  felder = [[feld, farbe, anteil], ...] - anteil kommt aus
+  // stand.ziele.anteil (Skript), z.B. 0.5 = ein Schritt zaehlt einen halben Tisch; fehlt er, 1.
   function plot(el, reihe, felder, schnittFeld, ziel, farbeLinie) {
+    function wert(z, j) { return (z[felder[j][0]] || 0) * (felder[j][2] || 1); }
     var W = el.clientWidth, H = el.clientHeight;
     if (W < 50 || H < 50) return;
     var rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
@@ -248,7 +250,7 @@
     var pw = W - M.l - M.r, ph = H - M.t - M.b;
     var n = reihe.length, step = pw / n;
 
-    function summe(z) { var t = 0; for (var j = 0; j < felder.length; j++) t += z[felder[j][0]] || 0; return t; }
+    function summe(z) { var t = 0; for (var j = 0; j < felder.length; j++) t += wert(z, j); return t; }
     var max = ziel;
     for (var i = 0; i < n; i++) {
       max = Math.max(max, summe(reihe[i]), reihe[i][schnittFeld] || 0);
@@ -276,7 +278,7 @@
       var bx = M.l + step * i + 1, unten = 0;
       var op = (i === n - 1) ? ' opacity="0.45"' : '';
       for (var j = 0; j < felder.length; j++) {
-        var w = reihe[i][felder[j][0]] || 0;
+        var w = wert(reihe[i], j);
         if (!w) continue;
         var oben = unten + w, by = y(oben), bh = y(unten) - by;
         if (oben >= gesamt) {
@@ -328,7 +330,7 @@
       s += '<span><i style="width:0.8rem;height:0.8rem;border-radius:0.15rem;background:' + balken[i][0] + '"></i>' + balken[i][1] + '</span>';
     }
     el.innerHTML = s +
-      '<span><i style="width:1.4rem;height:0.2rem;background:' + farbeLinie + '"></i>Schnitt 14 Tage je Arbeitstag</span>' +
+      '<span><i style="width:1.4rem;height:0.2rem;background:' + farbeLinie + '"></i>Ø 14 Tage je Arbeitstag</span>' +
       '<span><i style="width:1.4rem;border-top:0.12rem dotted ' + css('--ink2') + '"></i>Ziel</span>';
   }
 
@@ -343,11 +345,13 @@
     rate($('rateBohr'), k.gebohrt.pro_at, css('--bohr'), 'Bohrungen pro Arbeitstag', [], k);
     heute(stand.heute || {});
     legende($('legBohr'), [[css('--bohr-bar'), 'gebohrt']], css('--bohr-line'));
-    legende($('legTische'), [[css('--pk-bar'), 'Primärkonstr.'], [css('--tisch-bar'), 'Modulträger']], css('--montage-line'));
+    // Tische gestapelt (François Borner 25.09.2026: PK + MT sichtbar; Victor 25.09.2026: Ziel 5 TISCHE):
+    // ein Tisch = Primärkonstruktion + Modulträger, jeder Schritt ein halber Tisch (Anteile aus dem Skript)
+    var an = z.anteil || { pk: 0.5, mt: 0.5 };
+    legende($('legTische'), [[css('--pk-bar'), 'Primärkonstr. ½ Tisch'], [css('--tisch-bar'), 'Modulträger ½ Tisch']], css('--montage-line'));
     plot($('plotBohr'), stand.reihe, [['gebohrt', css('--bohr-bar')]], 'schnitt_gebohrt', z.bohr_pro_at, css('--bohr-line'));
-    // Montage gestapelt (Wunsch François Borner 25.09.2026): PK + MT, Ziel 10 = 2 Schritte je Tisch × Nalpi-Ziel 5
-    plot($('plotTische'), stand.reihe, [['pk', css('--pk-bar')], ['mt', css('--tisch-bar')]], 'schnitt_montage',
-      z.montage_pro_at || 2 * z.tische_pro_at, css('--montage-line'));
+    plot($('plotTische'), stand.reihe, [['pk', css('--pk-bar'), an.pk], ['mt', css('--tisch-bar'), an.mt]], 'schnitt_montage',
+      z.tische_pro_at, css('--montage-line'));
     standZeile();
   }
 
