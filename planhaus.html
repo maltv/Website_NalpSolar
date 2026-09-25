@@ -34,7 +34,7 @@
     --tisch-line: #1d4ed8;
     --pk: #10b981;          /* Nalpi ASSEMBLED */
     --pk-bar: #10b981;
-    --montage-line: #1e293b; /* Schnitt PK+MT zusammen - weder blau noch gruen, weil er beide Teile meint */
+    --pk-line: #047857;
     --vs: #eab308;          /* Nalpi SCREWED_CARD_COLOR */
     --inj: #075985;         /* Nalpi INJECTED */
     --gut: #2f9e44;
@@ -150,7 +150,7 @@
   var QUELLE = 'https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app/erfassung/planhaus/stand.json';
   var ABFRAGE_MS = 60 * 1000;           // jede Minute nachsehen
   var NEU_LADEN_MS = 6 * 3600 * 1000;   // alle 6 h die ganze Seite neu (TV-Browser laufen sonst voll)
-  var SPEICHER = 'nalp_planhaus_stand_v3';   // v3: Stand mit schnitt_montage (in Tischen) + ziele.anteil
+  var SPEICHER = 'nalp_planhaus_stand_v4';   // v4: Stand mit schnitt_pk (eigene Linie fuer die Primaerkonstruktion)
   var TAGE = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
   var MONATE = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
 
@@ -236,12 +236,11 @@
   }
 
   // ---------------------------------------------------------------- Plot
-  // Balken = Tageswert, bei mehreren Feldern gestapelt (erstes Feld unten), Linie = gleitender
-  // Schnitt je Arbeitstag ueber die Summe (wie Nalpi), punktiert = Ziel pro Arbeitstag.
-  // Heute ist nie fertig: Balken blass.  felder = [[feld, farbe, anteil], ...] - anteil kommt aus
-  // stand.ziele.anteil (Skript), z.B. 0.5 = ein Schritt zaehlt einen halben Tisch; fehlt er, 1.
-  function plot(el, reihe, felder, schnittFeld, ziel, farbeLinie) {
-    function wert(z, j) { return (z[felder[j][0]] || 0) * (felder[j][2] || 1); }
+  // Balken = Tageswert je Serie, mehrere Serien NEBENEINANDER (gruppiert), je Serie eine Linie =
+  // gleitender Schnitt je Arbeitstag (wie Nalpi), punktiert = EIN Ziel pro Arbeitstag, das fuer jede
+  // Serie gilt (Victor 25.09.2026: im Schnitt 5 Primaerkonstruktionen UND 5 Modultraeger pro Tag).
+  // Heute ist nie fertig: Balken blass.  serien = [[feld, farbeBalken, schnittFeld, farbeLinie], ...]
+  function plot(el, reihe, serien, ziel) {
     var W = el.clientWidth, H = el.clientHeight;
     if (W < 50 || H < 50) return;
     var rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
@@ -250,10 +249,9 @@
     var pw = W - M.l - M.r, ph = H - M.t - M.b;
     var n = reihe.length, step = pw / n;
 
-    function summe(z) { var t = 0; for (var j = 0; j < felder.length; j++) t += wert(z, j); return t; }
-    var max = ziel;
+    var k = serien.length, max = ziel;
     for (var i = 0; i < n; i++) {
-      max = Math.max(max, summe(reihe[i]), reihe[i][schnittFeld] || 0);
+      for (var j = 0; j < k; j++) max = Math.max(max, reihe[i][serien[j][0]] || 0, reihe[i][serien[j][2]] || 0);
     }
     var raster = max <= 12 ? 2 : (max <= 30 ? 5 : (max <= 60 ? 10 : 20));
     max = Math.ceil(max * 1.08 / raster) * raster;
@@ -270,46 +268,45 @@
       s += '<line x1="' + M.l + '" x2="' + (W - M.r) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="' + css('--hair') + '"/>' +
         '<text x="' + (M.l - 0.4 * rem) + '" y="' + (y(v) + fs * 0.35) + '" font-size="' + fs + '" text-anchor="end" fill="' + css('--muted') + '">' + v + '</text>';
     }
-    // Balken gestapelt: erstes Feld unten, 2 px Luft zwischen Tagen und zwischen den Teilen, oberster Teil gerundet
-    var bw = Math.max(2, step - 2), rr = Math.min(4, bw / 2);
+    // Balken je Serie nebeneinander: 2 px Luft zwischen Tagen, 1 px zwischen den Serien, oben gerundet
+    var gw = Math.max(2, step - 2), bw = Math.max(1.5, (gw - (k - 1)) / k), rr = Math.min(4, bw / 2);
     for (i = 0; i < n; i++) {
-      var gesamt = summe(reihe[i]);
-      if (!gesamt) continue;
-      var bx = M.l + step * i + 1, unten = 0;
       var op = (i === n - 1) ? ' opacity="0.45"' : '';
-      for (var j = 0; j < felder.length; j++) {
-        var w = wert(reihe[i], j);
+      for (var j = 0; j < k; j++) {
+        var w = reihe[i][serien[j][0]] || 0;
         if (!w) continue;
-        var oben = unten + w, by = y(oben), bh = y(unten) - by;
-        if (oben >= gesamt) {
-          var r2 = Math.min(rr, bh);
-          s += '<path d="M' + bx + ',' + y(unten) + 'V' + (by + r2) + 'Q' + bx + ',' + by + ' ' + (bx + r2) + ',' + by +
-            'H' + (bx + bw - r2) + 'Q' + (bx + bw) + ',' + by + ' ' + (bx + bw) + ',' + (by + r2) + 'V' + y(unten) + 'Z" fill="' + felder[j][1] + '"' + op + '/>';
-        } else {
-          s += '<rect x="' + bx + '" y="' + (by + 2) + '" width="' + bw + '" height="' + Math.max(1, bh - 2) + '" fill="' + felder[j][1] + '"' + op + '/>';
-        }
-        unten = oben;
+        var bx = M.l + step * i + 1 + j * (bw + 1), by = y(w), bh = y(0) - by, r2 = Math.min(rr, bh);
+        s += '<path d="M' + bx + ',' + y(0) + 'V' + (by + r2) + 'Q' + bx + ',' + by + ' ' + (bx + r2) + ',' + by +
+          'H' + (bx + bw - r2) + 'Q' + (bx + bw) + ',' + by + ' ' + (bx + bw) + ',' + (by + r2) + 'V' + y(0) + 'Z" fill="' + serien[j][1] + '"' + op + '/>';
       }
     }
-    // Ziel
-    s += '<line x1="' + M.l + '" x2="' + (W - M.r) + '" y1="' + y(ziel) + '" y2="' + y(ziel) + '" stroke="' + css('--ink2') + '" stroke-width="1.5" stroke-dasharray="2 5"/>' +
-      '<text x="' + (W - M.r + 0.4 * rem) + '" y="' + (y(ziel) + fs * 0.35) + '" font-size="' + fs + '" fill="' + css('--ink2') + '">Ziel ' + ziel + '</text>';
-    // Gleitender Schnitt
-    var pfad = '', letzt = -1;
-    for (i = 0; i < n; i++) {
-      var sv = reihe[i][schnittFeld];
-      if (sv === undefined || sv === null) continue;
-      pfad += (pfad ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(sv).toFixed(1);
-      letzt = i;
+    // Ziel: EINE Linie, gilt fuer jede Serie
+    s += '<line x1="' + M.l + '" x2="' + (W - M.r) + '" y1="' + y(ziel) + '" y2="' + y(ziel) + '" stroke="' + css('--ink2') + '" stroke-width="1.5" stroke-dasharray="2 5"/>';
+    var marken = [{ y: y(ziel), text: 'Ziel ' + ziel, fett: false, farbe: css('--ink2'), fs: fs }];
+    // Gleitender Schnitt je Serie, Endpunkt mit Ø-Beschriftung (Punkt in der Serienfarbe davor)
+    for (j = 0; j < k; j++) {
+      var sf = serien[j][2], pfad = '', letzt = -1;
+      for (i = 0; i < n; i++) {
+        var sv = reihe[i][sf];
+        if (sv === undefined || sv === null) continue;
+        pfad += (pfad ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(sv).toFixed(1);
+        letzt = i;
+      }
+      if (!pfad) continue;
+      var lv = reihe[letzt][sf];
+      s += '<path d="' + pfad + '" fill="none" stroke="' + serien[j][3] + '" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>' +
+        '<circle cx="' + x(letzt) + '" cy="' + y(lv) + '" r="5" fill="' + serien[j][3] + '" stroke="#fff" stroke-width="2"/>';
+      marken.push({ y: y(lv), text: 'Ø ' + komma(lv), fett: true, farbe: css('--ink'), punkt: (k > 1 ? serien[j][3] : null), fs: fs * 1.15 });
     }
-    if (pfad) {
-      s += '<path d="' + pfad + '" fill="none" stroke="' + farbeLinie + '" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>';
-      var lv = reihe[letzt][schnittFeld];
-      s += '<circle cx="' + x(letzt) + '" cy="' + y(lv) + '" r="5" fill="' + farbeLinie + '" stroke="#fff" stroke-width="2"/>';
-      // Direktbeschriftung nur am Endpunkt; weicht aus, wenn sie auf der Ziel-Beschriftung liegt
-      var ly = y(lv) + fs * 0.35;
-      if (Math.abs(y(lv) - y(ziel)) < fs * 1.2) ly = y(lv) + (lv >= ziel ? -fs * 0.6 : fs * 1.3);
-      s += '<text x="' + (W - M.r + 0.4 * rem) + '" y="' + ly + '" font-size="' + (fs * 1.15) + '" font-weight="700" fill="' + css('--ink') + '">Ø ' + komma(lv) + '</text>';
+    // Beschriftungen rechts: nach Hoehe sortieren und auseinanderschieben, damit nichts uebereinander liegt
+    marken.sort(function (a, b) { return a.y - b.y; });
+    for (i = 1; i < marken.length; i++) {
+      if (marken[i].y - marken[i - 1].y < fs * 1.3) marken[i].y = marken[i - 1].y + fs * 1.3;
+    }
+    for (i = 0; i < marken.length; i++) {
+      var mk = marken[i], mx = W - M.r + 0.4 * rem;
+      if (mk.punkt) { s += '<circle cx="' + (mx + 0.22 * rem) + '" cy="' + mk.y + '" r="' + (0.22 * rem) + '" fill="' + mk.punkt + '"/>'; mx += 0.65 * rem; }
+      s += '<text x="' + mx + '" y="' + (mk.y + mk.fs * 0.35) + '" font-size="' + mk.fs + '"' + (mk.fett ? ' font-weight="700"' : '') + ' fill="' + mk.farbe + '">' + mk.text + '</text>';
     }
     // Achse + Tage: jeder Montag und heute
     s += '<line x1="' + M.l + '" x2="' + (W - M.r) + '" y1="' + y(0) + '" y2="' + y(0) + '" stroke="' + css('--axis') + '"/>';
@@ -323,14 +320,15 @@
     el.innerHTML = s + '</svg>';
   }
 
-  // balken = [[farbe, text], ...] in der Reihenfolge der Stapelung (unten zuerst)
-  function legende(el, balken, farbeLinie) {
-    var s = '';
-    for (var i = 0; i < balken.length; i++) {
-      s += '<span><i style="width:0.8rem;height:0.8rem;border-radius:0.15rem;background:' + balken[i][0] + '"></i>' + balken[i][1] + '</span>';
+  // serien wie bei plot(), namen = Text je Serie; die Ø-Linie zeigt bei mehreren Serien beide Linienfarben
+  function legende(el, serien, namen) {
+    var s = '', lf = serien[0][3];
+    for (var i = 0; i < serien.length; i++) {
+      s += '<span><i style="width:0.8rem;height:0.8rem;border-radius:0.15rem;background:' + serien[i][1] + '"></i>' + namen[i] + '</span>';
     }
+    if (serien.length > 1) lf = 'linear-gradient(90deg,' + serien[0][3] + ' 50%,' + serien[1][3] + ' 50%)';
     el.innerHTML = s +
-      '<span><i style="width:1.4rem;height:0.2rem;background:' + farbeLinie + '"></i>Ø 14 Tage je Arbeitstag</span>' +
+      '<span><i style="width:1.4rem;height:0.2rem;background:' + lf + '"></i>Ø 14 Tage je Arbeitstag</span>' +
       '<span><i style="width:1.4rem;border-top:0.12rem dotted ' + css('--ink2') + '"></i>Ziel</span>';
   }
 
@@ -344,14 +342,14 @@
       [[k.pk.pro_at, 'Primärkonstruktion', css('--pk')], [k.mt.pro_at, 'Modulträger', css('--tisch')]], k);
     rate($('rateBohr'), k.gebohrt.pro_at, css('--bohr'), 'Bohrungen pro Arbeitstag', [], k);
     heute(stand.heute || {});
-    legende($('legBohr'), [[css('--bohr-bar'), 'gebohrt']], css('--bohr-line'));
-    // Tische gestapelt (François Borner 25.09.2026: PK + MT sichtbar; Victor 25.09.2026: Ziel 5 TISCHE):
-    // ein Tisch = Primärkonstruktion + Modulträger, jeder Schritt ein halber Tisch (Anteile aus dem Skript)
-    var an = z.anteil || { pk: 0.5, mt: 0.5 };
-    legende($('legTische'), [[css('--pk-bar'), 'Primärkonstr. ½ Tisch'], [css('--tisch-bar'), 'Modulträger ½ Tisch']], css('--montage-line'));
-    plot($('plotBohr'), stand.reihe, [['gebohrt', css('--bohr-bar')]], 'schnitt_gebohrt', z.bohr_pro_at, css('--bohr-line'));
-    plot($('plotTische'), stand.reihe, [['pk', css('--pk-bar'), an.pk], ['mt', css('--tisch-bar'), an.mt]], 'schnitt_montage',
-      z.tische_pro_at, css('--montage-line'));
+    // Tische (Victor 25.09.2026): im Schnitt 5 Primärkonstruktionen UND 5 Modulträger pro Tag -
+    // beide Serien nebeneinander, je eine Ø-Linie, EINE Ziellinie (Nalpi-Ziel Tische/AT) für beide
+    var SB = [['gebohrt', css('--bohr-bar'), 'schnitt_gebohrt', css('--bohr-line')]];
+    var ST = [['pk', css('--pk-bar'), 'schnitt_pk', css('--pk-line')], ['mt', css('--tisch-bar'), 'schnitt_mt', css('--tisch-line')]];
+    legende($('legBohr'), SB, ['gebohrt']);
+    legende($('legTische'), ST, ['Primärkonstr.', 'Modulträger']);
+    plot($('plotBohr'), stand.reihe, SB, z.bohr_pro_at);
+    plot($('plotTische'), stand.reihe, ST, z.tische_pro_at);
     standZeile();
   }
 
