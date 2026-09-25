@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NalpSolar Planhaus</title>
+<!--
+  Bildschirm im Planhaus (TV Hisense 55A7KQ, VIDAA-Browser). Zeigt die Kennzahlen
+  der Nalpi-Uebersicht, fast live.
+
+  Daten: Firebase-RTDB erfassung/planhaus/stand - geschrieben von
+  Tools\Planhaus_Live.py (PC, holt Nalpi ueber den angemeldeten Edge). Diese Seite
+  rechnet NICHTS nach, sie zeichnet nur; die Regeln stehen im Skript bzw. in Nalpi.
+
+  Bewusst altes JavaScript (var, function, XMLHttpRequest): der TV-Browser ist ein
+  abgespecktes Chromium unbekannten Alters.
+  Ohne PIN-Gate: es stehen nur Summen drauf, dieselben wie in baustand.json.
+-->
+<style>
+  :root {
+    --bg: #f1f3f5;
+    --card: #ffffff;
+    --ink: #1a1b1e;
+    --ink2: #495057;
+    --muted: #868e96;
+    --hair: #e2e8f0;
+    --axis: #cbd5e1;
+    --weekend: #eceff3;
+    --bohr: #f97316;        /* Nalpi DRILLED */
+    --bohr-bar: #fb923c;
+    --bohr-line: #9a3412;
+    --tisch: #2563eb;       /* Nalpi RACK_MOUNTED */
+    --tisch-bar: #60a5fa;
+    --tisch-line: #1d4ed8;
+    --pk: #10b981;          /* Nalpi ASSEMBLED */
+    --vs: #eab308;          /* Nalpi SCREWED_CARD_COLOR */
+    --inj: #075985;         /* Nalpi INJECTED */
+    --gut: #2f9e44;
+    --warn: #e8590c;
+    --alt: #c92a2a;
+    --rot: #D72622;         /* STRABAG */
+  }
+  /* 1 rem = 1/96 der Breite: auf 1920 px sind das 20 px, auf jedem 16:9-Schirm gleich gross */
+  html { font-size: 1.0417vw; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: Arial, Helvetica, sans-serif;
+    height: 100vh; overflow: hidden;
+  }
+  .num { font-variant-numeric: tabular-nums; }
+  .wrap { display: flex; flex-direction: column; height: 100vh; padding: 1rem 1.4rem 0.8rem; box-sizing: border-box; }
+
+  header { display: flex; align-items: center; border-bottom: 0.2rem solid var(--rot); padding-bottom: 0.6rem; }
+  header img { height: 2.4rem; margin-right: 1.2rem; }
+  header h1 { font-size: 1.9rem; margin: 0; font-weight: 700; flex: 1; }
+  header h1 span { color: var(--muted); font-weight: 400; }
+  .zeit { text-align: right; }
+  .uhr { font-size: 2.6rem; font-weight: 700; line-height: 1; }
+  .datum { font-size: 1rem; color: var(--ink2); margin-top: 0.2rem; }
+  .stand { margin-left: 2rem; font-size: 1rem; color: var(--ink2); text-align: right; line-height: 1.4; }
+  .stand b { color: var(--ink); }
+  .punkt { display: inline-block; width: 0.8rem; height: 0.8rem; border-radius: 50%; margin-right: 0.4rem; vertical-align: -0.05rem; background: var(--muted); }
+
+  .reihe { display: flex; margin-top: 1rem; }
+  .reihe > .karte + .karte { margin-left: 1rem; }
+  .karte { background: var(--card); border-radius: 0.6rem; padding: 1rem 1.3rem; box-sizing: border-box; flex: 1; min-width: 0; }
+  .titel { font-size: 0.85rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+
+  /* Fortschrittsringe */
+  .ring { display: flex; align-items: center; }
+  .ring svg { width: 7.5rem; height: 7.5rem; flex: none; margin-right: 1.2rem; }
+  .ring .gross { font-size: 2.6rem; font-weight: 700; line-height: 1; }
+  .ring .gross small { font-size: 1.4rem; color: var(--muted); font-weight: 400; }
+  .ring .was { font-size: 1.15rem; font-weight: 700; margin-top: 0.4rem; }
+
+  /* Leistung pro Arbeitstag */
+  .rate { display: flex; align-items: center; }
+  .rate .wert { font-size: 4.4rem; font-weight: 700; line-height: 1; margin-right: 1.2rem; }
+  .rate .teil { font-size: 1.05rem; line-height: 1.6; color: var(--ink2); }
+  .rate .teil b { color: var(--ink); }
+  .marke { display: inline-block; width: 0.7rem; height: 0.7rem; border-radius: 0.15rem; margin-right: 0.35rem; }
+  .rate-was { font-size: 1.15rem; font-weight: 700; margin-top: 0.5rem; }
+  .klein { font-size: 0.85rem; color: var(--muted); margin-top: 0.2rem; }
+
+  /* Heute */
+  .heute { display: flex; align-items: center; }
+  .heute .titel { margin: 0 1.5rem 0 0; font-size: 1rem; color: var(--ink2); font-weight: 700; }
+  .heute .posten { flex: 1; display: flex; align-items: baseline; }
+  .heute .posten .z { font-size: 2.4rem; font-weight: 700; margin-right: 0.5rem; }
+  .heute .posten .t { font-size: 1.05rem; color: var(--ink2); }
+
+  /* Plots */
+  .plots { flex: 1; min-height: 0; }
+  .plots .karte { display: flex; flex-direction: column; }
+  .plotkopf { display: flex; align-items: baseline; }
+  .plotkopf .name { font-size: 1.25rem; font-weight: 700; flex: 1; }
+  .legende { font-size: 0.9rem; color: var(--ink2); }
+  .legende span { margin-left: 1.1rem; white-space: nowrap; }
+  .legende i { display: inline-block; vertical-align: middle; margin-right: 0.35rem; }
+  .plot { flex: 1; min-height: 0; margin-top: 0.4rem; }
+  .plot svg { display: block; width: 100%; height: 100%; }
+
+  .fuss { font-size: 0.8rem; color: var(--muted); margin-top: 0.6rem; display: flex; }
+  .fuss span:first-child { flex: 1; }
+  .hinweis { display: none; background: #fff4e6; color: #7c2d12; border-radius: 0.4rem; padding: 0.5rem 0.9rem; margin-top: 0.8rem; font-size: 1.1rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="assets/img/strabag-logo.png" alt="STRABAG">
+    <h1>NalpSolar <span>· Baustand</span></h1>
+    <div class="zeit"><div class="uhr num" id="uhr">--:--</div><div class="datum" id="datum"></div></div>
+    <div class="stand" id="stand"><span class="punkt"></span>Nalpi wird geladen …</div>
+  </header>
+
+  <div class="hinweis" id="hinweis"></div>
+
+  <div class="reihe">
+    <div class="karte"><div class="titel">Fortschritt</div>
+      <div class="ring" id="ringTische"></div></div>
+    <div class="karte"><div class="titel">Fortschritt</div>
+      <div class="ring" id="ringBohr"></div></div>
+    <div class="karte"><div class="titel">Leistung</div>
+      <div id="rateTische"></div></div>
+    <div class="karte"><div class="titel">Leistung</div>
+      <div id="rateBohr"></div></div>
+  </div>
+
+  <div class="reihe"><div class="karte heute" id="heute"></div></div>
+
+  <div class="reihe plots">
+    <div class="karte">
+      <div class="plotkopf"><div class="name">Bohrungen pro Tag</div><div class="legende" id="legBohr"></div></div>
+      <div class="plot" id="plotBohr"></div>
+    </div>
+    <div class="karte">
+      <div class="plotkopf"><div class="name">Tische pro Tag</div><div class="legende" id="legTische"></div></div>
+      <div class="plot" id="plotTische"></div>
+    </div>
+  </div>
+
+  <div class="fuss"><span>Zahlen aus Nalpi, gleiche Regeln wie die Nalpi-Übersicht</span><span id="fussZeit"></span></div>
+</div>
+
+<script>
+(function () {
+  var QUELLE = 'https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app/erfassung/planhaus/stand.json';
+  var ABFRAGE_MS = 60 * 1000;           // jede Minute nachsehen
+  var NEU_LADEN_MS = 6 * 3600 * 1000;   // alle 6 h die ganze Seite neu (TV-Browser laufen sonst voll)
+  var SPEICHER = 'nalp_planhaus_stand_v1';
+  var TAGE = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+  var MONATE = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+
+  var stand = null;          // letzter gueltiger Stand
+  var letzteAntwort = null;  // Zeitpunkt der letzten erfolgreichen Abfrage
+
+  function $(id) { return document.getElementById(id); }
+  function zwei(n) { return (n < 10 ? '0' : '') + n; }
+  function komma(x) { return (Math.round(x * 10) / 10).toFixed(1).replace('.', ','); }
+  function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).replace(/\s/g, ''); }
+  function isoTag(s) { var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function kurzTag(s) { var p = s.split('-'); return p[2] + '.' + p[1] + '.'; }
+
+  // ---------------------------------------------------------------- Uhr
+  function uhr() {
+    var d = new Date();
+    $('uhr').textContent = zwei(d.getHours()) + ':' + zwei(d.getMinutes());
+    $('datum').textContent = TAGE[d.getDay()] + ', ' + d.getDate() + '. ' + MONATE[d.getMonth()] + ' ' + d.getFullYear();
+    standZeile();
+  }
+
+  // Wie alt sind die Zahlen? Nie so tun, als waeren sie frisch.
+  function standZeile() {
+    var el = $('stand');
+    if (!stand) return;
+    var gelesen = new Date(stand.gelesen);
+    var min = Math.round((new Date() - gelesen) / 60000);
+    var farbe = min <= 30 ? css('--gut') : (min <= 180 ? css('--warn') : css('--alt'));
+    var alter = min < 1 ? 'gerade eben' : (min < 60 ? 'vor ' + min + ' Min.' :
+      (min < 60 * 24 ? 'vor ' + Math.floor(min / 60) + ' h ' + zwei(min % 60) + ' Min.' : 'vor ' + Math.floor(min / 1440) + ' Tagen'));
+    el.innerHTML = '<span class="punkt" style="background:' + farbe + '"></span>Nalpi-Stand <b class="num">' +
+      zwei(gelesen.getHours()) + ':' + zwei(gelesen.getMinutes()) + '</b><br>' + alter;
+    var h = $('hinweis');
+    if (min > 180) {
+      h.style.display = 'block';
+      h.textContent = 'Die Zahlen sind nicht aktuell – der Büro-PC hat Nalpi seit ' +
+        zwei(gelesen.getHours()) + ':' + zwei(gelesen.getMinutes()) + ' Uhr nicht mehr abgefragt.';
+    } else if (letzteAntwort && new Date() - letzteAntwort > 5 * 60000) {
+      h.style.display = 'block';
+      h.textContent = 'Keine Verbindung zum Internet – angezeigt wird der letzte Stand.';
+    } else {
+      h.style.display = 'none';
+    }
+  }
+
+  // ---------------------------------------------------------------- Karten
+  function ring(el, ist, soll, farbe, was) {
+    var pct = soll > 0 ? Math.round(ist / soll * 100) : 0;
+    var r = 42, u = 2 * Math.PI * r, bogen = u * Math.min(1, ist / soll);
+    el.innerHTML =
+      '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="' + r + '" fill="none" stroke="' + css('--hair') + '" stroke-width="10"/>' +
+      '<circle cx="50" cy="50" r="' + r + '" fill="none" stroke="' + farbe + '" stroke-width="10" stroke-linecap="round"' +
+      ' stroke-dasharray="' + bogen.toFixed(1) + ' ' + u.toFixed(1) + '" transform="rotate(-90 50 50)"/>' +
+      '<text x="50" y="57" text-anchor="middle" font-size="22" font-weight="700" fill="' + css('--ink') + '">' + pct + '%</text></svg>' +
+      '<div><div class="gross num">' + ist + ' <small>/ ' + soll + '</small></div><div class="was">' + was + '</div></div>';
+  }
+
+  function rate(el, wert, farbe, was, teile, kacheln) {
+    var t = '';
+    for (var i = 0; i < teile.length; i++) {
+      t += '<div><span class="marke" style="background:' + teile[i][2] + '"></span><b class="num">' + komma(teile[i][0]) + '</b> ' + teile[i][1] + '</div>';
+    }
+    el.innerHTML = '<div class="rate"><div class="wert num" style="color:' + farbe + '">' + komma(wert) + '</div>' +
+      (t ? '<div class="teil">' + t + '</div>' : '') + '</div>' +
+      '<div class="rate-was">' + was + '</div>' +
+      '<div class="klein">' + kurzTag(kacheln.von) + '–' + kurzTag(kacheln.bis) + ' · ' + kacheln.arbeitstage + ' Arbeitstage</div>';
+  }
+
+  function heute(h) {
+    var posten = [
+      ['gebohrt', 'gebohrt', css('--bohr')],
+      ['injiziert', 'injiziert', css('--inj')],
+      ['pk', 'Primärkonstr.', css('--pk')],
+      ['mt', 'Modulträger', css('--tisch')],
+      ['vs', 'verschraubt', css('--vs')]
+    ];
+    var s = '<div class="titel">Heute<br>bisher</div>';
+    for (var i = 0; i < posten.length; i++) {
+      s += '<div class="posten"><span class="marke" style="background:' + posten[i][2] + ';align-self:center"></span>' +
+        '<span class="z num">' + (h[posten[i][0]] || 0) + '</span><span class="t">' + posten[i][1] + '</span></div>';
+    }
+    $('heute').innerHTML = s;
+  }
+
+  // ---------------------------------------------------------------- Plot
+  // Balken = Tageswert, Linie = gleitender Schnitt je Arbeitstag (wie Nalpi),
+  // punktiert = Ziel pro Arbeitstag. Heute ist nie fertig: Balken blass.
+  function plot(el, reihe, feld, schnittFeld, ziel, farbeBalken, farbeLinie) {
+    var W = el.clientWidth, H = el.clientHeight;
+    if (W < 50 || H < 50) return;
+    var rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    var fs = 0.8 * rem;
+    var M = { l: 2.2 * rem, r: 3.6 * rem, t: 0.9 * rem, b: 1.6 * rem };
+    var pw = W - M.l - M.r, ph = H - M.t - M.b;
+    var n = reihe.length, step = pw / n;
+
+    var max = ziel;
+    for (var i = 0; i < n; i++) {
+      max = Math.max(max, reihe[i][feld] || 0, reihe[i][schnittFeld] || 0);
+    }
+    var raster = max <= 12 ? 2 : (max <= 30 ? 5 : (max <= 60 ? 10 : 20));
+    max = Math.ceil(max * 1.08 / raster) * raster;
+    function y(v) { return M.t + ph - v / max * ph; }
+    function x(i) { return M.l + step * i + step / 2; }
+
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" font-family="Arial, Helvetica, sans-serif">';
+    // Wochenenden grau hinterlegt (wie im Nalpi-Bautempo)
+    for (i = 0; i < n; i++) {
+      if (!reihe[i].at) s += '<rect x="' + (M.l + step * i) + '" y="' + M.t + '" width="' + step + '" height="' + ph + '" fill="' + css('--weekend') + '"/>';
+    }
+    // Raster
+    for (var v = 0; v <= max; v += raster) {
+      s += '<line x1="' + M.l + '" x2="' + (W - M.r) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="' + css('--hair') + '"/>' +
+        '<text x="' + (M.l - 0.4 * rem) + '" y="' + (y(v) + fs * 0.35) + '" font-size="' + fs + '" text-anchor="end" fill="' + css('--muted') + '">' + v + '</text>';
+    }
+    // Balken, oben gerundet, 2 px Luft dazwischen
+    var bw = Math.max(2, step - 2), rr = Math.min(4, bw / 2);
+    for (i = 0; i < n; i++) {
+      var w = reihe[i][feld] || 0;
+      if (!w) continue;
+      var bx = M.l + step * i + 1, by = y(w), bh = y(0) - by;
+      var r2 = Math.min(rr, bh);
+      var ist_heute = (i === n - 1);
+      s += '<path d="M' + bx + ',' + y(0) + 'V' + (by + r2) + 'Q' + bx + ',' + by + ' ' + (bx + r2) + ',' + by +
+        'H' + (bx + bw - r2) + 'Q' + (bx + bw) + ',' + by + ' ' + (bx + bw) + ',' + (by + r2) + 'V' + y(0) + 'Z" fill="' + farbeBalken + '"' +
+        (ist_heute ? ' opacity="0.45"' : '') + '/>';
+    }
+    // Ziel
+    s += '<line x1="' + M.l + '" x2="' + (W - M.r) + '" y1="' + y(ziel) + '" y2="' + y(ziel) + '" stroke="' + css('--ink2') + '" stroke-width="1.5" stroke-dasharray="2 5"/>' +
+      '<text x="' + (W - M.r + 0.4 * rem) + '" y="' + (y(ziel) + fs * 0.35) + '" font-size="' + fs + '" fill="' + css('--ink2') + '">Ziel ' + ziel + '</text>';
+    // Gleitender Schnitt
+    var pfad = '', letzt = -1;
+    for (i = 0; i < n; i++) {
+      var sv = reihe[i][schnittFeld];
+      if (sv === undefined || sv === null) continue;
+      pfad += (pfad ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(sv).toFixed(1);
+      letzt = i;
+    }
+    if (pfad) {
+      s += '<path d="' + pfad + '" fill="none" stroke="' + farbeLinie + '" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>';
+      var lv = reihe[letzt][schnittFeld];
+      s += '<circle cx="' + x(letzt) + '" cy="' + y(lv) + '" r="5" fill="' + farbeLinie + '" stroke="#fff" stroke-width="2"/>';
+      // Direktbeschriftung nur am Endpunkt; weicht aus, wenn sie auf der Ziel-Beschriftung liegt
+      var ly = y(lv) + fs * 0.35;
+      if (Math.abs(y(lv) - y(ziel)) < fs * 1.2) ly = y(lv) + (lv >= ziel ? -fs * 0.6 : fs * 1.3);
+      s += '<text x="' + (W - M.r + 0.4 * rem) + '" y="' + ly + '" font-size="' + (fs * 1.15) + '" font-weight="700" fill="' + css('--ink') + '">Ø ' + komma(lv) + '</text>';
+    }
+    // Achse + Tage: jeder Montag und heute
+    s += '<line x1="' + M.l + '" x2="' + (W - M.r) + '" y1="' + y(0) + '" y2="' + y(0) + '" stroke="' + css('--axis') + '"/>';
+    for (i = 0; i < n; i++) {
+      var d = isoTag(reihe[i].tag);
+      if (d.getDay() === 1 || i === n - 1) {
+        s += '<text x="' + x(i) + '" y="' + (H - 0.35 * rem) + '" font-size="' + fs + '" text-anchor="middle" fill="' + css('--ink2') + '">' +
+          (i === n - 1 ? 'heute' : 'Mo ' + kurzTag(reihe[i].tag)) + '</text>';
+      }
+    }
+    el.innerHTML = s + '</svg>';
+  }
+
+  function legende(el, farbeBalken, farbeLinie, wasProTag) {
+    el.innerHTML =
+      '<span><i style="width:0.8rem;height:0.8rem;border-radius:0.15rem;background:' + farbeBalken + '"></i>' + wasProTag + '</span>' +
+      '<span><i style="width:1.4rem;height:0.2rem;background:' + farbeLinie + '"></i>Schnitt 14 Tage je Arbeitstag</span>' +
+      '<span><i style="width:1.4rem;border-top:0.12rem dotted ' + css('--ink2') + '"></i>Ziel</span>';
+  }
+
+  // ---------------------------------------------------------------- Zeichnen
+  function zeichnen() {
+    if (!stand) return;
+    var s = stand.summe, z = stand.ziele, k = stand.kacheln;
+    ring($('ringTische'), s.montiert, z.tische, css('--tisch'), 'Tische montiert');
+    ring($('ringBohr'), s.gebohrt, z.bohrungen, css('--bohr'), 'Bohrungen gebohrt');
+    rate($('rateTische'), k.mt.pro_at, css('--tisch'), 'Tische pro Arbeitstag',
+      [[k.pk.pro_at, 'Primärkonstruktion', css('--pk')], [k.mt.pro_at, 'Modulträger', css('--tisch')]], k);
+    rate($('rateBohr'), k.gebohrt.pro_at, css('--bohr'), 'Bohrungen pro Arbeitstag', [], k);
+    heute(stand.heute || {});
+    legende($('legBohr'), css('--bohr-bar'), css('--bohr-line'), 'gebohrt');
+    legende($('legTische'), css('--tisch-bar'), css('--tisch-line'), 'Modulträger montiert');
+    plot($('plotBohr'), stand.reihe, 'gebohrt', 'schnitt_gebohrt', z.bohr_pro_at, css('--bohr-bar'), css('--bohr-line'));
+    plot($('plotTische'), stand.reihe, 'mt', 'schnitt_mt', z.tische_pro_at, css('--tisch-bar'), css('--tisch-line'));
+    standZeile();
+  }
+
+  // ---------------------------------------------------------------- Laden
+  function uebernehmen(d) {
+    if (!d || !d.summe || !d.reihe) return false;
+    stand = d;
+    zeichnen();
+    setTimeout(zeichnen, 500);   // nochmals, wenn das Layout steht (Plothoehe)
+    return true;
+  }
+
+  function holen() {
+    var x = new XMLHttpRequest();
+    x.open('GET', QUELLE + '?t=' + new Date().getTime(), true);
+    x.timeout = 20000;
+    x.onload = function () {
+      if (x.status !== 200) return;
+      try {
+        var d = JSON.parse(x.responseText);
+        if (uebernehmen(d)) {
+          letzteAntwort = new Date();
+          $('fussZeit').textContent = 'abgefragt ' + zwei(letzteAntwort.getHours()) + ':' + zwei(letzteAntwort.getMinutes());
+          try { localStorage.setItem(SPEICHER, x.responseText); } catch (e) {}
+        }
+      } catch (e) {}
+    };
+    x.send();
+  }
+
+  // Letzten Stand sofort zeigen (auch ohne Netz), dann frisch holen
+  try { var alt = localStorage.getItem(SPEICHER); if (alt) uebernehmen(JSON.parse(alt)); } catch (e) {}
+  letzteAntwort = new Date();
+  uhr();
+  holen();
+  setInterval(uhr, 15000);
+  setInterval(holen, ABFRAGE_MS);
+  setTimeout(function () { location.reload(); }, NEU_LADEN_MS);
+  var warte;
+  window.addEventListener('resize', function () { clearTimeout(warte); warte = setTimeout(zeichnen, 200); });
+})();
+</script>
+</body>
+</html>
