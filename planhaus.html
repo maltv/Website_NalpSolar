@@ -30,9 +30,11 @@
     --bohr-bar: #fb923c;
     --bohr-line: #9a3412;
     --tisch: #2563eb;       /* Nalpi RACK_MOUNTED */
-    --tisch-bar: #60a5fa;
+    --tisch-bar: #3b82f6;   /* gestapelt mit --pk-bar: geprueft auf Farbsehschwaeche (ΔE 25 deutan) */
     --tisch-line: #1d4ed8;
     --pk: #10b981;          /* Nalpi ASSEMBLED */
+    --pk-bar: #10b981;
+    --montage-line: #1e293b; /* Schnitt PK+MT zusammen - weder blau noch gruen, weil er beide Teile meint */
     --vs: #eab308;          /* Nalpi SCREWED_CARD_COLOR */
     --inj: #075985;         /* Nalpi INJECTED */
     --gut: #2f9e44;
@@ -93,9 +95,9 @@
   .plots { flex: 1; min-height: 0; }
   .plots .karte { display: flex; flex-direction: column; }
   .plotkopf { display: flex; align-items: baseline; }
-  .plotkopf .name { font-size: 1.25rem; font-weight: 700; flex: 1; }
-  .legende { font-size: 0.9rem; color: var(--ink2); }
-  .legende span { margin-left: 1.1rem; white-space: nowrap; }
+  .plotkopf .name { font-size: 1.25rem; font-weight: 700; flex: 1; white-space: nowrap; }
+  .legende { font-size: 0.85rem; color: var(--ink2); flex: none; }
+  .legende span { margin-left: 1rem; white-space: nowrap; }
   .legende i { display: inline-block; vertical-align: middle; margin-right: 0.35rem; }
   .plot { flex: 1; min-height: 0; margin-top: 0.4rem; }
   .plot svg { display: block; width: 100%; height: 100%; }
@@ -135,7 +137,7 @@
       <div class="plot" id="plotBohr"></div>
     </div>
     <div class="karte">
-      <div class="plotkopf"><div class="name">Tische pro Tag</div><div class="legende" id="legTische"></div></div>
+      <div class="plotkopf"><div class="name">Montage pro Tag</div><div class="legende" id="legTische"></div></div>
       <div class="plot" id="plotTische"></div>
     </div>
   </div>
@@ -148,7 +150,7 @@
   var QUELLE = 'https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app/erfassung/planhaus/stand.json';
   var ABFRAGE_MS = 60 * 1000;           // jede Minute nachsehen
   var NEU_LADEN_MS = 6 * 3600 * 1000;   // alle 6 h die ganze Seite neu (TV-Browser laufen sonst voll)
-  var SPEICHER = 'nalp_planhaus_stand_v1';
+  var SPEICHER = 'nalp_planhaus_stand_v2';   // v2: Stand mit schnitt_montage + ziele.montage_pro_at
   var TAGE = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
   var MONATE = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
 
@@ -234,9 +236,10 @@
   }
 
   // ---------------------------------------------------------------- Plot
-  // Balken = Tageswert, Linie = gleitender Schnitt je Arbeitstag (wie Nalpi),
-  // punktiert = Ziel pro Arbeitstag. Heute ist nie fertig: Balken blass.
-  function plot(el, reihe, feld, schnittFeld, ziel, farbeBalken, farbeLinie) {
+  // Balken = Tageswert, bei mehreren Feldern gestapelt (erstes Feld unten), Linie = gleitender
+  // Schnitt je Arbeitstag ueber die Summe (wie Nalpi), punktiert = Ziel pro Arbeitstag.
+  // Heute ist nie fertig: Balken blass.  felder = [[feld, farbe], ...]
+  function plot(el, reihe, felder, schnittFeld, ziel, farbeLinie) {
     var W = el.clientWidth, H = el.clientHeight;
     if (W < 50 || H < 50) return;
     var rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
@@ -245,9 +248,10 @@
     var pw = W - M.l - M.r, ph = H - M.t - M.b;
     var n = reihe.length, step = pw / n;
 
+    function summe(z) { var t = 0; for (var j = 0; j < felder.length; j++) t += z[felder[j][0]] || 0; return t; }
     var max = ziel;
     for (var i = 0; i < n; i++) {
-      max = Math.max(max, reihe[i][feld] || 0, reihe[i][schnittFeld] || 0);
+      max = Math.max(max, summe(reihe[i]), reihe[i][schnittFeld] || 0);
     }
     var raster = max <= 12 ? 2 : (max <= 30 ? 5 : (max <= 60 ? 10 : 20));
     max = Math.ceil(max * 1.08 / raster) * raster;
@@ -264,17 +268,26 @@
       s += '<line x1="' + M.l + '" x2="' + (W - M.r) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="' + css('--hair') + '"/>' +
         '<text x="' + (M.l - 0.4 * rem) + '" y="' + (y(v) + fs * 0.35) + '" font-size="' + fs + '" text-anchor="end" fill="' + css('--muted') + '">' + v + '</text>';
     }
-    // Balken, oben gerundet, 2 px Luft dazwischen
+    // Balken gestapelt: erstes Feld unten, 2 px Luft zwischen Tagen und zwischen den Teilen, oberster Teil gerundet
     var bw = Math.max(2, step - 2), rr = Math.min(4, bw / 2);
     for (i = 0; i < n; i++) {
-      var w = reihe[i][feld] || 0;
-      if (!w) continue;
-      var bx = M.l + step * i + 1, by = y(w), bh = y(0) - by;
-      var r2 = Math.min(rr, bh);
-      var ist_heute = (i === n - 1);
-      s += '<path d="M' + bx + ',' + y(0) + 'V' + (by + r2) + 'Q' + bx + ',' + by + ' ' + (bx + r2) + ',' + by +
-        'H' + (bx + bw - r2) + 'Q' + (bx + bw) + ',' + by + ' ' + (bx + bw) + ',' + (by + r2) + 'V' + y(0) + 'Z" fill="' + farbeBalken + '"' +
-        (ist_heute ? ' opacity="0.45"' : '') + '/>';
+      var gesamt = summe(reihe[i]);
+      if (!gesamt) continue;
+      var bx = M.l + step * i + 1, unten = 0;
+      var op = (i === n - 1) ? ' opacity="0.45"' : '';
+      for (var j = 0; j < felder.length; j++) {
+        var w = reihe[i][felder[j][0]] || 0;
+        if (!w) continue;
+        var oben = unten + w, by = y(oben), bh = y(unten) - by;
+        if (oben >= gesamt) {
+          var r2 = Math.min(rr, bh);
+          s += '<path d="M' + bx + ',' + y(unten) + 'V' + (by + r2) + 'Q' + bx + ',' + by + ' ' + (bx + r2) + ',' + by +
+            'H' + (bx + bw - r2) + 'Q' + (bx + bw) + ',' + by + ' ' + (bx + bw) + ',' + (by + r2) + 'V' + y(unten) + 'Z" fill="' + felder[j][1] + '"' + op + '/>';
+        } else {
+          s += '<rect x="' + bx + '" y="' + (by + 2) + '" width="' + bw + '" height="' + Math.max(1, bh - 2) + '" fill="' + felder[j][1] + '"' + op + '/>';
+        }
+        unten = oben;
+      }
     }
     // Ziel
     s += '<line x1="' + M.l + '" x2="' + (W - M.r) + '" y1="' + y(ziel) + '" y2="' + y(ziel) + '" stroke="' + css('--ink2') + '" stroke-width="1.5" stroke-dasharray="2 5"/>' +
@@ -308,9 +321,13 @@
     el.innerHTML = s + '</svg>';
   }
 
-  function legende(el, farbeBalken, farbeLinie, wasProTag) {
-    el.innerHTML =
-      '<span><i style="width:0.8rem;height:0.8rem;border-radius:0.15rem;background:' + farbeBalken + '"></i>' + wasProTag + '</span>' +
+  // balken = [[farbe, text], ...] in der Reihenfolge der Stapelung (unten zuerst)
+  function legende(el, balken, farbeLinie) {
+    var s = '';
+    for (var i = 0; i < balken.length; i++) {
+      s += '<span><i style="width:0.8rem;height:0.8rem;border-radius:0.15rem;background:' + balken[i][0] + '"></i>' + balken[i][1] + '</span>';
+    }
+    el.innerHTML = s +
       '<span><i style="width:1.4rem;height:0.2rem;background:' + farbeLinie + '"></i>Schnitt 14 Tage je Arbeitstag</span>' +
       '<span><i style="width:1.4rem;border-top:0.12rem dotted ' + css('--ink2') + '"></i>Ziel</span>';
   }
@@ -325,10 +342,12 @@
       [[k.pk.pro_at, 'Primärkonstruktion', css('--pk')], [k.mt.pro_at, 'Modulträger', css('--tisch')]], k);
     rate($('rateBohr'), k.gebohrt.pro_at, css('--bohr'), 'Bohrungen pro Arbeitstag', [], k);
     heute(stand.heute || {});
-    legende($('legBohr'), css('--bohr-bar'), css('--bohr-line'), 'gebohrt');
-    legende($('legTische'), css('--tisch-bar'), css('--tisch-line'), 'Modulträger montiert');
-    plot($('plotBohr'), stand.reihe, 'gebohrt', 'schnitt_gebohrt', z.bohr_pro_at, css('--bohr-bar'), css('--bohr-line'));
-    plot($('plotTische'), stand.reihe, 'mt', 'schnitt_mt', z.tische_pro_at, css('--tisch-bar'), css('--tisch-line'));
+    legende($('legBohr'), [[css('--bohr-bar'), 'gebohrt']], css('--bohr-line'));
+    legende($('legTische'), [[css('--pk-bar'), 'Primärkonstr.'], [css('--tisch-bar'), 'Modulträger']], css('--montage-line'));
+    plot($('plotBohr'), stand.reihe, [['gebohrt', css('--bohr-bar')]], 'schnitt_gebohrt', z.bohr_pro_at, css('--bohr-line'));
+    // Montage gestapelt (Wunsch François Borner 25.09.2026): PK + MT, Ziel 10 = 2 Schritte je Tisch × Nalpi-Ziel 5
+    plot($('plotTische'), stand.reihe, [['pk', css('--pk-bar')], ['mt', css('--tisch-bar')]], 'schnitt_montage',
+      z.montage_pro_at || 2 * z.tische_pro_at, css('--montage-line'));
     standZeile();
   }
 
