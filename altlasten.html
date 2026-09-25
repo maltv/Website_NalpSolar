@@ -311,7 +311,7 @@
       info_p1:'Der Bauherr hat das ganze Gelände abgesucht und jede Altlast mit GPS und Foto aufgenommen (14.11.2025). Die Prio-Liste sagt, was damit geschieht:',
       info_p3:'<b>So geht es:</b> Punkt auf der Karte antippen → Foto und Massnahme anschauen → wenn erledigt: <b>✅ Erledigt</b> drücken, Foto vom Resultat dazu, Name, senden. Geht etwas nicht (zu schwer, Beton, Abtransport unklar): <b>⚠️ Problem</b> melden. Die Rückmeldung sehen alle sofort auf der Karte und in der Liste – auch die Bauleitung.<br><b>Stunden sind freiwillig:</b> wer sie einträgt (wer wie viele Stunden, welches Gerät wie viele Stunden), dem zählt der Reiter <b>⏱ Aufwand</b> sie je Prio zusammen.',
       info_13:'Achtung bei Nr. 13 (Blech): liegt auf einer archäologischen Wüstung – nur Metallteile entfernen, Steine belassen, nicht befahren.',
-      info_grenze:'<b>Wir räumen nur bis Nr. 14</b> (oberhalb des Bachs). Alles südlich davon macht seit 24.09.2026 eine andere Firma – diese Punkte sind nicht mehr in der Liste.',
+      info_grenze:'<b>Wir räumen Nr. 1–18 und 52–55</b> (im und direkt am Perimeter, Festlegung Axpo 24.09.2026). Alle anderen Punkte macht die Firma Lorez – sie sind nicht in der Liste.',
       q_h:'Quelle',
       q_t:'Excel «Datentabelle Fremdkörper Nalps_prioliste_für KV.xlsx» – Severin Kathriner (Axpo) → Christian Schmuckle 04.09.2026 → François Borner → Victor Malt 21.09.2026. Aufnahme mit happyrtk (RTK FIX), 14.11.2025. Originalfotos liegen beim Bauherrn (CloudFront, je ~7 MB) – hier sind Vorschaubilder, das Original öffnet sich auf Tipp.',
       prio1:'wird entfernt oder unter dem Boden abgeschnitten', prio2:'wird verbessert, wenn es im Budget liegt', prio3:'wird belassen',
@@ -345,7 +345,7 @@
       info_p1:'O dono da obra percorreu todo o terreno e registou cada resíduo com GPS e fotografia (14.11.2025). A lista de prioridades diz o que se faz com cada um:',
       info_p3:'<b>Como fazer:</b> tocar no ponto no mapa → ver a foto e a medida → quando estiver feito: carregar em <b>✅ Feito</b>, juntar foto do resultado, nome, enviar. Se algo não der (pesado demais, betão, transporte pouco claro): comunicar <b>⚠️ Problema</b>. Todos veem a resposta logo no mapa e na lista – também a direção da obra.<br><b>As horas são opcionais:</b> quem as registar (quem e quantas horas, que máquina e quantas horas) vê-as somadas por prioridade no separador <b>⏱ Horas</b>.',
       info_13:'Atenção no n.º 13 (chapa): está num sítio arqueológico – retirar só as peças de metal, deixar as pedras, não passar por cima com veículos.',
-      info_grenze:'<b>Nós só limpamos até ao n.º 14</b> (acima do riacho). Tudo o que fica a sul é feito por outra empresa desde 24.09.2026 – esses pontos já não estão na lista.',
+      info_grenze:'<b>Nós limpamos os n.º 1–18 e 52–55</b> (no perímetro e junto a ele, definido pela Axpo em 24.09.2026). Todos os outros pontos são feitos pela empresa Lorez – não estão na lista.',
       q_h:'Fonte',
       q_t:'Excel «Datentabelle Fremdkörper Nalps_prioliste_für KV.xlsx» – Severin Kathriner (Axpo) → Christian Schmuckle 04.09.2026 → François Borner → Victor Malt 21.09.2026. Levantamento com happyrtk (RTK FIX), 14.11.2025. As fotos originais estão com o dono da obra (CloudFront, ~7 MB cada) – aqui há miniaturas, o original abre com um toque. Tipos e comentários traduzidos do original em alemão.',
       prio1:'é retirado ou cortado abaixo do nível do solo', prio2:'é melhorado, se houver orçamento', prio3:'fica no local',
@@ -379,7 +379,7 @@
       info_p1:'The client searched the whole site and recorded every piece of debris with GPS and a photo (14.11.2025). The priority list says what happens to it:',
       info_p3:'<b>How it works:</b> tap the point on the map → look at the photo and the action → when done: press <b>✅ Done</b>, add a photo of the result, your name, send. If something doesn\'t work (too heavy, concrete, unclear how to haul it away): report <b>⚠️ Problem</b>. Everyone sees the feedback right away on the map and in the list – site management too.<br><b>Hours are optional:</b> if you enter them (who and how many hours, which machine and how many hours), the <b>⏱ Hours</b> tab adds them up per priority.',
       info_13:'Caution at no. 13 (sheet metal): lies on an archaeological site – remove only the metal parts, leave the stones, do not drive over it.',
-      info_grenze:'<b>We only clear up to no. 14</b> (above the stream). Everything south of it is done by another company since 24.09.2026 – those points are no longer in the list.',
+      info_grenze:'<b>We clear no. 1–18 and 52–55</b> (in and right next to the perimeter, set by Axpo on 24.09.2026). All other points are done by the company Lorez – they are not in the list.',
       q_h:'Source',
       q_t:'Excel «Datentabelle Fremdkörper Nalps_prioliste_für KV.xlsx» – Severin Kathriner (Axpo) → Christian Schmuckle 04.09.2026 → François Borner → Victor Malt 21.09.2026. Surveyed with happyrtk (RTK FIX), 14.11.2025. The original photos are held by the client (CloudFront, ~7 MB each) – shown here are previews, the original opens on tap. Types and comments translated from the German original.',
       prio1:'is removed or cut off below ground', prio2:'is improved if within budget', prio3:'is left in place',
@@ -517,7 +517,7 @@
   function schalter(id,akt,cb){
     $(id).innerHTML=FILT.map(function(f){
       var n=daten?daten.punkte.filter(function(p){ return passt(p,f.id); }).length:'';
-      if(n===0 && /^p\d$/.test(f.id)) return '';   // Prio ohne Punkte (seit Grenze Nr. 14 nur noch Prio 1)
+      if(n===0 && /^p\d$/.test(f.id)) return '';   // Prio ohne Punkte (Umfang 1–18 + 52–55 = nur Prio 1)
       return '<button data-f="'+f.id+'"'+(akt===f.id?' class="on"':'')+'>'+t(f.t)+(n!==''?' '+n:'')+'</button>';
     }).join('');
     Array.prototype.forEach.call($(id).querySelectorAll('button'),function(b){ b.onclick=function(){ cb(b.dataset.f); }; });
