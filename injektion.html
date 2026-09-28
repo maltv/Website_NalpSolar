@@ -1,0 +1,909 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NalpSolar · Injektion Einzelbeine</title>
+<meta name="theme-color" content="#ffffff">
+<script>
+  window.NALP_GATE_CODE  = '6460';
+  window.NALP_GATE_KEY   = 'nalp_portal_unlock_v1';
+  window.NALP_GATE_TITEL = 'Injektion Einzelbeine';
+  window.NALP_GATE_SUB   = 'Code eingeben / Introduzir código / Enter code';
+</script>
+<script src="assets/js/nalp-gate.js"></script>
+<link rel="stylesheet" href="assets/js/leaflet/leaflet.css">
+<style>
+  /* Reiter «Injektion Einzelbeine» (Auftrag Victor 28.09.2026, WERKZEUGE.md §68).
+     Einzelbein = gebohrter Pfahl ohne Injektion in Nalpi, während ein anderes Bein desselben Tisches injiziert ist.
+     Die Seite rechnet selbst: uploads/tables/bohrstand.json (06:30 automatisch gepusht) + baustand.json (PK montiert)
+     + live api.buildtrack.ch/api/v1/drillpoints/changes (Injektions-Klicks seit dem letzten Export).
+     Rückmeldung mit Foto: RTDB erfassung/injektion_rueck/<fuss>/<key>, Fotos in erfassung/injektion_fotos/<fid>
+     – Bausteine 1:1 aus altlasten.html (Blatt, Warteschlange, Foto 1400 px). Nalpi bleibt die Stelle fürs Abhaken. */
+  :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
+         --gruen:#1e9e5a; --blau:#1565c0; --orange:#e08a00; --lila:#8e24aa; --grau:#8a8e94; --dunkel:#8f1d1d; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body{ margin:0; background:#eef0f3; min-height:100vh; color:var(--ink);
+        font-family:Arial,"Helvetica Neue",sans-serif; }
+  header{ position:sticky; top:0; z-index:10; display:flex; align-items:center; gap:8px;
+          padding:9px 10px; background:#fff; border-bottom:4px solid var(--rot); }
+  header a.home{ color:var(--ink); text-decoration:none; font-size:20px; }
+  header .logo img{ height:20px; display:block; }
+  header h1{ font-size:14.5px; margin:0; flex:1; min-width:0; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .lang{ display:flex; flex:0 0 auto; border:1px solid #c9ccd2; border-radius:7px; overflow:hidden; }
+  .lang button{ border:0; background:#fff; font:800 11.5px Arial; color:var(--mut); padding:5px 7px; cursor:pointer; }
+  .lang button.on{ background:var(--rot); color:#fff; }
+  header .netz{ font-size:11px; font-weight:700; color:var(--gruen); white-space:nowrap; }
+  header .netz.off{ color:var(--rot); }
+  .tabs{ display:flex; background:#fff; border-bottom:1px solid var(--line); position:sticky; top:52px; z-index:9; }
+  .tabs button{ flex:1 1 0; min-width:0; border:none; background:none; padding:11px 2px; font-size:12.5px; font-weight:800;
+        white-space:nowrap; color:var(--mut); cursor:pointer; border-bottom:3px solid transparent; }
+  .tabs button.on{ color:var(--rot); border-bottom-color:var(--rot); }
+  .tabs .zahl{ display:inline-block; background:var(--rot); color:#fff; font-size:10.5px; border-radius:9px;
+        padding:0 6px; margin-left:4px; vertical-align:1px; }
+  main{ max-width:760px; margin:0 auto; padding:12px 12px 80px; }
+  section[hidden]{ display:none; }
+  .box{ background:#fff; border:1px solid var(--line); border-left:5px solid var(--rot);
+        border-radius:6px; padding:13px; margin-bottom:13px; box-shadow:0 1px 4px rgba(20,25,32,.07); }
+  .box.grau{ border-left-color:#9aa0a6; }
+  .box.gruen{ border-left-color:var(--gruen); }
+  .box h2{ margin:0 0 6px; font-size:15.5px; }
+  .box p{ margin:0 0 8px; font-size:14px; line-height:1.5; }
+  .sub{ font-size:12px; color:var(--mut); line-height:1.45; }
+  .big{ font-size:30px; font-weight:900; color:var(--rot); line-height:1; }
+  .btn{ display:inline-block; border:none; border-radius:6px; padding:12px 16px; font-size:14.5px;
+        font-weight:800; cursor:pointer; color:#fff; background:var(--rot); text-decoration:none; text-align:center; }
+  .btn.w{ background:#fff; color:var(--ink); border:1px solid #c9ccd2; }
+  .btn.gr{ background:var(--gruen); }
+  .btn[disabled]{ opacity:.45; cursor:default; }
+  .btnrow{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  /* ── Karte ── */
+  /* eigene Stapelebene: sonst schieben sich Leaflet-Ebenen (z 200–1000) beim Scrollen über Kopf und Reiter */
+  .kartebox{ position:relative; isolation:isolate; }
+  #map2d{ position:relative; z-index:0; height:calc(100vh - 250px); min-height:380px; border-radius:6px; border:1px solid var(--line); background:#d9dde3; }
+  .gps{ position:absolute; right:10px; top:10px; z-index:900; }
+  .gps.an{ background:var(--blau); color:#fff; border-color:var(--blau); }
+  .legende{ display:flex; flex-wrap:wrap; gap:8px 14px; font-size:12px; color:var(--mut); margin:8px 0 0; align-items:center; }
+  .legende i{ display:inline-block; width:16px; height:16px; border-radius:50%; vertical-align:-3px; margin-right:4px; border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.25); }
+  .stand{ font-size:11.5px; color:var(--mut); margin-top:6px; }
+  .leaflet-container{ font-family:inherit; }
+  /* Marker: weit weg nur ein Punkt, ab Zoom 17.5 mit Tisch + Bein (Handy-Regel: Beschriftung erst beim Ranzoomen) */
+  .mk{ display:inline-flex; align-items:center; gap:4px; height:24px; padding:0 8px 0 4px; border-radius:12px; border:2px solid #fff;
+       box-shadow:0 1px 4px rgba(0,0,0,.5); color:#fff; font-weight:900; font-size:12px; white-space:nowrap; cursor:pointer;
+       transform:translate(-12px,-12px); background:var(--grau); position:relative; }
+  .mk::before{ content:''; width:10px; height:10px; border-radius:50%; background:#fff; flex:0 0 10px; opacity:.9; }
+  .weit .mk{ width:18px; height:18px; padding:0; transform:translate(-9px,-9px); }
+  .weit .mk::before, .weit .mk .l{ display:none; }
+  .mk.pk{ background:var(--dunkel); } .mk.of{ background:var(--orange); } .mk.pr{ background:var(--lila); }
+  .mk.gm{ background:var(--gruen); } .mk.ok{ background:#5f6b66; }
+  .mk.gm::after, .mk.ok::after{ content:'✓'; position:absolute; right:-7px; top:-8px; background:#fff; color:var(--gruen); border-radius:50%;
+       width:15px; height:15px; font-size:11px; line-height:15px; text-align:center; box-shadow:0 0 0 1px rgba(0,0,0,.2); }
+  .mk.pr::after{ content:'!'; position:absolute; right:-7px; top:-8px; background:#fff; color:var(--lila); border-radius:50%;
+       width:15px; height:15px; font-size:11px; line-height:15px; text-align:center; font-weight:900; box-shadow:0 0 0 1px rgba(0,0,0,.2); }
+  .leaflet-marker-icon.mkw{ overflow:visible; background:none; border:0; }
+  .schalter{ display:flex; gap:6px; flex-wrap:wrap; margin:0 0 8px; }
+  .schalter button{ border:1px solid var(--line); background:#fff; cursor:pointer; font:700 12px Arial; color:var(--mut);
+        padding:7px 12px; border-radius:14px; white-space:nowrap; }
+  .schalter button.on{ background:var(--rot); border-color:var(--rot); color:#fff; }
+  /* ── Liste ── */
+  .pos{ background:#fff; border:1px solid var(--line); border-left:5px solid var(--grau); border-radius:6px;
+        padding:10px 12px; margin-bottom:8px; box-shadow:0 1px 4px rgba(20,25,32,.07); display:flex; gap:10px; align-items:center; cursor:pointer; }
+  .pos.pk{ border-left-color:var(--dunkel); } .pos.of{ border-left-color:var(--orange); } .pos.pr{ border-left-color:var(--lila); }
+  .pos.gm{ border-left-color:var(--gruen); background:#f3faf5; } .pos.ok{ border-left-color:#5f6b66; background:#f4f5f5; }
+  .pos .nr{ flex:0 0 40px; height:40px; border-radius:50%; color:#fff; font-weight:900; font-size:13px;
+        display:flex; align-items:center; justify-content:center; background:var(--grau); }
+  .pos.pk .nr{ background:var(--dunkel); } .pos.of .nr{ background:var(--orange); } .pos.pr .nr{ background:var(--lila); }
+  .pos.gm .nr{ background:var(--gruen); } .pos.ok .nr{ background:#5f6b66; }
+  .pos .tx{ flex:1; min-width:0; }
+  .pos .was{ font-size:15px; font-weight:800; }
+  .pos .kom{ font-size:12px; color:var(--mut); line-height:1.4; }
+  .pos .st{ font-size:11.5px; margin-top:3px; font-weight:700; }
+  .pos .st.gm{ color:var(--gruen); } .pos .st.pr{ color:var(--lila); } .pos .st.ok{ color:#5f6b66; }
+  .pos .dist{ flex:0 0 auto; font-size:14px; font-weight:800; color:var(--blau); text-align:right; }
+  .chip{ display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:800; color:#fff; background:var(--grau); vertical-align:1px; }
+  .chip.pk{ background:var(--dunkel); } .chip.of{ background:var(--orange); } .chip.pr{ background:var(--lila); }
+  .chip.gm{ background:var(--gruen); } .chip.ok{ background:#5f6b66; } .chip.no{ background:#6b7078; }
+  .beine{ display:flex; gap:6px; flex-wrap:wrap; margin:8px 0 2px; }
+  .beine span{ font-size:12.5px; font-weight:800; padding:4px 9px; border-radius:6px; background:#eef0f2; color:var(--mut); }
+  .beine span.inj{ background:#e3f3ea; color:var(--gruen); }
+  .beine span.dies{ outline:2px solid var(--ink); color:var(--ink); background:#fff; }
+  .tun{ background:#fff8e6; border-left:3px solid var(--orange); padding:8px 10px; border-radius:0 4px 4px 0;
+       font-size:14px; line-height:1.5; margin:10px 0 6px; font-weight:700; }
+  /* ── Detail-Blatt (von unten) ── */
+  #deckel{ position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1000; display:none; }
+  #sheet{ position:fixed; left:0; right:0; bottom:0; z-index:1001; background:#fff; border-radius:14px 14px 0 0;
+          max-height:90vh; overflow:auto; display:none; box-shadow:0 -4px 20px rgba(0,0,0,.25); padding-bottom:env(safe-area-inset-bottom); }
+  #sheet.an, #deckel.an{ display:block; }
+  .sk{ position:sticky; top:0; background:#fff; display:flex; align-items:center; gap:10px; padding:12px 14px;
+       border-bottom:1px solid var(--line); z-index:2; }
+  .sk .nr{ width:40px; height:40px; border-radius:50%; color:#fff; font-weight:900; font-size:14px; display:flex;
+       align-items:center; justify-content:center; background:var(--grau); flex:0 0 40px; }
+  .sk .t{ flex:1; min-width:0; }
+  .sk .t b{ font-size:17px; }
+  .sk .x{ border:none; background:#eef0f2; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer; flex:0 0 36px; }
+  .si{ padding:12px 14px; max-width:760px; margin:0 auto; }
+  .si .koord{ font-size:12px; color:var(--mut); margin-top:6px; }
+  .hist{ margin:12px 0 4px; }
+  .hist .e{ border-top:1px solid var(--line); padding:8px 0; font-size:13px; line-height:1.45; }
+  .hist .e .w{ color:var(--mut); font-size:12px; }
+  .hist .fl{ display:inline-block; margin-top:4px; font-size:12.5px; font-weight:700; color:var(--rot); cursor:pointer; }
+  .hist img{ width:100%; border-radius:5px; margin-top:6px; display:block; }
+  /* ── Formular ── */
+  .form{ border-top:2px solid var(--line); margin-top:10px; padding-top:10px; }
+  .form h3{ margin:0 0 8px; font-size:15px; }
+  label.f{ display:block; font-size:13px; font-weight:700; margin:12px 0 5px; }
+  label.f span{ font-weight:400; color:var(--mut); font-size:12px; }
+  .wahl{ display:flex; gap:7px; flex-wrap:wrap; }
+  .wahl button{ flex:1 1 auto; border:1px solid var(--line); background:#fff; cursor:pointer; font:800 14px Arial; color:var(--mut);
+        padding:12px 10px; border-radius:8px; }
+  .wahl button.on.injiziert, .wahl button.on.war_schon{ background:var(--gruen); border-color:var(--gruen); color:#fff; }
+  .wahl button.on.problem{ background:var(--lila); border-color:var(--lila); color:#fff; }
+  textarea, input[type=text]{ width:100%; padding:11px; font-size:16px; font-family:inherit; border:1px solid #c9ccd2;
+        border-radius:5px; background:#fff; color:var(--ink); }
+  textarea{ min-height:56px; resize:vertical; line-height:1.45; }
+  textarea:focus, input:focus{ outline:2px solid var(--rot); outline-offset:-2px; }
+  .fotoknoepfe{ display:flex; gap:8px; }
+  .fotoknoepfe .btn{ flex:1; }
+  input[type=file]{ display:none; }
+  .fotos{ display:flex; gap:8px; flex-wrap:wrap; margin-top:9px; }
+  .fotos .pg{ position:relative; width:82px; height:82px; border:1px solid var(--line); border-radius:5px; overflow:hidden; background:#f6f7f9; }
+  .fotos .pg img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .fotos .pg .del{ position:absolute; top:2px; right:2px; width:23px; height:23px; border:none; border-radius:50%;
+        background:rgba(0,0,0,.62); color:#fff; font-size:13px; cursor:pointer; line-height:23px; padding:0; }
+  #status{ font-size:13px; font-weight:700; color:var(--mut); margin-top:10px; min-height:18px; }
+  .gross{ width:100%; padding:15px; font-size:16px; margin-top:14px; }
+  .wieder{ font-size:12px; color:var(--mut); margin-top:10px; }
+  .wieder a{ color:var(--rot); font-weight:700; cursor:pointer; }
+  .btn:focus-visible, .schalter button:focus-visible, .tabs button:focus-visible, .pos:focus-visible{ outline:3px solid var(--blau); outline-offset:2px; }
+</style>
+</head>
+<body>
+<header>
+  <a class="home" href="index.html" title="Portal">‹</a>
+  <div class="logo"><img src="assets/img/strabag-logo.png" alt="STRABAG"></div>
+  <h1 data-i="h1">💉 Einzelbeine</h1>
+  <div class="netz" id="netz">online</div>
+  <div class="lang" id="lang"><button data-l="de">DE</button><button data-l="pt">PT</button><button data-l="en">EN</button></div>
+</header>
+
+<div class="tabs">
+  <button class="on" data-t="k2d" onclick="tab('k2d')" data-i="tab_k">🗺 Karte</button>
+  <button data-t="liste" onclick="tab('liste')"><span data-i="tab_l">📋 Liste</span><span class="zahl" id="zOffen">–</span></button>
+  <button data-t="info" onclick="tab('info')">ℹ️ Info</button>
+</div>
+
+<main>
+  <!-- ================= KARTE ================= -->
+  <section id="t-k2d">
+    <div class="schalter" id="schalterK"></div>
+    <div class="kartebox">
+      <div id="map2d"></div>
+      <button class="btn w gps" id="gpsBtn" onclick="gps()" title="Mein Standort" data-iti="gps">📍</button>
+    </div>
+    <div class="legende">
+      <span><i style="background:#8f1d1d"></i><span data-i="leg_pk">Stahl steht schon</span></span>
+      <span><i style="background:#e08a00"></i><span data-i="leg_of">offen</span></span>
+      <span><i style="background:#1e9e5a"></i><span data-i="leg_gm">gemeldet</span></span>
+      <span><i style="background:#8e24aa"></i><span data-i="leg_pr">Problem</span></span>
+      <span data-i="leg_tip">Punkt antippen = hinführen, Foto, melden</span>
+    </div>
+    <div class="stand" id="standK"></div>
+  </section>
+
+  <!-- ================= LISTE ================= -->
+  <section id="t-liste" hidden>
+    <div class="schalter" id="schalterL"></div>
+    <div id="liste"><div class="box"><div class="sub" data-i="lade">lade …</div></div></div>
+  </section>
+
+  <!-- ================= INFO ================= -->
+  <section id="t-info" hidden>
+    <div class="box">
+      <div class="big" id="anz">–</div>
+      <h2 data-i="info_h">Beine ohne Injektion – der Rest des Tisches ist injiziert</h2>
+      <p data-i="info_p1"></p>
+      <p data-i="info_p2"></p>
+      <p class="sub" data-i="info_p3"></p>
+    </div>
+    <div class="box grau">
+      <h2 data-i="q_h">Stand der Daten</h2>
+      <p class="sub" id="standI"></p>
+    </div>
+  </section>
+</main>
+
+<!-- ================= DETAIL-BLATT ================= -->
+<div id="deckel" onclick="sheetZu()"></div>
+<div id="sheet" role="dialog" aria-modal="true" aria-labelledby="sTitel">
+  <div class="sk">
+    <div class="nr" id="sNr">–</div>
+    <div class="t"><b id="sTitel">–</b><br><span class="sub" id="sSub"></span></div>
+    <button class="x" onclick="sheetZu()" title="schliessen" data-iti="zu">✕</button>
+  </div>
+  <div class="si">
+    <div id="sChips"></div>
+    <div class="beine" id="sBeine"></div>
+    <div class="tun" data-i="tun">Prüfen → injizieren → Foto → senden. Danach in Nalpi abhaken.</div>
+    <div class="koord" id="sKoord"></div>
+    <div class="btnrow">
+      <button class="btn w" onclick="aufKarte()" data-i="b_karte">🗺 Auf der Karte</button>
+      <a class="btn w" id="sNav" target="_blank" rel="noopener" data-i="b_nav">🧭 Hinführen</a>
+    </div>
+    <div class="hist" id="sHist"></div>
+
+    <div class="form">
+      <h3 data-i="f_h">Rückmeldung</h3>
+      <div class="wahl" id="wStatus">
+        <button type="button" class="injiziert" data-s="injiziert" data-i="w_inj">✅ Injiziert</button>
+        <button type="button" class="war_schon" data-s="war_schon" data-i="w_war">☑️ War schon injiziert</button>
+        <button type="button" class="problem" data-s="problem" data-i="w_pr">⚠️ Problem</button>
+      </div>
+      <label class="f" data-i="l_foto">Foto <span>– vom Pfahl, Pflicht, bis 4</span></label>
+      <div class="fotoknoepfe">
+        <button type="button" class="btn w" onclick="document.getElementById('fCam').click()" data-i="b_cam">📷 Foto</button>
+        <button type="button" class="btn w" onclick="document.getElementById('fDat').click()" data-i="b_gal">🖼 Galerie</button>
+      </div>
+      <input type="file" id="fCam" accept="image/*" capture="environment" multiple>
+      <input type="file" id="fDat" accept="image/*" multiple>
+      <div class="fotos" id="prev"></div>
+      <label class="f" for="fText" data-i="l_text">Bemerkung <span>– bei Problem Pflicht</span></label>
+      <textarea id="fText" data-iph="ph_text" placeholder="z. B. Rohr verstopft, Pfahl nicht erreichbar"></textarea>
+      <label class="f" for="fVon" data-i="l_von">Dein Name</label>
+      <input type="text" id="fVon" placeholder="Vor- und Nachname" autocomplete="name" data-iph="ph_von">
+      <button class="btn gr gross" id="btnSend" onclick="senden()" data-i="b_send">Senden</button>
+      <div id="status"></div>
+      <div class="wieder" id="wieder" style="display:none" data-i="wieder">Aus Versehen gemeldet? <a onclick="wiederOffen()">wieder auf «offen» setzen</a></div>
+    </div>
+  </div>
+</div>
+
+<script src="assets/js/leaflet/leaflet.js"></script>
+<script>
+(function(){
+  'use strict';
+  var BOHR='uploads/tables/bohrstand.json', BAU='uploads/tables/baustand.json', BER='uploads/tables/bereiche.json';
+  var API='https://api.buildtrack.ch/api/v1/drillpoints/changes';
+  var RTDB='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app/erfassung';
+  var P_RUECK='injektion_rueck', P_FOT='injektion_fotos';
+  var LS_VON='nalp_injektion_von_v1', LS_CACHE='nalp_injektion_rueck_v1', LS_LANG='nalp_injektion_lang_v1', LS_API='nalp_injektion_api_v1';
+  var IDB_NAME='nalp_injektion_v1', IDB_STORE='warteschlange', MAX_FOTOS=4;
+  var ST={ injiziert:{t:'st_inj',k:'gm',sym:'✅'}, war_schon:{t:'st_war',k:'gm',sym:'☑️'},
+           problem:{t:'st_pr',k:'pr',sym:'⚠️'}, offen:{t:'st_off',k:'no',sym:'↩'} };
+
+  var bohr=null, bau=null, ber={}, api={}, apiZeit=null, apiFrisch=false, R={};
+  var P={}, LISTE=[], map=null, MK={}, kontext=null, gpsMarker=null, gpsKreis=null, gpsWatch=null, pos=null, folgen=false, vorne=null;
+  var aktiv=null, entwurfF=null, gepusht=false, fotos=[], stat='injiziert', filtK='offen', filtL='offen';
+  var ladeStand='laedt', laeuft={};   // laeuft[f] = Meldung für dieses Bein wird gerade gesendet (kein Doppelsenden)
+
+  /* ── Texte DE / PT / EN (gespeichert wird immer deutsch) ── */
+  var LANG='de';
+  var TXT={
+    de:{ doc:'NalpSolar · Injektion Einzelbeine', h1:'💉 Einzelbeine', tab_k:'🗺 Karte', tab_l:'📋 Liste',
+      gps:'Mein Standort', leg_pk:'Stahl steht schon – zuerst', leg_of:'offen', leg_gm:'gemeldet, Nalpi fehlt noch', leg_pr:'Problem',
+      leg_tip:'Punkt antippen = hinführen, Foto, melden', lade:'lade …',
+      f_offen:'Offen', f_pk:'Stahl steht', f_gm:'Gemeldet', f_pr:'Problem', f_ok:'In Nalpi erledigt', f_alle:'Alle',
+      info_h:'Beine ohne Injektion – der Rest des Tisches ist injiziert',
+      info_p1:'<b>So geht es:</b> Punkt antippen → 🧭 Hinführen → prüfen, ob injiziert ist → wenn nicht: injizieren → Foto vom Pfahl → Senden. Danach in Nalpi abhaken.',
+      info_p2:'<b>Rot zuerst:</b> dort steht die Primärkonstruktion schon.',
+      info_p3:'Ein Punkt verschwindet, sobald er in Nalpi als injiziert abgehakt ist. Das Luftbild braucht Netz, Punkte und Liste gehen auch offline. Rückmeldungen ohne Netz werden gesendet, sobald wieder Empfang ist.',
+      q_h:'Stand der Daten', stand_n:'Nalpi-Export {d}', stand_a:'live geprüft {d}', stand_a0:'live-Abgleich nicht erreichbar', stand_a1:'letzter live-Abgleich {d} (jetzt nicht erreichbar)', m_warte:'⏳ gespeichert – wird gleich gesendet.',
+      zu:'schliessen', b_karte:'🗺 Auf der Karte', b_nav:'🧭 Hinführen', tun:'Prüfen → injizieren → Foto → senden. Danach in Nalpi abhaken.',
+      tisch:'Tisch', bein:'Bein', bereich:'Bereich', pk_ch:'Primärkonstruktion montiert {d}', nv_ch:'noch nicht vermessen',
+      inj:'injiziert', offen:'offen', f_h:'Rückmeldung', w_inj:'✅ Injiziert', w_war:'☑️ War schon injiziert', w_pr:'⚠️ Problem',
+      l_foto:'Foto <span>– vom Pfahl, Pflicht, bis 4</span>', b_cam:'📷 Foto', b_gal:'🖼 Galerie',
+      l_text:'Bemerkung <span>– bei Problem Pflicht</span>', ph_text:'z. B. Rohr verstopft, Pfahl nicht erreichbar',
+      l_von:'Dein Name', ph_von:'Vor- und Nachname', b_send:'Senden',
+      wieder:'Aus Versehen gemeldet? <a onclick="wiederOffen()">wieder auf «offen» setzen</a>',
+      st_inj:'injiziert', st_war:'war schon injiziert', st_pr:'Problem', st_off:'wieder offen', st_ok:'in Nalpi abgehakt',
+      rms:'Rückmeldungen', keine_rm:'Noch keine Rückmeldung.', foto1:'📷 1 Foto anzeigen', foton:'📷 {n} Fotos anzeigen',
+      kein_foto:'kein Foto gefunden', foto_fehl:'Foto laden ging nicht (Netz?)', entf:'entfernen', foto_vorb:'Foto wird vorbereitet …',
+      max_fotos:'Mehr als {n} Fotos gehen nicht.', m_foto:'Bitte ein Foto vom Pfahl machen.', m_text:'Bitte kurz schreiben, was das Problem ist.',
+      m_name:'Bitte deinen Namen eintragen.', m_send:'wird gesendet …', m_ok:'✅ gespeichert – danke! Jetzt in Nalpi abhaken.',
+      m_offl:'📴 kein Netz – gespeichert, wird automatisch gesendet.', m_versehen:'aus Versehen gemeldet', m_gesp:'✅ gespeichert.',
+      m_fehl:'Daten konnten nicht geladen werden. Netz prüfen und neu laden.', nichts:'Nichts in dieser Auswahl. 👍',
+      kein_gps:'Standort wird auf diesem Gerät nicht unterstützt.', kein_ort:'Standort nicht gefunden – GPS einschalten und Freigabe erlauben.',
+      n_offen:' · {n} warten', weg:'{m} m', wegk:'{k} km', gebohrt:'gebohrt {d}', von_am:'{v} · {d}' },
+    pt:{ doc:'NalpSolar · Injeção pernas isoladas', h1:'💉 Pernas isoladas', tab_k:'🗺 Mapa', tab_l:'📋 Lista',
+      gps:'A minha posição', leg_pk:'Estrutura já montada – primeiro', leg_of:'em aberto', leg_gm:'comunicado, falta no Nalpi', leg_pr:'Problema',
+      leg_tip:'Tocar no ponto = ir até lá, foto, comunicar', lade:'a carregar …',
+      f_offen:'Em aberto', f_pk:'Estrutura montada', f_gm:'Comunicado', f_pr:'Problema', f_ok:'Feito no Nalpi', f_alle:'Todos',
+      info_h:'Pernas sem injeção – o resto da mesa já está injetado',
+      info_p1:'<b>Como fazer:</b> tocar no ponto → 🧭 Ir até lá → verificar se está injetado → se não: injetar → foto da estaca → Enviar. Depois marcar no Nalpi.',
+      info_p2:'<b>Vermelho primeiro:</b> aí a estrutura primária já está montada.',
+      info_p3:'O ponto desaparece quando estiver marcado como injetado no Nalpi. A imagem aérea precisa de rede, pontos e lista funcionam offline. Respostas sem rede são enviadas quando houver rede.',
+      q_h:'Estado dos dados', stand_n:'Exportação Nalpi {d}', stand_a:'verificado ao vivo {d}', stand_a0:'verificação ao vivo indisponível', stand_a1:'última verificação ao vivo {d} (agora indisponível)', m_warte:'⏳ guardado – será enviado já a seguir.',
+      zu:'fechar', b_karte:'🗺 No mapa', b_nav:'🧭 Ir até lá', tun:'Verificar → injetar → foto → enviar. Depois marcar no Nalpi.',
+      tisch:'Mesa', bein:'Perna', bereich:'Zona', pk_ch:'Estrutura primária montada {d}', nv_ch:'ainda não medida',
+      inj:'injetada', offen:'em aberto', f_h:'Resposta', w_inj:'✅ Injetada', w_war:'☑️ Já estava injetada', w_pr:'⚠️ Problema',
+      l_foto:'Foto <span>– da estaca, obrigatória, até 4</span>', b_cam:'📷 Foto', b_gal:'🖼 Galeria',
+      l_text:'Observação <span>– obrigatória se houver problema</span>', ph_text:'p. ex. tubo entupido, estaca inacessível',
+      l_von:'O teu nome', ph_von:'Nome e apelido', b_send:'Enviar',
+      wieder:'Comunicado por engano? <a onclick="wiederOffen()">voltar a «em aberto»</a>',
+      st_inj:'injetada', st_war:'já estava injetada', st_pr:'problema', st_off:'de novo em aberto', st_ok:'marcada no Nalpi',
+      rms:'Respostas', keine_rm:'Ainda sem resposta.', foto1:'📷 ver 1 foto', foton:'📷 ver {n} fotos',
+      kein_foto:'nenhuma foto encontrada', foto_fehl:'Não foi possível carregar a foto (rede?)', entf:'remover', foto_vorb:'A preparar a foto …',
+      max_fotos:'Não dá para mais de {n} fotos.', m_foto:'Por favor tirar uma foto da estaca.', m_text:'Por favor escrever qual é o problema.',
+      m_name:'Por favor escrever o teu nome.', m_send:'a enviar …', m_ok:'✅ guardado – obrigado! Agora marcar no Nalpi.',
+      m_offl:'📴 sem rede – guardado, será enviado automaticamente.', m_versehen:'comunicado por engano', m_gesp:'✅ guardado.',
+      m_fehl:'Não foi possível carregar os dados. Verificar a rede e recarregar.', nichts:'Nada nesta seleção. 👍',
+      kein_gps:'Posição não suportada neste aparelho.', kein_ort:'Posição não encontrada – ligar o GPS e permitir.',
+      n_offen:' · {n} em espera', weg:'{m} m', wegk:'{k} km', gebohrt:'furada {d}', von_am:'{v} · {d}' },
+    en:{ doc:'NalpSolar · Grouting single legs', h1:'💉 Single legs', tab_k:'🗺 Map', tab_l:'📋 List',
+      gps:'My location', leg_pk:'Steel already mounted – first', leg_of:'open', leg_gm:'reported, Nalpi still missing', leg_pr:'Problem',
+      leg_tip:'Tap a point = guide me, photo, report', lade:'loading …',
+      f_offen:'Open', f_pk:'Steel mounted', f_gm:'Reported', f_pr:'Problem', f_ok:'Done in Nalpi', f_alle:'All',
+      info_h:'Legs without grouting – the rest of the table is grouted',
+      info_p1:'<b>How to:</b> tap the point → 🧭 Guide me → check whether it is grouted → if not: grout it → photo of the pile → Send. Then tick it off in Nalpi.',
+      info_p2:'<b>Red first:</b> the primary structure is already mounted there.',
+      info_p3:'A point disappears as soon as it is ticked off as grouted in Nalpi. The aerial photo needs a network, points and list work offline. Reports made offline are sent once there is a network.',
+      q_h:'Data status', stand_n:'Nalpi export {d}', stand_a:'checked live {d}', stand_a0:'live check not reachable', stand_a1:'last live check {d} (not reachable now)', m_warte:'⏳ saved – will be sent in a moment.',
+      zu:'close', b_karte:'🗺 On the map', b_nav:'🧭 Guide me', tun:'Check → grout → photo → send. Then tick it off in Nalpi.',
+      tisch:'Table', bein:'Leg', bereich:'Area', pk_ch:'Primary structure mounted {d}', nv_ch:'not surveyed yet',
+      inj:'grouted', offen:'open', f_h:'Report', w_inj:'✅ Grouted', w_war:'☑️ Was already grouted', w_pr:'⚠️ Problem',
+      l_foto:'Photo <span>– of the pile, required, up to 4</span>', b_cam:'📷 Photo', b_gal:'🖼 Gallery',
+      l_text:'Note <span>– required for a problem</span>', ph_text:'e.g. pipe blocked, pile not reachable',
+      l_von:'Your name', ph_von:'First and last name', b_send:'Send',
+      wieder:'Reported by mistake? <a onclick="wiederOffen()">set back to «open»</a>',
+      st_inj:'grouted', st_war:'was already grouted', st_pr:'problem', st_off:'open again', st_ok:'ticked off in Nalpi',
+      rms:'Reports', keine_rm:'No report yet.', foto1:'📷 show 1 photo', foton:'📷 show {n} photos',
+      kein_foto:'no photo found', foto_fehl:'Could not load the photo (network?)', entf:'remove', foto_vorb:'Preparing photo …',
+      max_fotos:'No more than {n} photos.', m_foto:'Please take a photo of the pile.', m_text:'Please write briefly what the problem is.',
+      m_name:'Please enter your name.', m_send:'sending …', m_ok:'✅ saved – thanks! Now tick it off in Nalpi.',
+      m_offl:'📴 no network – saved, will be sent automatically.', m_versehen:'reported by mistake', m_gesp:'✅ saved.',
+      m_fehl:'Could not load the data. Check the network and reload.', nichts:'Nothing in this selection. 👍',
+      kein_gps:'Location is not supported on this device.', kein_ort:'Location not found – switch on GPS and allow access.',
+      n_offen:' · {n} waiting', weg:'{m} m', wegk:'{k} km', gebohrt:'drilled {d}', von_am:'{v} · {d}' }
+  };
+  function t(k,v){ var d=TXT[LANG]||TXT.de, s=(d[k]!==undefined?d[k]:(TXT.de[k]!==undefined?TXT.de[k]:k));
+    if(v) Object.keys(v).forEach(function(x){ s=s.split('{'+x+'}').join(v[x]); }); return s; }
+
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function zz(n){ return String(n).padStart(2,'0'); }
+  function heute(){ var d=new Date(); return d.getFullYear()+'-'+zz(d.getMonth()+1)+'-'+zz(d.getDate()); }
+  /* ISO mit Zeitzone (z.B. 2026-07-12T22:00:00Z) lokal lesen – nie [:10] (Nalpi-Datumsfalle) */
+  function tagLokal(iso){ if(!iso) return ''; var d=new Date(iso); if(isNaN(d)) return String(iso).slice(0,10);
+    return d.getFullYear()+'-'+zz(d.getMonth()+1)+'-'+zz(d.getDate()); }
+  /* Datumswerte können aus der offen beschreibbaren RTDB kommen: nur echte ISO-Daten zeigen, sonst nichts */
+  function isoOk(iso){ return typeof iso==='string' && /^\d{4}-\d\d-\d\d/.test(iso); }
+  function deDat(iso){ if(!isoOk(iso)) return ''; return iso.slice(8,10)+'.'+iso.slice(5,7)+'.'+iso.slice(0,4); }
+  function kurzDat(iso){ if(!isoOk(iso)) return ''; return iso.slice(8,10)+'.'+iso.slice(5,7)+'.'; }
+  function fotoAnz(e){ var n=parseInt(e&&e.anzahl_fotos,10); return (n>0&&n<=MAX_FOTOS)?n:0; }
+  function fotoIds(e){ var o=e&&e.fotos; if(!o||typeof o!=='object') return [];
+    return Object.keys(o).filter(function(k){ return /^[A-Za-z0-9_-]{1,80}$/.test(k); }); }
+  function zeitDe(ms){ var d=new Date(ms); return zz(d.getDate())+'.'+zz(d.getMonth()+1)+'. '+zz(d.getHours())+':'+zz(d.getMinutes()); }
+  function netzAn(){ return navigator.onLine!==false; }
+
+  /* LV95 -> WGS84 (swisstopo Näherungsformel, gleiche Funktion wie in wasserleitung.html / karte.html) */
+  function ll(E,N){
+    var x=(N-1200000)/1e6, y=(E-2600000)/1e6;
+    var lat=16.9023892+3.238272*x-0.270978*y*y-0.002528*x*x-0.0447*y*y*x-0.0140*x*x*x;
+    var lng=2.6779094+4.728982*y+0.791484*y*x+0.1306*y*x*x-0.0436*y*y*y;
+    return [lat*100/36, lng*100/36];
+  }
+  function meter(a,b){ var R0=6371000, r=Math.PI/180, dl=(b[0]-a[0])*r, dn=(b[1]-a[1])*r*Math.cos((a[0]+b[0])/2*r);
+    return Math.sqrt(dl*dl+dn*dn)*R0; }
+  function wegText(m){ return m<1000?t('weg',{m:Math.round(m)}):t('wegk',{k:(m/1000).toFixed(1).replace('.',LANG==='en'?'.':',')}); }
+
+  /* ── Reiter ── */
+  window.tab=function(tb){
+    document.querySelectorAll('.tabs button').forEach(function(b){ b.classList.toggle('on', b.dataset.t===tb); });
+    ['k2d','liste','info'].forEach(function(k){ $('t-'+k).hidden=(k!==tb); });
+    try{ history.replaceState(null,'','#'+tb); }catch(e){}
+    if(tb==='k2d'){ mapBauen(); setTimeout(function(){ if(map) map.invalidateSize(); },50); }
+    if(tb==='liste') listeBauen();
+  };
+
+  /* ── Daten laden ── */
+  function json(url){ return fetch(url,{cache:'no-store'}).then(function(r){ if(!r.ok) throw new Error(url+' '+r.status); return r.json(); }); }
+  /* Live-Stand vom BuildTrack-Server (nur lesen, CORS für maltv.github.io offen, limit max. 500).
+     Er kennt nur einen Teil der Punkte, darum nur als Überlagerung auf bohrstand.json. */
+  function apiLaden(){
+    var A={}, since=0, runde=0;
+    function seite(){
+      var ctl=window.AbortController?new AbortController():null, to=setTimeout(function(){ if(ctl) ctl.abort(); },12000);
+      return fetch(API+'?since='+since+'&limit=500',{cache:'no-store', signal:ctl?ctl.signal:undefined})
+        .then(function(r){ clearTimeout(to); if(!r.ok) throw new Error('api '+r.status); return r.json(); })
+        .then(function(d){
+          (d.states||[]).forEach(function(s){
+            A[s.foundationId]=[s.injectedAt?1:0, s.drilledAt?1:0, s.stageOwnedAt?1:0, tagLokal(s.drilledAt)];
+          });
+          runde++;
+          if(d.hasMore && d.watermark!==since && runde<12){ since=d.watermark; return seite(); }
+        });
+    }
+    /* sw.js reicht diese Anfragen ungecacht durch – was hier ankommt, ist wirklich live. Der Rückfall auf die
+       letzte Kopie (LS_API) gilt als NICHT frisch: dann nur Injektionen übernehmen, nie 4 → 3 zurückstufen. */
+    return seite().then(function(){
+      api=A; apiZeit=Date.now(); apiFrisch=true;
+      try{ localStorage.setItem(LS_API,JSON.stringify({z:apiZeit,a:A})); }catch(e){}
+    }).catch(function(){
+      apiFrisch=false;
+      try{ var c=JSON.parse(localStorage.getItem(LS_API)||'null'); if(c&&c.a&&typeof c.a==='object'){ api=c.a; apiZeit=c.z||null; } }catch(e){}
+    });
+  }
+  function objekt(o){ return (o && typeof o==='object' && !Array.isArray(o))?o:{}; }
+  function rueckLaden(){
+    return fetch(RTDB+'/'+P_RUECK+'.json',{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; })
+      .then(function(j){ R=objekt(j); try{ localStorage.setItem(LS_CACHE,JSON.stringify(R)); }catch(e){} })
+      .catch(function(){ try{ R=objekt(JSON.parse(localStorage.getItem(LS_CACHE)||'{}')); }catch(e){ R={}; } });
+  }
+  /* Noch nicht gesendete Meldungen aus der Warteschlange einmischen – sonst stehen sie nach dem Neuladen wieder als offen da */
+  function warteschlangeMischen(){
+    return Q.alle().then(function(jobs){
+      jobs.forEach(function(j){ if(!j||!j.f||!j.rec) return;
+        var rec={}; for(var s in j.rec) rec[s]=j.rec[s]; rec.anzahl_fotos=(j.fotos||[]).length;
+        R[j.f]=objekt(R[j.f]); R[j.f][j.k]=rec; });
+    });
+  }
+  function laden(){
+    return Promise.all([
+      json(BOHR).then(function(j){ bohr=j; }),
+      json(BAU).then(function(j){ bau=j; }).catch(function(){ bau={tische:{}}; }),
+      json(BER).then(function(j){ ber=(j&&j.bereiche)||{}; }).catch(function(){ ber={}; }),
+      apiLaden(), rueckLaden().then(warteschlangeMischen)
+    ]).then(rechnen);
+  }
+
+  /* ── Einzelbeine rechnen ──
+     Status je Bein aus bohrstand.json: 0 geplant · 1 abgesteckt · 2 gebohrt · 3 vermessen · 4 injiziert.
+     Live-Überlagerung: injectedAt gesetzt → 4. Gehört der Punkt dem Server (stageOwnedAt) und hat kein injectedAt,
+     gilt er als nicht injiziert (in Nalpi wieder entfernt). Frisch gebohrt → mindestens 2. */
+  function rechnen(){
+    var T={};
+    (bohr.punkte||[]).forEach(function(r){
+      var tid=String(r[0]), s=+r[1], f=tid+'_S'+s, st=+r[5], a=api[f];
+      if(a){
+        if(a[0]) st=4;
+        else if(apiFrisch && a[2] && st===4) st=3;
+        if(a[1] && st<2) st=2;
+      }
+      (T[tid]=T[tid]||{})[s]={f:f, s:s, E:+r[2], N:+r[3], st:st, geb:a?a[3]:''};
+    });
+    P={}; LISTE=[];
+    Object.keys(T).forEach(function(tid){
+      var beine=T[tid], ss=Object.keys(beine), injAnz=ss.filter(function(s){ return beine[s].st===4; }).length;
+      ss.forEach(function(s){
+        var b=beine[s], einzel=(b.st===2||b.st===3) && injAnz>0, gemeldet=eintraege(b.f).length>0;
+        if(!einzel && !gemeldet) return;
+        var pk=((bau.tische||{})[tid]||{}).pk||'';
+        var p={f:b.f, tisch:tid, s:+s, E:b.E, N:b.N, st:b.st, geb:b.geb, pk:pk, ber:ber[tid]||'',
+               beine:[1,2,3,4].map(function(k){ return beine[k]?beine[k].st:null; })};
+        p.ll=ll(p.E,p.N);
+        P[p.f]=p; LISTE.push(p);
+      });
+    });
+  }
+
+  /* ── Rückmeldungen ── */
+  /* Nur echte Sätze (Objekte) – ein kaputter Eintrag in der offenen RTDB darf die Seite nicht lahmlegen */
+  function eintraege(f){
+    var o=objekt(R[f]); return Object.keys(o).filter(function(k){ return o[k] && typeof o[k]==='object' && !Array.isArray(o[k]); })
+      .map(function(k){ var e=o[k]; e._k=k; return e; })
+      .sort(function(a,b){ return (+a.ts||0)-(+b.ts||0); });
+  }
+  function meldung(f){ var z=null; eintraege(f).forEach(function(e){ if(e.status) z=e; }); return z; }
+  /* Klasse: ok = in Nalpi injiziert · gm = gemeldet, Nalpi fehlt · pr = Problem · pk = Stahl steht · of = offen */
+  function klasse(p){
+    if(p.st===4) return 'ok';
+    var m=meldung(p.f), s=m?m.status:'';
+    if(s==='injiziert'||s==='war_schon') return 'gm';
+    if(s==='problem') return 'pr';
+    return p.pk?'pk':'of';
+  }
+  function farbe(k){ return {pk:'#8f1d1d',of:'#e08a00',pr:'#8e24aa',gm:'#1e9e5a',ok:'#5f6b66'}[k]||'#8a8e94'; }
+
+  /* ── Filter (Karte + Liste teilen die Regel) ── */
+  var FILT=[{id:'offen',t:'f_offen'},{id:'pk',t:'f_pk'},{id:'gm',t:'f_gm'},{id:'pr',t:'f_pr'},{id:'ok',t:'f_ok'},{id:'alle',t:'f_alle'}];
+  function passt(p,f){
+    var k=klasse(p);
+    if(f==='alle') return true;
+    if(f==='offen') return k==='pk'||k==='of'||k==='pr';
+    return k===f;
+  }
+  function schalter(id,akt,cb){
+    $(id).innerHTML=FILT.map(function(f){
+      var n=LISTE.filter(function(p){ return passt(p,f.id); }).length;
+      if(n===0 && f.id!=='offen' && f.id!==akt) return '';
+      return '<button type="button" data-f="'+f.id+'"'+(akt===f.id?' class="on"':'')+'>'+t(f.t)+' '+n+'</button>';
+    }).join('');
+    Array.prototype.forEach.call($(id).querySelectorAll('button'),function(b){ b.onclick=function(){ cb(b.dataset.f); }; });
+  }
+
+  /* ── Karte ── */
+  function mapBauen(){
+    if(map || typeof L==='undefined' || !bohr) return;
+    map=L.map('map2d',{ zoomSnap:0.25, maxZoom:22, attributionControl:true });
+    map.attributionControl.setPrefix('');
+    L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg',
+      { maxNativeZoom:20, maxZoom:22, attribution:'© swisstopo' }).addTo(map);
+    L.control.scale({imperial:false, maxWidth:110}).addTo(map);
+    /* Umfeld blass: injizierte Beine dunkel, andere offene Beine hell – so sieht man, was allein steht */
+    var cv=L.canvas({padding:.3}); kontext=L.layerGroup().addTo(map);
+    (bohr.punkte||[]).forEach(function(r){
+      var f=r[0]+'_S'+r[1]; if(P[f]) return;
+      var st=+r[5], a=api[f]; if(a&&a[0]) st=4;
+      if(st<2) return;
+      L.circleMarker(ll(+r[2],+r[3]),{renderer:cv, radius:2.6, stroke:false, interactive:false,
+        fillColor:st===4?'#123f4c':'#45c6e4', fillOpacity:st===4?.55:.7}).addTo(kontext);
+    });
+    var alle=[];
+    LISTE.forEach(function(p){
+      var m=L.marker(p.ll,{ icon:ikone(p), title:p.tisch+' S'+p.s, keyboard:true }).addTo(map);
+      m.on('click',function(){ sheetAuf(p.f); });
+      MK[p.f]=m; if(passt(p,'offen')) alle.push(p.ll);
+    });
+    if(!alle.length) alle=LISTE.map(function(p){ return p.ll; });
+    if(alle.length) map.fitBounds(L.latLngBounds(alle).pad(0.08)); else map.setView([46.676,8.743],16);
+    map.on('zoomend',weitMalen); weitMalen();
+    markerMalen();
+  }
+  function weitMalen(){ if(map) $('map2d').classList.toggle('weit', map.getZoom()<17.5); }
+  function ikone(p){
+    return L.divIcon({ className:'mkw', html:'<div class="mk '+klasse(p)+'"><span class="l">'+esc(p.tisch)+' S'+p.s+'</span></div>',
+      iconSize:[0,0], iconAnchor:[0,0] });
+  }
+  function markerMalen(){
+    if(!map) return;
+    LISTE.forEach(function(p){
+      var m=MK[p.f]; if(!m) return;
+      m.setIcon(ikone(p));
+      var soll=passt(p,filtK);
+      if(soll && !map.hasLayer(m)) m.addTo(map);
+      if(!soll && map.hasLayer(m)) map.removeLayer(m);
+    });
+    schalter('schalterK',filtK,function(f){ filtK=f; markerMalen(); });
+  }
+  function zeige(f){
+    tab('k2d');
+    var p=P[f]; if(!p||!map) return;
+    if(!map.hasLayer(MK[f])){ filtK='alle'; markerMalen(); }
+    /* Zoom 21: die Beine liegen oft nur 1–3 m auseinander, erst dort decken sich die Schilder nicht mehr. Ziel nach vorne. */
+    if(vorne && MK[vorne]) MK[vorne].setZIndexOffset(0);
+    MK[f].setZIndexOffset(1000); vorne=f;
+    map.setView(p.ll, Math.max(map.getZoom(),21));
+  }
+  window.aufKarte=function(){
+    var f=aktiv, war=gepusht; sheetZu(); if(!f) return;
+    if(war){ var h=function(){ window.removeEventListener('popstate',h); zeige(f); }; window.addEventListener('popstate',h); }
+    else zeige(f);
+  };
+
+  /* ── Standort: läuft beim Gehen mit (watchPosition). Erster Druck = einschalten + hinzoomen, danach = wieder hinzoomen. ── */
+  window.gps=function(){
+    if(!navigator.geolocation){ alert(t('kein_gps')); return; }
+    folgen=true;
+    if(pos && map) map.setView(pos, Math.max(map.getZoom(),18));
+    if(gpsWatch!==null) return;
+    $('gpsBtn').classList.add('an');
+    gpsWatch=navigator.geolocation.watchPosition(function(q){
+      var erst=!pos; pos=[q.coords.latitude,q.coords.longitude];
+      if(map){
+        if(!gpsKreis) gpsKreis=L.circle(pos,{radius:q.coords.accuracy||10, color:'#1565c0', weight:1, fillOpacity:.08, interactive:false}).addTo(map);
+        gpsKreis.setLatLng(pos).setRadius(q.coords.accuracy||10);
+        if(!gpsMarker) gpsMarker=L.circleMarker(pos,{radius:8,color:'#fff',weight:2,fillColor:'#1565c0',fillOpacity:1,interactive:false}).addTo(map);
+        gpsMarker.setLatLng(pos);
+        if(erst && folgen) map.setView(pos, Math.max(map.getZoom(),18));
+      }
+      entfernungenMalen();
+    }, function(){
+      if(!pos){ alert(t('kein_ort')); navigator.geolocation.clearWatch(gpsWatch); gpsWatch=null; $('gpsBtn').classList.remove('an'); }
+    }, {enableHighAccuracy:true, maximumAge:4000, timeout:20000});
+  };
+  var letzteListe=0;
+  function entfernungenMalen(){
+    if(aktiv && P[aktiv]) sheetWeg(P[aktiv]);
+    if(!$('t-liste').hidden && Date.now()-letzteListe>5000) listeBauen();
+  }
+
+  /* ── Liste: mit Standort nach Entfernung, sonst Stahl zuerst, dann nach Bereich und Tisch ── */
+  function listeBauen(){
+    letzteListe=Date.now();
+    if(ladeStand!=='ok'){ $('schalterL').innerHTML='';
+      $('liste').innerHTML='<div class="box"><div class="sub">'+t(ladeStand==='fehler'?'m_fehl':'lade')+'</div></div>'; return; }
+    schalter('schalterL',filtL,function(f){ filtL=f; listeBauen(); });
+    var ps=LISTE.filter(function(p){ return passt(p,filtL); });
+    var rang={pk:0,pr:1,of:2,gm:3,ok:4};
+    ps.forEach(function(p){ p._m=pos?meter(pos,p.ll):null; });
+    ps.sort(function(a,b){
+      if(pos) return a._m-b._m;
+      return (rang[klasse(a)]-rang[klasse(b)]) || String(a.ber).localeCompare(String(b.ber)) || (+a.tisch-+b.tisch) || (a.s-b.s);
+    });
+    if(!ps.length){ $('liste').innerHTML='<div class="box gruen"><div class="sub">'+t('nichts')+'</div></div>'; return; }
+    $('liste').innerHTML=ps.map(function(p){
+      var k=klasse(p), m=meldung(p.f), st='';
+      if(k==='ok') st='<div class="st ok">✓ '+esc(t('st_ok'))+'</div>';
+      else if(m){ var s=ST[m.status]||ST.offen;
+        st='<div class="st '+(s.k==='gm'?'gm':(s.k==='pr'?'pr':''))+'">'+s.sym+' '+esc(t(s.t))+' · '+esc(t('von_am',{v:m.von||'',d:deDat(m.datum)}))
+          +(fotoAnz(m)?' · 📷 '+fotoAnz(m):'')+'</div>'; }
+      var info=[p.ber, p.pk?t('pk_ch',{d:kurzDat(p.pk)}):'', p.st===2?t('nv_ch'):''].filter(Boolean).join(' · ');
+      return '<div class="pos '+k+'" role="button" tabindex="0" data-f="'+esc(p.f)+'">'
+        +'<div class="nr">S'+p.s+'</div>'
+        +'<div class="tx"><div class="was">'+esc(t('tisch'))+' '+esc(p.tisch)+' · '+esc(t('bein'))+' S'+p.s+'</div>'
+        +'<div class="kom">'+esc(info)+'</div>'+st+'</div>'
+        +(p._m!=null?'<div class="dist">'+wegText(p._m)+'</div>':'')
+        +'</div>';
+    }).join('');
+  }
+  $('liste').addEventListener('click',function(e){ var d=e.target.closest('.pos'); if(d) sheetAuf(d.dataset.f); });
+  $('liste').addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ var d=e.target.closest('.pos'); if(d){ e.preventDefault(); sheetAuf(d.dataset.f); } } });
+  function zaehlen(){
+    var offen=LISTE.filter(function(p){ return passt(p,'offen'); }).length;
+    $('zOffen').textContent=offen; $('anz').textContent=offen;
+  }
+  function standMalen(){
+    var s=[];
+    if(bohr&&bohr.stand) s.push(t('stand_n',{d:deDat(bohr.stand)}));
+    s.push(apiFrisch?t('stand_a',{d:zeitDe(apiZeit)}):(apiZeit?t('stand_a1',{d:zeitDe(apiZeit)}):t('stand_a0')));
+    $('standK').textContent=s.join(' · '); $('standI').textContent=s.join(' · ');
+  }
+
+  /* ── Detail-Blatt ── */
+  /* Entwurf (Fotos, Text, Wahl) bleibt stehen, wenn dasselbe Bein wieder geöffnet wird – z.B. nach Tipp auf den dunklen
+     Rand oder der Zurück-Geste. Geleert wird erst bei einem anderen Bein oder nach dem Senden. */
+  window.sheetAuf=function(f){
+    var p=P[f]; if(!p) return;
+    var k=klasse(p);
+    aktiv=f; $('status').textContent=laeuft[f]?t('m_send'):''; $('btnSend').disabled=!!laeuft[f];
+    if(entwurfF!==f){ entwurfF=f; fotos=[]; $('fText').value=''; stat=(k==='pr')?'problem':'injiziert'; }
+    fotosZeichnen(); statusMalen();
+    $('sNr').textContent='S'+p.s; $('sNr').style.background=farbe(k);
+    sheetTexte(p);
+    $('sNav').href='https://www.google.com/maps/dir/?api=1&destination='+p.ll[0].toFixed(7)+','+p.ll[1].toFixed(7)+'&travelmode=walking';
+    $('wieder').style.display=(k==='gm'||k==='pr')?'block':'none';
+    histMalen(f);
+    try{ if(!$('fVon').value) $('fVon').value=localStorage.getItem(LS_VON)||localStorage.getItem('nalp_altlasten_von_v1')||localStorage.getItem('nalp_einkauf_von_v1')||''; }catch(e){}
+    $('deckel').classList.add('an'); $('sheet').classList.add('an'); $('sheet').scrollTop=0;
+    /* eigener Verlaufseintrag: die Zurück-Geste schliesst nur das Blatt, nicht die Seite */
+    try{ if(!gepusht){ history.pushState({blatt:1},'','#f='+f); gepusht=true; } else history.replaceState({blatt:1},'','#f='+f); }catch(e){}
+  };
+  function sheetTexte(p){
+    $('sTitel').textContent=t('tisch')+' '+p.tisch+' · '+t('bein')+' S'+p.s;
+    sheetWeg(p);
+    var k=klasse(p), ch=[];
+    if(p.pk && k!=='ok') ch.push('<span class="chip pk">'+esc(t('pk_ch',{d:kurzDat(p.pk)}))+'</span>');
+    if(k==='ok') ch.push('<span class="chip ok">✓ '+esc(t('st_ok'))+'</span>');
+    if(p.st===2) ch.push('<span class="chip no">'+esc(t('nv_ch'))+'</span>');
+    $('sChips').innerHTML=ch.join(' ');
+    $('sBeine').innerHTML=p.beine.map(function(st,i){
+      if(st===null) return '';
+      var inj=st===4, dies=(i+1)===p.s;
+      return '<span class="'+(inj?'inj':'')+(dies?' dies':'')+'">S'+(i+1)+' '+(inj?'✓ '+esc(t('inj')):esc(t('offen')))+'</span>';
+    }).join('');
+    $('sKoord').textContent='E '+p.E.toFixed(2)+' · N '+p.N.toFixed(2)+(p.geb?' · '+t('gebohrt',{d:deDat(p.geb)}):'');
+  }
+  function sheetWeg(p){
+    $('sSub').textContent=[p.ber?t('bereich')+' '+p.ber:'', pos?wegText(meter(pos,p.ll)):''].filter(Boolean).join(' · ');
+  }
+  function blattWeg(){ $('deckel').classList.remove('an'); $('sheet').classList.remove('an'); aktiv=null; }
+  window.sheetZu=function(){
+    blattWeg();
+    if(gepusht){ gepusht=false; try{ history.back(); }catch(e){} }
+  };
+  window.addEventListener('popstate',function(){ gepusht=false; if(aktiv) blattWeg(); });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape' && aktiv) sheetZu(); });
+  function histMalen(f){
+    var es=eintraege(f).reverse();
+    if(!es.length){ $('sHist').innerHTML='<div class="sub">'+t('keine_rm')+'</div>'; return; }
+    $('sHist').innerHTML='<b style="font-size:13px">'+t('rms')+'</b>'+es.map(function(e){
+      /* Alles aus der RTDB (offen beschreibbar) nur maskiert oder geprüft ins HTML */
+      var s=ST[e.status]||ST.offen, ids=fotoIds(e), n=Math.min(fotoAnz(e)||ids.length, ids.length);
+      return '<div class="e"><span class="chip '+s.k+'">'+s.sym+' '+esc(t(s.t))+'</span> '
+        +'<span class="w">'+esc(e.von||'')+' · '+esc(deDat(e.datum))+'</span>'
+        +(e.text?'<div>'+esc(e.text)+'</div>':'')
+        +(n?'<span class="fl" data-f="'+esc(ids.join(','))+'" onclick="fotoZeigen(this)">'+esc(t(n>1?'foton':'foto1',{n:n}))+'</span><div class="fb"></div>':'')
+        +'</div>';
+    }).join('');
+  }
+  /* Fotos einzeln über die im Satz gespeicherten IDs – wie altlasten.html, aber das Bild wird per DOM gebaut
+     und nur ein echtes Base64-Bild angenommen (kein Ausbruch aus dem src-Attribut möglich) */
+  var BILD_RE=/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/;
+  window.fotoZeigen=function(el){
+    var box=el.nextSibling, ids=(el.dataset.f||'').split(',').filter(function(x){ return /^[A-Za-z0-9_-]{1,80}$/.test(x); });
+    el.textContent=t('lade');
+    Promise.all(ids.map(function(fid){ return fetch(RTDB+'/'+P_FOT+'/'+fid+'.json').then(function(r){ return r.json(); }); }))
+      .then(function(l){
+        box.innerHTML='';
+        var gut=l.filter(function(x){ return x && typeof x.data==='string' && BILD_RE.test(x.data); });
+        gut.forEach(function(x){ var i=document.createElement('img'); i.alt=''; i.src=x.data; box.appendChild(i); });
+        if(!gut.length){ var d=document.createElement('div'); d.className='sub'; d.textContent=t('kein_foto'); box.appendChild(d); }
+        el.style.display='none';
+      }).catch(function(){ el.textContent=t('foto_fehl'); });
+  };
+
+  /* ── Formular ── */
+  function statusMalen(){
+    Array.prototype.forEach.call($('wStatus').querySelectorAll('button'),function(b){ b.classList.toggle('on',b.dataset.s===stat); });
+  }
+  Array.prototype.forEach.call($('wStatus').querySelectorAll('button'),function(b){ b.onclick=function(){ stat=b.dataset.s; statusMalen(); }; });
+
+  /* Foto: 1400 px wie in einkauf.html / ls.html / altlasten.html */
+  function bildLesen(datei,fertig){
+    var img=new Image();
+    img.onload=function(){
+      var m=1400,w=img.width,h=img.height;
+      if(w>m||h>m){ if(w>h){ h=Math.round(h*m/w); w=m; } else { w=Math.round(w*m/h); h=m; } }
+      var c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      var d=c.toDataURL('image/jpeg',0.78);
+      if(d.length>1300000) d=c.toDataURL('image/jpeg',0.6);
+      URL.revokeObjectURL(img.src); fertig(d);
+    };
+    img.onerror=function(){ URL.revokeObjectURL(img.src); fertig(null); };
+    img.src=URL.createObjectURL(datei);
+  }
+  function fotosZeichnen(){
+    $('prev').innerHTML=fotos.map(function(f,i){
+      return '<div class="pg"><button type="button" class="del" onclick="fotoWeg('+i+')" title="'+t('entf')+'">✕</button><img src="'+f+'" alt=""></div>';
+    }).join('');
+  }
+  window.fotoWeg=function(i){ fotos.splice(i,1); fotosZeichnen(); };
+  function dateienAnhaengen(fl){
+    var f=Array.prototype.slice.call(fl||[]); if(!f.length) return;
+    $('status').textContent=t('foto_vorb');
+    (function naechste(){
+      if(!f.length){ $('status').textContent=(aktiv&&laeuft[aktiv])?t('m_send'):''; fotosZeichnen(); return; }
+      if(fotos.length>=MAX_FOTOS){ $('status').textContent=''; alert(t('max_fotos',{n:MAX_FOTOS})); return; }
+      bildLesen(f.shift(),function(d){ if(d) fotos.push(d); fotosZeichnen(); naechste(); });
+    })();
+  }
+  $('fCam').addEventListener('change',function(){ dateienAnhaengen(this.files); this.value=''; });
+  $('fDat').addEventListener('change',function(){ dateienAnhaengen(this.files); this.value=''; });
+
+  /* ── Warteschlange (IndexedDB) – wie altlasten.html / einkauf.html ──
+     Ohne IndexedDB (Privatmodus, WebView) oder bei vollem Speicher läuft sie im Arbeitsspeicher weiter (MEM):
+     online wird dann sofort gesendet, nur ein Neuladen vor dem Senden würde die Meldung verlieren. */
+  var Q=(function(){
+    var dbP=null, MEM=[];
+    function db(){
+      if(dbP) return dbP;
+      if(!window.indexedDB){ dbP=Promise.resolve(null); return dbP; }
+      dbP=new Promise(function(ok,fehl){
+        var a=window.indexedDB.open(IDB_NAME,1);
+        a.onupgradeneeded=function(){ if(!a.result.objectStoreNames.contains(IDB_STORE)) a.result.createObjectStore(IDB_STORE,{keyPath:'k'}); };
+        a.onsuccess=function(){ ok(a.result); }; a.onerror=function(){ fehl(a.error); }; a.onblocked=function(){ fehl(new Error('blockiert')); };
+      }).catch(function(){ return null; });
+      return dbP;
+    }
+    function tx(modus,arbeit){
+      return db().then(function(d){
+        if(!d) throw new Error('keine IndexedDB');
+        return new Promise(function(ok,fehl){
+          var tr=d.transaction(IDB_STORE,modus), s=tr.objectStore(IDB_STORE); var r=arbeit(s);
+          tr.oncomplete=function(){ ok(r&&r.result!==undefined?r.result:null); };
+          tr.onerror=function(){ fehl(tr.error); }; tr.onabort=function(){ fehl(tr.error||new Error('abgebrochen')); };
+        });
+      });
+    }
+    function memWeg(k){ MEM=MEM.filter(function(x){ return x.k!==k; }); }
+    return {
+      add:function(job){ return tx('readwrite',function(s){ return s.put(job); })
+        .catch(function(){ memWeg(job.k); MEM.push(job); }); },
+      alle:function(){ return tx('readonly',function(s){ return s.getAll(); })
+        .then(function(r){ return (r||[]).concat(MEM); }).catch(function(){ return MEM.slice(); }); },
+      weg:function(k){ memWeg(k); return tx('readwrite',function(s){ return s.delete(k); }).catch(function(){}); }
+    };
+  })();
+  function netzMalen(){
+    Q.alle().then(function(a){
+      var e=$('netz'); e.className='netz'+(netzAn()?'':' off');
+      e.textContent=(netzAn()?'online':'offline')+(a.length?t('n_offen',{n:a.length}):'');
+    });
+  }
+  window.addEventListener('online',function(){ netzMalen(); pendSenden(); });
+  window.addEventListener('offline',netzMalen);
+  /* Am Berg meldet das Handy bei schwachem Empfang oft «online», das online-Ereignis kommt dann nie:
+     solange etwas wartet, jede Minute ein neuer Versuch */
+  setInterval(function(){ Q.alle().then(function(a){ if(a.length) pendSenden(); }); },60000);
+
+  /* Erst die Fotos (eigener Knoten), dann der Satz mit dem Verweis – kein Satz zeigt auf ein Foto, das nie ankam.
+     Kommt während eines Laufs ein neuer Satz dazu, läuft direkt danach ein zweiter Lauf (nochmal). */
+  var sendeLaeuft=null, nochmal=false;
+  function nachSenden(){ markerMalen(); zaehlen(); if(!$('t-liste').hidden) listeBauen(); if(aktiv) histMalen(aktiv); }
+  function einLauf(){
+    return Q.alle().then(function(jobs){
+      return jobs.reduce(function(kette,j){
+        return kette.then(function(){
+          var rec={}; for(var s in j.rec) rec[s]=j.rec[s];
+          var bilder=j.fotos||[];
+          return bilder.reduce(function(k2,data,ix){
+            return k2.then(function(){
+              var fid='f_'+j.k+'_'+ix;
+              return fetch(RTDB+'/'+P_FOT+'/'+fid+'.json',{method:'PUT',
+                body:JSON.stringify({eintrag:j.k,punkt:j.f,von:rec.von,ts:rec.ts,data:data,mime:'image/jpeg',nr:ix+1})})
+                .then(function(r){ if(!r.ok) throw 0; rec.fotos=rec.fotos||{}; rec.fotos[fid]=true; });
+            });
+          },Promise.resolve()).then(function(){
+            rec.anzahl_fotos=bilder.length;
+            return fetch(RTDB+'/'+P_RUECK+'/'+j.f+'/'+j.k+'.json',{method:'PUT',body:JSON.stringify(rec)});
+          }).then(function(r){ if(r&&r.ok){ R[j.f]=objekt(R[j.f]); R[j.f][j.k]=rec; return Q.weg(j.k); } }).catch(function(){});
+        });
+      },Promise.resolve());
+    });
+  }
+  function pendSenden(){
+    if(!netzAn()) return Promise.resolve();
+    if(sendeLaeuft){ nochmal=true; return sendeLaeuft; }
+    sendeLaeuft=einLauf().catch(function(){}).then(function(){
+      sendeLaeuft=null;
+      if(nochmal && netzAn()){ nochmal=false; return pendSenden(); }
+      nochmal=false;
+    }).then(function(){ netzMalen(); nachSenden(); });
+    return sendeLaeuft;
+  }
+  /* Gemeinsamer Weg für Senden und «wieder offen»: erst in die Warteschlange, dann senden.
+     Das Ergebnis erscheint nur im Blatt DIESES Beins – ist inzwischen ein anderes offen, bleibt dieses unberührt. */
+  function abschicken(f,rec,bilder,okText){
+    var id='r_'+Date.now()+'_'+Math.round(Math.random()*1e6);
+    /* Entwurf sofort leeren (der Job hat seine eigene Kopie der Fotos) und das Bein bis zum Ende sperren */
+    laeuft[f]=true; if(entwurfF===f){ entwurfF=null; fotos=[]; fotosZeichnen(); $('fText').value=''; }
+    $('btnSend').disabled=true; $('status').textContent=t('m_send');
+    return Q.add({k:id, f:f, rec:rec, fotos:bilder}).then(function(){ return pendSenden(); }).then(function(){ return Q.alle(); })
+      .then(function(rest){
+        var offen=rest.some(function(j){ return j.k===id; });
+        if(offen){ var lokal={}; for(var s in rec) lokal[s]=rec[s]; lokal.anzahl_fotos=bilder.length;
+          R[f]=objekt(R[f]); R[f][id]=lokal; nachSenden(); }
+        delete laeuft[f];
+        if(aktiv===f){
+          $('status').textContent=t(offen?(netzAn()?'m_warte':'m_offl'):okText);
+          setTimeout(function(){ if(aktiv===f) sheetZu(); },1400);
+        }
+      }).catch(function(){ delete laeuft[f]; if(aktiv===f){ $('btnSend').disabled=false; $('status').textContent=t('m_warte'); } });
+  }
+
+  window.senden=function(){
+    if(!aktiv || laeuft[aktiv]) return;
+    var text=$('fText').value.trim(), von=$('fVon').value.trim();
+    if((stat==='injiziert'||stat==='war_schon') && !fotos.length){ alert(t('m_foto')); return; }
+    if(stat==='problem' && !text){ alert(t('m_text')); $('fText').focus(); return; }
+    if(!von){ alert(t('m_name')); $('fVon').focus(); return; }
+    try{ localStorage.setItem(LS_VON,von); }catch(e){}
+    var f=aktiv, p=P[f];
+    abschicken(f,{ ts:Date.now(), datum:heute(), status:stat, text:text, von:von, quelle:'web', fuss:f, tisch:p?p.tisch:'' },
+      fotos.slice(), stat==='problem'?'m_gesp':'m_ok');
+  };
+  window.wiederOffen=function(){
+    if(!aktiv || laeuft[aktiv]) return;
+    var von=$('fVon').value.trim(); if(!von){ alert(t('m_name')); $('fVon').focus(); return; }
+    try{ localStorage.setItem(LS_VON,von); }catch(e){}
+    var f=aktiv;
+    abschicken(f,{ ts:Date.now(), datum:heute(), status:'offen', text:$('fText').value.trim()||t('m_versehen'), von:von,
+      quelle:'web', fuss:f, tisch:(P[f]||{}).tisch||'' }, [], 'm_gesp');
+  };
+
+  /* ── Sprache ── */
+  function sprache(l,merken){
+    LANG=(l==='pt'||l==='en')?l:'de';
+    if(merken){ try{ localStorage.setItem(LS_LANG,LANG); }catch(e){} }
+    document.documentElement.lang=LANG; document.title=t('doc');
+    Array.prototype.forEach.call(document.querySelectorAll('[data-i]'),function(el){ el.innerHTML=t(el.dataset.i); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-iph]'),function(el){ el.placeholder=t(el.dataset.iph); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-iti]'),function(el){ el.title=t(el.dataset.iti); });
+    Array.prototype.forEach.call($('lang').querySelectorAll('button'),function(b){ b.classList.toggle('on',b.dataset.l===LANG); });
+    statusMalen(); netzMalen();
+    if(!bohr) return;
+    standMalen(); markerMalen();
+    if(!$('t-liste').hidden) listeBauen();
+    if(aktiv && P[aktiv]){ sheetTexte(P[aktiv]); histMalen(aktiv); }
+  }
+  Array.prototype.forEach.call($('lang').querySelectorAll('button'),function(b){ b.onclick=function(){ sprache(b.dataset.l,true); }; });
+  (function(){ var l=''; try{ l=localStorage.getItem(LS_LANG)||''; }catch(e){}
+    if(!l){ var n=String(navigator.language||'').toLowerCase(); l=/^pt/.test(n)?'pt':(/^en/.test(n)?'en':'de'); }
+    sprache(l,false); })();
+
+  /* ── Start ── */
+  laden().then(function(){
+    ladeStand='ok';
+    sprache(LANG,false);
+    zaehlen(); standMalen(); netzMalen(); pendSenden();
+    var start=(location.hash||'').replace('#','');
+    if(/^f=/.test(start)){ tab('k2d'); var f=decodeURIComponent(start.slice(2)); setTimeout(function(){ if(P[f]){ zeige(f); sheetAuf(f); } },300); }
+    else if(['liste','info'].indexOf(start)>=0) tab(start);
+    else tab('k2d');
+  }).catch(function(e){ console.warn('Daten',e); ladeStand='fehler'; tab('liste'); });
+})();
+if('serviceWorker' in navigator){ window.addEventListener('load',function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
+</script>
+</body>
+</html>

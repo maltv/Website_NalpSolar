@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v199';
+var CACHE = 'nalpsolar-v200';
 var PRECACHE = [
   './index.html',
   // Webapp-Manifest + Icons des Portals (22.09.2026, Tools\Portal_Icons_Bauen.py) und die
@@ -13,6 +13,7 @@ var PRECACHE = [
   './assets/img/ico/tagesrapport.png',  // Kachel Tagesrapport (23.09.2026)
   './assets/img/ico/ueberstand.png',   // Kachel Schrägpfahl (22.09.2026)
   './assets/img/ico/altlasten.png',
+  './assets/img/ico/pfahlkopf.png',   // Kachel Injektion Einzelbeine (28.09.2026)
   './assets/img/ico/wasserleitung.png',
   './assets/img/ico/vormontage.png',
   './assets/img/ico/stahlbau.png',
@@ -36,6 +37,7 @@ var PRECACHE = [
   './uploads/wasserleitung.json',
   './altlasten.html',
   './uploads/altlasten.json',
+  './injektion.html',   // Injektion Einzelbeine ablaufen (28.09.2026, WERKZEUGE §68)
   // './gewinde.html',   abgeschaltet 28.08.2026 (Auftrag Victor)
   // './pfahlkopf.html',   abgeschaltet 28.08.2026 (Auftrag Victor)
   './einzelfundamente.html',
@@ -170,6 +172,10 @@ self.addEventListener('fetch', function(e) {
   var url = e.request.url;
   var isExternal = url.includes('geo.admin.ch') || url.includes('api3.geo.admin.ch');
 
+  // BuildTrack-Live-Feed (injektion.html): nie über den Service Worker, sonst friert der Live-Abgleich ein und
+  // in Nalpi abgehakte Beine bleiben offen. Die Seite hat ohne Netz ihre eigene Kopie (localStorage). 28.09.2026
+  if (url.indexOf('api.buildtrack.ch/api/v1/drillpoints/') !== -1) return;
+
   // External map tiles/images: network first, fall back to cache (offline)
   if (isExternal) {
     e.respondWith(
@@ -182,7 +188,8 @@ self.addEventListener('fetch', function(e) {
   // fall back to cache when offline.
   var isFresh = e.request.mode === 'navigate'
     || url.endsWith('.html') || url.endsWith('.json')
-    || url.indexOf('nalp-passstueck-') !== -1;   // SOLL-Daten/Konstanten: immer network first
+    || url.indexOf('nalp-passstueck-') !== -1   // SOLL-Daten/Konstanten: immer network first
+    || url.indexOf('api.buildtrack.ch') !== -1;   // Mängel-Feed stahlbau/verschrauben: lief cache-first und blieb stehen (28.09.2026)
   if (isFresh) {
     e.respondWith(
       fetch(e.request).then(function(resp) {
