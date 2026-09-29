@@ -18,7 +18,7 @@
   .wrap{max-width:820px;margin:0 auto;padding:0 14px 60px;}
 
   .top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
-    padding:10px 14px calc(10px + env(safe-area-inset-top));margin:0 -14px 14px;
+    padding:10px 14px calc(10px + env(safe-area-inset-top));margin:0 0 14px;
     color:#e8eef7;background:radial-gradient(120% 160% at 0 0,#173657,#0b1826);box-shadow:0 2px 14px rgba(0,0,0,.3);}
   .top .brand{font-size:10px;letter-spacing:.22em;font-weight:800;color:#ffc340;text-transform:uppercase;}
   .top h1{font-size:16px;font-weight:900;margin:1px 0 0;}
@@ -84,6 +84,11 @@
   .legende span::before{content:"";display:inline-block;width:18px;height:6px;border-radius:3px;margin-right:6px;vertical-align:middle;}
   .legende .l-soll::before{background:#9aa7b4;} .legende .l-ist::before{background:#e0691b;} .legende .l-neu::before{background:#1c8a4a;}
   .legende .l-st::before{background:#3d4a5c;} .legende .l-rad::before{background:#7a1fa2;}
+  .legende .l-ef::before{background:#d63a3f;} .legende .l-nah::before{background:#e0691b;}
+  .legende .l-blk::before{background:#c98a4b;} .legende .l-plan::before{background:#c9d1db;}
+  .legende .l-geb::before{width:10px;height:10px;border-radius:50%;background:#fff;border:2.5px solid #14202e;}
+  table.st td.num{font-variant-numeric:tabular-nums;white-space:nowrap;}
+  table.st td .nt{font-size:11.5px;color:var(--muted);}
 
   .formel{background:linear-gradient(135deg,#12304f,#0b1826);color:#e8eef7;border-radius:14px;padding:14px;}
   .formel .f{font-size:18px;font-weight:900;margin:6px 0;}
@@ -117,6 +122,25 @@
 </div>
 
 <div class="wrap">
+
+  <!-- ============ Baupiste B3: Einzelfundamente am Kabelrohrblock (Auswertung 28.09.2026) ============ -->
+  <div class="card" id="b3">
+    <h2 data-i="b3_h"></h2>
+    <div class="lead" style="margin-bottom:10px;" data-i="b3_lead"></div>
+    <div class="tblwrap">
+      <table class="st">
+        <thead><tr data-i="b3_th"></tr></thead>
+        <tbody id="tbB3"></tbody>
+      </table>
+    </div>
+    <div class="sk" id="skB3"></div>
+    <div class="legende" data-i="b3_leg"></div>
+    <div class="hint" data-i="b3_hint"></div>
+    <details>
+      <summary data-i="q_sum"></summary>
+      <div class="inner quelle" data-i="b3_q"></div>
+    </details>
+  </div>
 
   <!-- ============ Worum es geht ============ -->
   <div class="card">
@@ -269,7 +293,18 @@
     sk_pf:'Mikropfahl {e}°', sk_pfl:'Mikropfahl lotrecht', sk_rad:'Radius = Stützenlänge', sk_rad2:'hier darf der Fuss überall liegen',
     sk_c_raus:'▶ Pfahl {a} {t}', sk_c_raus2:'Kopf trifft den Kreis · Stütze behält ihre Länge, dreht {d}°',
     sk_c_prob:'▶ Pfahl sitzt {x}', sk_c_prob2:'Achse parallel neben dem SOLL – Stütze passt so nicht',
-    sk_zutief:'zu tief', sk_zuhoch:'zu hoch', sk_zuweit:'zu weit', sk_lupe:'Lupe: Pfahlkopf', sk_soll:'SOLL', sk_ist:'IST', sk_kreis:'Kreis', sk_auf:'auf dem Kreis ✓'
+    sk_zutief:'zu tief', sk_zuhoch:'zu hoch', sk_zuweit:'zu weit', sk_lupe:'Lupe: Pfahlkopf', sk_soll:'SOLL', sk_ist:'IST', sk_kreis:'Kreis', sk_auf:'auf dem Kreis ✓',
+    // Baupiste B3
+    b3_h:'Baupiste B3 · Hier kommen Einzelfundamente',
+    b3_lead:'Der Kabelrohrblock Strang B liegt in B3 unter den bergseitigen Stützen der Tische 460 und 461 – laut Sondagen vom 14.09.2026 <b>0.56 bis 1.09 m bergseitig</b> neben der ILF-Achse (OK Block 1990.16–1990.41 m ü. M.). An drei Punkten würde der Pfahl den Block treffen: dort wird <b>nicht gebohrt</b>, es kommt ein Einzelfundament auf den Block (ILF-Konzept 16.09.2026).',
+    b3_th:'<th>Punkt · was tun</th><th>E / N <i>LV95</i></th><th>SOLL-Kopf <i>m ü. M.</i></th>',
+    b3_ef:'<b style="color:#d63a3f">Einzelfundament</b> – nicht bohren', b3_ef_n:'Bohrung läge {x} cm im Block',
+    b3_nah:'<b style="color:#e0691b">bohren</b> – nur {x} cm Luft zum Block', b3_nah_n:'beim Abstecken und Bohren aufpassen',
+    b3_geb:'Tisch {t}: alle vier Pfähle am {d} gebohrt (Nalpi).',
+    b3_leg:'<span class="l-ef">Einzelfundament</span><span class="l-nah">nahe am Block</span><span class="l-geb">gebohrt (Nalpi)</span><span class="l-blk">Block eingemessen</span><span class="l-plan">Block nach ILF-Plan</span>',
+    b3_hint:'Lageplan massstäblich, bergwärts oben (Nordpfeil). Luft = kleinster waagrechter Abstand der Pfahlachse (0.3–2.0 m unter dem Kopf, mit Neigung) zur Blockkante, minus Bohrradius. Ausserhalb der drei Sondagen ist die wirkliche Lage des Blocks unbekannt (kein As-built).',
+    b3_q:'Sondagen 14.09.2026 (Punkte 1341–1346, beide Blockkanten an 3 Stellen) · ILF-Absteckungsliste <i>NalpSolar_51_LI_0412_A10</i> (Grabenachse Strang B) · Bohrpunkte Nalpi 26.09./29.09.2026 · Auswertung STRABAG 28.09.2026 · ILF-Konzept Einzelfundament, Mail vom 16.09.2026.',
+    b3_berg:'BERG', b3_tal:'TAL'
   },
   en: {
     titel:'Inclined pile · position & pull-out', doc:'NalpSolar · Inclined pile – position & pull-out',
@@ -320,7 +355,18 @@
     sk_pf:'Micropile {e}°', sk_pfl:'Micropile vertical', sk_rad:'Radius = strut length', sk_rad2:'the foot may sit anywhere here',
     sk_c_raus:'▶ {a} pile {t}', sk_c_raus2:'Head meets the circle · strut keeps its length, rotates {d}°',
     sk_c_prob:'▶ Pile sits {x}', sk_c_prob2:'Axis parallel beside the design – strut does not fit like this',
-    sk_zutief:'too low', sk_zuhoch:'too high', sk_zuweit:'too far', sk_lupe:'Magnifier: pile head', sk_soll:'DESIGN', sk_ist:'AS BUILT', sk_kreis:'circle', sk_auf:'on the circle ✓'
+    sk_zutief:'too low', sk_zuhoch:'too high', sk_zuweit:'too far', sk_lupe:'Magnifier: pile head', sk_soll:'DESIGN', sk_ist:'AS BUILT', sk_kreis:'circle', sk_auf:'on the circle ✓',
+    // construction road B3
+    b3_h:'Construction road B3 · single foundations here',
+    b3_lead:'In B3 the cable duct block of line B runs under the uphill posts of tables 460 and 461 – according to the trial pits of 14.09.2026 it lies <b>0.56 to 1.09 m uphill</b> of the ILF axis (top of block 1990.16–1990.41 m a.s.l.). At three points the pile would hit the block: there is <b>no drilling</b>, a single foundation is placed on the block instead (ILF concept 16.09.2026).',
+    b3_th:'<th>Point · what to do</th><th>E / N <i>LV95</i></th><th>Design head <i>m a.s.l.</i></th>',
+    b3_ef:'<b style="color:#d63a3f">Single foundation</b> – do not drill', b3_ef_n:'drill hole would be {x} cm inside the block',
+    b3_nah:'<b style="color:#e0691b">Drill</b> – only {x} cm clearance to the block', b3_nah_n:'take care when setting out and drilling',
+    b3_geb:'Table {t}: all four piles drilled on {d} (Nalpi).',
+    b3_leg:'<span class="l-ef">single foundation</span><span class="l-nah">close to the block</span><span class="l-geb">drilled (Nalpi)</span><span class="l-blk">block as surveyed</span><span class="l-plan">block per ILF plan</span>',
+    b3_hint:'Site plan to scale, uphill at the top (see north arrow). Clearance = smallest horizontal distance of the pile axis (0.3–2.0 m below the head, with inclination) to the block edge, minus drill radius. Outside the three trial pits the true position of the block is unknown (no as-built survey).',
+    b3_q:'Trial pits 14.09.2026 (points 1341–1346, both block edges at 3 places) · ILF setting-out list <i>NalpSolar_51_LI_0412_A10</i> (trench axis line B) · drilling points Nalpi 26.09./29.09.2026 · evaluation STRABAG 28.09.2026 · ILF single-foundation concept, mail of 16.09.2026.',
+    b3_berg:'UPHILL', b3_tal:'VALLEY'
   }};
   var LANG='de';
   function t(k){ var d=TXT[LANG]||TXT.de; return d[k]!==undefined?d[k]:(TXT.de[k]||k); }
@@ -332,7 +378,7 @@
     var ph=document.querySelectorAll('[data-ip]'); for(var j=0;j<ph.length;j++){ ph[j].placeholder=t(ph[j].getAttribute('data-ip')); }
     markiere($('pLang'),LANG);
     if(merken){ try{ localStorage.setItem('nalp_pfahllage_lang',LANG); }catch(e){} }
-    merktabelle(); rechne();
+    merktabelle(); b3(); rechne();
   }
 
   // ---- Typendaten -----------------------------------------------------------------------
@@ -390,6 +436,91 @@
     ['A','B','C','D','E'].forEach(function(k){ var T=TYP[k], r=rechneKreis(T.eps,T.eps,T.R*1000,0,-100);
       h+='<tr><td><b>'+k+'</b></td><td>'+T.eps+'°</td><td>'+T.R.toFixed(1)+' m</td><td><b>'+(r?cm(r.t):'–')+'</b></td><td>'+(r?cm(r.tFull):'–')+'</td></tr>'; });
     $('tbMerk').innerHTML=h;
+  }
+
+  // ---- Baupiste B3: Einzelfundamente am Kabelrohrblock Strang B --------------------------------------
+  // Auswertung 28.09.2026 (Baupiste_Rueckbau\260928_KRB_StrangB): Achse ILF LI 0412 A10 (Punkte 031–038),
+  // Block eingemessen = Sondagen 14.09.2026 (1341–1346), Punkte + Klasse aus Bohrpunkte_BaupisteB_KRB_260928.csv,
+  // gebohrt = DRILL_DATE im Nalpi-Export 29.09.2026. Klasse r = Pfahlachse im Block, o = nahe, y = aufpassen, g = frei.
+  var B3 = {
+    achse:[[2701800.761,1165936.682],[2701815.996,1165905.803],[2701817.49,1165901.698],[2701818.598,1165897.16],[2701821.628,1165890.455],[2701825.706,1165884.614],[2701826.926,1165882.782],[2701831.419,1165875.7]],
+    ist:[[2701813.247,1165915.247],[2701815.531,1165909.622],[2701819.559,1165898.122],[2701818.492,1165897.415],[2701814.416,1165908.828],[2701812.042,1165914.87]],
+    // [Punkt, E, N, H SOLL-Kopf, Klasse, Luft m, gebohrt]
+    p:[
+      ['1627_S1',2701824.648,1165894.32,1992.664,'g',3.58,1],['1627_S2',2701827.229,1165895.635,1993.474,'g',6.64,1],
+      ['1627_S3',2701830.62,1165889.065,1993.407,'g',5.98,1],['1627_S4',2701828.004,1165887.732,1992.584,'g',2.9,1],
+      ['1628_S1',2701818.728,1165905.953,1992.293,'g',1.7,0],['1628_S2',2701821.323,1165907.275,1993.395,'g',4.76,0],
+      ['1628_S3',2701824.413,1165900.551,1993.914,'g',5.43,0],['1628_S4',2701822.084,1165899.365,1991.978,'g',2.66,0],
+      ['1629_S1',2701812.806,1165917.575,1992.226,'y',0.33,0],['1629_S2',2701815.437,1165918.916,1993.428,'g',3.45,0],
+      ['1629_S3',2701818.654,1165912.256,1993.7,'g',3.96,0],['1629_S4',2701816.162,1165910.987,1992.36,'y',1.01,0],
+      ['435_S1',2701816.437,1165886.445,1988.93,'g',5.79,0],['435_S2',2701819.119,1165887.812,1989.911,'y',1.66,1],
+      ['435_S3',2701822.704,1165881.34,1989.468,'g',2.4,1],['435_S4',2701819.793,1165879.857,1988.198,'g',6.79,1],
+      ['436_S1',2701811.009,1165898.235,1988.582,'g',6.65,1],['436_S2',2701813.788,1165899.473,1989.776,'g',2.47,0],
+      ['436_S3',2701816.548,1165892.608,1990.246,'y',1.82,0],['436_S4',2701814.017,1165891.481,1988.852,'g',5.75,0],
+      ['437_S1',2701805.765,1165910.014,1988.288,'g',7.51,1],['437_S2',2701808.742,1165911.34,1989.489,'g',3.1,0],
+      ['437_S3',2701811.697,1165904.562,1989.589,'g',2.74,0],['437_S4',2701808.773,1165903.26,1988.653,'g',7.08,1],
+      ['459_S1',2701820.304,1165888.99,1990.916,'y',1.16,1],['459_S2',2701823.009,1165890.929,1991.102,'o',0.81,1],
+      ['459_S3',2701826.96,1165884.663,1991.861,'o',0.48,1],['459_S4',2701824.61,1165882.98,1990.455,'o',1.05,1],
+      ['460_S1',2701815.223,1165901.362,1990.708,'g',1.64,0],['460_S2',2701818.005,1165902.287,1991.71,'r',-0.03,0],
+      ['460_S3',2701820.649,1165895.375,1991.145,'o',0.15,0],['460_S4',2701817.559,1165894.346,1990.857,'g',1.77,0],
+      ['461_S1',2701810.051,1165913.309,1990.168,'g',2.31,0],['461_S2',2701812.934,1165914.632,1991.204,'r',-0.47,0],
+      ['461_S3',2701815.812,1165907.818,1991.598,'r',-0.26,0],['461_S4',2701813.137,1165906.589,1990.92,'g',1.86,0]
+    ],
+    gebohrtAm:'28.09.2026', tischGebohrt:'459'
+  };
+  function b3(){
+    var h='', nah=function(q){ return q[4]==='o' && q[5]<0.3 && !q[6]; };
+    B3.p.filter(function(q){ return q[4]==='r'||nah(q); }).sort(function(a,b){ var x=a[0].split('_'), y=b[0].split('_'); return (+y[0])-(+x[0]) || (x[1]<y[1]?-1:1); }).forEach(function(q){
+      var ef=q[4]==='r', x=Math.round(Math.abs(q[5])*100);
+      h+='<tr><td><b style="white-space:nowrap;">'+q[0].replace('_',' ')+'</b><br>'+f(ef?'b3_ef':'b3_nah',{x:x})+'<br><span class="nt">'+f(ef?'b3_ef_n':'b3_nah_n',{x:x})+'</span></td>'
+        +'<td class="num">'+q[1].toFixed(3)+'<br>'+q[2].toFixed(3)+'</td><td class="num">'+q[3].toFixed(3)+'</td></tr>';
+    });
+    h+='<tr><td colspan="3" style="color:var(--muted);font-size:12.5px;">'+f('b3_geb',{t:B3.tischGebohrt, d:B3.gebohrtAm})+'</td></tr>';
+    $('tbB3').innerHTML=h;
+    $('skB3').innerHTML=skB3();
+  }
+  // Lageplan: gedreht, damit die Tischachse Tal→Berg nach oben zeigt (Mittel aus S1→S2 und S4→S3 aller Tische)
+  function skB3(){
+    var byT={}, hx=0, hy=0;
+    B3.p.forEach(function(q){ var a=q[0].split('_'); (byT[a[0]]=byT[a[0]]||{})[a[1]]=q; });
+    for(var k in byT){ var o=byT[k]; hx+=o.S2[1]-o.S1[1]+o.S3[1]-o.S4[1]; hy+=o.S2[2]-o.S1[2]+o.S3[2]-o.S4[2]; }
+    var hl=Math.sqrt(hx*hx+hy*hy); hx/=hl; hy/=hl; var rx=hy, ry=-hx, E0=2701818, N0=1165899;
+    var U=function(e,n){ return (e-E0)*rx+(n-N0)*ry; }, V=function(e,n){ return (e-E0)*hx+(n-N0)*hy; };
+    var u0=1e9,u1=-1e9,v0=1e9,v1=-1e9;
+    B3.p.forEach(function(q){ var u=U(q[1],q[2]), v=V(q[1],q[2]); u0=Math.min(u0,u); u1=Math.max(u1,u); v0=Math.min(v0,v); v1=Math.max(v1,v); });
+    u0-=2; u1+=2; v0-=2.5; v1+=3.5;
+    var W=600, sc=W/(u1-u0), H=Math.round((v1-v0)*sc)+26;
+    var X=function(e,n){ return (U(e,n)-u0)*sc; }, Y=function(e,n){ return (v1-V(e,n))*sc; };
+    var pts=function(a){ return a.map(function(c){ return X(c[0],c[1]).toFixed(1)+','+Y(c[0],c[1]).toFixed(1); }).join(' '); };
+    var s='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" role="img"><rect width="'+W+'" height="'+H+'" fill="#f7f9fc"/>';
+    s+='<clipPath id="b3clip"><rect width="'+W+'" height="'+H+'"/></clipPath><g clip-path="url(#b3clip)">';
+    // Block nach ILF-Plan (Achse ±0.70 m) als breiter Strich, Achse gestrichelt, Block eingemessen
+    s+='<polyline points="'+pts(B3.achse)+'" fill="none" stroke="#c9d1db" stroke-width="'+(1.40*sc).toFixed(1)+'" stroke-linejoin="round"/>';
+    s+='<polyline points="'+pts(B3.achse)+'" fill="none" stroke="#8a97a6" stroke-width="1.2" stroke-dasharray="8 6"/>';
+    s+='<polygon points="'+pts(B3.ist)+'" fill="#c98a4b" fill-opacity=".85" stroke="#8a5a2b" stroke-width="1.5"/>';
+    // Tische
+    for(var tk in byT){ var o2=byT[tk], ring=[o2.S1,o2.S2,o2.S3,o2.S4];
+      s+='<polygon points="'+ring.map(function(q){ return X(q[1],q[2]).toFixed(1)+','+Y(q[1],q[2]).toFixed(1); }).join(' ')+'" fill="#ffffff" fill-opacity=".55" stroke="#b3bfcc" stroke-width="1.2"/>';
+      var cx=0, cy=0; ring.forEach(function(q){ cx+=X(q[1],q[2])/4; cy+=Y(q[1],q[2])/4; });
+      s+=T(cx,cy+4,tk,'#6b7986','middle',12.5); }
+    // Punkte
+    var FARBE={r:'#d63a3f', o:'#e0691b', y:'#e8a012', g:'#9aa7b4'};
+    B3.p.forEach(function(q){ var x=X(q[1],q[2]), y=Y(q[1],q[2]);
+      if(q[6]) s+=C(x,y,8.5,'#fff','#14202e');
+      if(q[4]==='r'){ s+='<rect x="'+(x-7).toFixed(1)+'" y="'+(y-7).toFixed(1)+'" width="14" height="14" rx="2" fill="#d63a3f" stroke="#fff" stroke-width="1.5"/>'; }
+      else s+=C(x,y,5,FARBE[q[4]],'#fff');
+      if(q[4]==='r'||(q[4]==='o'&&!q[6])) s+=T(x+11,y-8,q[0].replace('_',' '),q[4]==='r'?'#b3242a':'#b5510f','start',12.5);
+    });
+    s+='</g>';
+    // Tal/Berg, Nordpfeil, Massstab (Block steht in der Legende)
+    s+=T(12,20,'▲ '+t('b3_berg'),'#7a6a52','start',12.5); s+=T(12,H-10,'▼ '+t('b3_tal'),'#7a6a52','start',12.5);
+    var nx=W-34, ny=38, dx=ry, dy=-hy;   // Nordrichtung (0,1) im Bild
+    s+=L(nx-dx*18,ny-dy*18,nx+dx*18,ny+dy*18,'#14202e',2.2);
+    s+='<polygon points="'+(nx+dx*22).toFixed(1)+','+(ny+dy*22).toFixed(1)+' '+(nx+dx*12-dy*6).toFixed(1)+','+(ny+dy*12+dx*6).toFixed(1)+' '+(nx+dx*12+dy*6).toFixed(1)+','+(ny+dy*12-dx*6).toFixed(1)+'" fill="#14202e"/>';
+    s+=T(nx+dx*34,ny+dy*34+4,'N','#14202e','middle',13);
+    var mx=W-20-5*sc, my=H-14; s+=L(mx,my,mx+5*sc,my,'#14202e',3); s+=L(mx,my-5,mx,my+5,'#14202e',1.5); s+=L(mx+5*sc,my-5,mx+5*sc,my+5,'#14202e',1.5);
+    s+=T(mx+2.5*sc,my-8,'5 m','#14202e','middle',11.5);
+    s+='</svg>'; return s;
   }
 
   // ---- Rechnung -------------------------------------------------------------------------
