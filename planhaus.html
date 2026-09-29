@@ -4,17 +4,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NalpSolar Planhaus</title>
+<link rel="stylesheet" href="assets/js/leaflet/leaflet.css">
 <!--
-  Bildschirm im Planhaus (TV Hisense 55A7KQ, VIDAA-Browser). Zeigt die Kennzahlen
-  der Nalpi-Uebersicht, fast live.
+  Bildschirm im Planhaus (TV Hisense 55A7KQ, VIDAA-Browser). Wechselt alle 15 s zwischen
+  den Kennzahlen der Nalpi-Uebersicht und der Karte mit den Tischfarben aus Nalpi.
 
-  Daten: Firebase-RTDB erfassung/planhaus/stand - geschrieben von
-  Tools\Planhaus_Live.py (PC, holt Nalpi ueber den angemeldeten Edge). Diese Seite
-  rechnet NICHTS nach, sie zeichnet nur; die Regeln stehen im Skript bzw. in Nalpi.
+  Daten: Firebase-RTDB erfassung/planhaus/stand (Kennzahlen) + erfassung/planhaus/karte
+  (Tischumrisse + Stufe + Farben). Geschrieben von Nalpi selbst (Planhaus-Sender in der
+  Extension), sobald irgendwer im Team Nalpi offen hat - kein PC, kein Server.
+  Diese Seite rechnet NICHTS nach, sie zeichnet nur; Regeln und Farben stehen in Nalpi.
 
   Bewusst altes JavaScript (var, function, XMLHttpRequest): der TV-Browser ist ein
-  abgespecktes Chromium unbekannten Alters.
-  Ohne PIN-Gate: es stehen nur Summen drauf, dieselben wie in baustand.json.
+  abgespecktes Chromium unbekannten Alters. Karte = Leaflet 2D (kein WebGL).
+  Ohne PIN-Gate: es stehen nur Summen und Tischfarben drauf, wie in baustand.json.
+  Aufruf-Schalter: ?sek=15 (Wechseltakt), ?nur=dash oder ?nur=karte (kein Wechsel).
 -->
 <style>
   :root {
@@ -105,9 +108,37 @@
   .fuss { font-size: 0.8rem; color: var(--muted); margin-top: 0.6rem; display: flex; }
   .fuss span:first-child { flex: 1; }
   .hinweis { display: none; background: #fff4e6; color: #7c2d12; border-radius: 0.4rem; padding: 0.5rem 0.9rem; margin-top: 0.8rem; font-size: 1.1rem; }
+
+  /* Zwei Seiten uebereinander, Wechsel per Ueberblendung */
+  .seite { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; overflow: hidden; background: var(--bg);
+    -webkit-transition: opacity 1.2s; transition: opacity 1.2s; }
+  .seite.aus { opacity: 0; }
+
+  /* Karte: Flaeche groesser als der Schirm, gleitet langsam hin und her (nur transform = fluessig) */
+  #seiteKarte { background: #2b2f33; }
+  #kartenFlaeche { position: absolute; left: 0; top: 0; }
+  #kartenFlaeche .leaflet-container, #kartenFlaeche { background: #2b2f33; }
+  .kkopf { position: absolute; left: 0; right: 0; top: 0; display: flex; align-items: center;
+    padding: 0.8rem 1.4rem 0.6rem; background: rgba(255, 255, 255, 0.92); border-bottom: 0.2rem solid var(--rot); }
+  .kkopf img { height: 2.4rem; margin-right: 1.2rem; }
+  .kkopf h1 { font-size: 1.9rem; margin: 0; font-weight: 700; flex: 1; }
+  .kkopf h1 span { color: var(--muted); font-weight: 400; }
+  .klegende { position: absolute; left: 1.4rem; bottom: 1.4rem; background: rgba(255, 255, 255, 0.94);
+    border-radius: 0.6rem; padding: 0.9rem 1.2rem 0.7rem; font-size: 1.15rem; }
+  .klegende .titel { margin-bottom: 0.4rem; }
+  .klegende div.z { display: flex; align-items: center; line-height: 1.75; }
+  .klegende i { display: inline-block; width: 1.5rem; height: 0.9rem; border-radius: 0.15rem; margin-right: 0.6rem;
+    border: 0.08rem solid rgba(0, 0, 0, 0.35); }
+  .klegende .n { font-weight: 700; min-width: 3.2rem; text-align: right; margin-right: 0.7rem; }
+  .khinweis { display: none; position: absolute; left: 50%; top: 5.6rem; -webkit-transform: translateX(-50%); transform: translateX(-50%);
+    background: #fff4e6; color: #7c2d12; border-radius: 0.4rem; padding: 0.5rem 0.9rem; font-size: 1.1rem; white-space: nowrap; }
+  /* Gebrochener Zoom: Kacheln 1 px ueberlappen, sonst zeigen sich feine Naehte im Luftbild.
+     Leaflet 1.9 blendet Kacheln mit plus-lighter - dann wuerde die Ueberlappung hell; darum normal. */
+  #kartenFlaeche img.leaflet-tile { width: 257px !important; height: 257px !important; mix-blend-mode: normal !important; }
 </style>
 </head>
 <body>
+<div class="seite" id="seiteDash">
 <div class="wrap">
   <header>
     <img src="assets/img/strabag-logo.png" alt="STRABAG">
@@ -144,7 +175,21 @@
 
   <div class="fuss"><span>Zahlen aus Nalpi, gleiche Regeln wie die Nalpi-Übersicht</span><span id="fussZeit"></span></div>
 </div>
+</div>
 
+<div class="seite aus" id="seiteKarte">
+  <div id="kartenFlaeche"></div>
+  <div class="kkopf">
+    <img src="assets/img/strabag-logo.png" alt="STRABAG">
+    <h1>NalpSolar <span>· Karte Baustand</span></h1>
+    <div class="zeit"><div class="uhr num" id="uhr2">--:--</div><div class="datum" id="datum2"></div></div>
+    <div class="stand" id="stand2"><span class="punkt"></span></div>
+  </div>
+  <div class="khinweis" id="khinweis"></div>
+  <div class="klegende" id="klegende"></div>
+</div>
+
+<script src="assets/js/leaflet/leaflet.js"></script>
 <script>
 (function () {
   var QUELLE = 'https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app/erfassung/planhaus/stand.json';
@@ -167,33 +212,35 @@
   // ---------------------------------------------------------------- Uhr
   function uhr() {
     var d = new Date();
-    $('uhr').textContent = zwei(d.getHours()) + ':' + zwei(d.getMinutes());
-    $('datum').textContent = TAGE[d.getDay()] + ', ' + d.getDate() + '. ' + MONATE[d.getMonth()] + ' ' + d.getFullYear();
+    var u = zwei(d.getHours()) + ':' + zwei(d.getMinutes());
+    var t = TAGE[d.getDay()] + ', ' + d.getDate() + '. ' + MONATE[d.getMonth()] + ' ' + d.getFullYear();
+    $('uhr').textContent = u; $('uhr2').textContent = u;
+    $('datum').textContent = t; $('datum2').textContent = t;
     standZeile();
   }
 
   // Wie alt sind die Zahlen? Nie so tun, als waeren sie frisch.
   function standZeile() {
-    var el = $('stand');
     if (!stand) return;
     var gelesen = new Date(stand.gelesen);
     var min = Math.round((new Date() - gelesen) / 60000);
     var farbe = min <= 30 ? css('--gut') : (min <= 180 ? css('--warn') : css('--alt'));
     var alter = min < 1 ? 'gerade eben' : (min < 60 ? 'vor ' + min + ' Min.' :
       (min < 60 * 24 ? 'vor ' + Math.floor(min / 60) + ' h ' + zwei(min % 60) + ' Min.' : 'vor ' + Math.floor(min / 1440) + ' Tagen'));
-    el.innerHTML = '<span class="punkt" style="background:' + farbe + '"></span>Nalpi-Stand <b class="num">' +
+    var zeile = '<span class="punkt" style="background:' + farbe + '"></span>Nalpi-Stand <b class="num">' +
       zwei(gelesen.getHours()) + ':' + zwei(gelesen.getMinutes()) + '</b><br>' + alter;
-    var h = $('hinweis');
+    $('stand').innerHTML = zeile; $('stand2').innerHTML = zeile;
+    var text = '';
     if (min > 180) {
-      h.style.display = 'block';
-      h.textContent = 'Die Zahlen sind nicht aktuell – der Büro-PC hat Nalpi seit ' +
-        zwei(gelesen.getHours()) + ':' + zwei(gelesen.getMinutes()) + ' Uhr nicht mehr abgefragt.';
+      text = 'Die Zahlen sind nicht aktuell – Nalpi hat seit ' +
+        zwei(gelesen.getHours()) + ':' + zwei(gelesen.getMinutes()) + ' Uhr keinen neuen Stand geschickt.';
     } else if (letzteAntwort && new Date() - letzteAntwort > 5 * 60000) {
-      h.style.display = 'block';
-      h.textContent = 'Keine Verbindung zum Internet – angezeigt wird der letzte Stand.';
-    } else {
-      h.style.display = 'none';
+      text = 'Keine Verbindung zum Internet – angezeigt wird der letzte Stand.';
     }
+    var h = $('hinweis'), kh = $('khinweis');
+    h.textContent = text; kh.textContent = text;
+    h.style.display = text ? 'block' : 'none';
+    kh.style.display = text ? 'block' : 'none';
   }
 
   // ---------------------------------------------------------------- Karten
@@ -353,6 +400,138 @@
     standZeile();
   }
 
+  // ---------------------------------------------------------------- Karte
+  // Umrisse, Stufe und Farben kommen fertig aus Nalpi (erfassung/planhaus/karte, geschrieben von
+  // NalpsChromeExtension src/hooks/data/use-planhaus-sender.ts, Format domain/planhaus/planhaus-payload.ts):
+  //   { gelesen, stufen: [{key, name, farbe, n}], wgs: {lat0, lng0}, tische: [[stufe, dLat1, dLng1, ...], ...] }
+  //   dLat/dLng = Millionstel Grad relativ zu lat0/lng0 (~0.1 m). Die Seite ordnet keine Farbe selbst zu.
+  var KQUELLE = QUELLE.replace('/stand.json', '/karte.json');
+  var KSPEICHER = 'nalp_planhaus_karte_v1';
+  var FAKTOR = 1.5;          // Kartenflaeche 1.5 x Schirm = leicht hineingezoomt, gleitet darueber
+  var karte = null, map = null, tischEbene = null, grenzen = null;
+  var fahrt = { a: null, b: null, hin: true };
+
+  function transform(el, x, y) {
+    var t = 'translate3d(' + Math.round(x) + 'px,' + Math.round(y) + 'px,0)';
+    el.style.webkitTransform = t; el.style.transform = t;
+  }
+
+  // Gleitweg: von «oben links» der Anlage nach «unten rechts» und zurueck. Der Kopfbalken deckt
+  // oben einen Streifen ab, darum dort mehr Rand.
+  function fahrtBerechnen() {
+    var W = window.innerWidth, H = window.innerHeight, FW = W * FAKTOR, FH = H * FAKTOR;
+    var rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    var kopf = 5 * rem, m = 1.5 * rem;
+    var p1 = map.latLngToContainerPoint(grenzen.getNorthWest()), p2 = map.latLngToContainerPoint(grenzen.getSouthEast());
+    function achse(lo, hi, rand0, fenster, flaeche) {
+      var a = rand0 - lo, b = fenster - m - hi;       // Anfang sichtbar / Ende sichtbar
+      if (a < b) a = b = (a + b) / 2;                 // passt ganz hinein -> mittig, kein Weg
+      return [Math.min(0, Math.max(fenster - flaeche, a)), Math.min(0, Math.max(fenster - flaeche, b))];
+    }
+    var ax = achse(p1.x, p2.x, m, W, FW), ay = achse(p1.y, p2.y, kopf + m, H, FH);
+    fahrt.a = [ax[0], ay[0]];
+    fahrt.b = [ax[1], ay[1]];
+    fahrt.hin = true;
+    var fl = $('kartenFlaeche');
+    fl.style.webkitTransition = 'none'; fl.style.transition = 'none';
+    transform(fl, fahrt.a[0], fahrt.a[1]);
+  }
+
+  function gleiten() {
+    if (!fahrt.a) return;
+    var fl = $('kartenFlaeche'), ziel = fahrt.hin ? fahrt.b : fahrt.a;
+    fahrt.hin = !fahrt.hin;
+    fl.style.webkitTransition = '-webkit-transform ' + (SEK + 1) + 's ease-in-out';
+    fl.style.transition = 'transform ' + (SEK + 1) + 's ease-in-out';
+    transform(fl, ziel[0], ziel[1]);
+  }
+
+  function kartenLegende() {
+    var s = '<div class="titel">Tische nach Baustand</div>';
+    for (var i = 0; i < karte.stufen.length; i++) {
+      var st = karte.stufen[i];
+      if (!st.n) continue;
+      s += '<div class="z"><i style="background:' + st.farbe + '"></i><span class="n num">' + st.n + '</span>' + st.name + '</div>';
+    }
+    $('klegende').innerHTML = s + '<div class="klein">Farben wie die Nalpi-Karte · Luftbild © swisstopo</div>';
+  }
+
+  // neuAusrichten: Flaeche an den Schirm anpassen und Gleitweg neu (Start, Groessenaenderung)
+  function karteZeichnen(neuAusrichten) {
+    if (!karte || !karte.tische || typeof L === 'undefined') return;
+    var fl = $('kartenFlaeche');
+    if (!map) {
+      neuAusrichten = true;
+      map = L.map(fl, { zoomControl: false, attributionControl: false, dragging: false, touchZoom: false,
+        scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false,
+        zoomSnap: 0, fadeAnimation: false, zoomAnimation: false, markerZoomAnimation: false, inertia: false });
+      L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg',
+        { maxNativeZoom: 20, maxZoom: 22, keepBuffer: 4 }).addTo(map);
+      tischEbene = L.layerGroup().addTo(map);
+    }
+    tischEbene.clearLayers();
+    var rd = L.canvas({ padding: 0.1 }), lat0 = karte.wgs.lat0, lng0 = karte.wgs.lng0, g = null;
+    for (var i = 0; i < karte.tische.length; i++) {
+      var t = karte.tische[i], st = karte.stufen[t[0]];
+      if (!st) continue;
+      var pts = [];
+      for (var j = 1; j + 1 < t.length; j += 2) pts.push([lat0 + t[j] / 1e6, lng0 + t[j + 1] / 1e6]);
+      if (pts.length < 3) continue;
+      var poly = L.polygon(pts, { renderer: rd, interactive: false, color: 'rgba(0,0,0,0.6)', weight: 1,
+        fillColor: st.farbe, fillOpacity: 0.95 });
+      tischEbene.addLayer(poly);
+      if (g) g.extend(poly.getBounds()); else g = poly.getBounds();
+    }
+    kartenLegende();
+    if (!g || !neuAusrichten) return;
+    grenzen = g;
+    fl.style.width = Math.round(window.innerWidth * FAKTOR) + 'px';
+    fl.style.height = Math.round(window.innerHeight * FAKTOR) + 'px';
+    map.invalidateSize(false);
+    map.fitBounds(grenzen, { padding: [20, 20], animate: false });
+    fahrtBerechnen();
+  }
+
+  function karteUebernehmen(d) {
+    if (!d || !d.tische || !d.stufen || !d.wgs) return false;
+    karte = d;
+    karteZeichnen(false);
+    return true;
+  }
+
+  function karteHolen() {
+    var x = new XMLHttpRequest();
+    x.open('GET', KQUELLE + '?t=' + new Date().getTime(), true);
+    x.timeout = 30000;
+    x.onload = function () {
+      if (x.status !== 200) return;
+      try {
+        if (karteUebernehmen(JSON.parse(x.responseText))) {
+          try { localStorage.setItem(KSPEICHER, x.responseText); } catch (e) {}
+        }
+      } catch (e) {}
+    };
+    x.send();
+  }
+
+  // ---------------------------------------------------------------- Wechsel Dashboard <-> Karte
+  function param(n) {
+    var m = new RegExp('[?&]' + n + '=([^&]*)').exec(location.search);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+  var SEK = Math.max(5, parseInt(param('sek'), 10) || 15);
+  var NUR = param('nur');
+  var zeigtKarte = false;
+
+  function wechsel() {
+    if (NUR === 'dash') return;
+    var kann = !!(map && fahrt.a);            // ohne Kartendaten bleibt das Dashboard stehen
+    zeigtKarte = kann && (NUR === 'karte' ? true : !zeigtKarte);
+    $('seiteKarte').className = 'seite' + (zeigtKarte ? '' : ' aus');
+    $('seiteDash').className = 'seite' + (zeigtKarte ? ' aus' : '');
+    if (zeigtKarte) gleiten();
+  }
+
   // ---------------------------------------------------------------- Laden
   function uebernehmen(d) {
     if (!d || !d.summe || !d.reihe) return false;
@@ -374,6 +553,8 @@
           letzteAntwort = new Date();
           $('fussZeit').textContent = 'abgefragt ' + zwei(letzteAntwort.getHours()) + ':' + zwei(letzteAntwort.getMinutes());
           try { localStorage.setItem(SPEICHER, x.responseText); } catch (e) {}
+          // Karte nur holen, wenn Nalpi eine neue geschickt hat (~80 KB, nicht jede Minute)
+          if (!karte || (d.karte_gelesen && d.karte_gelesen !== karte.gelesen)) karteHolen();
         }
       } catch (e) {}
     };
@@ -382,14 +563,20 @@
 
   // Letzten Stand sofort zeigen (auch ohne Netz), dann frisch holen
   try { var alt = localStorage.getItem(SPEICHER); if (alt) uebernehmen(JSON.parse(alt)); } catch (e) {}
+  try { var altK = localStorage.getItem(KSPEICHER); if (altK) karteUebernehmen(JSON.parse(altK)); } catch (e) {}
   letzteAntwort = new Date();
   uhr();
   holen();
+  if (NUR === 'karte') setTimeout(wechsel, 1500);
   setInterval(uhr, 15000);
   setInterval(holen, ABFRAGE_MS);
+  setInterval(wechsel, SEK * 1000);
   setTimeout(function () { location.reload(); }, NEU_LADEN_MS);
   var warte;
-  window.addEventListener('resize', function () { clearTimeout(warte); warte = setTimeout(zeichnen, 200); });
+  window.addEventListener('resize', function () {
+    clearTimeout(warte);
+    warte = setTimeout(function () { zeichnen(); karteZeichnen(true); }, 200);
+  });
 })();
 </script>
 </body>
