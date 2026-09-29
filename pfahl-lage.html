@@ -142,6 +142,16 @@
     </details>
   </div>
 
+  <!-- ============ Erklärvideo Englisch (Video_Schraegpfahl\, 29.09.2026) ============ -->
+  <div class="card" id="video">
+    <h2 data-i="v_h"></h2>
+    <div class="lead" style="margin-bottom:10px;" data-i="v_lead"></div>
+    <video controls preload="none" playsinline poster="uploads/video/schraegpfahl_en_poster.jpg"
+      style="display:block;width:100%;aspect-ratio:16/9;border-radius:12px;background:#0b1826;">
+      <source src="uploads/video/schraegpfahl_en.mp4" type="video/mp4">
+    </video>
+  </div>
+
   <!-- ============ Worum es geht ============ -->
   <div class="card">
     <h2 data-i="warum_h"></h2>
@@ -304,7 +314,9 @@
     b3_leg:'<span class="l-ef">Einzelfundament</span><span class="l-nah">nahe am Block</span><span class="l-geb">gebohrt (Nalpi)</span><span class="l-blk">Block eingemessen</span><span class="l-plan">Block nach ILF-Plan</span>',
     b3_hint:'Lageplan massstäblich, bergwärts oben (Nordpfeil). Luft = kleinster waagrechter Abstand der Pfahlachse (0.3–2.0 m unter dem Kopf, mit Neigung) zur Blockkante, minus Bohrradius. Ausserhalb der drei Sondagen ist die wirkliche Lage des Blocks unbekannt (kein As-built).',
     b3_q:'Sondagen 14.09.2026 (Punkte 1341–1346, beide Blockkanten an 3 Stellen) · ILF-Absteckungsliste <i>NalpSolar_51_LI_0412_A10</i> (Grabenachse Strang B) · Bohrpunkte Nalpi 26.09./29.09.2026 · Auswertung STRABAG 28.09.2026 · ILF-Konzept Einzelfundament, Mail vom 16.09.2026.',
-    b3_berg:'BERG', b3_tal:'TAL'
+    b3_berg:'BERG', b3_tal:'TAL',
+    v_h:'Erklärvideo (Englisch, 4:48 min)',
+    v_lead:'Warum ein Schrägpfahl trotz richtiger Absteckung daneben sitzen kann – und wie diese Seite sagt, was zu tun ist. Mit Untertiteln.'
   },
   en: {
     titel:'Inclined pile · position & pull-out', doc:'NalpSolar · Inclined pile – position & pull-out',
@@ -366,7 +378,9 @@
     b3_leg:'<span class="l-ef">single foundation</span><span class="l-nah">close to the block</span><span class="l-geb">drilled (Nalpi)</span><span class="l-blk">block as surveyed</span><span class="l-plan">block per ILF plan</span>',
     b3_hint:'Site plan to scale, uphill at the top (see north arrow). Clearance = smallest horizontal distance of the pile axis (0.3–2.0 m below the head, with inclination) to the block edge, minus drill radius. Outside the three trial pits the true position of the block is unknown (no as-built survey).',
     b3_q:'Trial pits 14.09.2026 (points 1341–1346, both block edges at 3 places) · ILF setting-out list <i>NalpSolar_51_LI_0412_A10</i> (trench axis line B) · drilling points Nalpi 26.09./29.09.2026 · evaluation STRABAG 28.09.2026 · ILF single-foundation concept, mail of 16.09.2026.',
-    b3_berg:'UPHILL', b3_tal:'VALLEY'
+    b3_berg:'UPHILL', b3_tal:'VALLEY',
+    v_h:'Explainer video (4:48 min)',
+    v_lead:'Why an inclined pile can end up in the wrong place even when the setting out was correct – and how this page tells you what to do. With subtitles.'
   }};
   var LANG='de';
   function t(k){ var d=TXT[LANG]||TXT.de; return d[k]!==undefined?d[k]:(TXT.de[k]||k); }
