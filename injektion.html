@@ -76,6 +76,8 @@
   .weit .mk::before, .weit .mk .l{ display:none; }
   .mk.pk{ background:var(--dunkel); } .mk.of{ background:var(--orange); } .mk.pr{ background:var(--lila); }
   .mk.gm{ background:var(--gruen); } .mk.ok{ background:#5f6b66; }
+  /* Zugprobe (BA 0269): weiss mit schwarzem Rand – nicht injizieren, GEWI zuerst (zugproben.html) */
+  .mk.zp{ background:#fff; color:var(--ink); border-color:var(--ink); } .mk.zp::before{ background:var(--ink); }
   .mk.gm::after, .mk.ok::after{ content:'✓'; position:absolute; right:-7px; top:-8px; background:#fff; color:var(--gruen); border-radius:50%;
        width:15px; height:15px; font-size:11px; line-height:15px; text-align:center; box-shadow:0 0 0 1px rgba(0,0,0,.2); }
   .mk.pr::after{ content:'!'; position:absolute; right:-7px; top:-8px; background:#fff; color:var(--lila); border-radius:50%;
@@ -185,6 +187,7 @@
       <span><i style="background:#e08a00"></i><span data-i="leg_of">offen</span></span>
       <span><i style="background:#1e9e5a"></i><span data-i="leg_gm">gemeldet</span></span>
       <span><i style="background:#8e24aa"></i><span data-i="leg_pr">Problem</span></span>
+      <span><i style="background:#fff;box-shadow:0 0 0 2px #1a1a1a"></i>🧪 ZP = Zugprobe – NICHT injizieren / não injetar / do not grout</span>
       <span data-i="leg_tip">Punkt antippen = hinführen, Foto, melden</span>
     </div>
     <div class="stand" id="standK"></div>
@@ -271,6 +274,9 @@
            problem:{t:'st_pr',k:'pr',sym:'⚠️'}, offen:{t:'st_off',k:'no',sym:'↩'} };
 
   var bohr=null, bau=null, ber={}, api={}, apiZeit=null, apiFrisch=false, R={};
+  /* Zugproben-Pfähle (BA 0269, uploads/zugproben.json): bekommen zuerst den GEWI und dürfen NICHT normal injiziert
+     werden – darum nie als Einzelbein führen, auf der Karte nur als Hinweis «ZP» mit Link auf zugproben.html. 29.09.2026 */
+  var ZPJ='uploads/zugproben.json', ZP={};
   var P={}, LISTE=[], map=null, MK={}, kontext=null, gpsMarker=null, gpsKreis=null, gpsWatch=null, pos=null, folgen=false, vorne=null;
   var aktiv=null, entwurfF=null, gepusht=false, fotos=[], stat='injiziert', filtK='offen', filtL='offen';
   var ladeStand='laedt', laeuft={};   // laeuft[f] = Meldung für dieses Bein wird gerade gesendet (kein Doppelsenden)
@@ -442,6 +448,7 @@
       json(BOHR).then(function(j){ bohr=j; }),
       json(BAU).then(function(j){ bau=j; }).catch(function(){ bau={tische:{}}; }),
       json(BER).then(function(j){ ber=(j&&j.bereiche)||{}; }).catch(function(){ ber={}; }),
+      json(ZPJ).then(function(j){ ((j&&j.proben)||[]).forEach(function(p){ ZP[p.tisch+'_S'+p.s]=p; }); }).catch(function(){ ZP={}; }),
       apiLaden(), rueckLaden().then(warteschlangeMischen)
     ]).then(rechnen);
   }
@@ -466,6 +473,7 @@
       var beine=T[tid], ss=Object.keys(beine), injAnz=ss.filter(function(s){ return beine[s].st===4; }).length;
       ss.forEach(function(s){
         var b=beine[s], einzel=(b.st===2||b.st===3) && injAnz>0, gemeldet=eintraege(b.f).length>0;
+        if(ZP[b.f]) return;   // Zugprobe: GEWI zuerst, nie normal injizieren
         if(!einzel && !gemeldet) return;
         var pk=((bau.tische||{})[tid]||{}).pk||'';
         var p={f:b.f, tisch:tid, s:+s, E:b.E, N:b.N, st:b.st, geb:b.geb, pk:pk, ber:ber[tid]||'',
@@ -524,6 +532,13 @@
     (bohr.punkte||[]).forEach(function(r){
       var f=r[0]+'_S'+r[1]; if(P[f]) return;
       var st=+r[5], a=api[f]; if(a&&a[0]) st=4;
+      if(ZP[f] && st<4){
+        L.marker(ll(+r[2],+r[3]),{ icon:L.divIcon({ className:'mkw', html:'<div class="mk zp"><span class="l">🧪 ZP '+esc(r[0])+' S'+r[1]+'</span></div>',
+          iconSize:[0,0], iconAnchor:[0,0] }) }).addTo(kontext)
+          .bindPopup('<b>🧪 '+esc(ZP[f].nr)+' · '+esc(r[0])+' S'+r[1]+'</b><br>Zugprobe / Ensaio de tração / Tension test<br>'
+            +'<b>NICHT injizieren – erst GEWI Ø 40</b><br><a href="zugproben.html">→ Zugproben</a>');
+        return;
+      }
       if(st<2) return;
       L.circleMarker(ll(+r[2],+r[3]),{renderer:cv, radius:2.6, stroke:false, interactive:false,
         fillColor:st===4?'#123f4c':'#45c6e4', fillOpacity:st===4?.55:.7}).addTo(kontext);

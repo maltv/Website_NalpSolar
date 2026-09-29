@@ -1,0 +1,23 @@
+{
+"stand": "2026-09-25",
+"quelle": "Baustellenanweisung NalpSolar_51_BA_0269_A1_MT-Zugpr-PZ3-PZ4_260925 (ILF, 25.09.2026, ACC GzA-A1), Tabellen 1-4",
+"hinweis": "EINE Stelle fuer die Zugproben-Pfaehle: zugproben.html und injektion.html lesen diese Datei. WERKZEUGE.md §71.",
+"proben": [
+  {"nr":"ZP_1-3","pz":"PZ3","tisch":"850", "s":4,"typ":"E","E":2701590.767,"N":1166025.454,"H":1957.608,"neigung":"lotrecht"},
+  {"nr":"ZP_2-3","pz":"PZ3","tisch":"1667","s":1,"typ":"E","E":2701595.178,"N":1166022.321,"H":1957.433,"neigung":"lotrecht"},
+  {"nr":"ZP_3-3","pz":"PZ3","tisch":"2031","s":4,"typ":"A","E":2701796.301,"N":1165796.116,"H":1964.915,"neigung":"lotrecht"},
+  {"nr":"ZP_4-3","pz":"PZ3","tisch":"2037","s":1,"typ":"B","E":2701808.303,"N":1165775.103,"H":1962.933,"neigung":"lotrecht"},
+  {"nr":"ZP_5-3","pz":"PZ3","tisch":"2058","s":1,"typ":"B","E":2701731.766,"N":1165908.755,"H":1964.832,"neigung":"lotrecht"},
+  {"nr":"ZP_6-3","pz":"PZ3","tisch":"2275","s":4,"typ":"E","E":2701701.828,"N":1165940.755,"H":1964.279,"neigung":"lotrecht"},
+  {"nr":"ZP_1-4","pz":"PZ4","tisch":"1321","s":4,"typ":"B","E":2702054.135,"N":1166088.648,"H":2049.030,"neigung":"lotrecht"},
+  {"nr":"ZP_2-4","pz":"PZ4","tisch":"1715","s":1,"typ":"B","E":2701990.121,"N":1166095.890,"H":2044.767,"neigung":"lotrecht"}
+],
+"offen": ["ZP_3-4", "ZP_4-4"],
+"typen": {
+  "A": {"ror":"89x7",   "gewi":40, "bohr":0.133, "einb":1.9, "Fa":20, "F1":79,  "F2":139, "Fp":198},
+  "B": {"ror":"89x7",   "gewi":40, "bohr":0.133, "einb":1.9, "Fa":20, "F1":79,  "F2":139, "Fp":198},
+  "C": {"ror":"114x10", "gewi":40, "bohr":0.152, "einb":2.4, "Fa":29, "F1":115, "F2":201, "Fp":287},
+  "D": {"ror":"114x10", "gewi":40, "bohr":0.152, "einb":2.4, "Fa":29, "F1":115, "F2":201, "Fp":287},
+  "E": {"ror":"114x16", "gewi":40, "bohr":0.152, "einb":2.9, "Fa":35, "F1":138, "F2":242, "Fp":346}
+}
+}

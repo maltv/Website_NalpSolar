@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NalpSolar · Zugproben PZ3 / PZ4</title>
+<meta name="theme-color" content="#ffffff">
+<script>
+  window.NALP_GATE_CODE  = '6460';
+  window.NALP_GATE_KEY   = 'nalp_portal_unlock_v1';
+  window.NALP_GATE_TITEL = 'Zugproben PZ3 / PZ4';
+  window.NALP_GATE_SUB   = 'Code eingeben / Enter code / Wpisz kod';
+</script>
+<script src="assets/js/nalp-gate.js"></script>
+<link rel="stylesheet" href="assets/js/leaflet/leaflet.css">
+<style>
+  /* Reiter «Zugproben PZ3 / PZ4» – Baustellenanweisung NalpSolar_51_BA_0269_A1 (ILF, 25.09.2026).
+     Pfähle + Laststufen: uploads/zugproben.json (EINE Stelle, liest auch injektion.html).
+     Stand je Pfahl rechnet die Seite selbst: uploads/tables/bohrstand.json + live api.buildtrack.ch.
+     WERKZEUGE.md §71. Optik wie wasserleitung.html / injektion.html. */
+  :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
+         --gruen:#1e9e5a; --blau:#1565c0; --orange:#e08a00; --lila:#8e24aa; --grau:#8a8e94; --dunkel:#123f4c; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body{ margin:0; background:#eef0f3; min-height:100vh; color:var(--ink);
+        font-family:Arial,"Helvetica Neue",sans-serif; }
+  header{ position:sticky; top:0; z-index:10; display:flex; align-items:center; gap:8px;
+          padding:9px 10px; background:#fff; border-bottom:4px solid var(--rot); }
+  header a.home{ color:var(--ink); text-decoration:none; font-size:20px; }
+  header .logo img{ height:20px; display:block; }
+  header h1{ font-size:14.5px; margin:0; flex:1; font-weight:800; }
+  .tabs{ display:flex; background:#fff; border-bottom:1px solid var(--line); position:sticky; top:52px; z-index:9; }
+  .tabs button{ flex:1 1 25%; border:none; background:none; padding:11px 2px; font-size:12px; font-weight:800;
+        white-space:nowrap; color:var(--mut); cursor:pointer; border-bottom:3px solid transparent; }
+  .tabs button.on{ color:var(--rot); border-bottom-color:var(--rot); }
+  main{ max-width:760px; margin:0 auto; padding:12px 12px 80px; }
+  section[hidden]{ display:none; }
+  .box{ background:#fff; border:1px solid var(--line); border-left:5px solid var(--rot);
+        border-radius:6px; padding:13px; margin-bottom:13px; box-shadow:0 1px 4px rgba(20,25,32,.07); }
+  .box.lila{ border-left-color:var(--lila); }
+  .box.grau{ border-left-color:#9aa0a6; }
+  .box.warn{ background:#fdecea; border-color:#f3b8b5; border-left-color:var(--rot); }
+  .box h2{ margin:0 0 6px; font-size:15.5px; }
+  .box p{ margin:0 0 8px; font-size:14px; line-height:1.5; }
+  .box .sub{ font-size:12px; color:var(--mut); line-height:1.45; }
+  .box ul{ margin:4px 0 0; padding-left:18px; font-size:14px; line-height:1.5; }
+  ol.todo{ margin:6px 0 0; padding-left:0; list-style:none; counter-reset:s; }
+  ol.todo li{ counter-increment:s; display:flex; gap:10px; align-items:flex-start; padding:9px 0;
+              border-top:1px solid var(--line); font-size:14.5px; line-height:1.45; }
+  ol.todo li::before{ content:counter(s); flex:0 0 28px; height:28px; border-radius:50%; background:var(--lila);
+              color:#fff; font-weight:900; display:flex; align-items:center; justify-content:center; font-size:14px; }
+  .big{ font-size:30px; font-weight:900; color:var(--lila); line-height:1; }
+  .jetzt{ margin-top:8px; font-size:14px; font-weight:800; }
+  .btn{ display:inline-block; border:none; border-radius:6px; padding:12px 16px; font-size:14.5px;
+        font-weight:800; cursor:pointer; color:#fff; background:var(--rot); text-decoration:none; text-align:center; }
+  .btn.w{ background:#fff; color:var(--ink); border:1px solid #c9ccd2; }
+  .btnrow{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  .bild{ width:100%; border-radius:6px; border:1px solid var(--line); display:block; margin-top:8px; background:#fff; }
+  /* Karte – eigene Stapelebene, sonst schieben sich Leaflet-Ebenen über Kopf und Reiter */
+  .kartebox{ position:relative; isolation:isolate; }
+  #map2d{ position:relative; z-index:0; height:calc(100vh - 230px); min-height:380px; border-radius:6px; border:1px solid var(--line); background:#d9dde3; }
+  .gps{ position:absolute; right:10px; top:10px; z-index:900; }
+  .legende{ display:flex; flex-wrap:wrap; gap:8px 14px; font-size:12px; color:var(--mut); margin:8px 0 0; align-items:center; }
+  .legende i{ display:inline-block; width:16px; height:16px; border-radius:50%; vertical-align:-3px; margin-right:4px; border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.25); }
+  .stand{ font-size:11.5px; color:var(--mut); margin-top:6px; }
+  .leaflet-container{ font-family:inherit; }
+  .mk{ display:inline-flex; align-items:center; gap:4px; height:24px; padding:0 8px 0 4px; border-radius:12px; border:2px solid #fff;
+       box-shadow:0 1px 4px rgba(0,0,0,.5); color:#fff; font-weight:900; font-size:12px; white-space:nowrap; cursor:pointer;
+       transform:translate(-12px,-12px); background:var(--grau); }
+  .mk::before{ content:''; width:10px; height:10px; border-radius:50%; background:#fff; flex:0 0 10px; opacity:.9; }
+  .weit .mk{ width:18px; height:18px; padding:0; transform:translate(-9px,-9px); }
+  .weit .mk::before, .weit .mk .l{ display:none; }
+  .leaflet-marker-icon.mkw{ overflow:visible; background:none; border:0; }
+  /* Zustand je Pfahl: pl geplant/abgesteckt · gb gebohrt · fx Rohr fixiert (jetzt GEWI) · ij injiziert */
+  .pl{ background:var(--grau)!important; } .gb{ background:var(--orange)!important; }
+  .fx{ background:var(--rot)!important; } .ij{ background:var(--dunkel)!important; }
+  /* Liste */
+  .pos{ background:#fff; border:1px solid var(--line); border-left:5px solid var(--grau); border-radius:6px;
+        padding:10px 12px; margin-bottom:8px; box-shadow:0 1px 4px rgba(20,25,32,.07); display:flex; gap:10px; align-items:flex-start; cursor:pointer; }
+  .pos.k-gb{ border-left-color:var(--orange); } .pos.k-fx{ border-left-color:var(--rot); } .pos.k-ij{ border-left-color:var(--dunkel); }
+  .pos.tbd{ cursor:default; opacity:.7; border-left-style:dashed; }
+  .pos .nr{ flex:0 0 44px; height:44px; border-radius:50%; color:#fff; font-weight:900; font-size:12.5px;
+        display:flex; align-items:center; justify-content:center; }
+  .pos .tx{ flex:1; min-width:0; }
+  .pos .was{ font-size:15px; font-weight:800; }
+  .pos .kom{ font-size:12.5px; color:var(--mut); line-height:1.45; margin-top:2px; }
+  .pos .tun{ font-size:13px; font-weight:800; margin-top:5px; }
+  .pos.k-fx .tun{ color:var(--rot); }
+  .chip{ display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:800; color:#fff; vertical-align:1px; }
+  /* Tabellen Prüfung */
+  table.lt{ width:100%; border-collapse:collapse; font-size:13px; margin-top:6px; }
+  table.lt th, table.lt td{ border:1px solid var(--line); padding:6px 4px; text-align:center; }
+  table.lt th{ background:#f5f6f8; font-weight:800; }
+  table.lt td:first-child, table.lt th:first-child{ text-align:left; padding-left:7px; }
+  table.lt tr.fp td{ font-weight:900; background:#fdecea; }
+  table.lt th.zp, table.lt td.zp{ background:#f3e5f5; }
+  .klein{ font-size:11.5px; color:var(--mut); margin-top:6px; line-height:1.45; }
+</style>
+</head>
+<body>
+<header>
+  <a class="home" href="index.html" title="Portal">‹</a>
+  <div class="logo"><img src="assets/img/strabag-logo.png" alt="STRABAG"></div>
+  <h1>🧪 Zugproben PZ3 / PZ4</h1>
+</header>
+
+<div class="tabs">
+  <button class="on" data-t="info" onclick="tab('info')">📋 Was tun</button>
+  <button data-t="k2d" onclick="tab('k2d')">🗺 Karte</button>
+  <button data-t="liste" onclick="tab('liste')">🔢 Pfähle</button>
+  <button data-t="pruef" onclick="tab('pruef')">📈 Prüfung</button>
+</div>
+
+<main>
+  <!-- ================= WAS TUN ================= -->
+  <section id="t-info">
+    <div class="box lila">
+      <div class="big" id="anz">8</div>
+      <h2>Pfähle für Zugproben – <span id="anzPz">6 in PZ3, 2 in PZ4</span></h2>
+      <p>An diesen Bauwerks-Pfählen wird die Tragfähigkeit geprüft (Zugprobe). In PZ4 folgen noch
+         <b>2 weitere</b> – die legt ILF noch fest.</p>
+      <div class="sub" id="standInfo">Stand wird geladen …</div>
+    </div>
+
+    <div class="box warn">
+      <h2>⚠ Diese Pfähle NICHT normal injizieren</h2>
+      <p>Zuerst einen <b>GEWI-Stab Ø 40 mm</b> ins Rohr – über die <b>ganze Pfahllänge</b> – und mit einbetonieren.
+         Oben muss der GEWI über den Pfahl hinausragen: daran zieht die Presse.</p>
+      <div class="jetzt" id="jetzt"></div>
+    </div>
+
+    <div class="box">
+      <h2>Ablauf</h2>
+      <ol class="todo">
+        <li><div><b>Bohren:</b> der <b>Geologe</b> ist bei jeder Bohrung dabei. Für jede Bohrung ein Bohrprotokoll.</div></li>
+        <li><div><b>GEWI Ø 40</b> einsetzen, über die ganze Pfahllänge einbetonieren. Wie weit er oben herausragt, legt STRABAG fest.</div></li>
+        <li><div><b>Prüfaufbau:</b> Prüfbalken mind. <b>3 m</b>, zwei Auflager links und rechts. Je Auflager mind. <b>1.0 m²</b>
+            Stahlplatte flach auf Kiesbett. Gezogen wird mittig, in der Pfahlachse. Statik des Prüfbalkens: STRABAG.</div></li>
+        <li><div><b>Prüfen</b> nach SIA 267/1, 7.2.3: 4 Laststufen je Typ, auf der Prüfkraft 15 Minuten halten und ablesen
+            (Reiter <a href="#pruef" onclick="tab('pruef');return false;">📈 Prüfung</a>).</div></li>
+        <li><div><b>Danach:</b> GEWI oben abschneiden, Pfahlkopf nach dem Korrosionsschutzkonzept
+            (B18-13_STRABAG_Korrosionsschutz_NalpSolar) aufsetzen.</div></li>
+        <li><div><b>Abgeben an ILF:</b> je Pfahl eine Excel mit Zeit, Last, Verschiebung und Kriechdiagramm – dazu die Bohrprotokolle.</div></li>
+      </ol>
+    </div>
+
+    <div class="box grau">
+      <h2>Noch offen</h2>
+      <ul>
+        <li>PZ4: <b>ZP_3-4 und ZP_4-4</b> stehen in der Anweisung noch als «tbd».</li>
+        <li>Typ E (Tisch 850, 1667, 2275): die Anweisung schreibt «lotrecht», der Typenplan 0289 zeigt den
+            Tal-Pfahl Typ E mit 10° Neigung. <b>Neigung vor dem Bohren und vor dem Aufbau mit der Bauführung klären.</b></li>
+      </ul>
+    </div>
+
+    <div class="box grau">
+      <h2>Quelle</h2>
+      <p class="sub">Baustellenanweisung <b>NalpSolar_51_BA_0269_A1_MT-Zugpr-PZ3-PZ4_260925</b> «Zugproben PZ3 und PZ4»,
+         ILF (F. Nothdurfter), 25.09.2026, auf ACC als GzA-A1. Gehört zu PL_0289_A1 (Mikropfahl-Typenplan) und
+         BE_0283_A4 (Pfahl-Kontrollplan).<br>
+         Lage der Pfähle aus der Anweisung (Tabelle 1 + 2), gegen die Bohrpunkte der Website geprüft: alle 8 auf ≤ 8 cm.
+         Stand je Pfahl aus Nalpi (Tagesexport) + BuildTrack live.</p>
+      <div class="btnrow">
+        <a class="btn w" href="uploads/zugproben/BA_0269_A1_Zugproben_PZ3-PZ4_260925.pdf" target="_blank">📄 Anweisung (PDF)</a>
+      </div>
+      <img class="bild" src="uploads/zugproben/Abb1_Versuchseinrichtung.png" alt="Abbildung 1: Versuchseinrichtung Zugproben (aus der Anweisung)" loading="lazy">
+      <div class="klein">Abbildung 1 der Anweisung: Versuchseinrichtung (analog Ausziehversuche).</div>
+    </div>
+  </section>
+
+  <!-- ================= KARTE ================= -->
+  <section id="t-k2d" hidden>
+    <div class="kartebox">
+      <div id="map2d"></div>
+      <button class="btn w gps" onclick="gps()" title="Mein Standort">📍</button>
+    </div>
+    <div class="legende">
+      <span><i class="fx"></i>Rohr fixiert – jetzt GEWI</span>
+      <span><i class="gb"></i>gebohrt</span>
+      <span><i class="pl"></i>noch nicht gebohrt</span>
+      <span><i class="ij"></i>injiziert</span>
+      <span>Punkt antippen = Angaben + hinführen</span>
+    </div>
+    <div class="stand" id="standK"></div>
+  </section>
+
+  <!-- ================= PFÄHLE ================= -->
+  <section id="t-liste" hidden>
+    <div id="liste"></div>
+    <div class="stand" id="standL"></div>
+  </section>
+
+  <!-- ================= PRÜFUNG ================= -->
+  <section id="t-pruef" hidden>
+    <div class="box">
+      <h2>Laststufen in kN</h2>
+      <table class="lt" id="tabLast"></table>
+      <div class="klein">Violett = Typen mit Zugproben (A, B, E). Tabelle 4 der Anweisung.
+        F<sub>1</sub> = (F<sub>p</sub> − F<sub>a</sub>)/3 + F<sub>a</sub> · F<sub>2</sub> = 2 (F<sub>p</sub> − F<sub>a</sub>)/3 + F<sub>a</sub>.</div>
+    </div>
+
+    <div class="box lila">
+      <h2>So wird geprüft</h2>
+      <ol class="todo">
+        <li><div><b>F<sub>a</sub></b> aufbringen → hier die <b>Nullmessung</b> der Verschiebung.</div></li>
+        <li><div>Auf <b>F<sub>p</sub></b> spannen. Auf <b>F<sub>1</sub></b> und <b>F<sub>2</sub></b> die Verschiebung Δl ablesen – ohne Wartezeit.</div></li>
+        <li><div>Auf <b>F<sub>p</sub></b> die Kraft halten (auf ± 1 kN genau) und die Verschiebung ablesen nach
+            <b>0 · 1 · 2 · 5 · 10 · 15 Minuten</b>.</div></li>
+        <li><div>Zug immer in <b>Pfahlachse</b>.</div></li>
+        <li><div>Je Pfahl in die Excel: <b>Zeit, Last, Verschiebung, Kriechdiagramm</b>.</div></li>
+      </ol>
+    </div>
+
+    <div class="box grau">
+      <h2>Pfahl je Typ</h2>
+      <table class="lt" id="tabTyp"></table>
+      <div class="klein">Tabelle 3 der Anweisung.</div>
+      <img class="bild" src="uploads/zugproben/Abb2_Kraft_Verschiebung.png" alt="Abbildung 2: Zugprobe nach SIA 267/1, Figur 18" loading="lazy">
+      <div class="klein">Abbildung 2 der Anweisung: Zugprobe nach SIA 267/1, Figur 18.</div>
+    </div>
+  </section>
+</main>
+
+<script src="assets/js/leaflet/leaflet.js"></script>
+<script>
+(function(){
+  'use strict';
+  var DATEN='uploads/zugproben.json', BOHR='uploads/tables/bohrstand.json';
+  var API='https://api.buildtrack.ch/api/v1/drillpoints/changes';
+  var zp=null, bohr=null, api={}, apiOk=false, ST={}, map=null, MK={}, gpsMarker=null;
+  /* Nalpi-Status je Bein: 0 geplant · 1 abgesteckt · 2 gebohrt · 3 Pfähle fixiert · 4 injiziert */
+  var ZUST={
+    pl:{t:'noch nicht gebohrt', tun:'Bohren – nur mit Geologe'},
+    gb:{t:'gebohrt',            tun:'GEWI Ø 40 rein und einbetonieren – nicht normal injizieren'},
+    fx:{t:'Rohr fixiert',       tun:'JETZT GEWI Ø 40 rein, dann einbetonieren – nicht normal injizieren'},
+    ij:{t:'in Nalpi injiziert', tun:'Mit GEWI einbetoniert? Wenn nicht: sofort der Bauführung melden'}
+  };
+  var FARBE={pl:'#8a8e94', gb:'#e08a00', fx:'#D72622', ij:'#123f4c'};
+
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function f(p){ return p.tisch+'_S'+p.s; }
+  window.tab=function(t){
+    document.querySelectorAll('.tabs button').forEach(function(b){ b.classList.toggle('on', b.dataset.t===t); });
+    ['info','k2d','liste','pruef'].forEach(function(k){ $('t-'+k).hidden=(k!==t); });
+    try{ history.replaceState(null,'','#'+t); }catch(e){}
+    if(t==='k2d'){ mapBauen(); setTimeout(function(){ if(map) map.invalidateSize(); },50); }
+  };
+
+  /* LV95 -> WGS84 (swisstopo Näherungsformel, gleiche Funktion wie in karte.html) */
+  function ll(E,N){
+    var x=(N-1200000)/1e6, y=(E-2600000)/1e6;
+    var lat=16.9023892+3.238272*x-0.270978*y*y-0.002528*x*x-0.0447*y*y*x-0.0140*x*x*x;
+    var lng=2.6779094+4.728982*y+0.791484*y*x+0.1306*y*x*x-0.0436*y*y*y;
+    return [lat*100/36, lng*100/36];
+  }
+  function json(u){ return fetch(u,{cache:'no-store'}).then(function(r){ if(!r.ok) throw new Error(u+' '+r.status); return r.json(); }); }
+
+  /* Live-Stand BuildTrack (nur lesen, gleiche Quelle wie injektion.html): injectedAt → injiziert, drilledAt → mind. gebohrt */
+  function apiLaden(){
+    var since=0, runde=0;
+    function seite(){
+      var ctl=window.AbortController?new AbortController():null, to=setTimeout(function(){ if(ctl) ctl.abort(); },12000);
+      return fetch(API+'?since='+since+'&limit=500',{cache:'no-store', signal:ctl?ctl.signal:undefined})
+        .then(function(r){ clearTimeout(to); if(!r.ok) throw new Error('api '+r.status); return r.json(); })
+        .then(function(d){
+          (d.states||[]).forEach(function(s){ api[s.foundationId]=[s.injectedAt?1:0, s.drilledAt?1:0]; });
+          runde++;
+          if(d.hasMore && d.watermark!==since && runde<12){ since=d.watermark; return seite(); }
+        });
+    }
+    return seite().then(function(){ apiOk=true; }).catch(function(){ apiOk=false; });
+  }
+
+  function rechnen(){
+    var B={};
+    ((bohr&&bohr.punkte)||[]).forEach(function(r){ B[r[0]+'_S'+r[1]]=+r[5]; });
+    zp.proben.forEach(function(p){
+      var st=B[f(p)], a=api[f(p)];
+      if(st==null) st=0;
+      if(a){ if(a[0]) st=4; if(a[1] && st<2) st=2; }
+      p.st=st; p.k= st>=4?'ij' : st===3?'fx' : st===2?'gb' : 'pl';
+    });
+  }
+
+  function standText(){
+    return 'Stand Pfähle: Nalpi-Export '+esc((bohr&&bohr.stand)||'?')+(apiOk?' + BuildTrack live':' (live-Abgleich nicht erreichbar)');
+  }
+
+  function infoBauen(){
+    var n=zp.proben.length, n3=zp.proben.filter(function(p){ return p.pz==='PZ3'; }).length;
+    $('anz').textContent=n;
+    $('anzPz').textContent=n3+' in PZ3, '+(n-n3)+' in PZ4';
+    var fx=zp.proben.filter(function(p){ return p.k==='fx'; }), ij=zp.proben.filter(function(p){ return p.k==='ij'; });
+    var h='';
+    if(fx.length) h+='Jetzt dran (Rohr fixiert, noch nicht injiziert): '+fx.map(function(p){ return esc(p.tisch+' S'+p.s); }).join(', ')+'.';
+    if(ij.length) h+=(h?'<br>':'')+'<span style="color:#123f4c">Schon injiziert laut Nalpi: '+ij.map(function(p){ return esc(p.tisch+' S'+p.s); }).join(', ')+' – mit GEWI?</span>';
+    $('jetzt').innerHTML=h;
+    $('standInfo').innerHTML=standText();
+  }
+
+  function listeBauen(){
+    var rang={fx:0,gb:1,pl:2,ij:3};
+    var ps=zp.proben.slice().sort(function(a,b){ return (rang[a.k]-rang[b.k]) || a.nr.localeCompare(b.nr); });
+    var h=ps.map(function(p){
+      var t=zp.typen[p.typ]||{};
+      return '<div class="pos k-'+p.k+'" onclick="zeige(\''+p.nr+'\')">'
+        +'<div class="nr" style="background:'+FARBE[p.k]+'">'+esc(p.nr.replace('ZP_',''))+'</div>'
+        +'<div class="tx"><div class="was">Tisch '+esc(p.tisch)+' · S'+p.s+' · Typ '+esc(p.typ)+' · '+esc(p.pz)+'</div>'
+        +'<div class="kom"><span class="chip" style="background:'+FARBE[p.k]+'">'+esc(ZUST[p.k].t)+'</span> '
+        +'Prüfkraft F<sub>p</sub> <b>'+(t.Fp||'?')+' kN</b> · ROR '+esc(t.ror||'')+' · '+esc(p.neigung)+'</div>'
+        +'<div class="tun">'+esc(ZUST[p.k].tun)+'</div></div></div>';
+    }).join('');
+    h+=(zp.offen||[]).map(function(nr){
+      return '<div class="pos tbd"><div class="nr" style="background:#c3c6cb">'+esc(nr.replace('ZP_',''))+'</div>'
+        +'<div class="tx"><div class="was">'+esc(nr)+' · PZ4</div><div class="kom">noch nicht festgelegt («tbd» in der Anweisung)</div></div></div>';
+    }).join('');
+    $('liste').innerHTML=h;
+    $('standL').innerHTML=standText();
+  }
+
+  function pruefBauen(){
+    var T=['A','B','C','D','E'], zpT={}; zp.proben.forEach(function(p){ zpT[p.typ]=1; });
+    function kopf(){ return '<tr><th></th>'+T.map(function(k){ return '<th'+(zpT[k]?' class="zp"':'')+'>Typ '+k+'</th>'; }).join('')+'</tr>'; }
+    function zeile(lbl,key,cls){ return '<tr'+(cls?' class="'+cls+'"':'')+'><td>'+lbl+'</td>'+T.map(function(k){
+      return '<td'+(zpT[k]&&!cls?' class="zp"':'')+'>'+esc(zp.typen[k][key])+'</td>'; }).join('')+'</tr>'; }
+    $('tabLast').innerHTML=kopf()+zeile('F<sub>a</sub> ≈ 0.1 F<sub>p</sub>','Fa')+zeile('F<sub>1</sub>','F1')+zeile('F<sub>2</sub>','F2')
+      +zeile('Prüfkraft F<sub>p</sub>','Fp','fp');
+    $('tabTyp').innerHTML=kopf()+zeile('ROR [mm]','ror')+zeile('GEWI Ø [mm]','gewi')+zeile('Bohrung Ø [m]','bohr')+zeile('Einbindelänge [m]','einb');
+  }
+
+  function mapBauen(){
+    if(map || typeof L==='undefined' || !zp) return;
+    map=L.map('map2d',{ zoomSnap:0.25, maxZoom:22, attributionControl:true });
+    map.attributionControl.setPrefix('');
+    L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg',
+      { maxNativeZoom:20, maxZoom:22, attribution:'© swisstopo' }).addTo(map);
+    L.control.scale({imperial:false, maxWidth:110}).addTo(map);
+    /* Umfeld: alle Bohrpunkte blass (Canvas, nicht anklickbar – schont das Handy) */
+    var cv=L.canvas({padding:.3}), ZPF={};
+    zp.proben.forEach(function(p){ ZPF[f(p)]=1; });
+    ((bohr&&bohr.punkte)||[]).forEach(function(r){
+      if(ZPF[r[0]+'_S'+r[1]]) return;
+      L.circleMarker(ll(+r[2],+r[3]),{renderer:cv, radius:2.4, stroke:false, interactive:false,
+        fillColor:+r[5]===4?'#123f4c':'#ffffff', fillOpacity:+r[5]===4?.5:.55}).addTo(map);
+    });
+    var alle=[];
+    zp.proben.forEach(function(p){
+      var t=zp.typen[p.typ]||{}, q=ll(p.E,p.N); alle.push(q);
+      var m=L.marker(q,{ icon:L.divIcon({ className:'mkw', html:'<div class="mk '+p.k+'"><span class="l">'+esc(p.nr)+' · '+esc(p.tisch)+' S'+p.s+'</span></div>',
+        iconSize:[0,0], iconAnchor:[0,0] }), title:p.nr }).addTo(map);
+      m.bindPopup('<b>'+esc(p.nr)+'</b> · Tisch '+esc(p.tisch)+' · S'+p.s+' · Typ '+esc(p.typ)+' · '+esc(p.pz)
+        +'<br><b style="color:'+FARBE[p.k]+'">'+esc(ZUST[p.k].t)+'</b> – '+esc(ZUST[p.k].tun)
+        +'<br>Laststufen F<sub>a</sub>/F<sub>1</sub>/F<sub>2</sub>/F<sub>p</sub>: '+t.Fa+' / '+t.F1+' / '+t.F2+' / <b>'+t.Fp+' kN</b>'
+        +'<br><span style="color:#63676d">E '+p.E.toFixed(2)+' · N '+p.N.toFixed(2)+' · H '+p.H.toFixed(2)+' (Soll)</span>'
+        +'<br><a href="https://www.google.com/maps/dir/?api=1&destination='+q[0].toFixed(7)+','+q[1].toFixed(7)+'&travelmode=walking" target="_blank">🧭 hinführen</a>');
+      MK[p.nr]=m;
+    });
+    map.fitBounds(L.latLngBounds(alle).pad(0.12));
+    function weit(){ $('map2d').classList.toggle('weit', map.getZoom()<17.5); }
+    map.on('zoomend', weit); weit();
+    $('standK').innerHTML=standText();
+  }
+
+  window.zeige=function(nr){
+    tab('k2d');
+    var m=MK[nr]; if(!m) return;
+    map.setView(m.getLatLng(), Math.max(map.getZoom(),20));
+    m.openPopup();
+  };
+
+  window.gps=function(){
+    if(!navigator.geolocation || !map){ alert('Kein GPS verfügbar.'); return; }
+    navigator.geolocation.getCurrentPosition(function(p){
+      var pt=[p.coords.latitude,p.coords.longitude];
+      if(!gpsMarker) gpsMarker=L.circleMarker(pt,{radius:8,color:'#fff',weight:2,fillColor:'#1565c0',fillOpacity:1}).addTo(map);
+      gpsMarker.setLatLng(pt); map.setView(pt, Math.max(map.getZoom(),18));
+    }, function(){ alert('Standort nicht bestimmbar.'); }, {enableHighAccuracy:true, timeout:8000});
+  };
+
+  Promise.all([
+    json(DATEN).then(function(j){ zp=j; }),
+    json(BOHR).then(function(j){ bohr=j; }).catch(function(){ bohr=null; }),
+    apiLaden()
+  ]).then(function(){
+    rechnen(); infoBauen(); listeBauen(); pruefBauen();
+    var h=(location.hash||'').replace('#','');
+    if(['k2d','liste','pruef'].indexOf(h)>=0) tab(h);
+  }).catch(function(e){ $('standInfo').textContent='Daten nicht ladbar: '+e.message; });
+})();
+if('serviceWorker' in navigator){ window.addEventListener('load',function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
+</script>
+</body>
+</html>
