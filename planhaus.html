@@ -130,6 +130,9 @@
   .klegende i { display: inline-block; width: 1.5rem; height: 0.9rem; border-radius: 0.15rem; margin-right: 0.6rem;
     border: 0.08rem solid rgba(0, 0, 0, 0.35); }
   .klegende .n { font-weight: 700; min-width: 3.2rem; text-align: right; margin-right: 0.7rem; }
+  /* viele Stufen (Passstueck-Stufen): zwei Spalten, sonst deckt die Legende zu viele Tische ab */
+  .klegende .zwei { -webkit-column-count: 2; column-count: 2; -webkit-column-gap: 1.6rem; column-gap: 1.6rem; font-size: 1rem; }
+  .klegende .zwei div.z { -webkit-column-break-inside: avoid; break-inside: avoid; line-height: 1.6; }
   .khinweis { display: none; position: absolute; left: 50%; top: 5.6rem; -webkit-transform: translateX(-50%); transform: translateX(-50%);
     background: #fff4e6; color: #7c2d12; border-radius: 0.4rem; padding: 0.5rem 0.9rem; font-size: 1.1rem; white-space: nowrap; }
   /* Gebrochener Zoom: Kacheln 1 px ueberlappen, sonst zeigen sich feine Naehte im Luftbild.
@@ -355,11 +358,11 @@
       if (mk.punkt) { s += '<circle cx="' + (mx + 0.22 * rem) + '" cy="' + mk.y + '" r="' + (0.22 * rem) + '" fill="' + mk.punkt + '"/>'; mx += 0.65 * rem; }
       s += '<text x="' + mx + '" y="' + (mk.y + mk.fs * 0.35) + '" font-size="' + mk.fs + '"' + (mk.fett ? ' font-weight="700"' : '') + ' fill="' + mk.farbe + '">' + mk.text + '</text>';
     }
-    // Achse + Tage: jeder Montag und heute
+    // Achse + Tage: jeder Montag und heute (ein Montag direkt vor «heute» faellt weg, sonst ueberlappen sie)
     s += '<line x1="' + M.l + '" x2="' + (W - M.r) + '" y1="' + y(0) + '" y2="' + y(0) + '" stroke="' + css('--axis') + '"/>';
     for (i = 0; i < n; i++) {
       var d = isoTag(reihe[i].tag);
-      if (d.getDay() === 1 || i === n - 1) {
+      if ((d.getDay() === 1 && i < n - 2) || i === n - 1) {
         s += '<text x="' + x(i) + '" y="' + (H - 0.35 * rem) + '" font-size="' + fs + '" text-anchor="middle" fill="' + css('--ink2') + '">' +
           (i === n - 1 ? 'heute' : 'Mo ' + kurzTag(reihe[i].tag)) + '</text>';
       }
@@ -447,13 +450,16 @@
   }
 
   function kartenLegende() {
-    var s = '<div class="titel">Tische nach Baustand</div>';
+    var s = '', anzahl = 0;
     for (var i = 0; i < karte.stufen.length; i++) {
       var st = karte.stufen[i];
       if (!st.n) continue;
+      anzahl++;
       s += '<div class="z"><i style="background:' + st.farbe + '"></i><span class="n num">' + st.n + '</span>' + st.name + '</div>';
     }
-    $('klegende').innerHTML = s + '<div class="klein">Farben wie die Nalpi-Karte · Luftbild © swisstopo</div>';
+    $('klegende').innerHTML = '<div class="titel">Tische nach Baustand</div>' +
+      '<div' + (anzahl > 7 ? ' class="zwei"' : '') + '>' + s + '</div>' +
+      '<div class="klein">Farben wie die Nalpi-Karte · Luftbild © swisstopo</div>';
   }
 
   // neuAusrichten: Flaeche an den Schirm anpassen und Gleitweg neu (Start, Groessenaenderung)
