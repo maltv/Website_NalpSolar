@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NalpSolar · Abschlussfest Freitag 30.10.</title>
+<meta name="theme-color" content="#D72622">
+<!-- OFFENE SEITE - BEWUSST OHNE GATE-CODE: jeder aus der STRABAG-Mannschaft soll sich
+     mit dem Handy anmelden koennen, ohne Code und ohne Login.
+     Auftrag V. Malt 30.09.2026: «Anmeldung ueber die Website fuer das interne Personal».
+     Nur STRABAG - Geoworks und Schuoler (zahlen wir auch) sowie CKW und Beer Bigliel
+     (zahlen selber) melden ihre Leute per Mail. Darum Firma fix STRABAG, keine Auswahl.
+     Muster: pizza.html (21.08.2026).
+
+     Fest: Fr 30.10.2026 ab 18:00, Installationsplatz Tal, Via Tgamaura 16a.
+     Essen: Metzgerei Curschellas, Offerte 112676 vom 29.09.2026, zugesagt 30.09.2026:
+     Grill + Salatbuffet (Grillkaese fuer Vegis steht in der Offerte). Getraenke bringen wir.
+     Die Metzgerei bekommt die Anzahl am Mo 19.10. - Anmeldeschluss darum Fr 16.10.
+     KEINE Preise auf dieser Seite: das Website-Repo ist oeffentlich.
+
+     Datenbank: dieselbe Firebase-RTDB wie die uebrigen Seiten, unter dem freigegebenen
+     Knoten "erfassung" (neuer Top-Level-Knoten wuerde abgelehnt, siehe pizza.html). -->
+<style>
+  :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
+         --gruen:#1e9e5a; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body{ margin:0; background:#eef0f3; min-height:100vh; color:var(--ink);
+        font-family:Arial,"Helvetica Neue",sans-serif; }
+  body::before{ content:""; position:fixed; inset:0; z-index:-1;
+        background:linear-gradient(rgba(240,242,245,.86),rgba(240,242,245,.94)),
+        url('assets/img/hero.jpg') center 40%/cover no-repeat; }
+  header{ display:flex; align-items:center; gap:10px; padding:12px 14px;
+          background:#fff; border-bottom:4px solid var(--rot); }
+  header .logo img{ height:24px; display:block; }
+  header h1{ font-size:14.5px; margin:0; flex:1; min-width:0; font-weight:800;
+             white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .lang{ display:flex; border:1px solid #c9ccd2; border-radius:6px; overflow:hidden; flex:none; }
+  .lang button{ border:none; background:#fff; color:var(--mut); font-weight:800; font-size:12px;
+        padding:6px 5px; cursor:pointer; border-right:1px solid #e3e5e8; font-family:inherit; }
+  .lang button:last-child{ border-right:none; }
+  .lang button.on{ background:var(--rot); color:#fff; }
+  main{ max-width:640px; margin:0 auto; padding:14px 12px 90px; }
+
+  .box{ background:#fff; border:1px solid var(--line); border-left:5px solid var(--rot);
+        border-radius:6px; padding:15px; margin-bottom:14px; box-shadow:0 1px 4px rgba(20,25,32,.07); }
+  .box h2{ margin:0 0 4px; font-size:17px; }
+  .box p.sub{ margin:0 0 12px; font-size:13.5px; color:var(--mut); line-height:1.5; }
+
+  /* Kopf: wann, wo, bis wann */
+  .wann{ background:var(--rot); color:#fff; border:none; }
+  .wann h2{ font-size:22px; font-weight:900; margin:0; }
+  .wann .zeile{ font-size:14.5px; margin-top:7px; line-height:1.5; }
+  .wann .frist{ margin-top:12px; background:rgba(255,255,255,.16); border-radius:5px;
+        padding:10px 12px; font-size:14px; font-weight:700; line-height:1.45; }
+  .wann .frist b{ font-size:15.5px; }
+
+  label.fl{ display:block; font-size:11.5px; font-weight:700; color:var(--mut); margin:15px 0 5px;
+            text-transform:uppercase; letter-spacing:.04em; }
+  label.fl:first-child{ margin-top:0; }
+  input[type=text]{ width:100%; background:#fff; border:1px solid #c9ccd2;
+          border-radius:6px; color:var(--ink); padding:11px 10px; font-size:16px; font-family:inherit; }
+  input:focus{ outline:2px solid rgba(215,38,34,.35); }
+
+  /* Vegi-Haekchen */
+  .vegi{ position:relative; display:block; margin-top:16px; }
+  .vegi input{ position:absolute; opacity:0; pointer-events:none; }
+  .vegi span{ display:block; border:1.5px dashed #c9ccd2; border-radius:7px; padding:12px 13px 12px 44px;
+        background:#fff; cursor:pointer; font-size:14.5px; line-height:1.4; }
+  .vegi span::before{ content:""; position:absolute; left:14px; top:15px; width:18px; height:18px;
+        border:2px solid #b9bec5; border-radius:3px; background:#fff; }
+  .vegi input:checked + span{ border-style:solid; border-color:var(--rot); background:#fff7f7; }
+  .vegi input:checked + span::before{ border-color:var(--rot); background:var(--rot); }
+  .vegi input:checked + span::after{ content:""; position:absolute; left:20px; top:19px;
+        width:5px; height:10px; border:solid #fff; border-width:0 2.5px 2.5px 0; transform:rotate(43deg); }
+  .vegi small{ display:block; color:var(--mut); font-size:12.5px; margin-top:2px; }
+
+  .btn{ display:block; width:100%; border:none; border-radius:7px; padding:16px;
+        font-size:17px; font-weight:800; cursor:pointer; color:#fff; background:var(--rot);
+        font-family:inherit; margin-top:18px; }
+  .btn[disabled]{ opacity:.45; }
+  .btn.grau{ background:#5b6067; }
+  .btn.klein{ padding:12px; font-size:15px; margin-top:10px; }
+  #status{ font-size:13px; color:var(--mut); min-height:18px; margin-top:10px; text-align:center; }
+
+  .ok{ display:none; text-align:center; padding:26px 16px; }
+  .ok .hk{ font-size:56px; line-height:1; }
+  .ok h2{ margin:12px 0 6px; font-size:20px; color:var(--gruen); }
+  .ok p{ margin:0 0 6px; font-size:14.5px; color:var(--mut); line-height:1.55; }
+  .ok .meins{ background:#f5f6f8; border-radius:6px; padding:12px 14px; text-align:left;
+        font-size:14px; line-height:1.5; margin:14px 0 4px; }
+
+  /* Uebersicht */
+  .zahl{ display:flex; gap:10px; margin:0 0 12px; }
+  .zahl div{ flex:1; background:#f5f6f8; border-radius:6px; padding:11px 8px; text-align:center; }
+  .zahl b{ display:block; font-size:24px; font-weight:900; line-height:1.1; }
+  .zahl small{ font-size:11.5px; color:var(--mut); }
+  table.ue{ width:100%; border-collapse:collapse; font-size:14px; }
+  table.ue td{ border-top:1px solid var(--line); padding:9px 2px; vertical-align:top; }
+  table.ue tr:first-child td{ border-top:none; }
+  table.ue .nm{ font-weight:700; }
+  table.ue .vg{ color:var(--gruen); font-size:12.5px; white-space:nowrap; text-align:right; }
+  table.ue .del{ width:26px; text-align:right; }
+  table.ue .del button{ background:none; border:none; color:var(--mut); font-size:17px;
+        cursor:pointer; padding:0 2px; font-family:inherit; }
+  .leer{ font-size:13.5px; color:var(--mut); }
+  .hint{ font-size:12.5px; color:var(--mut); background:rgba(255,255,255,.9);
+         border-radius:6px; padding:11px 13px; line-height:1.55; }
+  .zu{ background:#fff4e5; border:1px solid #f0c98a; border-radius:6px; padding:11px 13px;
+       font-size:13.5px; line-height:1.5; margin-bottom:14px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><a href="index.html"><img src="assets/img/strabag-logo.png" alt="STRABAG"></a></div>
+  <h1 data-i18n="kopf">Abschlussfest</h1>
+  <div class="lang" id="langBox">
+    <button data-lang="de" onclick="setLang('de')">DE</button>
+    <button data-lang="en" onclick="setLang('en')">EN</button>
+    <button data-lang="it" onclick="setLang('it')">IT</button>
+    <button data-lang="pt" onclick="setLang('pt')">PT</button>
+    <button data-lang="pl" onclick="setLang('pl')">PL</button>
+  </div>
+</header>
+
+<main>
+
+  <div class="box wann">
+    <h2 data-i18n="wann_titel">🔥 Freitag, 30. Oktober</h2>
+    <div class="zeile" id="wannZeile"></div>
+    <div class="frist" id="frist"></div>
+  </div>
+
+  <div id="form">
+    <div class="box">
+      <h2 data-i18n="form_titel">Ich komme</h2>
+      <p class="sub" data-i18n="form_sub">Name eintragen und abschicken. Du kannst auch Kollegen ohne Handy anmelden.</p>
+
+      <label class="fl" data-i18n="lbl_name">Name *</label>
+      <input type="text" id="fName" autocomplete="name" data-i18n-ph="ph_name" placeholder="Vorname Name">
+
+      <label class="vegi">
+        <input type="checkbox" id="fVegi">
+        <span id="vegiTxt"></span>
+      </label>
+
+      <button class="btn" id="btnSend" onclick="senden()" data-i18n="btn_senden">✔ Anmelden</button>
+      <div id="status"></div>
+    </div>
+  </div>
+
+  <div class="ok" id="ok">
+    <div class="hk">🔥</div>
+    <h2 data-i18n="ok_titel">Angemeldet – danke!</h2>
+    <p data-i18n="ok_sub">Wir sehen uns am Freitag, 30. Oktober ab 18:00 Uhr.</p>
+    <div class="meins" id="meins"></div>
+    <button class="btn klein grau" onclick="neuStart(true)" data-i18n="btn_aendern">✏️ Meine Anmeldung ändern</button>
+    <button class="btn klein" onclick="neuStart(false)" data-i18n="btn_weitere">➕ Jemand anderen anmelden</button>
+  </div>
+
+  <div class="box">
+    <h2 data-i18n="ue_titel">Wer kommt?</h2>
+    <p class="sub" data-i18n="ue_sub">Alle Anmeldungen – aktualisiert sich beim Öffnen der Seite.</p>
+    <div class="zahl">
+      <div><b id="nLeute">–</b><small data-i18n="z_leute">Personen</small></div>
+      <div><b id="nVegi">–</b><small data-i18n="z_vegi">Vegi</small></div>
+    </div>
+    <div id="ueTab"><div class="leer" data-i18n="laedt">Wird geladen …</div></div>
+    <button class="btn klein grau" onclick="listeKopieren()" data-i18n="btn_kopieren">📋 Liste kopieren</button>
+    <div id="kopStatus" style="font-size:12.5px;color:var(--mut);text-align:center;margin-top:8px;min-height:16px"></div>
+  </div>
+
+  <div class="hint" id="hintBox"></div>
+
+</main>
+
+<script>
+'use strict';
+var DB='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app';
+var P='erfassung/fest_20261030/anmeldungen';
+var LS_NAME='nalp_fest_name_v1', LS_MEIN='nalp_fest_meine_v1';
+var FRIST=new Date(2026,9,17,0,0,0);          /* Ende Fr 16.10.2026 - Anzahl an Curschellas am Mo 19.10. */
+
+/* ══════════ Sprachen DE / EN / IT / PT / PL ══════════ */
+var I18N={
+ de:{
+  kopf:'Abschlussfest',
+  wann_titel:'🔥 Freitag, 30. Oktober',
+  wann_zeile:'Abschlussfest ab <b>18:00 Uhr</b> · Installationsplatz Tal, Via Tgamaura 16a, Sedrun<br>Grill und Salatbuffet von der Metzgerei Curschellas. STRABAG lädt ein.',
+  frist:'<b>Anmeldung bis Freitag, 16. Oktober.</b><br>Die Metzgerei braucht die genaue Zahl.',
+  form_titel:'Ich komme',
+  form_sub:'Name eintragen und abschicken. Du kannst auch Kollegen ohne Handy anmelden.',
+  lbl_name:'Name *', ph_name:'Vorname Name',
+  vegi:'🧀 Ich esse vegetarisch<small>Grillkäse statt Fleisch</small>',
+  btn_senden:'✔ Anmelden',
+  ok_titel:'Angemeldet – danke!', ok_sub:'Wir sehen uns am Freitag, 30. Oktober ab 18:00 Uhr.',
+  btn_aendern:'✏️ Meine Anmeldung ändern', btn_weitere:'➕ Jemand anderen anmelden',
+  ue_titel:'Wer kommt?', ue_sub:'Alle Anmeldungen – aktualisiert sich beim Öffnen der Seite.',
+  z_leute:'Personen', z_vegi:'Vegi', vegi_kurz:'Vegi', laedt:'Wird geladen …',
+  leer:'Noch niemand angemeldet – mach den Anfang.',
+  btn_kopieren:'📋 Liste kopieren',
+  kopiert:'Liste kopiert – kannst du jetzt einfügen.', kopiert_nein:'Kopieren hat nicht geklappt.',
+  hint:'Fragen? Victor Malt · +41 76 835 21 75',
+  zu:'<b>Anmeldeschluss ist vorbei.</b> Die Zahl ist bei der Metzgerei. Du kannst dich noch eintragen – ob es noch reicht, sagt dir Victor (076 835 21 75).',
+  err_name:'Bitte deinen Namen angeben.',
+  err_senden:'Senden fehlgeschlagen – bitte Empfang prüfen und nochmals versuchen.',
+  sendet:'Wird gesendet …', del_frage:'Diese Anmeldung wirklich löschen?',
+  doppelt:'{n} ist schon angemeldet. Trotzdem nochmals anmelden?'
+ },
+ en:{
+  kopf:'Closing party',
+  wann_titel:'🔥 Friday, 30 October',
+  wann_zeile:'Closing party from <b>6:00 p.m.</b> · Installation area in the valley, Via Tgamaura 16a, Sedrun<br>Barbecue and salad buffet from Metzgerei Curschellas. STRABAG invites you.',
+  frist:'<b>Sign up by Friday, 16 October.</b><br>The butcher needs the exact number.',
+  form_titel:'I\'m coming',
+  form_sub:'Enter your name and send. You can also sign up colleagues who have no phone.',
+  lbl_name:'Name *', ph_name:'First name Last name',
+  vegi:'🧀 I eat vegetarian<small>Grilled cheese instead of meat</small>',
+  btn_senden:'✔ Sign up',
+  ok_titel:'Signed up – thank you!', ok_sub:'See you on Friday, 30 October from 6:00 p.m.',
+  btn_aendern:'✏️ Change my sign-up', btn_weitere:'➕ Sign up someone else',
+  ue_titel:'Who is coming?', ue_sub:'All sign-ups – updates when you open the page.',
+  z_leute:'people', z_vegi:'vegetarian', vegi_kurz:'veggie', laedt:'Loading …',
+  leer:'Nobody signed up yet – be the first.',
+  btn_kopieren:'📋 Copy list',
+  kopiert:'List copied – you can paste it now.', kopiert_nein:'Copying failed.',
+  hint:'Questions? Victor Malt · +41 76 835 21 75',
+  zu:'<b>The deadline has passed.</b> The number has gone to the butcher. You can still sign up – Victor will tell you if it still works (076 835 21 75).',
+  err_name:'Please enter your name.',
+  err_senden:'Sending failed – check your signal and try again.',
+  sendet:'Sending …', del_frage:'Really delete this sign-up?',
+  doppelt:'{n} is already signed up. Sign up again anyway?'
+ },
+ it:{
+  kopf:'Festa di fine cantiere',
+  wann_titel:'🔥 Venerdì 30 ottobre',
+  wann_zeile:'Festa di fine cantiere dalle <b>18:00</b> · Piazzale di installazione a valle, Via Tgamaura 16a, Sedrun<br>Grigliata e buffet di insalate della Metzgerei Curschellas. Offre la STRABAG.',
+  frist:'<b>Iscrizione entro venerdì 16 ottobre.</b><br>La macelleria ha bisogno del numero esatto.',
+  form_titel:'Io vengo',
+  form_sub:'Inserisci il tuo nome e invia. Puoi iscrivere anche colleghi senza telefono.',
+  lbl_name:'Nome *', ph_name:'Nome Cognome',
+  vegi:'🧀 Sono vegetariano<small>Formaggio alla griglia invece della carne</small>',
+  btn_senden:'✔ Iscriviti',
+  ok_titel:'Iscritto – grazie!', ok_sub:'Ci vediamo venerdì 30 ottobre dalle 18:00.',
+  btn_aendern:'✏️ Modifica la mia iscrizione', btn_weitere:'➕ Iscrivi un\'altra persona',
+  ue_titel:'Chi viene?', ue_sub:'Tutte le iscrizioni – si aggiorna aprendo la pagina.',
+  z_leute:'persone', z_vegi:'vegetariani', vegi_kurz:'vegetariano', laedt:'Caricamento …',
+  leer:'Ancora nessun iscritto – fai tu il primo passo.',
+  btn_kopieren:'📋 Copia la lista',
+  kopiert:'Lista copiata – ora puoi incollarla.', kopiert_nein:'Copia non riuscita.',
+  hint:'Domande? Victor Malt · +41 76 835 21 75',
+  zu:'<b>Il termine è scaduto.</b> Il numero è già stato comunicato alla macelleria. Puoi ancora iscriverti – Victor ti dice se si riesce (076 835 21 75).',
+  err_name:'Inserisci il tuo nome.',
+  err_senden:'Invio non riuscito – controlla la ricezione e riprova.',
+  sendet:'Invio in corso …', del_frage:'Cancellare davvero questa iscrizione?',
+  doppelt:'{n} è già iscritto. Iscrivere di nuovo?'
+ },
+ pt:{
+  kopf:'Festa de encerramento',
+  wann_titel:'🔥 Sexta-feira, 30 de outubro',
+  wann_zeile:'Festa de encerramento a partir das <b>18:00</b> · Estaleiro no vale, Via Tgamaura 16a, Sedrun<br>Churrasco e buffet de saladas da Metzgerei Curschellas. A STRABAG convida.',
+  frist:'<b>Inscrição até sexta-feira, 16 de outubro.</b><br>O talho precisa do número exato.',
+  form_titel:'Eu vou',
+  form_sub:'Escreve o teu nome e envia. Também podes inscrever colegas sem telemóvel.',
+  lbl_name:'Nome *', ph_name:'Nome Apelido',
+  vegi:'🧀 Sou vegetariano<small>Queijo grelhado em vez de carne</small>',
+  btn_senden:'✔ Inscrever',
+  ok_titel:'Inscrito – obrigado!', ok_sub:'Até sexta-feira, 30 de outubro, a partir das 18:00.',
+  btn_aendern:'✏️ Alterar a minha inscrição', btn_weitere:'➕ Inscrever outra pessoa',
+  ue_titel:'Quem vem?', ue_sub:'Todas as inscrições – atualiza ao abrir a página.',
+  z_leute:'pessoas', z_vegi:'vegetarianos', vegi_kurz:'vegetariano', laedt:'A carregar …',
+  leer:'Ainda ninguém inscrito – sê o primeiro.',
+  btn_kopieren:'📋 Copiar lista',
+  kopiert:'Lista copiada – já podes colar.', kopiert_nein:'Não foi possível copiar.',
+  hint:'Dúvidas? Victor Malt · +41 76 835 21 75',
+  zu:'<b>O prazo terminou.</b> O número já foi enviado ao talho. Ainda te podes inscrever – o Victor diz-te se ainda dá (076 835 21 75).',
+  err_name:'Escreve o teu nome, por favor.',
+  err_senden:'Falha no envio – verifica a rede e tenta de novo.',
+  sendet:'A enviar …', del_frage:'Apagar mesmo esta inscrição?',
+  doppelt:'{n} já está inscrito. Inscrever outra vez?'
+ },
+ pl:{
+  kopf:'Impreza końcowa',
+  wann_titel:'🔥 Piątek, 30 października',
+  wann_zeile:'Impreza na zakończenie budowy od <b>18:00</b> · Plac instalacyjny w dolinie, Via Tgamaura 16a, Sedrun<br>Grill i bufet sałatkowy z Metzgerei Curschellas. STRABAG zaprasza.',
+  frist:'<b>Zapisy do piątku, 16 października.</b><br>Rzeźnik potrzebuje dokładnej liczby osób.',
+  form_titel:'Przychodzę',
+  form_sub:'Wpisz imię i nazwisko i wyślij. Możesz też zapisać kolegów bez telefonu.',
+  lbl_name:'Imię i nazwisko *', ph_name:'Imię Nazwisko',
+  vegi:'🧀 Jestem wegetarianinem<small>Ser z grilla zamiast mięsa</small>',
+  btn_senden:'✔ Zapisz się',
+  ok_titel:'Zapisano – dziękujemy!', ok_sub:'Do zobaczenia w piątek, 30 października od 18:00.',
+  btn_aendern:'✏️ Zmień mój zapis', btn_weitere:'➕ Zapisz inną osobę',
+  ue_titel:'Kto przychodzi?', ue_sub:'Wszystkie zapisy – odświeża się przy otwarciu strony.',
+  z_leute:'osób', z_vegi:'wegetarian', vegi_kurz:'wege', laedt:'Ładowanie …',
+  leer:'Nikt się jeszcze nie zapisał – bądź pierwszy.',
+  btn_kopieren:'📋 Kopiuj listę',
+  kopiert:'Lista skopiowana – możesz ją teraz wkleić.', kopiert_nein:'Kopiowanie nie powiodło się.',
+  hint:'Pytania? Victor Malt · +41 76 835 21 75',
+  zu:'<b>Termin zapisów minął.</b> Liczba osób jest już u rzeźnika. Nadal możesz się zapisać – Victor powie ci, czy to jeszcze możliwe (076 835 21 75).',
+  err_name:'Wpisz swoje imię i nazwisko.',
+  err_senden:'Wysyłanie nie powiodło się – sprawdź zasięg i spróbuj ponownie.',
+  sendet:'Wysyłanie …', del_frage:'Na pewno usunąć ten zapis?',
+  doppelt:'{n} jest już zapisany. Zapisać ponownie?'
+ }
+};
+var LS_LANG='nalp_lang_v1';
+var lang=(function(){
+  try{ var g=localStorage.getItem(LS_LANG); if(g&&I18N[g]) return g; }catch(e){}
+  var n=(navigator.language||'de').slice(0,2).toLowerCase();
+  return I18N[n]?n:'de';
+})();
+function T(k){ return (I18N[lang]&&I18N[lang][k]) || I18N.de[k] || k; }
+
+var alle=[], meine=[];
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+function setLang(l){
+  if(!I18N[l]) return;
+  lang=l;
+  try{ localStorage.setItem(LS_LANG,l); }catch(e){}
+  document.documentElement.lang=l;
+  document.querySelectorAll('[data-i18n]').forEach(function(el){ el.textContent=T(el.getAttribute('data-i18n')); });
+  document.querySelectorAll('[data-i18n-ph]').forEach(function(el){ el.placeholder=T(el.getAttribute('data-i18n-ph')); });
+  document.querySelectorAll('#langBox button').forEach(function(b){
+    b.classList.toggle('on', b.getAttribute('data-lang')===l);
+  });
+  $('wannZeile').innerHTML=T('wann_zeile');
+  $('frist').innerHTML=T('frist');
+  $('vegiTxt').innerHTML=T('vegi');
+  $('hintBox').innerHTML=T('hint');
+  var zu=$('zuBox'); if(zu) zu.innerHTML=T('zu');
+  zeichnen();
+}
+
+/* Frist-Hinweis, sobald sie durch ist */
+(function(){
+  if(new Date()>FRIST){
+    var d=document.createElement('div');
+    d.className='zu'; d.id='zuBox';
+    d.innerHTML=T('zu');
+    $('form').insertBefore(d,$('form').firstChild);
+  }
+})();
+
+/* ── Datenbank (REST, gleiches Muster wie pizza.html) ─── */
+function apiPost(body){ return fetch(DB+'/'+P+'.json',{method:'POST',body:JSON.stringify(body)})
+  .then(function(r){ return r.ok?r.json():null; }).then(function(j){ return j&&j.name?j.name:null; }); }
+function apiDel(key){ return fetch(DB+'/'+P+'/'+key+'.json',{method:'DELETE'})
+  .then(function(r){ return r.ok; }); }
+function apiGet(){ return fetch(DB+'/'+P+'.json?_='+Date.now())
+  .then(function(r){ return r.ok?r.json():null; }).catch(function(){ return null; }); }
+
+function meineLesen(){ try{ meine=JSON.parse(localStorage.getItem(LS_MEIN)||'[]'); }catch(e){ meine=[]; } }
+function meineSchreiben(){ try{ localStorage.setItem(LS_MEIN,JSON.stringify(meine)); }catch(e){} }
+meineLesen();
+
+/* ── Absenden ─────────────────────────────────────────── */
+function senden(){
+  var name=$('fName').value.trim();
+  if(!name){ alert(T('err_name')); return; }
+
+  /* Doppelte Anmeldung abfangen (gleicher Name, Gross/klein egal) */
+  var schon=alle.some(function(d){ return String(d.name||'').trim().toLowerCase()===name.toLowerCase(); });
+  if(schon && !confirm(T('doppelt').replace('{n}',name))) return;
+
+  /* Nur STRABAG meldet sich hier an - Firma fix, keine Auswahl */
+  var rec={ ts:Date.now(), name:name, firma:'STRABAG', vegi:$('fVegi').checked };
+
+  try{ localStorage.setItem(LS_NAME,name); }catch(e){}
+  $('btnSend').disabled=true;
+  $('status').textContent=T('sendet');
+
+  apiPost(rec).then(function(key){
+    if(!key) throw 0;
+    meine.push(key); meineSchreiben();
+    $('meins').innerHTML='<b>'+esc(rec.name)+'</b>'+(rec.vegi?' · 🧀 '+esc(T('vegi_kurz')):'');
+    $('form').style.display='none';
+    $('ok').style.display='block';
+    $('btnSend').disabled=false; $('status').textContent='';
+    laden();
+    window.scrollTo(0,0);
+  }).catch(function(){
+    $('btnSend').disabled=false;
+    $('status').textContent='';
+    alert(T('err_senden'));
+  });
+}
+
+/* "ändern" = letzten eigenen Eintrag löschen und neu ausfüllen;
+   "jemand anderen" = leeres Formular, Name frei */
+function neuStart(aendern){
+  if(aendern && meine.length){
+    var key=meine[meine.length-1];
+    apiDel(key).then(function(){ meine.pop(); meineSchreiben(); laden(); });
+  } else {
+    $('fName').value=''; $('fVegi').checked=false;
+  }
+  $('ok').style.display='none';
+  $('form').style.display='block';
+  window.scrollTo(0,0);
+}
+
+function loeschen(key){
+  if(!confirm(T('del_frage'))) return;
+  apiDel(key).then(function(){
+    var i=meine.indexOf(key); if(i>=0){ meine.splice(i,1); meineSchreiben(); }
+    laden();
+  });
+}
+
+/* ── Übersicht ────────────────────────────────────────── */
+function laden(){
+  apiGet().then(function(daten){
+    alle=[];
+    if(daten) for(var k in daten){ if(daten.hasOwnProperty(k)){ var d=daten[k]||{}; d._key=k; alle.push(d); } }
+    alle.sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
+    zeichnen();
+  });
+}
+
+function zeichnen(){
+  var nV=0;
+  for(var i=0;i<alle.length;i++) if(alle[i].vegi) nV++;
+  $('nLeute').textContent=alle.length;
+  $('nVegi').textContent=nV;
+
+  if(!alle.length){
+    $('ueTab').innerHTML='<div class="leer">'+T('leer')+'</div>';
+    return;
+  }
+  var h='<table class="ue">';
+  for(var j=0;j<alle.length;j++){
+    var d=alle[j];
+    h+='<tr><td class="nm">'+esc(d.name)+'</td>'
+      +'<td class="vg">'+(d.vegi?'🧀 '+esc(T('vegi_kurz')):'')+'</td>'
+      +'<td class="del">'+(meine.indexOf(d._key)>=0
+          ? '<button title="löschen" onclick="loeschen(\''+d._key+'\')">✕</button>' : '')+'</td></tr>';
+  }
+  h+='</table>';
+  $('ueTab').innerHTML=h;
+}
+
+/* Fertiger Text für die Meldung an die Metzgerei */
+function listeText(){
+  var nV=0;
+  for(var i=0;i<alle.length;i++) if(alle[i].vegi) nV++;
+  var L=['ABSCHLUSSFEST NALPSOLAR - Freitag, 30.10.2026, ab 18:00 Uhr','Anmeldungen STRABAG',''];
+  L.push('Total '+alle.length+' Personen, davon '+nV+' vegetarisch.');
+  L.push('');
+  for(var j=0;j<alle.length;j++) L.push('  '+(j+1)+'. '+alle[j].name+(alle[j].vegi?' (vegetarisch)':''));
+  return L.join('\n');
+}
+function listeKopieren(){
+  var t=listeText();
+  var fertig=function(){ $('kopStatus').textContent=T('kopiert'); };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(fertig,function(){ notfall(t); });
+  } else notfall(t);
+  function notfall(txt){
+    var ta=document.createElement('textarea');
+    ta.value=txt; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); fertig(); }catch(e){ $('kopStatus').textContent=T('kopiert_nein'); }
+    document.body.removeChild(ta);
+  }
+}
+
+/* Name merken + Sprache anwenden */
+setLang(lang);
+try{ $('fName').value=localStorage.getItem(LS_NAME)||''; }catch(e){}
+laden();
+</script>
+</body>
+</html>
