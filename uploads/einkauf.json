@@ -1,6 +1,6 @@
 {
- "stand": "2026-09-03",
- "gebaut_am": "2026-09-03 20:31",
+ "stand": "2026-10-02",
+ "gebaut_am": "2026-10-02 09:17",
  "quelle": "Bestellungen/einkaufsregister.json",
  "bestellungen": [
   {
@@ -18,14 +18,14 @@
    "beleg": "",
    "bemerkung": "Bene hat am 19.08. Modelle geschickt, die Auswahl blieb liegen; Freigabe 2x12 am 25.08. nachgereicht. Lieferfrist lt. Bene 3-5 Arbeitstage.",
    "quelle": "Mail 25.08.2026 an Benedict.Albin@bmsuisse.ch; Bestellungen/20260819_Aluleiter_Bestellung_Barit.md",
-   "tage_seit_bestellung": 9,
-   "tage_bis_termin": -2,
+   "tage_seit_bestellung": 38,
+   "tage_bis_termin": -31,
    "ampel": "rot",
-   "ampeltext": "überfällig seit 2 Tagen",
+   "ampeltext": "überfällig seit 31 Tagen",
    "liefer": {
     "stufe": "spaet",
     "text": "LIEFERUNG WAR AM Di 01.09.2026 (geschaetzt)",
-    "zusatz": "überfällig seit 2 Tagen"
+    "zusatz": "überfällig seit 31 Tagen"
    }
   },
   {
@@ -44,14 +44,14 @@
    "bemerkung": "AB 420-76814 vom 13.08.2026 lag im Posteingang, war aber nie im Register - darum stand hier faelschlich \"kein Termin\". Liefertermin 04.09.2026 zugesagt. 6 Stk zu EP 65.20 (40% + 3% Rabatt), netto 227.70 / brutto 246.15 CHF. EXW Buttikon, Versand PostPac Priority. Lieferung nach Disentis, NICHT auf die Baustelle. Termin ist zu spaet - am 27.08. bei Igrek nachgefragt, ob es frueher geht (Teillieferung/Abholung).",
    "quelle": "AB 420-76814 vom 13.08.2026 (Mail notifications@hbt-ag.ch 13.08.2026 13:31); Bestellung Mail 11.08.2026 10:58 an christian.igrek@hbt-ag.ch",
    "bestellt_von": "Victor",
-   "tage_seit_bestellung": 23,
-   "tage_bis_termin": 1,
-   "ampel": "orange",
-   "ampeltext": "morgen fällig",
+   "tage_seit_bestellung": 52,
+   "tage_bis_termin": -28,
+   "ampel": "rot",
+   "ampeltext": "überfällig seit 28 Tagen",
    "liefer": {
-    "stufe": "heute",
-    "text": "LIEFERUNG MORGEN, Fr 04.09.2026",
-    "zusatz": "zugesagt"
+    "stufe": "spaet",
+    "text": "LIEFERUNG WAR AM Fr 04.09.2026 (zugesagt)",
+    "zusatz": "überfällig seit 28 Tagen"
    }
   },
   {
@@ -69,64 +69,14 @@
    "beleg": "Offerte 26079714; AB 260859993",
    "bemerkung": "Freigabe Admir 25.08. 08:23, Bestellung raus 25.08. 09:06. Helm und Verbrauchsmaterial auf ZWEI getrennte Rechnungen verlangt. Liefertermin ist noch nicht bestaetigt.",
    "quelle": "Mail 25.08.2026 09:06 an info@arthurweber.ch (Offerte 26079714); AB 260859993 vom 25.08.2026 (Mail fabio.inderbitzin@arthurweber.ch)",
-   "tage_seit_bestellung": 9,
-   "tage_bis_termin": 1,
-   "ampel": "orange",
-   "ampeltext": "morgen fällig",
+   "tage_seit_bestellung": 38,
+   "tage_bis_termin": -28,
+   "ampel": "rot",
+   "ampeltext": "überfällig seit 28 Tagen",
    "liefer": {
-    "stufe": "heute",
-    "text": "LIEFERUNG MORGEN, Fr 04.09.2026",
-    "zusatz": "zugesagt"
-   }
-  },
-  {
-   "id": "20260824-berner-gehoerschutz",
-   "was": "3 Stk Gehoerschutzkapsel Premium, SNR 35 dB (Art. 48063)",
-   "fuer": "Bohrteam",
-   "lieferant": "Berner AG",
-   "wo": "IP Tal 1, Tujetsch",
-   "bestellt_am": "2026-08-24",
-   "termin": null,
-   "termin_art": "offen",
-   "preis": null,
-   "preis_art": "offen",
-   "status": "bestellt",
-   "beleg": "",
-   "bemerkung": "ACHTUNG doppelt gesendet am 24.08. - bei Wareneingang auf doppelte Lieferung achten.",
-   "quelle": "Bestellungen/20260824_Gehoerschutz_Bestellung_Berner.md",
-   "tage_seit_bestellung": 10,
-   "tage_bis_termin": null,
-   "ampel": "orange",
-   "ampeltext": "kein Termin, 10 Tage her – nachhaken",
-   "liefer": {
-    "stufe": "offen",
-    "text": "LIEFERTERMIN UNBEKANNT – nachfragen",
-    "zusatz": "bestellt vor 10 Tagen"
-   }
-  },
-  {
-   "id": "20260825-aw-schweisswinkel",
-   "was": "4 Stk Magnet-Schweisswinkel schaltbar + 6 Stk Magnet-Schweisswinkel + Ringschrauben",
-   "fuer": "Stahlbau (Schweissen)",
-   "lieferant": "Arthur Weber AG",
-   "wo": "Abholung Schattdorf",
-   "bestellt_am": "2026-08-25",
-   "termin": null,
-   "termin_art": "offen",
-   "preis": null,
-   "preis_art": "offen",
-   "status": "bestellt",
-   "beleg": "",
-   "bemerkung": "",
-   "quelle": "Mail 25.08.2026 08:48 an info@arthurweber.ch",
-   "tage_seit_bestellung": 9,
-   "tage_bis_termin": null,
-   "ampel": "orange",
-   "ampeltext": "kein Termin, 9 Tage her – nachhaken",
-   "liefer": {
-    "stufe": "offen",
-    "text": "LIEFERTERMIN UNBEKANNT – nachfragen",
-    "zusatz": "bestellt vor 9 Tagen"
+    "stufe": "spaet",
+    "text": "LIEFERUNG WAR AM Fr 04.09.2026 (zugesagt)",
+    "zusatz": "überfällig seit 28 Tagen"
    }
   },
   {
@@ -144,14 +94,142 @@
    "beleg": "Angebot 037875; AB 374218",
    "bemerkung": "Widerspruch Termin: am 20.08. hiess es lagernd, im Angebot 4 Wochen - Bestaetigung verlangt. SPERRE: einsetzen erst nach Aufnahme ins SiKo PSAgA durch S. Gaeumann.",
    "quelle": "Arbeitssicherheit/260819_Traegerklemmen_HEA/20260824_Vergabe_Traegerklemmen.md; AB 374218 vom 25.08.2026 (Mail emir.murati@haberkorn.ch)",
-   "tage_seit_bestellung": 10,
-   "tage_bis_termin": 18,
-   "ampel": "grau",
-   "ampeltext": "in 18 Tagen",
+   "tage_seit_bestellung": 39,
+   "tage_bis_termin": -11,
+   "ampel": "rot",
+   "ampeltext": "überfällig seit 11 Tagen",
    "liefer": {
-    "stufe": "kommt",
-    "text": "LIEFERUNG AM Mo 21.09.2026 (geschaetzt)",
-    "zusatz": "in 18 Tagen"
+    "stufe": "spaet",
+    "text": "LIEFERUNG WAR AM Mo 21.09.2026 (geschaetzt)",
+    "zusatz": "überfällig seit 11 Tagen"
+   }
+  },
+  {
+   "id": "20260824-berner-gehoerschutz",
+   "was": "3 Stk Gehoerschutzkapsel Premium, SNR 35 dB (Art. 48063)",
+   "fuer": "Bohrteam",
+   "lieferant": "Berner AG",
+   "wo": "IP Tal 1, Tujetsch",
+   "bestellt_am": "2026-08-24",
+   "termin": null,
+   "termin_art": "offen",
+   "preis": null,
+   "preis_art": "offen",
+   "status": "bestellt",
+   "beleg": "",
+   "bemerkung": "ACHTUNG doppelt gesendet am 24.08. - bei Wareneingang auf doppelte Lieferung achten.",
+   "quelle": "Bestellungen/20260824_Gehoerschutz_Bestellung_Berner.md",
+   "tage_seit_bestellung": 39,
+   "tage_bis_termin": null,
+   "ampel": "orange",
+   "ampeltext": "kein Termin, 39 Tage her – nachhaken",
+   "liefer": {
+    "stufe": "offen",
+    "text": "LIEFERTERMIN UNBEKANNT – nachfragen",
+    "zusatz": "bestellt vor 39 Tagen"
+   }
+  },
+  {
+   "id": "20260825-aw-schweisswinkel",
+   "was": "4 Stk Magnet-Schweisswinkel schaltbar + 6 Stk Magnet-Schweisswinkel + Ringschrauben",
+   "fuer": "Stahlbau (Schweissen)",
+   "lieferant": "Arthur Weber AG",
+   "wo": "Abholung Schattdorf",
+   "bestellt_am": "2026-08-25",
+   "termin": null,
+   "termin_art": "offen",
+   "preis": null,
+   "preis_art": "offen",
+   "status": "bestellt",
+   "beleg": "",
+   "bemerkung": "",
+   "quelle": "Mail 25.08.2026 08:48 an info@arthurweber.ch",
+   "tage_seit_bestellung": 38,
+   "tage_bis_termin": null,
+   "ampel": "orange",
+   "ampeltext": "kein Termin, 38 Tage her – nachhaken",
+   "liefer": {
+    "stufe": "offen",
+    "text": "LIEFERTERMIN UNBEKANNT – nachfragen",
+    "zusatz": "bestellt vor 38 Tagen"
+   }
+  },
+  {
+   "id": "20260922-hebetech-hebebaender-10",
+   "was": "10 Stk Hebeband Xpert 1 t, 10 m (Art. 09383-1000)",
+   "fuer": "Modultraeger heben (Berg)",
+   "lieferant": "Hebetech AG (Ch. Igrek)",
+   "wo": "Lieferung Disentis, Via Plaun da Diras 8",
+   "bestellt_am": "2026-09-22",
+   "termin": null,
+   "termin_art": "offen",
+   "preis": null,
+   "preis_art": "offen",
+   "status": "bestellt",
+   "beleg": "",
+   "bestellt_von": "Victor",
+   "bemerkung": "Bestellmail 22.09.2026 16:41 von Victor gesendet an christian.igrek@hbt-ag.ch, CC Samuel Decurtins + Damian Tuor (Gesendete Elemente geprueft). AB/Liefertermin nachhalten. Erwartet ca. CHF 652 netto (EP 65.20 wie AB 420-76814). AB kommt von notifications@hbt-ag.ch, Termin nur im PDF.",
+   "quelle": "Koordinationssitzung 22.09.2026 (Protokoll, Pendenzen «Zu bestellen»); Mailentwurf 22.09.2026 geoeffnet an christian.igrek@hbt-ag.ch; gesendet 22.09.2026 16:41",
+   "tage_seit_bestellung": 10,
+   "tage_bis_termin": null,
+   "ampel": "orange",
+   "ampeltext": "kein Termin, 10 Tage her – nachhaken",
+   "liefer": {
+    "stufe": "offen",
+    "text": "LIEFERTERMIN UNBEKANNT – nachfragen",
+    "zusatz": "bestellt vor 10 Tagen"
+   }
+  },
+  {
+   "id": "20260922-aw-radio-akkus-nuss32",
+   "was": "1 Stk Milwaukee M18 Baustellenradio DAB+ (RADDAB+G2-0), 5 Stk Milwaukee M18 Akku (staerker als 5.5 Ah, was lagernd), 3 Stk Impact-Nuss SW 32 3/4 Zoll verstaerkt",
+   "fuer": "Stahlbau / Container Berg",
+   "lieferant": "Arthur Weber AG",
+   "wo": "Lieferung IP Tal 1, Via Tgamaura 16a, 7188 Tujetsch",
+   "bestellt_am": "2026-09-22",
+   "termin": null,
+   "termin_art": "offen",
+   "preis": null,
+   "preis_art": "offen",
+   "status": "bestellt",
+   "beleg": "",
+   "bestellt_von": "Victor",
+   "bemerkung": "Bestellmail 22.09.2026 16:44 von Victor gesendet an info@arthurweber.ch, CC Samuel Decurtins + Damian Tuor (Gesendete Elemente geprueft). AB/Liefertermin nachhalten. Victor hat den Entwurf 22.09. selbst ergaenzt: CC Samuel Decurtins + Damian Tuor, 5 Akkus staerker als 5.5 Ah, Lieferung IP Tal 1 statt Abholung Schattdorf; Hinweis an AW, dass er die eingelagerten Lieferungen in Schattdorf bald holt.",
+   "quelle": "Koordinationssitzung 22.09.2026 (Protokoll, Pendenzen «Zu bestellen»); Mailentwurf 22.09.2026 geoeffnet an info@arthurweber.ch; Anpassung Victor im Entwurf 22.09.2026 (Screenshot) + Chat: Lieferung IP Tal 1; gesendet 22.09.2026 16:44",
+   "tage_seit_bestellung": 10,
+   "tage_bis_termin": null,
+   "ampel": "orange",
+   "ampeltext": "kein Termin, 10 Tage her – nachhaken",
+   "liefer": {
+    "stufe": "offen",
+    "text": "LIEFERTERMIN UNBEKANNT – nachfragen",
+    "zusatz": "bestellt vor 10 Tagen"
+   }
+  },
+  {
+   "id": "20261002-aw-gabelschluessel",
+   "was": "10 Stk Gabelschluessel: je 2 Stk SW 32, 36, 41, 46, 50",
+   "fuer": "Stahlbau / Verschrauben",
+   "lieferant": "Arthur Weber AG",
+   "wo": "Lieferung IP Tal 1, Via Tgamaura 16a, 7188 Tujetsch, z.H. Samuel Decurtins",
+   "bestellt_am": "2026-10-02",
+   "termin": null,
+   "termin_art": "offen",
+   "preis": null,
+   "preis_art": "offen",
+   "status": "bestellt",
+   "beleg": "",
+   "bestellt_von": "Victor",
+   "bemerkung": "Bestellmail 02.10.2026 09:15 von Victor gesendet an info@arthurweber.ch, CC Samuel Decurtins (Gesendete Elemente geprueft). Victor ab 03.10. in den Ferien - Rueckfragen und Eingang laufen ueber Samuel (Hotline 076 312 03 77). AB/Liefertermin nachhalten.",
+   "quelle": "Auftrag Victor 02.10.2026 im Chat (Gabelschluessel je 2 Stk M32/M36/M41/M46/M50 = Schluesselweiten); gesendet 02.10.2026 09:15",
+   "tage_seit_bestellung": 0,
+   "tage_bis_termin": null,
+   "ampel": "grau",
+   "ampeltext": "läuft",
+   "liefer": {
+    "stufe": "offen",
+    "text": "LIEFERTERMIN UNBEKANNT – nachfragen",
+    "zusatz": "bestellt vor 0 Tagen"
    }
   },
   {
@@ -231,6 +309,58 @@
    }
   },
   {
+   "id": "20260922-fust-kaffeemaschinen-mikrowelle",
+   "was": "2 Stk Nespresso-Kapselmaschinen (einfaches Modell), 1 Stk Mikrowelle",
+   "fuer": "Container Berg (Aufenthaltsraum)",
+   "lieferant": "Fust (Filiale 60)",
+   "wo": "Abholung oder Lieferung Disentis - offen",
+   "bestellt_am": null,
+   "termin": null,
+   "termin_art": "offen",
+   "preis": 208.85,
+   "preis_art": "rund",
+   "status": "angefragt",
+   "beleg": "",
+   "bestellt_von": "Victor",
+   "bemerkung": "NICHT bestellt. Fust Schattdorf (Julian von Monkiewitsch) 23.09. 08:47: Offerte 2x De'Longhi Essenza Mini EN85.BM + 1x Primotec Apollo Mikrowelle = CHF 208.85 inkl., Lieferung Disentis oder Abholung moeglich, ABER keine Rechnung, nur Vorauszahlung. Victor 23.09. 13:15: Vorauszahlung geht im STRABAG-System nicht, Rechnung + Abholung nach Zahlung? Antwort offen. ALTERNATIVE mit Rechnung: Schaefer Shop (Kundenkonto 75718002, Zahlungsoption Rechnung, Juli-Bestellung 0408617126): L'Or Kapselmaschine Mini fuer Nespresso Art. 562376 (1 Woche) + Severin Mikrowelle MW 7886 Art. 665765 CHF 84.95; oder Nespresso.ch direkt (Rechnung 30 Tage).",
+   "quelle": "Koordinationssitzung 22.09.2026 (Protokoll, Pendenzen «Zu bestellen»); Mailentwurf 22.09.2026 geoeffnet an 60@fust.ch; gesendet 22.09.2026 16:38; Fust AW 23.09.2026 08:47; Victor AW 23.09.2026 13:15; Schaefer-Shop-Bestellmail 03.07.2026 (Zahlungsoption Rechnung)",
+   "tage_seit_bestellung": null,
+   "tage_bis_termin": null,
+   "ampel": "grau",
+   "ampeltext": "angefragt, noch nicht bestellt",
+   "liefer": {
+    "stufe": "offen",
+    "text": "NOCH KEIN LIEFERTERMIN",
+    "zusatz": "erst angefragt, noch nicht bestellt"
+   }
+  },
+  {
+   "id": "20260923-schaefer-kapselmaschinen-mikrowelle",
+   "was": "2 Stk L'Or Kapselmaschine Mini fuer Nespresso (Art. 562376), 1 Stk Severin Mikrowelle MW 7886 (Art. 665765)",
+   "fuer": "Container Berg (Aufenthaltsraum)",
+   "lieferant": "Schaefer Shop AG (Kundennr. 75718002)",
+   "wo": "Lieferung Disentis, Via Plaun da Diras 8",
+   "bestellt_am": null,
+   "termin": null,
+   "termin_art": "offen",
+   "preis": null,
+   "preis_art": "offen",
+   "status": "angefragt",
+   "beleg": "",
+   "bestellt_von": "Victor",
+   "bemerkung": "Mailentwurf 23.09.2026 an info@schaefer-shop.ch geoeffnet, Versand durch Victor - bei Versand auf 'bestellt' setzen. Ersetzt die Fust-Anfrage (Fust: keine Rechnung). Mikrowelle CHF 84.95, Maschine Preis im Shop nicht offen; Kapselmaschine lieferbar innert 1 Woche.",
+   "quelle": "Auftrag Victor 23.09.2026 im Chat («passt lass das mail raus.. 2 nespresso und eine mikrowelle»); Schaefer-Shop-Konto laut Bestellmail 0408617126 vom 03.07.2026 (Zahlungsoption Rechnung)",
+   "tage_seit_bestellung": null,
+   "tage_bis_termin": null,
+   "ampel": "grau",
+   "ampeltext": "angefragt, noch nicht bestellt",
+   "liefer": {
+    "stufe": "offen",
+    "text": "NOCH KEIN LIEFERTERMIN",
+    "zusatz": "erst angefragt, noch nicht bestellt"
+   }
+  },
+  {
    "id": "20260730-aw-gewindelehren",
    "was": "10 Stk Gewindelehren-Satz SCALA 464 (Art. 626352)",
    "fuer": "Pfahlgewinde-Sortierung 5 vs. 6 mm (Vulkanox-Fehlgewinde)",
@@ -252,8 +382,8 @@
     "notiz": ""
    },
    "geliefert_am": "2026-08-27",
-   "tage_seit_bestellung": 35,
-   "tage_bis_termin": -23,
+   "tage_seit_bestellung": 64,
+   "tage_bis_termin": -52,
    "ampel": "gruen",
    "ampeltext": "auf der Baustelle seit 27.08.2026",
    "liefer": {
@@ -284,8 +414,8 @@
     "notiz": ""
    },
    "geliefert_am": "2026-08-27",
-   "tage_seit_bestellung": 23,
-   "tage_bis_termin": -22,
+   "tage_seit_bestellung": 52,
+   "tage_bis_termin": -51,
    "ampel": "gruen",
    "ampeltext": "auf der Baustelle seit 27.08.2026",
    "liefer": {
@@ -316,8 +446,8 @@
     "notiz": ""
    },
    "geliefert_am": "2026-08-27",
-   "tage_seit_bestellung": 21,
-   "tage_bis_termin": -20,
+   "tage_seit_bestellung": 50,
+   "tage_bis_termin": -49,
    "ampel": "gruen",
    "ampeltext": "auf der Baustelle seit 27.08.2026",
    "liefer": {
@@ -348,8 +478,8 @@
     "notiz": ""
    },
    "geliefert_am": "2026-08-27",
-   "tage_seit_bestellung": 20,
-   "tage_bis_termin": -17,
+   "tage_seit_bestellung": 49,
+   "tage_bis_termin": -46,
    "ampel": "gruen",
    "ampeltext": "auf der Baustelle seit 27.08.2026",
    "liefer": {
@@ -381,8 +511,8 @@
     "notiz": ""
    },
    "geliefert_am": "2026-08-27",
-   "tage_seit_bestellung": 17,
-   "tage_bis_termin": -16,
+   "tage_seit_bestellung": 46,
+   "tage_bis_termin": -45,
    "ampel": "gruen",
    "ampeltext": "auf der Baustelle seit 27.08.2026",
    "liefer": {
@@ -406,8 +536,8 @@
    "beleg": "",
    "bemerkung": "In Schattdorf abgeholt (Meldung Victor 25.08.2026). Damit sind die Impact-Verlaengerungen 1/2 Zoll 250 mm auf der Baustelle - die verchromten Hand-Verlaengerungen aus der Bestellung vom 25.08. sind zusaetzlich und gehoeren NICHT an den Schlagschrauber.",
    "quelle": "Mail 18.08.2026 16:06 an info@arthurweber.ch",
-   "tage_seit_bestellung": 16,
-   "tage_bis_termin": -15,
+   "tage_seit_bestellung": 45,
+   "tage_bis_termin": -44,
    "ampel": "gruen",
    "ampeltext": "geliefert",
    "liefer": {
@@ -438,8 +568,8 @@
     "notiz": ""
    },
    "geliefert_am": "2026-09-01",
-   "tage_seit_bestellung": 17,
-   "tage_bis_termin": -10,
+   "tage_seit_bestellung": 46,
+   "tage_bis_termin": -39,
    "ampel": "gruen",
    "ampeltext": "auf der Baustelle seit 01.09.2026",
    "liefer": {
@@ -463,8 +593,8 @@
    "beleg": "",
    "bemerkung": "Angekommen (Meldung Victor 25.08.2026). Direkt zu Marco in die Werkstatt Tal. OFFEN bleiben die Kernbohrer - die muessen lang genug sein, um durch die Pfetten durchzubohren (Anfrage Hasler).",
    "quelle": "Meldung Victor 25.08.2026; Dashboard/aufgaben.md",
-   "tage_seit_bestellung": 17,
-   "tage_bis_termin": -9,
+   "tage_seit_bestellung": 46,
+   "tage_bis_termin": -38,
    "ampel": "gruen",
    "ampeltext": "geliefert",
    "liefer": {
@@ -495,8 +625,8 @@
     "von": "Victor",
     "notiz": "Handwinde 1,5 t ist auf der Baustelle."
    },
-   "tage_seit_bestellung": 17,
-   "tage_bis_termin": -8,
+   "tage_seit_bestellung": 46,
+   "tage_bis_termin": -37,
    "ampel": "gruen",
    "ampeltext": "auf der Baustelle seit 27.08.2026",
    "liefer": {
@@ -527,8 +657,8 @@
     "notiz": ""
    },
    "geliefert_am": "2026-09-01",
-   "tage_seit_bestellung": 9,
-   "tage_bis_termin": -8,
+   "tage_seit_bestellung": 38,
+   "tage_bis_termin": -37,
    "ampel": "gruen",
    "ampeltext": "auf der Baustelle seit 01.09.2026",
    "liefer": {
@@ -553,8 +683,8 @@
    "bemerkung": "GEHOLT am 26.08.2026 (Meldung Victor). Weg lief ueber Mig (BMTI) bei Linde Gas: O2 50 l / 200 bar und Acetylen 40 l, nur Gas. VOR DEM ERSTEN EINSATZ: Acetylenflasche mindestens 12 h STEHEND stehen lassen, wenn sie liegend transportiert wurde - sonst reisst Aceton mit. Rueckschlagsicherungen und Flammensperren der vorhandenen Garnitur auf Ablaufdatum pruefen (ueblich 5-10 Jahre). OFFEN fuer den Betrieb: Tauschpartner in der Surselva und Mietkonditionen (Pauschale statt Tagesmiete) sind noch nicht geklaert.",
    "quelle": "Meldung Victor 26.08.2026; Mail Mig 25.08.2026 11:01; Antwort 25.08.2026 an maria-josef.herger@strabag.com; Lieferdatum aus der Bemerkung «GEHOLT am 26.08.2026»",
    "geliefert_am": "2026-08-26",
-   "tage_seit_bestellung": 9,
-   "tage_bis_termin": -8,
+   "tage_seit_bestellung": 38,
+   "tage_bis_termin": -37,
    "ampel": "gruen",
    "ampeltext": "geliefert am 26.08.2026",
    "liefer": {
@@ -585,8 +715,8 @@
     "notiz": ""
    },
    "geliefert_am": "2026-09-01",
-   "tage_seit_bestellung": 20,
-   "tage_bis_termin": -6,
+   "tage_seit_bestellung": 49,
+   "tage_bis_termin": -35,
    "ampel": "gruen",
    "ampeltext": "auf der Baustelle seit 01.09.2026",
    "liefer": {
@@ -617,7 +747,7 @@
     "notiz": ""
    },
    "geliefert_am": "2026-08-27",
-   "tage_seit_bestellung": 22,
+   "tage_seit_bestellung": 51,
    "tage_bis_termin": null,
    "ampel": "gruen",
    "ampeltext": "auf der Baustelle seit 27.08.2026",
@@ -649,7 +779,7 @@
     "notiz": ""
    },
    "geliefert_am": "2026-08-27",
-   "tage_seit_bestellung": 20,
+   "tage_seit_bestellung": 49,
    "tage_bis_termin": null,
    "ampel": "gruen",
    "ampeltext": "auf der Baustelle seit 27.08.2026",
@@ -681,7 +811,7 @@
     "notiz": ""
    },
    "geliefert_am": "2026-08-27",
-   "tage_seit_bestellung": 17,
+   "tage_seit_bestellung": 46,
    "tage_bis_termin": null,
    "ampel": "gruen",
    "ampeltext": "auf der Baustelle seit 27.08.2026",
@@ -713,7 +843,7 @@
     "notiz": ""
    },
    "geliefert_am": "2026-08-27",
-   "tage_seit_bestellung": 17,
+   "tage_seit_bestellung": 46,
    "tage_bis_termin": null,
    "ampel": "gruen",
    "ampeltext": "auf der Baustelle seit 27.08.2026",
@@ -725,15 +855,15 @@
   }
  ],
  "summen": {
-  "anzahl": 25,
-  "offen": 9,
-  "ueberfaellig": 1,
+  "anzahl": 30,
+  "offen": 14,
+  "ueberfaellig": 4,
   "abholbereit": 0,
   "nachhaken": 4,
   "geliefert": 16,
-  "ohne_termin": 5,
-  "summe_offen_chf": 5715.25,
-  "ohne_preis": 5
+  "ohne_termin": 10,
+  "summe_offen_chf": 5924.1,
+  "ohne_preis": 9
  },
  "lieferanten": [
   "Arthur Weber AG",
@@ -741,11 +871,13 @@
   "Berner AG",
   "Debrunner Acifer AG",
   "Debrunner Acifer AG (G. Casale)",
+  "Fust (Filiale 60)",
   "Haberkorn AG (E. Murati)",
   "Hebetech AG (Ch. Igrek)",
   "JS Schweisstechnik AG (O. Pozzy)",
   "Linde Gas Schweiz AG (via BMTI, M. Herger)",
   "STRABAG BMTI Erstfeld (A. Gasser / Wisi)",
+  "Schaefer Shop AG (Kundennr. 75718002)",
   "profiwerkzeug24.ch"
  ]
 }
