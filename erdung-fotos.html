@@ -52,6 +52,8 @@
   .wahl button{ flex:1; border:0; background:#fff; padding:12px 4px; font:800 13.5px Arial; color:var(--mut); cursor:pointer; }
   .wahl button + button{ border-left:1.5px solid #c9ccd2; }
   .wahl button.on{ background:var(--ink); color:#fff; }
+  #art{ display:grid; grid-template-columns:1fr 1fr; gap:1.5px; background:#c9ccd2; }
+  #art button + button{ border-left:0; }
   .fotos{ display:grid; grid-template-columns:repeat(auto-fill, minmax(96px, 1fr)); gap:8px; margin-top:10px; }
   .foto{ position:relative; border:1px solid var(--line); border-radius:6px; overflow:hidden; background:#f6f7f8; }
   .foto img{ display:block; width:100%; height:90px; object-fit:cover; }
@@ -94,12 +96,13 @@
         <input type="number" id="jahr" inputmode="numeric" min="2025" max="2029">
       </div>
     </div>
-    <div class="hilfe" data-i="punkteHilfe">Wie im Bild, z. B. 1320, 1321 oder 1320-1324. Ein Foto darf mehrere Punkte zeigen.</div>
+    <div class="hilfe" data-i="punkteHilfe">Wie im Bild, z. B. 1320, 1321, 1320-1324 oder mit Code L1388. Ein Foto darf mehrere Punkte zeigen.</div>
 
     <label class="feld" data-i="art">Punktart</label>
     <div class="wahl" id="art">
       <button data-a="erdung" data-i="artErdung">Erdungsverbindung</button>
       <button data-a="leitung" data-i="artLeitung">Leitungspunkt</button>
+      <button data-a="beton" data-i="artBeton">Betonpunkt</button>
       <button data-a="" class="on" data-i="artWeissNicht">weiss nicht</button>
     </div>
 
@@ -124,8 +127,8 @@
 
   var TXT = {
     de: { h1: 'Erdung · Fotos', waehlen: '📷 Fotos wählen', punkte: 'Punktnummern auf dem Foto', jahr: 'Jahr',
-      punkteHilfe: 'Wie im Bild, z. B. 1320, 1321 oder 1320-1324. Ein Foto darf mehrere Punkte zeigen.',
-      art: 'Punktart', artErdung: 'Erdungsverbindung', artLeitung: 'Leitungspunkt', artWeissNicht: 'weiss nicht',
+      punkteHilfe: 'Wie im Bild, z. B. 1320, 1321, 1320-1324 oder mit Code L1388. Ein Foto darf mehrere Punkte zeigen.',
+      art: 'Punktart', artErdung: 'Erdungsverbindung', artLeitung: 'Leitungspunkt', artBeton: 'Betonpunkt', artWeissNicht: 'weiss nicht',
       bemerkung: 'Bemerkung (freiwillig)', name: 'Name (freiwillig)',
       senden: function (n) { return n === 1 ? '1 Foto senden' : n + ' Fotos senden'; },
       nochmal: function (n) { return n + ' nicht gesendete erneut senden'; },
@@ -133,15 +136,15 @@
       fertig: function (n) { return n + (n === 1 ? ' Foto' : ' Fotos') + ' gesendet. Nalpi übernimmt sie in den nächsten Minuten nach SharePoint.'; },
       teil: function (ok, f) { return ok + ' gesendet, ' + f + ' nicht – der Grund steht beim Foto. Erneut senden.'; },
       zuLang: 'Punktnummern zu lang (höchstens 200 Zeichen).',
-      unklar: function (x) { return 'Unklare Punktnummer «' + x + '». Nur Nummern wie 1320, 1320-1324 oder 1381-NORTH.'; },
+      unklar: function (x) { return 'Unklare Punktnummer «' + x + '». Nur Nummern wie 1320, 1320-1324, L1388 oder 1381-NORTH.'; },
       zuViele: function (n) { return n + ' Punkte für ein Foto sind zu viele (höchstens 30).'; },
       zeit: 'Zeit abgelaufen – Netz schwach, erneut senden.',
       heic: 'HEIC-Foto zu gross. In der Kamera «Hohe Effizienz» ausschalten oder das Foto als JPG teilen.',
       wartend: function (n) { return n === 0 ? 'Alle gesendeten Fotos sind in Nalpi übernommen.' : 'Noch nicht in Nalpi übernommen: ' + n + (n === 1 ? ' Foto' : ' Fotos'); },
       entfernen: 'Foto entfernen' },
     en: { h1: 'Earthing · photos', waehlen: '📷 Choose photos', punkte: 'Point numbers on the photo', jahr: 'Year',
-      punkteHilfe: 'As written in the picture, e.g. 1320, 1321 or 1320-1324. One photo may show several points.',
-      art: 'Point type', artErdung: 'Earthing connection', artLeitung: 'Pipe point', artWeissNicht: "don't know",
+      punkteHilfe: 'As written in the picture, e.g. 1320, 1321, 1320-1324 or with code L1388. One photo may show several points.',
+      art: 'Point type', artErdung: 'Earthing connection', artLeitung: 'Pipe point', artBeton: 'Concrete point', artWeissNicht: "don't know",
       bemerkung: 'Note (optional)', name: 'Name (optional)',
       senden: function (n) { return n === 1 ? 'Send 1 photo' : 'Send ' + n + ' photos'; },
       nochmal: function (n) { return 'Send the ' + n + ' unsent again'; },
@@ -149,7 +152,7 @@
       fertig: function (n) { return n + (n === 1 ? ' photo' : ' photos') + ' sent. Nalpi moves them to SharePoint within the next minutes.'; },
       teil: function (ok, f) { return ok + ' sent, ' + f + ' not – the reason is shown on the photo. Send again.'; },
       zuLang: 'Point numbers too long (200 characters at most).',
-      unklar: function (x) { return 'Unclear point number «' + x + '». Only numbers like 1320, 1320-1324 or 1381-NORTH.'; },
+      unklar: function (x) { return 'Unclear point number «' + x + '». Only numbers like 1320, 1320-1324, L1388 or 1381-NORTH.'; },
       zuViele: function (n) { return n + ' points for one photo are too many (30 at most).'; },
       zeit: 'Timed out – weak connection, send again.',
       heic: 'HEIC photo too large. Switch off «High efficiency» in the camera or share the photo as JPG.',
@@ -278,17 +281,17 @@
   // pruefeEingabe + normNr). FALLE: Ändert sich dort etwas, auch hier ändern.
   function punktePruefen(text) {
     if (text.length > 200) return t('zuLang');
-    var n = 0, teile = text.replace(/(\d)\s*[-–]\s*(\d)/g, '$1-$2').split(/[\s,;]+/);
+    var n = 0, teile = text.replace(/(\d)\s*[-–]\s*([A-Z]?\d)/gi, '$1-$2').split(/[\s,;]+/);
     for (var i = 0; i < teile.length; i++) {
       var x = teile[i].trim(), nr;
       if (!x) continue;
       var k = /^(2[5-9])-([^-\s]+)(?:-([a-z]))?$/i.exec(x);
-      var b = /^(\d+)(?:-|–|\.\.)(\d+)$/.exec(x);
+      var b = /^([A-Z]?)(\d+)(?:-|–|\.\.)(?:\1)?(\d+)$/i.exec(x);
       if (k) { nr = k[2]; n++; }
-      else if (b && +b[2] >= +b[1] && +b[2] - +b[1] < 100) { n += +b[2] - +b[1] + 1; continue; }
+      else if (b && +b[3] >= +b[2] && +b[3] - +b[2] < 100) { n += +b[3] - +b[2] + 1; continue; }
       else { nr = x; n++; }
       nr = /^\d+$/.test(nr) ? nr : nr.toUpperCase().replace(/[\s-]+/g, '_');
-      if (!/^\d{1,6}(_[A-Z0-9]{1,12})?$/.test(nr)) return t('unklar')(x);
+      if (!/^[ELB]?\d{1,6}(_[A-Z0-9]{1,12})?$/.test(nr)) return t('unklar')(x);
     }
     if (n === 0) return t('fehltPunkte');
     if (n > 30) return t('zuViele')(n);
