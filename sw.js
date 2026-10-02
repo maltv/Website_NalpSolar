@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v205';
+var CACHE = 'nalpsolar-v206';
 var PRECACHE = [
   './index.html',
   // Webapp-Manifest + Icons des Portals (22.09.2026, Tools\Portal_Icons_Bauen.py) und die
@@ -68,6 +68,8 @@ var PRECACHE = [
   './assets/js/nalp-terrain.js',
   './passstueck.html',
   './tagesrapport.html',  // digitaler Tagesrapport (23.09.2026)
+  './me-messung.html',    // ME-Messung = Plattendruckversuch, offline mit PDF (02.10.2026, WERKZEUGE §76)
+  './assets/js/jspdf.umd.min.js',   // PDF auf dem Handy bauen (me-messung.html)
   './pfahl-lage.html',   // Schrägpfahl Lage & Auszug (22.09.2026, WERKZEUGE §64)
   './assets/js/nalp-passstueck-daten.js',
   // Laufende Normteil-Inventur im Tal - muss offline laufen

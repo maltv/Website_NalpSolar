@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>NalpSolar · ME-Messung</title>
+<meta name="theme-color" content="#0b1826">
+<link rel="manifest" href="manifest.json">
+<!--
+  ME-MESSUNG = PLATTENDRUCKVERSUCH (Baustellen-Portal, Kachel «ME-Messung») – seit 02.10.2026.
+
+  Auftrag Victor 02.10.2026: Damian braucht eine Protokollvorlage für die ME-Messungen und soll das
+  Protokoll auch im Portal machen können – OFFLINE, mit Fotos und Standort, und es sich dann per Mail
+  selber schicken. Änderungswünsche gehen an Dennis (Victor in den Ferien 03.–18.10.).
+
+  Grundlage (EINE Stelle für die Rechnung ist die STRABAG-Excel «Plattendruckversuch ME», Mail
+  François Borner 24.08.2026 «Plattendruckversuche Nalps», Kopie in ME_Messungen\):
+    - 15 Laststufen (sigma0 in MN/m2): Erstbelastung 0 / .02 / .05 / .10 / .20 / .30 / .40 / .50,
+      Entlastung .25 / .12 / .02, Wiederbelastung .05 / .10 / .20 / .30 / .40
+    - je Phase quadratische Ausgleichskurve s = a0 + a1*sigma + a2*sigma^2 (kleinste Quadrate)
+    - ME = 1.5 * (D/2) / (a1 + a2 * sigma_max)   mit D = Plattendurchmesser in mm, sigma_max = 0.5
+      (Excel Blatt 1, Zelle C18/G18; Regression am 02.10.2026 gegen die Excel geprüft: identisch,
+      ME1 92.98 / ME2 142.64 für Blatt 1)
+    - Anforderung ME1 >= 30 MN/m2 unter Erstbelastung (Borner 24.08.2026; ILF-BA 0286 für den
+      Rückbau Baupiste B: lagenweise <= 50 cm, 3 Versuche je Etappe)
+  FALLE: die Rechenregel liegt damit doppelt (Excel + diese Seite). Ändert sich die Excel,
+  hier nachziehen (Funktionen fitQuad / meWert, Tabelle STUFEN).
+
+  Alles bleibt auf dem Handy: IndexedDB `nalp_me_messung` (Protokolle samt Fotos), kein Server,
+  keine RTDB. «Protokoll teilen» baut ein PDF (jsPDF, lokal in assets/js) und öffnet das
+  Teilen-Menü des Handys (Web Share API mit Datei) – dort die Mail-App wählen und an sich selber
+  schicken; die Mail-App sendet, sobald Netz da ist. Ohne Teilen-Menü (alter Browser/Desktop):
+  PDF wird heruntergeladen und ein Mail-Entwurf (mailto) mit dem Text geöffnet.
+  Papiervorlage dazu: ME_Messungen\Vorlage_Protokoll_ME_Messung.pdf (Tools\ME_Vorlage_Bauen.py).
+-->
+<script>
+  window.NALP_GATE_CODE  = '6460';
+  window.NALP_GATE_KEY   = 'nalp_portal_unlock_v1';
+  window.NALP_GATE_TITEL = 'ME-Messung';
+  window.NALP_GATE_SUB   = 'Code eingeben / Enter code / Inserir código';
+</script>
+<script src="assets/js/nalp-gate.js"></script>
+<script src="assets/js/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#eef1f5; --card:#fff; --line:rgba(10,22,38,.12); --txt:#14202e; --muted:#5b6b7c;
+    --blue:#0b5fff; --red:#d63a3f; --green:#1c8a4a; --amber:#e8a012; --strabag:#D72622;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;}
+  body{background:var(--bg);color:var(--txt);font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;line-height:1.45;}
+  .wrap{max-width:820px;margin:0 auto;padding:0 14px 80px;}
+  .top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    padding:10px 14px calc(10px + env(safe-area-inset-top));margin:0 -14px 12px;
+    color:#e8eef7;background:radial-gradient(120% 160% at 0 0,#173657,#0b1826);box-shadow:0 2px 14px rgba(0,0,0,.3);}
+  .top .brand{font-size:10px;letter-spacing:.22em;font-weight:800;color:#ffc340;text-transform:uppercase;}
+  .top h1{font-size:16px;font-weight:900;margin:1px 0 0;}
+  .top .sp{flex:1;}
+  .home{border:0;border-radius:11px;padding:10px 14px;font-weight:800;font-size:14px;color:#fff;cursor:pointer;
+    background:linear-gradient(135deg,#0b5fff,#2196F3);white-space:nowrap;text-decoration:none;display:inline-block;}
+
+  .tabs{display:flex;gap:6px;margin:0 0 12px;}
+  .tabs button{flex:1;border:1.5px solid var(--line);border-radius:12px;padding:11px 6px;font-weight:900;font-size:15px;
+    background:#f7f9fc;color:var(--muted);cursor:pointer;}
+  .tabs button.on{background:#0b1826;color:#fff;border-color:#0b1826;}
+  .tab{display:none;} .tab.on{display:block;}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px;
+    box-shadow:0 6px 18px rgba(10,22,38,.06);}
+  h2{font-size:15px;font-weight:900;margin:0 0 8px;display:flex;align-items:center;gap:8px;}
+  h2 .n{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;
+    background:var(--strabag);color:#fff;font-size:12px;font-weight:900;flex:none;}
+  .lead{font-size:12.5px;color:var(--muted);margin:-4px 0 10px;}
+  .hint{font-size:12px;color:var(--muted);margin-top:8px;}
+  .anf{background:#fdecec;border:1px solid rgba(215,38,34,.35);border-radius:12px;padding:9px 12px;font-weight:800;color:var(--strabag);font-size:14px;margin-bottom:10px;}
+  .anf small{display:block;font-weight:600;color:var(--muted);font-size:11.5px;margin-top:2px;}
+
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  @media (max-width:420px){ .g2.schmal{grid-template-columns:1fr;} }
+  input[type=text],input[type=number],input[type=date],input[type=email],textarea{width:100%;border:1.5px solid var(--line);border-radius:10px;
+    padding:10px;font:inherit;font-size:15px;background:#fff;color:var(--txt);}
+  textarea{min-height:72px;resize:vertical;}
+  label.l{display:block;font-size:12px;font-weight:800;color:var(--muted);margin:10px 0 4px;text-transform:uppercase;letter-spacing:.04em;}
+  .pick{display:flex;gap:6px;flex-wrap:wrap;}
+  .pick button{border:1.5px solid var(--line);border-radius:12px;padding:9px 11px;font-weight:800;font-size:14px;
+    background:#f7f9fc;color:var(--txt);cursor:pointer;}
+  .pick button.on{background:var(--strabag);color:#fff;border-color:var(--strabag);}
+
+  .gpsrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .btn2{border:1.5px solid var(--line);border-radius:12px;padding:11px 14px;background:#f7f9fc;font-weight:800;font-size:14px;cursor:pointer;color:var(--txt);}
+  .btn2.blau{background:linear-gradient(135deg,#0b5fff,#2196F3);color:#fff;border-color:transparent;}
+  .gpsinfo{font-size:13px;color:var(--muted);flex:1;min-width:160px;}
+  .gpsinfo b{color:var(--txt);}
+  .gpsinfo a{color:var(--blue);font-weight:800;text-decoration:none;}
+
+  table.st{width:100%;border-collapse:collapse;font-size:14px;}
+  table.st th{background:#0b1826;color:#fff;font-size:12px;padding:7px 4px;text-align:center;}
+  table.st td{border-bottom:1px solid var(--line);padding:3px 4px;text-align:center;}
+  table.st tr.entl td{background:#f3f5f8;}
+  table.st td.ph{text-align:left;font-size:12px;color:var(--muted);white-space:nowrap;}
+  table.st td.nr{font-weight:900;width:34px;}
+  table.st td.sig{font-variant-numeric:tabular-nums;width:64px;}
+  table.st td.s input{width:100%;max-width:120px;text-align:center;padding:8px 6px;font-size:16px;font-weight:700;}
+  table.st td.s input.fehl{border-color:var(--red);}
+
+  .erg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px;}
+  .erg div{border:1.5px solid var(--line);border-radius:12px;padding:8px 6px;text-align:center;background:#f7f9fc;}
+  .erg small{display:block;font-size:11px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.03em;}
+  .erg b{font-size:20px;font-variant-numeric:tabular-nums;}
+  .urteil{margin-top:8px;border-radius:12px;padding:10px 12px;font-weight:900;font-size:15px;text-align:center;background:#f7f9fc;color:var(--muted);}
+  .urteil.ok{background:#e4f5ea;color:var(--green);}
+  .urteil.nein{background:#fdecec;color:var(--strabag);}
+
+  .fbtns{display:flex;gap:8px;}
+  .fbtn{flex:1;border:1.5px solid var(--line);border-radius:12px;padding:12px 8px;background:#f7f9fc;font-weight:800;font-size:14px;cursor:pointer;text-align:center;color:var(--txt);}
+  .fbtn input{display:none;}
+  .prev{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px;}
+  .pg{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:#e6e9ee;}
+  .pg img{width:100%;height:100%;object-fit:cover;}
+  .pg .del{position:absolute;top:4px;right:4px;width:28px;height:28px;border:0;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-weight:900;cursor:pointer;}
+
+  .send{width:100%;border:0;border-radius:14px;padding:16px;font-weight:900;font-size:17px;color:#fff;cursor:pointer;
+    background:linear-gradient(135deg,#1c8a4a,#23a85b);box-shadow:0 8px 20px rgba(28,138,74,.3);margin-top:4px;}
+  .send.grau{background:linear-gradient(135deg,#3d4a5c,#0b1826);box-shadow:none;margin-top:8px;}
+  .send:disabled{opacity:.6;cursor:wait;}
+  .status{font-size:13px;margin-top:8px;min-height:18px;}
+  .status.ok{color:var(--green);font-weight:800;} .status.warn{color:var(--red);font-weight:800;}
+  .netz{position:fixed;right:10px;bottom:10px;z-index:30;font-size:11px;font-weight:800;padding:5px 9px;border-radius:999px;background:#1c8a4a;color:#fff;}
+  .netz.off{background:#5b6b7c;}
+
+  .p{border-top:1px solid var(--line);padding:10px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .p:first-child{border-top:0;}
+  .p .t{flex:1;min-width:180px;}
+  .p .t b{font-size:15px;}
+  .p .t small{display:block;color:var(--muted);font-size:12.5px;}
+  .p .me{font-weight:900;white-space:nowrap;}
+  .p .me.ok{color:var(--green);} .p .me.nein{color:var(--strabag);}
+  .p button{border:1.5px solid var(--line);border-radius:10px;background:#f7f9fc;padding:8px 10px;font-weight:800;font-size:13px;cursor:pointer;}
+  .p button.x{color:var(--red);}
+  .leer{color:var(--muted);font-size:14px;padding:8px 0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <div class="brand">STRABAG · NalpSolar</div>
+      <h1>ME-Messung · Plattendruckversuch</h1>
+    </div>
+    <div class="sp"></div>
+    <a class="home" href="index.html">Portal</a>
+  </div>
+
+  <div class="tabs">
+    <button id="tbNeu" class="on" onclick="tab('neu')">Protokoll</button>
+    <button id="tbListe" onclick="tab('liste')">Meine Protokolle</button>
+  </div>
+
+  <!-- ───────────── Protokoll ───────────── -->
+  <div id="tabNeu" class="tab on">
+    <div class="anf">Anforderung: ME1 ≥ <span id="anfTxt">30</span> MN/m² unter Erstbelastung
+      <small>BA 0286 Rückbau Baupiste B: lagenweise ≤ 50 cm, 3 Versuche je Etappe · Mail F. Borner 24.08.2026</small></div>
+
+    <div class="card">
+      <h2><span class="n">1</span> Angaben</h2>
+      <div class="g2">
+        <div><label class="l">Datum</label><input type="date" id="datum"></div>
+        <div><label class="l">Versuch-Nr.</label><input type="number" id="nr" inputmode="numeric" min="1"></div>
+      </div>
+      <label class="l">Prüfer</label><input type="text" id="pruefer" placeholder="Name" autocomplete="off">
+      <div class="g2 schmal">
+        <div><label class="l">Ort / Etappe</label><input type="text" id="ort" list="ortL" placeholder="z. B. Baupiste B3, Etappe 2" autocomplete="off">
+          <datalist id="ortL"><option value="Baupiste B3"><option value="Baupiste B4"><option value="Kabelgraben"><option value="Kranstandort"></datalist></div>
+        <div><label class="l">Tisch- / Punkt-Nr.</label><input type="text" id="tisch" placeholder="z. B. Tisch 1623" autocomplete="off"></div>
+      </div>
+      <div class="g2 schmal">
+        <div><label class="l">Schicht / Material</label><input type="text" id="schicht" list="schichtL" placeholder="z. B. Schüttung" autocomplete="off">
+          <datalist id="schichtL"><option value="Schüttung"><option value="Kiessand"><option value="Rückfüllung Graben"><option value="Planum"></datalist></div>
+        <div><label class="l">Lage</label><input type="text" id="lage" placeholder="z. B. 2. Lage, OK Planum" autocomplete="off"></div>
+      </div>
+      <label class="l">Witterung</label>
+      <div class="pick" id="wetter">
+        <button type="button" data-w="schön">☀️ schön</button><button type="button" data-w="bewölkt">⛅ bewölkt</button>
+        <button type="button" data-w="Regen">🌧 Regen</button><button type="button" data-w="Schnee">❄️ Schnee</button>
+      </div>
+      <div class="g2">
+        <div><label class="l">Gegengewicht</label><input type="text" id="gegen" value="CAT-Bagger" autocomplete="off"></div>
+        <div><label class="l">Platten-Ø D [mm]</label><input type="number" id="dmm" inputmode="numeric" value="298" min="100" max="800"></div>
+      </div>
+      <div class="hint">STRABAG-Gerät: Platte 298 mm (Excel F. Borner). Anforderung ME1 ≥ <input type="number" id="anf" value="30" inputmode="numeric" style="width:64px;display:inline-block;padding:4px 6px;font-size:14px;"> MN/m²</div>
+    </div>
+
+    <div class="card">
+      <h2><span class="n">2</span> Standort</h2>
+      <div class="gpsrow">
+        <button type="button" class="btn2 blau" onclick="standortHolen()">📍 Standort holen</button>
+        <div class="gpsinfo" id="gpsInfo">noch kein Standort</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="n">3</span> Laststufen</h2>
+      <div class="lead">Je Stufe die Setzung s in mm von der Messuhr eintragen (Stufe 0 = Nullablesung).</div>
+      <table class="st"><thead><tr><th>Stufe</th><th>Phase</th><th>σ0 MN/m²</th><th>Setzung s [mm]</th></tr></thead>
+        <tbody id="stufen"></tbody></table>
+      <div class="erg">
+        <div><small>ME1 Erst</small><b id="me1">–</b></div>
+        <div><small>ME2 Wieder</small><b id="me2">–</b></div>
+        <div><small>ME2 / ME1</small><b id="verh">–</b></div>
+      </div>
+      <div class="urteil" id="urteil">Werte eintragen …</div>
+    </div>
+
+    <div class="card">
+      <h2><span class="n">4</span> Fotos</h2>
+      <div class="lead">Gerät auf der Platte, Übersicht der Messstelle – bis 6 Fotos.</div>
+      <div class="fbtns">
+        <label class="fbtn">📷 Kamera<input type="file" accept="image/*" capture="environment" onchange="dateienAnhaengen(this.files);this.value=''"></label>
+        <label class="fbtn">🖼 Galerie<input type="file" accept="image/*" multiple onchange="dateienAnhaengen(this.files);this.value=''"></label>
+      </div>
+      <div class="prev" id="prev"></div>
+      <div class="status" id="sFoto"></div>
+    </div>
+
+    <div class="card">
+      <h2><span class="n">5</span> Bemerkungen</h2>
+      <textarea id="bem" placeholder="Auffälligkeiten, Wasser, Frost, Material …"></textarea>
+    </div>
+
+    <div class="card">
+      <label class="l">Meine Mail-Adresse (für den Entwurf ohne Teilen-Menü)</label>
+      <input type="email" id="mail" placeholder="vorname.name@strabag.com" autocomplete="email">
+      <button class="send" id="bTeilen" onclick="teilen()">📄 Protokoll als PDF teilen / per Mail</button>
+      <button class="send grau" onclick="speichernKlick()">💾 Nur speichern</button>
+      <button class="send grau" onclick="neu(true)">✚ Neues Protokoll</button>
+      <div class="status" id="sAll"></div>
+      <div class="hint">Alles bleibt auf dem Handy, auch ohne Netz. Beim Teilen die Mail-App wählen und an dich selber schicken – die Mail geht raus, sobald Netz da ist.</div>
+    </div>
+  </div>
+
+  <!-- ───────────── Liste ───────────── -->
+  <div id="tabListe" class="tab">
+    <div class="card">
+      <h2>Meine Protokolle <span class="hint" style="margin:0 0 0 auto;font-weight:600" id="lzahl"></span></h2>
+      <div id="liste"><div class="leer">Noch keine Protokolle auf diesem Handy.</div></div>
+    </div>
+  </div>
+</div>
+<div class="netz" id="netz">online</div>
+
+<script>
+function $(id){ return document.getElementById(id); }
+
+/* ── Laststufen und Rechnung (= STRABAG-Excel «Plattendruckversuch ME», Borner 24.08.2026) ───── */
+var STUFEN=[
+  {nr:0,ph:'erst',sig:0},{nr:1,ph:'erst',sig:0.02},{nr:2,ph:'erst',sig:0.05},{nr:3,ph:'erst',sig:0.10},
+  {nr:4,ph:'erst',sig:0.20},{nr:5,ph:'erst',sig:0.30},{nr:6,ph:'erst',sig:0.40},{nr:7,ph:'erst',sig:0.50},
+  {nr:8,ph:'entl',sig:0.25},{nr:9,ph:'entl',sig:0.12},{nr:10,ph:'entl',sig:0.02},
+  {nr:11,ph:'wied',sig:0.05},{nr:12,ph:'wied',sig:0.10},{nr:13,ph:'wied',sig:0.20},{nr:14,ph:'wied',sig:0.30},{nr:15,ph:'wied',sig:0.40}
+];
+var PHASE={erst:'Erstbelastung',entl:'Entlastung',wied:'Wiederbelastung'};
+var SIG_MAX=0.5;   // MAX(B21:B28) der Excel – gilt für ME1 und ME2
+var FOTO_PX=1280, FOTO_MAX=6;
+
+/* quadratische Ausgleichskurve s = a0 + a1*x + a2*x^2 (kleinste Quadrate, Normalgleichungen) */
+function fitQuad(pts){
+  var n=pts.length, Sx=0,Sx2=0,Sx3=0,Sx4=0,Sy=0,Sxy=0,Sx2y=0;
+  for(var i=0;i<n;i++){ var x=pts[i][0],y=pts[i][1],x2=x*x;
+    Sx+=x; Sx2+=x2; Sx3+=x2*x; Sx4+=x2*x2; Sy+=y; Sxy+=x*y; Sx2y+=x2*y; }
+  var M=[[n,Sx,Sx2,Sy],[Sx,Sx2,Sx3,Sxy],[Sx2,Sx3,Sx4,Sx2y]];
+  for(var c=0;c<3;c++){                       // Gauss mit Pivot
+    var p=c; for(var r=c+1;r<3;r++) if(Math.abs(M[r][c])>Math.abs(M[p][c])) p=r;
+    var t=M[c]; M[c]=M[p]; M[p]=t;
+    if(Math.abs(M[c][c])<1e-12) return null;
+    for(var r2=0;r2<3;r2++){ if(r2===c) continue; var f=M[r2][c]/M[c][c];
+      for(var k=c;k<4;k++) M[r2][k]-=f*M[c][k]; }
+  }
+  return [M[0][3]/M[0][0], M[1][3]/M[1][1], M[2][3]/M[2][2]];
+}
+/* ME = 1.5 * (D/2) / (a1 + a2*sigma_max)   [MN/m2], D in mm  (Excel C18 / G18) */
+function meWert(pts,D){
+  var a=fitQuad(pts); if(!a) return null;
+  var nenner=a[1]+a[2]*SIG_MAX; if(!(nenner>0)) return null;
+  return 1.5*D/2/nenner;
+}
+function werteLesen(){
+  var s=[]; for(var i=0;i<STUFEN.length;i++){ var v=$('s'+i).value.replace(',','.').trim(); s.push(v===''?null:(isFinite(+v)?+v:null)); }
+  return s;
+}
+function auswerten(s,D){
+  var erst=[],wied=[],ok1=true,ok2=true;
+  STUFEN.forEach(function(st,i){
+    if(st.ph==='erst'){ if(s[i]===null) ok1=false; else erst.push([st.sig,s[i]]); }
+    if(st.ph==='wied'){ if(s[i]===null) ok2=false; else wied.push([st.sig,s[i]]); }
+  });
+  var me1=ok1?meWert(erst,D):null, me2=ok2?meWert(wied,D):null;
+  return {me1:me1,me2:me2,verh:(me1&&me2)?me2/me1:null};
+}
+function rechnen(){
+  var D=+$('dmm').value||298, anf=+$('anf').value||30, s=werteLesen(), e=auswerten(s,D);
+  $('anfTxt').textContent=anf;
+  $('me1').textContent=e.me1!==null?e.me1.toFixed(1):'–';
+  $('me2').textContent=e.me2!==null?e.me2.toFixed(1):'–';
+  $('verh').textContent=e.verh!==null?e.verh.toFixed(2):'–';
+  var u=$('urteil');
+  if(e.me1===null){
+    var fehlt=0; STUFEN.forEach(function(st,i){ if(st.ph==='erst'&&s[i]===null) fehlt++; });
+    u.className='urteil'; u.textContent=fehlt?('Erstbelastung: noch '+fehlt+' Wert'+(fehlt>1?'e':'')+' (Stufe 0–7)'):'Erstbelastung: Werte prüfen (Setzung muss mit der Last zunehmen)';
+  } else if(e.me1>=anf){ u.className='urteil ok'; u.textContent='✔ ME1 = '+e.me1.toFixed(1)+' MN/m² ≥ '+anf+' – Anforderung erfüllt'; }
+  else { u.className='urteil nein'; u.textContent='✘ ME1 = '+e.me1.toFixed(1)+' MN/m² < '+anf+' – nachverdichten, Versuch wiederholen'; }
+  return e;
+}
+function stufenZeichnen(){
+  $('stufen').innerHTML=STUFEN.map(function(st,i){
+    return '<tr class="'+st.ph+'"><td class="nr">'+st.nr+'</td><td class="ph">'+PHASE[st.ph]+'</td><td class="sig">'+st.sig.toFixed(2)+'</td>'+
+      '<td class="s"><input type="text" inputmode="decimal" id="s'+i+'" '+(i===0?'value="0"':'')+' placeholder="mm" oninput="rechnen()" '+
+      'onkeydown="if(event.key===\'Enter\'){var n=document.getElementById(\'s'+(i+1)+'\');if(n){n.focus();n.select();}}"></td></tr>';
+  }).join('');
+}
+
+/* ── Standort (GPS → LV95, swisstopo-Näherungsformeln) ─────────────────── */
+var gps=null;
+function wgs2lv95(lat,lon){
+  var p=(lat*3600-169028.66)/10000, l=(lon*3600-26782.5)/10000;
+  var E=2600072.37+211455.93*l-10938.51*l*p-0.36*l*p*p-44.54*l*l*l;
+  var N=1200147.07+308807.95*p+3745.25*l*l+76.63*p*p-194.56*l*l*p+119.79*p*p*p;
+  return {E:Math.round(E),N:Math.round(N)};
+}
+function gpsZeigen(){
+  var g=gps, el=$('gpsInfo');
+  if(!g){ el.textContent='noch kein Standort'; return; }
+  var k=wgs2lv95(g.lat,g.lon);
+  el.innerHTML='<b>LV95 '+k.E+' / '+k.N+'</b> · ±'+g.genau+' m<br>'+g.lat+', '+g.lon+' · '+
+    '<a href="https://map.geo.admin.ch/?swisssearch='+k.E+','+k.N+'" target="_blank" rel="noopener">Karte</a>';
+}
+function standortHolen(fertig){
+  if(!navigator.geolocation){ $('gpsInfo').textContent='kein GPS auf diesem Gerät'; if(fertig) fertig(null); return; }
+  $('gpsInfo').textContent='Standort wird geholt …';
+  navigator.geolocation.getCurrentPosition(function(p){
+    gps={lat:+p.coords.latitude.toFixed(6),lon:+p.coords.longitude.toFixed(6),genau:Math.round(p.coords.accuracy||0),ts:Date.now()};
+    gpsZeigen(); if(fertig) fertig(gps);
+  },function(){ $('gpsInfo').textContent='kein Standort (GPS erlauben, draussen nochmals versuchen)'; if(fertig) fertig(gps); },
+  {enableHighAccuracy:true,timeout:15000,maximumAge:30000});
+}
+
+/* ── Fotos (Muster tagesrapport.html, 1280 px) ──────────────────────────── */
+var fotos=[];
+function bildLesen(datei,fertig){
+  var img=new Image();
+  img.onload=function(){
+    var m=FOTO_PX,w=img.width,h=img.height;
+    if(w>m||h>m){ if(w>h){ h=Math.round(h*m/w); w=m; } else { w=Math.round(w*m/h); h=m; } }
+    var c=document.createElement('canvas'); c.width=w; c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h);
+    var d=c.toDataURL('image/jpeg',0.72);
+    if(d.length>900000) d=c.toDataURL('image/jpeg',0.55);
+    URL.revokeObjectURL(img.src); fertig(d,w,h);
+  };
+  img.onerror=function(){ URL.revokeObjectURL(img.src); fertig(null); };
+  img.src=URL.createObjectURL(datei);
+}
+function fotosZeichnen(){
+  $('prev').innerHTML=fotos.map(function(f,i){
+    return '<div class="pg"><button class="del" onclick="fotoWeg('+i+')" title="entfernen">✕</button><img src="'+f.data+'" alt=""></div>';
+  }).join('');
+}
+function fotoWeg(i){ fotos.splice(i,1); fotosZeichnen(); }
+function dateienAnhaengen(fl){
+  var f=Array.prototype.slice.call(fl||[]); if(!f.length) return;
+  if(fotos.length+f.length>FOTO_MAX){ $('sFoto').textContent='Höchstens '+FOTO_MAX+' Fotos.'; f=f.slice(0,Math.max(0,FOTO_MAX-fotos.length)); if(!f.length) return; }
+  $('sFoto').textContent='Foto wird vorbereitet …';
+  if(!gps) standortHolen();
+  (function naechste(){
+    if(!f.length){ $('sFoto').textContent=''; fotosZeichnen(); return; }
+    bildLesen(f.shift(),function(d,w,h){ if(d) fotos.push({data:d,w:w,h:h,ts:Date.now()}); naechste(); });
+  })();
+}
+
+/* ── Speicher auf dem Handy (IndexedDB) ─────────────────────────────────── */
+var IDB_NAME='nalp_me_messung', dbP=null, aktuellId=null;
+function db(){
+  if(dbP) return dbP;
+  dbP=new Promise(function(res,rej){
+    if(!window.indexedDB){ rej(new Error('kein IndexedDB')); return; }
+    var a=window.indexedDB.open(IDB_NAME,1);
+    a.onupgradeneeded=function(){ a.result.createObjectStore('protokolle',{keyPath:'id'}); };
+    a.onsuccess=function(){ res(a.result); }; a.onerror=function(){ rej(a.error); };
+  });
+  return dbP;
+}
+function dbSchreiben(rec){ return db().then(function(d){ return new Promise(function(res,rej){
+  var t=d.transaction('protokolle','readwrite'); t.objectStore('protokolle').put(rec); t.oncomplete=function(){ res(rec); }; t.onerror=function(){ rej(t.error); }; }); }); }
+function dbAlle(){ return db().then(function(d){ return new Promise(function(res,rej){
+  var r=d.transaction('protokolle').objectStore('protokolle').getAll(); r.onsuccess=function(){ res(r.result||[]); }; r.onerror=function(){ rej(r.error); }; }); }); }
+function dbLoeschen(id){ return db().then(function(d){ return new Promise(function(res,rej){
+  var t=d.transaction('protokolle','readwrite'); t.objectStore('protokolle').delete(id); t.oncomplete=res; t.onerror=function(){ rej(t.error); }; }); }); }
+
+function wetterWahl(){ var b=$('wetter').querySelector('button.on'); return b?b.getAttribute('data-w'):''; }
+function wetterSetzen(w){ Array.prototype.forEach.call($('wetter').querySelectorAll('button'),function(b){ b.className=b.getAttribute('data-w')===w?'on':''; }); }
+function sammeln(){
+  var e=rechnen();
+  if(!aktuellId) aktuellId='me_'+Date.now().toString(36);
+  return {id:aktuellId, ts:Date.now(), datum:$('datum').value, nr:+$('nr').value||0, pruefer:$('pruefer').value.trim(),
+    ort:$('ort').value.trim(), tisch:$('tisch').value.trim(), schicht:$('schicht').value.trim(), lage:$('lage').value.trim(),
+    wetter:wetterWahl(), gegen:$('gegen').value.trim(), d:+$('dmm').value||298, anf:+$('anf').value||30,
+    gps:gps, s:werteLesen(), me1:e.me1, me2:e.me2, verh:e.verh, bem:$('bem').value.trim(), fotos:fotos};
+}
+function laden(r){
+  aktuellId=r.id; $('datum').value=r.datum||''; $('nr').value=r.nr||''; $('pruefer').value=r.pruefer||'';
+  $('ort').value=r.ort||''; $('tisch').value=r.tisch||''; $('schicht').value=r.schicht||''; $('lage').value=r.lage||'';
+  wetterSetzen(r.wetter||''); $('gegen').value=r.gegen||''; $('dmm').value=r.d||298; $('anf').value=r.anf||30;
+  gps=r.gps||null; gpsZeigen(); (r.s||[]).forEach(function(v,i){ if($('s'+i)) $('s'+i).value=(v===null||v===undefined)?'':v; });
+  $('bem').value=r.bem||''; fotos=(r.fotos||[]).slice(); fotosZeichnen(); rechnen();
+  tab('neu'); window.scrollTo(0,0);
+}
+function pruefen(){
+  var m=[]; if(!$('datum').value) m.push('Datum'); if(!$('pruefer').value.trim()) m.push('Prüfer'); if(!$('ort').value.trim()) m.push('Ort / Etappe');
+  return m;
+}
+function speichern(){
+  try{ localStorage.setItem('nalp_me_pruefer',$('pruefer').value.trim()); localStorage.setItem('nalp_me_mail',$('mail').value.trim()); }catch(e){}
+  return dbSchreiben(sammeln());
+}
+function speichernKlick(){
+  var m=pruefen(); if(m.length){ status('sAll','Bitte ausfüllen: '+m.join(', '),'warn'); return; }
+  speichern().then(function(){ status('sAll','Gespeichert auf diesem Handy.','ok'); listeZeichnen(); })
+    .catch(function(e){ status('sAll','Speichern ging nicht: '+e.message,'warn'); });
+}
+function neu(frag){
+  if(frag&&aktuellId&&!confirm('Neues Protokoll beginnen? Das aktuelle ist gespeichert, falls du «Speichern» gedrückt hast.')) return;
+  aktuellId=null; gps=null; fotos=[]; fotosZeichnen(); gpsZeigen();
+  $('datum').value=heute(); $('ort').value=''; $('tisch').value=''; $('schicht').value=''; $('lage').value=''; wetterSetzen('');
+  $('gegen').value='CAT-Bagger'; $('dmm').value=298; $('bem').value='';
+  STUFEN.forEach(function(st,i){ $('s'+i).value=i===0?'0':''; });
+  $('nr').value=1;
+  dbAlle().then(function(a){ var mx=0; a.forEach(function(r){ if(+r.nr>mx) mx=+r.nr; }); $('nr').value=mx+1; }).catch(function(){ $('nr').value=1; });
+  rechnen(); status('sAll','');
+}
+function status(id,t,k){ var el=$(id); el.textContent=t||''; el.className='status'+(k?' '+k:''); }
+function heute(){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+function dCH(iso){ if(!iso) return ''; var p=iso.split('-'); return p.length===3?(p[2]+'.'+p[1]+'.'+p[0]):iso; }
+function hhmm(ts){ var d=new Date(ts); return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); }
+
+/* ── Liste ──────────────────────────────────────────────────────────────── */
+function listeZeichnen(){
+  dbAlle().then(function(a){
+    a.sort(function(x,y){ return (y.ts||0)-(x.ts||0); });
+    $('lzahl').textContent=a.length?(a.length+' auf diesem Handy'):'';
+    if(!a.length){ $('liste').innerHTML='<div class="leer">Noch keine Protokolle auf diesem Handy.</div>'; return; }
+    $('liste').innerHTML=a.map(function(r){
+      var me=r.me1!==null&&r.me1!==undefined?('ME1 '+r.me1.toFixed(1)):'ME1 –', k=r.me1==null?'':(r.me1>=(r.anf||30)?'ok':'nein');
+      return '<div class="p"><div class="t"><b>Nr. '+(r.nr||'?')+' · '+dCH(r.datum)+'</b><small>'+esc(r.ort||'')+(r.tisch?' · '+esc(r.tisch):'')+
+        (r.schicht?' · '+esc(r.schicht):'')+' · '+(r.fotos||[]).length+' Fotos · '+esc(r.pruefer||'')+'</small></div>'+
+        '<span class="me '+k+'">'+me+'</span>'+
+        '<button onclick="oeffnen(\''+r.id+'\')">Öffnen</button><button onclick="teilenId(\''+r.id+'\')">📄 PDF</button>'+
+        '<button class="x" onclick="loeschen(\''+r.id+'\')">✕</button></div>';
+    }).join('');
+  }).catch(function(){ $('liste').innerHTML='<div class="leer">Speicher nicht verfügbar.</div>'; });
+}
+function esc(s){ return String(s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function oeffnen(id){ dbAlle().then(function(a){ var r=a.filter(function(x){ return x.id===id; })[0]; if(r) laden(r); }); }
+function loeschen(id){ if(!confirm('Protokoll löschen?')) return; dbLoeschen(id).then(function(){ if(aktuellId===id) aktuellId=null; listeZeichnen(); }); }
+function teilenId(id){ dbAlle().then(function(a){ var r=a.filter(function(x){ return x.id===id; })[0]; if(r) pdfTeilen(r); }); }
+function tab(w){ $('tabNeu').className='tab'+(w==='neu'?' on':''); $('tabListe').className='tab'+(w==='liste'?' on':'');
+  $('tbNeu').className=w==='neu'?'on':''; $('tbListe').className=w==='liste'?'on':''; if(w==='liste') listeZeichnen(); }
+
+/* ── PDF (jsPDF, lokal) ─────────────────────────────────────────────────── */
+var logoData=null;
+function logoLaden(){
+  return new Promise(function(res){
+    if(logoData) { res(logoData); return; }
+    var img=new Image(); img.onload=function(){ try{ var c=document.createElement('canvas'); c.width=img.width; c.height=img.height;
+      c.getContext('2d').drawImage(img,0,0); logoData=c.toDataURL('image/png'); }catch(e){} res(logoData); };
+    img.onerror=function(){ res(null); }; img.src='assets/img/strabag-logo.png';
+  });
+}
+function f1(v){ return (v===null||v===undefined)?'-':(+v).toFixed(1); }
+function pdfBauen(r){
+  var J=window.jspdf.jsPDF, doc=new J({unit:'mm',format:'a4'}), W=210, L=15, R=W-15, y=18;
+  function txt(s,x,yy,o){ doc.text(String(s),x,yy,o||{}); }
+  function zeile(yy){ doc.setDrawColor(190); doc.setLineWidth(0.2); doc.line(L,yy,R,yy); }
+  if(logoData){ try{ doc.addImage(logoData,'PNG',R-34,10,34,11.8); }catch(e){} }
+  doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor(20,32,46);
+  txt('Protokoll Plattendruckversuch (ME-Messung)',L,y); y+=6;
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(91,107,124);
+  txt('NalpSolar Sedrun · Los B8-13 · STRABAG AG · Lastplatte Ø '+(r.d||298)+' mm · 15 Laststufen (DIN 18134)',L,y); y+=7;
+  doc.setFillColor(253,236,236); doc.setDrawColor(215,38,34); doc.roundedRect(L,y-4.5,R-L,8,1.5,1.5,'FD');
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(215,38,34);
+  txt('Anforderung: ME1 >= '+(r.anf||30)+' MN/m² unter Erstbelastung',L+3,y+0.8);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(91,107,124);
+  txt('BA 0286 / Mail F. Borner 24.08.2026',R-3,y+0.8,{align:'right'}); y+=10;
+
+  var k=r.gps?wgs2lv95(r.gps.lat,r.gps.lon):null;
+  var felder=[
+    ['Datum',dCH(r.datum),'Versuch-Nr.',String(r.nr||'')],
+    ['Prüfer',r.pruefer||'','Witterung',r.wetter||''],
+    ['Ort / Etappe',r.ort||'','Tisch- / Punkt-Nr.',r.tisch||''],
+    ['Schicht / Material',r.schicht||'','Lage',r.lage||''],
+    ['Gegengewicht',r.gegen||'','Platten-Ø D',(r.d||298)+' mm'],
+    ['Standort LV95',k?(k.E+' / '+k.N+'  (±'+r.gps.genau+' m)'):'-','WGS84',r.gps?(r.gps.lat+', '+r.gps.lon):'-']
+  ];
+  doc.setFontSize(9);
+  felder.forEach(function(f){
+    doc.setFont('helvetica','bold'); doc.setTextColor(91,107,124); txt(f[0],L,y); txt(f[2],L+92,y);
+    doc.setFont('helvetica','normal'); doc.setTextColor(20,32,46); txt(f[1],L+34,y); txt(f[3],L+126,y);
+    zeile(y+1.8); y+=6.4;
+  });
+  y+=3;
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(20,32,46); txt('Laststufen',L,y); y+=3;
+  var cols=[L,L+16,L+66,L+110,R], rh=5.6;
+  doc.setFillColor(11,24,38); doc.rect(L,y,R-L,rh,'F'); doc.setTextColor(255,255,255); doc.setFontSize(8.5);
+  txt('Stufe',cols[0]+8,y+3.9,{align:'center'}); txt('Phase',cols[1]+2,y+3.9); txt('Last σ0 [MN/m²]',cols[2]+22,y+3.9,{align:'center'}); txt('Setzung s [mm]',cols[3]+(R-cols[3])/2,y+3.9,{align:'center'});
+  y+=rh;
+  doc.setFontSize(9);
+  STUFEN.forEach(function(st,i){
+    if(st.ph==='entl'){ doc.setFillColor(243,245,248); doc.rect(L,y,R-L,rh,'F'); }
+    doc.setTextColor(20,32,46); doc.setFont('helvetica','bold'); txt(String(st.nr),cols[0]+8,y+3.9,{align:'center'});
+    doc.setFont('helvetica','normal'); txt(PHASE[st.ph],cols[1]+2,y+3.9); txt(st.sig.toFixed(2),cols[2]+22,y+3.9,{align:'center'});
+    var v=r.s&&r.s[i]!==null&&r.s[i]!==undefined?String(r.s[i]):''; doc.setFont('helvetica','bold'); txt(v,cols[3]+(R-cols[3])/2,y+3.9,{align:'center'});
+    zeile(y+rh); y+=rh;
+  });
+  y+=5;
+  var bx=(R-L)/3;
+  [['ME1 Erstbelastung',f1(r.me1)+(r.me1!=null?' MN/m²':'')],['ME2 Wiederbelastung',f1(r.me2)+(r.me2!=null?' MN/m²':'')],['ME2 / ME1',r.verh!=null?r.verh.toFixed(2):'-']].forEach(function(b,i){
+    var x=L+i*bx; doc.setFillColor(238,241,245); doc.setDrawColor(190); doc.rect(x,y,bx,12,'FD');
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(91,107,124); txt(b[0],x+bx/2,y+4,{align:'center'});
+    doc.setFontSize(12); doc.setTextColor(20,32,46); txt(b[1],x+bx/2,y+9.6,{align:'center'});
+  });
+  y+=16;
+  doc.setFont('helvetica','bold'); doc.setFontSize(10);
+  if(r.me1==null){ doc.setTextColor(91,107,124); txt('Anforderung ME1 >= '+(r.anf||30)+' MN/m²: nicht auswertbar (Werte fehlen)',L,y); }
+  else if(r.me1>=(r.anf||30)){ doc.setTextColor(28,138,74); txt('Anforderung ME1 >= '+(r.anf||30)+' MN/m²: ERFÜLLT',L,y); }
+  else { doc.setTextColor(215,38,34); txt('Anforderung ME1 >= '+(r.anf||30)+' MN/m²: NICHT ERFÜLLT - nachverdichten, Versuch wiederholen',L,y); }
+  y+=8;
+  doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(91,107,124); txt('Bemerkungen',L,y); y+=4.5;
+  doc.setFont('helvetica','normal'); doc.setTextColor(20,32,46);
+  var bem=doc.splitTextToSize(r.bem||'-',R-L); txt(bem,L,y); y+=bem.length*4.2+6;
+  doc.setFontSize(9); doc.setTextColor(91,107,124); txt('Datum / Unterschrift Prüfer:  ____________________________',L,Math.max(y,262));
+  doc.setFontSize(7); doc.setTextColor(120);
+  var jetzt=new Date();
+  txt('Erstellt '+dCH(heute())+' '+hhmm(jetzt.getTime())+' im Baustellen-Portal NalpSolar (ME-Messung) · Laststufen und Formel: STRABAG-Excel Plattendruckversuch ME (DIN 18134-300), F. Borner 24.08.2026 · '+(r.fotos||[]).length+' Fotos',L,290);
+
+  (r.fotos||[]).forEach(function(f,i){
+    if(i%2===0){ doc.addPage(); doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(20,32,46);
+      txt('Fotos · Versuch Nr. '+(r.nr||'')+' · '+dCH(r.datum)+' · '+(r.ort||''),L,15); }
+    var top=i%2===0?20:155, maxW=R-L, maxH=125, w=f.w||1280, h=f.h||960, s=Math.min(maxW/w,maxH/h), pw=w*s, ph=h*s;
+    try{ doc.addImage(f.data,'JPEG',L+(maxW-pw)/2,top,pw,ph); }catch(e){}
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(91,107,124);
+    txt('Foto '+(i+1)+' · '+hhmm(f.ts||Date.now())+(k?' · LV95 '+k.E+' / '+k.N:''),L,top+ph+4);
+  });
+  return doc;
+}
+function dateiname(r){
+  var o=(r.ort||'').replace(/[^A-Za-z0-9ÄÖÜäöü]+/g,'_').replace(/^_|_$/g,'').slice(0,30);
+  return 'ME-Messung_'+(r.datum||heute()).replace(/-/g,'')+'_Nr'+(r.nr||0)+(o?'_'+o:'')+'.pdf';
+}
+function zusammenfassung(r){
+  var k=r.gps?wgs2lv95(r.gps.lat,r.gps.lon):null;
+  return 'ME-Messung (Plattendruckversuch) Nr. '+(r.nr||'')+' vom '+dCH(r.datum)+'\n'+
+    'Ort: '+(r.ort||'')+(r.tisch?' · '+r.tisch:'')+'\nSchicht: '+(r.schicht||'')+(r.lage?' · '+r.lage:'')+'\nPrüfer: '+(r.pruefer||'')+'\n'+
+    'ME1 = '+f1(r.me1)+' MN/m² · ME2 = '+f1(r.me2)+' MN/m² · ME2/ME1 = '+(r.verh!=null?r.verh.toFixed(2):'-')+'\n'+
+    'Anforderung ME1 >= '+(r.anf||30)+': '+(r.me1==null?'nicht auswertbar':(r.me1>=(r.anf||30)?'erfüllt':'NICHT erfüllt'))+'\n'+
+    (k?'Standort LV95 '+k.E+' / '+k.N+'\n':'')+(r.bem?'Bemerkungen: '+r.bem+'\n':'')+(r.fotos||[]).length+' Fotos im PDF.';
+}
+function pdfTeilen(r){
+  var b=$('bTeilen'); b.disabled=true; status('sAll','PDF wird gebaut …');
+  return logoLaden().then(function(){
+    var doc=pdfBauen(r), name=dateiname(r), blob=doc.output('blob'), text=zusammenfassung(r);
+    var datei=null; try{ datei=new File([blob],name,{type:'application/pdf'}); }catch(e){}
+    if(datei&&navigator.canShare&&navigator.canShare({files:[datei]})&&navigator.share){
+      return navigator.share({files:[datei],title:name,text:text}).then(function(){ status('sAll','Geteilt – in der Mail-App an dich selber schicken.','ok'); })
+        .catch(function(e){ if(e&&e.name==='AbortError'){ status('sAll','Teilen abgebrochen.'); return; } herunterladen(blob,name,text); });
+    }
+    herunterladen(blob,name,text);
+  }).catch(function(e){ status('sAll','PDF ging nicht: '+e.message,'warn'); }).then(function(){ b.disabled=false; });
+}
+function herunterladen(blob,name,text){
+  var u=URL.createObjectURL(blob), a=document.createElement('a'); a.href=u; a.download=name; document.body.appendChild(a); a.click();
+  setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(u); },4000);
+  var an=$('mail').value.trim();
+  status('sAll','PDF heruntergeladen ('+name+'). Mail-Entwurf geöffnet – PDF aus den Downloads anhängen.','ok');
+  setTimeout(function(){ location.href='mailto:'+encodeURIComponent(an)+'?subject='+encodeURIComponent(name.replace('.pdf',''))+'&body='+encodeURIComponent(text+'\n\n(PDF aus den Downloads anhängen)'); },600);
+}
+function teilen(){
+  var m=pruefen(); if(m.length){ status('sAll','Bitte ausfüllen: '+m.join(', '),'warn'); return; }
+  speichern().then(function(r){ listeZeichnen(); return pdfTeilen(r); })
+    .catch(function(e){ status('sAll','Speichern ging nicht: '+e.message,'warn'); });
+}
+
+/* ── Start ──────────────────────────────────────────────────────────────── */
+function netz(){ var on=navigator.onLine!==false; $('netz').textContent=on?'online':'offline – geht trotzdem'; $('netz').className='netz'+(on?'':' off'); }
+window.addEventListener('online',netz); window.addEventListener('offline',netz);
+Array.prototype.forEach.call($('wetter').querySelectorAll('button'),function(b){ b.onclick=function(){ wetterSetzen(b.className==='on'?'':b.getAttribute('data-w')); }; });
+$('dmm').addEventListener('input',rechnen); $('anf').addEventListener('input',rechnen);
+stufenZeichnen(); netz();
+try{ $('pruefer').value=localStorage.getItem('nalp_me_pruefer')||''; $('mail').value=localStorage.getItem('nalp_me_mail')||''; }catch(e){}
+neu(false);
+logoLaden();
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(function(){}); }
+/* Selbsttest (?test=1): Werte aus STRABAG-Excel Blatt 1 → ME1 92.98 / ME2 142.64 erwartet */
+if(/test=1/.test(location.search)){
+  var T=[0,0.04,0.21,0.39,0.66,0.86,1.03,1.24,1.17,0.99,0.56,0.58,0.69,0.88,1.03,1.16];
+  T.forEach(function(v,i){ $('s'+i).value=v; }); $('dmm').value=298; rechnen();
+  document.title='TEST ME1='+$('me1').textContent+' ME2='+$('me2').textContent;
+  $('datum').value=heute(); $('pruefer').value='Test'; $('ort').value='Test Baupiste B3';
+  logoLaden().then(function(){ var d=pdfBauen(sammeln()); document.title+=' PDF='+d.output('arraybuffer').byteLength+' Seiten='+d.getNumberOfPages(); });
+}
+</script>
+</body>
+</html>
