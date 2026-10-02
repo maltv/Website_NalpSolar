@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NalpSolar · Erdung Fotos</title>
+<meta name="theme-color" content="#ffffff">
+<script>
+  window.NALP_GATE_CODE  = '6460';
+  window.NALP_GATE_KEY   = 'nalp_portal_unlock_v1';
+  window.NALP_GATE_TITEL = 'Erdung · Fotos';
+  window.NALP_GATE_SUB   = 'Code eingeben / Enter code';
+</script>
+<script src="assets/js/nalp-gate.js"></script>
+<style>
+  /* Handy-Upload für die Erdleiter-Dokumentation (Feedback Anna/Rihard 01.10.2026: «a quick access web link for the
+     phones … simply upload the photos from phone gallery (with the choose type option)»).
+     Jedes Foto geht als eigener Knoten nach RTDB erfassung/erdung_fotos/<id>: bis 7 MB im Original (mit EXIF), grösser
+     verkleinert (EXIF vorher gelesen und mitgeschickt). Jedes offene Nalpi holt die Fotos von dort nach SharePoint
+     (Seite Werkleitungen, Ebene Erdung) und löscht den Knoten danach – Nalpi rechnet auch die Punktnummern in Schlüssel
+     um (eine Stelle). WERKZEUGE.md §69. */
+  :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8; --gruen:#1e9e5a; --blau:#1565c0; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body{ margin:0; background:#eef0f3; min-height:100vh; color:var(--ink); font-family:Arial,"Helvetica Neue",sans-serif; }
+  header{ position:sticky; top:0; z-index:10; display:flex; align-items:center; gap:8px;
+          padding:9px 10px; background:#fff; border-bottom:4px solid var(--rot); }
+  header a.home{ color:var(--ink); text-decoration:none; font-size:20px; }
+  header .logo img{ height:20px; display:block; }
+  header h1{ font-size:14.5px; margin:0; flex:1; min-width:0; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  header .netz{ font-size:11px; font-weight:700; color:var(--gruen); white-space:nowrap; }
+  header .netz.off{ color:var(--rot); }
+  .lang{ display:flex; flex:0 0 auto; border:1px solid #c9ccd2; border-radius:7px; overflow:hidden; }
+  .lang button{ border:0; background:#fff; font:800 11.5px Arial; color:var(--mut); padding:5px 7px; cursor:pointer; }
+  .lang button.on{ background:var(--rot); color:#fff; }
+  main{ max-width:620px; margin:0 auto; padding:12px 12px 90px; }
+  .box{ background:#fff; border:1px solid var(--line); border-left:5px solid var(--rot); border-radius:6px; padding:13px;
+        margin-bottom:13px; box-shadow:0 1px 4px rgba(20,25,32,.07); }
+  .box h2{ margin:0 0 8px; font-size:15.5px; }
+  label.feld{ display:block; font-size:13px; font-weight:800; margin:12px 0 5px; }
+  .hilfe{ font-size:12px; color:var(--mut); margin-top:4px; line-height:1.4; }
+  input[type=text], input[type=number]{ width:100%; border:1.5px solid var(--line); border-radius:8px; padding:11px 12px;
+        font-size:16px; font-family:inherit; background:#fff; }
+  input:focus{ outline:none; border-color:var(--blau); }
+  .zeile{ display:flex; gap:10px; }
+  .zeile > div{ flex:1; }
+  .zeile > div.klein{ flex:0 0 96px; }
+  .btn{ display:block; width:100%; border:none; border-radius:8px; padding:15px 16px; font-size:16px; font-weight:800;
+        cursor:pointer; color:#fff; background:var(--rot); text-align:center; }
+  .btn.w{ background:#fff; color:var(--ink); border:1.5px solid #c9ccd2; }
+  .btn[disabled]{ opacity:.45; cursor:default; }
+  .wahl{ display:flex; border:1.5px solid #c9ccd2; border-radius:8px; overflow:hidden; }
+  .wahl button{ flex:1; border:0; background:#fff; padding:12px 4px; font:800 13.5px Arial; color:var(--mut); cursor:pointer; }
+  .wahl button + button{ border-left:1.5px solid #c9ccd2; }
+  .wahl button.on{ background:var(--ink); color:#fff; }
+  .fotos{ display:grid; grid-template-columns:repeat(auto-fill, minmax(96px, 1fr)); gap:8px; margin-top:10px; }
+  .foto{ position:relative; border:1px solid var(--line); border-radius:6px; overflow:hidden; background:#f6f7f8; }
+  .foto img{ display:block; width:100%; height:90px; object-fit:cover; }
+  .foto .n{ font-size:10px; color:var(--mut); padding:3px 5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .foto .x{ position:absolute; top:4px; right:4px; width:26px; height:26px; border-radius:13px; border:0; background:rgba(0,0,0,.65);
+        color:#fff; font-size:15px; font-weight:800; cursor:pointer; line-height:26px; padding:0; }
+  .foto .st{ position:absolute; left:0; right:0; top:0; height:90px; display:flex; align-items:center; justify-content:center;
+        font-size:28px; font-weight:900; color:#fff; background:rgba(0,0,0,.35); }
+  .foto .st.ok{ background:rgba(30,158,90,.55); }
+  .foto .st.err{ background:rgba(215,38,34,.6); font-size:13px; padding:4px; text-align:center; }
+  .meldung{ margin-top:12px; padding:11px 12px; border-radius:8px; font-size:14px; line-height:1.45; }
+  .meldung.ok{ background:#e7f6ee; color:#14653b; }
+  .meldung.err{ background:#fdecea; color:#8f1d1d; }
+  .fuss{ text-align:center; font-size:12.5px; color:var(--mut); margin-top:14px; }
+  input[type=file]{ display:none; }
+</style>
+</head>
+<body>
+<header>
+  <a class="home" href="index.html" title="Portal">‹</a>
+  <div class="logo"><img src="assets/img/strabag-logo.png" alt="STRABAG"></div>
+  <h1 data-i="h1">Erdung · Fotos</h1>
+  <div class="netz" id="netz">online</div>
+  <div class="lang" id="lang"><button data-l="de">DE</button><button data-l="en">EN</button></div>
+</header>
+
+<main>
+  <div class="box">
+    <label class="btn w" for="datei" id="waehlen" data-i="waehlen">📷 Fotos wählen</label>
+    <input type="file" id="datei" accept="image/*" multiple>
+    <div class="fotos" id="fotos"></div>
+
+    <div class="zeile">
+      <div>
+        <label class="feld" for="punkte" data-i="punkte">Punktnummern auf dem Foto</label>
+        <input type="text" id="punkte" inputmode="text" autocomplete="off" placeholder="1320, 1321">
+      </div>
+      <div class="klein">
+        <label class="feld" for="jahr" data-i="jahr">Jahr</label>
+        <input type="number" id="jahr" inputmode="numeric" min="2025" max="2029">
+      </div>
+    </div>
+    <div class="hilfe" data-i="punkteHilfe">Wie im Bild, z. B. 1320, 1321 oder 1320-1324. Ein Foto darf mehrere Punkte zeigen.</div>
+
+    <label class="feld" data-i="art">Punktart</label>
+    <div class="wahl" id="art">
+      <button data-a="erdung" data-i="artErdung">Erdungsverbindung</button>
+      <button data-a="leitung" data-i="artLeitung">Leitungspunkt</button>
+      <button data-a="" class="on" data-i="artWeissNicht">weiss nicht</button>
+    </div>
+
+    <label class="feld" for="bemerkung" data-i="bemerkung">Bemerkung (freiwillig)</label>
+    <input type="text" id="bemerkung" autocomplete="off">
+
+    <label class="feld" for="name" data-i="name">Name (freiwillig)</label>
+    <input type="text" id="name" autocomplete="name">
+
+    <div style="margin-top:16px"><button class="btn" id="senden" disabled>Senden</button></div>
+    <div id="meldung"></div>
+  </div>
+  <div class="fuss" id="wartend"></div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  var RTDB = 'https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app/erfassung/erdung_fotos';
+  var MAX_ORIGINAL = 7 * 1024 * 1024;        // grösser -> verkleinern (RTDB: eine Zeichenkette höchstens 10 MB)
+  var EXIF_BYTES = 128 * 1024;
+
+  var TXT = {
+    de: { h1: 'Erdung · Fotos', waehlen: '📷 Fotos wählen', punkte: 'Punktnummern auf dem Foto', jahr: 'Jahr',
+      punkteHilfe: 'Wie im Bild, z. B. 1320, 1321 oder 1320-1324. Ein Foto darf mehrere Punkte zeigen.',
+      art: 'Punktart', artErdung: 'Erdungsverbindung', artLeitung: 'Leitungspunkt', artWeissNicht: 'weiss nicht',
+      bemerkung: 'Bemerkung (freiwillig)', name: 'Name (freiwillig)',
+      senden: function (n) { return n === 1 ? '1 Foto senden' : n + ' Fotos senden'; },
+      nochmal: function (n) { return n + ' nicht gesendete erneut senden'; },
+      fehltPunkte: 'Bitte die Punktnummern eintragen.',
+      fertig: function (n) { return n + (n === 1 ? ' Foto' : ' Fotos') + ' gesendet. Nalpi übernimmt sie in den nächsten Minuten nach SharePoint.'; },
+      teil: function (ok, f) { return ok + ' gesendet, ' + f + ' nicht – der Grund steht beim Foto. Erneut senden.'; },
+      zuLang: 'Punktnummern zu lang (höchstens 200 Zeichen).',
+      unklar: function (x) { return 'Unklare Punktnummer «' + x + '». Nur Nummern wie 1320, 1320-1324 oder 1381-NORTH.'; },
+      zuViele: function (n) { return n + ' Punkte für ein Foto sind zu viele (höchstens 30).'; },
+      zeit: 'Zeit abgelaufen – Netz schwach, erneut senden.',
+      heic: 'HEIC-Foto zu gross. In der Kamera «Hohe Effizienz» ausschalten oder das Foto als JPG teilen.',
+      wartend: function (n) { return n === 0 ? 'Alle gesendeten Fotos sind in Nalpi übernommen.' : 'Noch nicht in Nalpi übernommen: ' + n + (n === 1 ? ' Foto' : ' Fotos'); },
+      entfernen: 'Foto entfernen' },
+    en: { h1: 'Earthing · photos', waehlen: '📷 Choose photos', punkte: 'Point numbers on the photo', jahr: 'Year',
+      punkteHilfe: 'As written in the picture, e.g. 1320, 1321 or 1320-1324. One photo may show several points.',
+      art: 'Point type', artErdung: 'Earthing connection', artLeitung: 'Pipe point', artWeissNicht: "don't know",
+      bemerkung: 'Note (optional)', name: 'Name (optional)',
+      senden: function (n) { return n === 1 ? 'Send 1 photo' : 'Send ' + n + ' photos'; },
+      nochmal: function (n) { return 'Send the ' + n + ' unsent again'; },
+      fehltPunkte: 'Please enter the point numbers.',
+      fertig: function (n) { return n + (n === 1 ? ' photo' : ' photos') + ' sent. Nalpi moves them to SharePoint within the next minutes.'; },
+      teil: function (ok, f) { return ok + ' sent, ' + f + ' not – the reason is shown on the photo. Send again.'; },
+      zuLang: 'Point numbers too long (200 characters at most).',
+      unklar: function (x) { return 'Unclear point number «' + x + '». Only numbers like 1320, 1320-1324 or 1381-NORTH.'; },
+      zuViele: function (n) { return n + ' points for one photo are too many (30 at most).'; },
+      zeit: 'Timed out – weak connection, send again.',
+      heic: 'HEIC photo too large. Switch off «High efficiency» in the camera or share the photo as JPG.',
+      wartend: function (n) { return n === 0 ? 'All sent photos are in Nalpi.' : 'Not yet in Nalpi: ' + n + (n === 1 ? ' photo' : ' photos'); },
+      entfernen: 'Remove photo' }
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var sprache = 'de';
+  try { sprache = localStorage.getItem('nalp_sprache') === 'en' ? 'en' : 'de'; } catch (e) { /* privat */ }
+  var liste = [];   // { datei, url, status: '' | 'laeuft' | 'ok' | Fehlertext }
+  var art = '';
+  var wartendN = null;
+
+  function t(k) { return TXT[sprache][k]; }
+
+  function sprachSetzen(l) {
+    sprache = l;
+    try { localStorage.setItem('nalp_sprache', l); } catch (e) { /* privat */ }
+    document.documentElement.lang = l;
+    [].forEach.call(document.querySelectorAll('[data-i]'), function (el) {
+      var v = TXT[l][el.getAttribute('data-i')];
+      if (typeof v === 'string') el.textContent = v;
+    });
+    [].forEach.call(document.querySelectorAll('#lang button'), function (b) { b.classList.toggle('on', b.getAttribute('data-l') === l); });
+    zeichnen();
+  }
+
+  // ── EXIF: Aufnahmezeit + GPS (gleiche Logik wie Nalpi src/lib/photos/exif-gps.ts) ──
+  function exifLesen(buf) {
+    var leer = { aufgenommen: null, lat: null, lon: null };
+    try {
+      var v = new DataView(buf);
+      if (v.byteLength < 4 || v.getUint16(0) !== 0xffd8) return leer;
+      var o = 2;
+      while (o + 4 <= v.byteLength) {
+        if (v.getUint8(o) !== 0xff) return leer;
+        var m = v.getUint8(o + 1);
+        if (m === 0xda || m === 0xd9) return leer;
+        var len = v.getUint16(o + 2);
+        if (m === 0xe1 && o + 10 <= v.byteLength && v.getUint32(o + 4) === 0x45786966) return tiff(v, o + 10);
+        o += 2 + len;
+      }
+    } catch (e) { /* kaputt */ }
+    return leer;
+  }
+  function tiff(v, t0) {
+    var little = v.getUint16(t0) === 0x4949;
+    var u16 = function (p) { return v.getUint16(t0 + p, little); };
+    var u32 = function (p) { return v.getUint32(t0 + p, little); };
+    if (u16(2) !== 0x002a) return { aufgenommen: null, lat: null, lon: null };
+    function eintraege(ifd) {
+      var out = {};
+      if (ifd <= 0 || t0 + ifd + 2 > v.byteLength) return out;
+      var n = u16(ifd);
+      for (var i = 0; i < n; i++) {
+        var e = ifd + 2 + i * 12;
+        if (t0 + e + 12 > v.byteLength) break;
+        out[u16(e)] = { anzahl: u32(e + 4), wert: u32(e + 8), pos: e + 8 };
+      }
+      return out;
+    }
+    function ascii(e) {
+      if (!e) return null;
+      var start = e.anzahl <= 4 ? e.pos : e.wert, s = '';
+      for (var i = 0; i < e.anzahl && t0 + start + i < v.byteLength; i++) {
+        var c = v.getUint8(t0 + start + i);
+        if (c === 0) break;
+        s += String.fromCharCode(c);
+      }
+      return s;
+    }
+    function grad(e, ref) {
+      if (!e || e.anzahl < 3) return null;
+      var r = function (i) { var den = u32(e.wert + i * 8 + 4); return den ? u32(e.wert + i * 8) / den : 0; };
+      var g = r(0) + r(1) / 60 + r(2) / 3600;
+      if (!isFinite(g) || g === 0) return null;
+      return ref === 'S' || ref === 'W' ? -g : g;
+    }
+    var ifd0 = eintraege(u32(4));
+    var ex = eintraege(ifd0[0x8769] ? ifd0[0x8769].wert : 0);
+    var gps = eintraege(ifd0[0x8825] ? ifd0[0x8825].wert : 0);
+    var zeit = ascii(ex[0x9003]) || ascii(ifd0[0x0132]);
+    var m = zeit ? /^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2})/.exec(zeit) : null;
+    var lat = grad(gps[2], ascii(gps[1])), lon = grad(gps[4], ascii(gps[3]));
+    return {
+      aufgenommen: m && m[1] !== '0000' ? m[1] + '-' + m[2] + '-' + m[3] + 'T' + m[4] + ':' + m[5] : null,
+      lat: lat !== null && lon !== null ? lat : null,
+      lon: lat !== null && lon !== null ? lon : null
+    };
+  }
+
+  // ── Bilddaten: Original (≤ 7 MB) oder verkleinert ──
+  function base64Von(blob) {
+    return new Promise(function (ok, fehler) {
+      var r = new FileReader();
+      r.onload = function () { var s = String(r.result); ok(s.slice(s.indexOf(',') + 1)); };
+      r.onerror = function () { fehler(r.error || new Error('lesen')); };
+      r.readAsDataURL(blob);
+    });
+  }
+  function verkleinern(datei) {
+    return new Promise(function (ok, fehler) {
+      var img = new Image(), url = URL.createObjectURL(datei);
+      img.onload = function () {
+        var s = Math.min(1, 3000 / Math.max(img.naturalWidth, img.naturalHeight));
+        var c = document.createElement('canvas');
+        c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        var q = 0.88;
+        (function versuch() {
+          c.toBlob(function (b) {
+            if (!b) { fehler(new Error('Bild nicht lesbar')); return; }
+            if (b.size > MAX_ORIGINAL && q > 0.4) { q -= 0.12; versuch(); return; }
+            ok(b);
+          }, 'image/jpeg', q);
+        })();
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); fehler(new Error('Bild nicht lesbar')); };
+      img.src = url;
+    });
+  }
+
+  // Punktnummern prüfen – gleiche Regeln wie Nalpi (src/domain/erdung/erdung-shared.ts keysAusEingabe +
+  // pruefeEingabe + normNr). FALLE: Ändert sich dort etwas, auch hier ändern.
+  function punktePruefen(text) {
+    if (text.length > 200) return t('zuLang');
+    var n = 0, teile = text.replace(/(\d)\s*[-–]\s*(\d)/g, '$1-$2').split(/[\s,;]+/);
+    for (var i = 0; i < teile.length; i++) {
+      var x = teile[i].trim(), nr;
+      if (!x) continue;
+      var k = /^(2[5-9])-([^-\s]+)(?:-([a-z]))?$/i.exec(x);
+      var b = /^(\d+)(?:-|–|\.\.)(\d+)$/.exec(x);
+      if (k) { nr = k[2]; n++; }
+      else if (b && +b[2] >= +b[1] && +b[2] - +b[1] < 100) { n += +b[2] - +b[1] + 1; continue; }
+      else { nr = x; n++; }
+      nr = /^\d+$/.test(nr) ? nr : nr.toUpperCase().replace(/[\s-]+/g, '_');
+      if (!/^\d{1,6}(_[A-Z0-9]{1,12})?$/.test(nr)) return t('unklar')(x);
+    }
+    if (n === 0) return t('fehltPunkte');
+    if (n > 30) return t('zuViele')(n);
+    return null;
+  }
+
+  function neueId() {
+    var z = 'abcdefghijklmnopqrstuvwxyz0123456789', s = '';
+    for (var i = 0; i < 4; i++) s += z[Math.floor(Math.random() * z.length)];
+    return 'f' + Date.now().toString(36) + s;
+  }
+
+  function sendeEins(eintrag, gemeinsam) {
+    var datei = eintrag.datei;
+    return datei.slice(0, EXIF_BYTES).arrayBuffer().then(function (buf) {
+      var exif = exifLesen(buf);
+      var original = datei.size <= MAX_ORIGINAL;
+      var heic = /hei[cf]/i.test(datei.type) || /\.hei[cf]$/i.test(datei.name || '');
+      if (!original && heic) throw new Error(t('heic'));
+      var bild = original ? Promise.resolve(datei) : verkleinern(datei);
+      return bild.then(function (b) {
+        return base64Von(b).then(function (daten) {
+          var rec = {
+            v: 1, eingabe: gemeinsam.eingabe, jahr: gemeinsam.jahr, art: gemeinsam.art, bemerkung: gemeinsam.bemerkung,
+            von: gemeinsam.von, zeit: new Date().toISOString(), datei: datei.name || 'foto.jpg',
+            mime: original ? (datei.type || 'image/jpeg') : 'image/jpeg', groesseKB: Math.round(b.size / 1024),
+            aufgenommen: exif.aufgenommen, lat: exif.lat, lon: exif.lon, original: original, daten: daten
+          };
+          var ac = typeof AbortController === 'function' ? new AbortController() : null;
+          var uhr = ac ? setTimeout(function () { ac.abort(); }, 120000) : null;
+          return fetch(RTDB + '/' + eintrag.id + '.json?print=silent', { method: 'PUT', body: JSON.stringify(rec), signal: ac ? ac.signal : undefined })
+            .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); },
+              function (err) { throw (err && err.name === 'AbortError') ? new Error(t('zeit')) : err; })
+            .then(function () { clearTimeout(uhr); }, function (err) { clearTimeout(uhr); throw err; });
+        });
+      });
+    });
+  }
+
+  function zeichnen() {
+    var box = $('fotos');
+    box.innerHTML = '';
+    liste.forEach(function (e, i) {
+      var d = document.createElement('div');
+      d.className = 'foto';
+      var st = e.status === 'ok' ? '<div class="st ok">✓</div>'
+        : e.status === 'laeuft' ? '<div class="st">…</div>'
+        : e.status ? '<div class="st err"></div>' : '';
+      d.innerHTML = '<img alt=""><div class="n"></div>' + st +
+        (e.status === 'laeuft' || e.status === 'ok' ? '' : '<button class="x" type="button">×</button>');
+      d.querySelector('img').src = e.url;
+      d.querySelector('.n').textContent = e.datei.name;
+      if (e.status && e.status !== 'ok' && e.status !== 'laeuft') d.querySelector('.st.err').textContent = e.status;
+      var x = d.querySelector('.x');
+      if (x) {
+        x.title = t('entfernen');
+        x.onclick = function () { URL.revokeObjectURL(e.url); var j = liste.indexOf(e); if (j >= 0) liste.splice(j, 1); zeichnen(); };
+      }
+      box.appendChild(d);
+    });
+    var offen = liste.filter(function (e) { return e.status !== 'ok'; }).length;
+    var fehler = liste.some(function (e) { return e.status && e.status !== 'ok' && e.status !== 'laeuft'; });
+    var btn = $('senden');
+    btn.textContent = fehler ? t('nochmal')(offen) : t('senden')(offen);
+    btn.disabled = offen === 0 || liste.some(function (e) { return e.status === 'laeuft'; });
+    $('wartend').textContent = wartendN === null ? '' : t('wartend')(wartendN);
+  }
+
+  function meldung(text, art_) {
+    $('meldung').innerHTML = text ? '<div class="meldung ' + art_ + '"></div>' : '';
+    if (text) $('meldung').firstChild.textContent = text;
+  }
+
+  function wartendLaden() {
+    fetch(RTDB + '.json?shallow=true', { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { wartendN = d ? Object.keys(d).filter(function (k) { return k.charAt(0) !== '_'; }).length : 0; zeichnen(); })
+      .catch(function () { /* offline */ });
+  }
+
+  $('datei').addEventListener('change', function (ev) {
+    [].forEach.call(ev.target.files || [], function (f) { liste.push({ id: neueId(), datei: f, url: URL.createObjectURL(f), status: '' }); });
+    ev.target.value = '';
+    meldung('', '');
+    zeichnen();
+  });
+
+  [].forEach.call(document.querySelectorAll('#art button'), function (b) {
+    b.addEventListener('click', function () {
+      art = b.getAttribute('data-a');
+      [].forEach.call(document.querySelectorAll('#art button'), function (x) { x.classList.toggle('on', x === b); });
+    });
+  });
+
+  [].forEach.call(document.querySelectorAll('#lang button'), function (b) {
+    b.addEventListener('click', function () { sprachSetzen(b.getAttribute('data-l')); });
+  });
+
+  $('senden').addEventListener('click', function () {
+    var eingabe = $('punkte').value.trim();
+    if (!eingabe) { meldung(t('fehltPunkte'), 'err'); $('punkte').focus(); return; }
+    var problem = punktePruefen(eingabe);
+    if (problem) { meldung(problem, 'err'); $('punkte').focus(); return; }
+    var jahr = parseInt($('jahr').value, 10);
+    if (!(jahr >= 2025 && jahr <= 2029)) jahr = new Date().getFullYear();
+    var von = $('name').value.trim();
+    try { localStorage.setItem('nalp_erdung_name', von); } catch (e) { /* privat */ }
+    var gemeinsam = { eingabe: eingabe, jahr: jahr, art: art, bemerkung: $('bemerkung').value.trim(), von: von };
+    var offen = liste.filter(function (e) { return e.status !== 'ok'; });
+    meldung('', '');
+    var gut = 0, schlecht = 0;
+    offen.reduce(function (kette, e) {
+      return kette.then(function () {
+        if (liste.indexOf(e) < 0) return;   // während des Sendens mit ✕ entfernt
+        e.status = 'laeuft'; zeichnen();
+        return sendeEins(e, gemeinsam).then(function () { e.status = 'ok'; gut++; }, function (err) {
+          e.status = (err && err.message) || 'Fehler'; schlecht++;
+        }).then(zeichnen);
+      });
+    }, Promise.resolve()).then(function () {
+      liste = liste.filter(function (e) { if (e.status === 'ok') { URL.revokeObjectURL(e.url); return false; } return true; });
+      if (schlecht === 0) {
+        meldung(t('fertig')(gut), 'ok');
+      } else {
+        meldung(t('teil')(gut, schlecht), 'err');
+      }
+      if (schlecht === 0 && liste.length === 0) {   // Fotos, die während des Sendens dazukamen, behalten ihre Angaben
+        $('punkte').value = ''; $('bemerkung').value = '';
+        art = '';
+        [].forEach.call(document.querySelectorAll('#art button'), function (x) { x.classList.toggle('on', x.getAttribute('data-a') === ''); });
+      }
+      zeichnen();
+      wartendLaden();
+    });
+  });
+
+  function netz() { var n = $('netz'); n.textContent = navigator.onLine ? 'online' : 'offline'; n.classList.toggle('off', !navigator.onLine); }
+  window.addEventListener('online', netz); window.addEventListener('offline', netz);
+
+  $('jahr').value = new Date().getFullYear();
+  try { $('name').value = localStorage.getItem('nalp_erdung_name') || ''; } catch (e) { /* privat */ }
+  netz();
+  sprachSetzen(sprache);
+  wartendLaden();
+})();
+</script>
+</body>
+</html>

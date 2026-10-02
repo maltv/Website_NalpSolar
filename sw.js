@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v204';
+var CACHE = 'nalpsolar-v205';
 var PRECACHE = [
   './index.html',
   // Webapp-Manifest + Icons des Portals (22.09.2026, Tools\Portal_Icons_Bauen.py) und die
@@ -178,6 +178,10 @@ self.addEventListener('fetch', function(e) {
   // BuildTrack-Live-Feed (injektion.html): nie über den Service Worker, sonst friert der Live-Abgleich ein und
   // in Nalpi abgehakte Beine bleiben offen. Die Seite hat ohne Netz ihre eigene Kopie (localStorage). 28.09.2026
   if (url.indexOf('api.buildtrack.ch/api/v1/drillpoints/') !== -1) return;
+
+  // Firebase-RTDB (erdung-fotos.html «noch nicht übernommen», 02.10.2026): nie über den Service Worker.
+  // `….json?shallow=true` endet nicht auf .json und lief deshalb cache-first – die Zahl blieb stehen.
+  if (url.indexOf('firebasedatabase.app') !== -1) return;
 
   // Videos (pfahl-lage.html Erklärvideo, 29.09.2026): nie über den Service Worker – der Player holt Range-Stücke (206),
   // die sich nicht cachen lassen, und ein ganzes MP4 im Offline-Cache wäre nur Ballast.
