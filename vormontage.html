@@ -1632,6 +1632,8 @@ var batchAuf={};
    Montag 07.09.2026 an und wurden alle einzeln erfasst.  ·  18: Mail Victor an
    J. Maeder 31.08.2026 13:26 "Gewuenschter Liefertermin: 28.09.2026"  ·  19: Mail
    Victor an J. Maeder 07.09.2026 14:55 "Gewuenschter Liefertermin: 05.10.2026".
+   21/22: Liefertermin aus der Bestell-xlsx (Zeile 1, SharePoint Formulare_Outputs/
+   Order), 22 deckt sich mit Victors Uebergabe-Mail (Lieferung 26.10.).
    17 hat KEINEN belegten Termin: den Batch hat F. Borner am 24.08.2026 11:28 ohne
    Terminangabe an Maeder geschickt. Der Wert unten ist hergeleitet (Bestelldatum
    + 4 Wochen, wie bei 3, 4, 8, 15, 16, 18 und 19 belegt) und als solcher markiert. */
@@ -1657,7 +1659,9 @@ var LIEFERUNG={
   16:{soll:'2026-09-14'},
   17:{soll:'2026-09-21', hinweis:'Termin nicht belegt - hergeleitet (+4 Wochen)'},
   18:{soll:'2026-09-28', hinweis:'65 Pos. Baupiste B sind Zweitbestellungen'},
-  19:{soll:'2026-10-05'}
+  19:{soll:'2026-10-05'},
+  21:{soll:'2026-10-19'},
+  22:{soll:'2026-10-26'}
 };
 function lieferText(b, voll){
   var l=LIEFERUNG[b];
