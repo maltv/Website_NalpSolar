@@ -54,6 +54,9 @@ td:first-child{font-family:var(--body);font-weight:600}
 tfoot td{font-weight:700;border-bottom:none}
 .ue-noten{margin:12px 0 0;padding-left:18px;font-size:.9rem;display:flex;flex-direction:column;gap:4px}
 @media (max-width:560px){.ue-kacheln{grid-template-columns:1fr 1fr}}
+.ue-h3{font-family:var(--display);font-size:1.05rem;margin:18px 0 2px}
+tr.mt td{background:var(--accent-soft)}
+.st{font-weight:600}.st.gut{color:var(--ok)}.st.schlecht{color:var(--accent)}
 .kopf{display:grid;grid-template-columns:1fr 1fr;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:14px}
 .kopf label{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
 .kopf .voll{grid-column:1/-1}
@@ -128,11 +131,65 @@ textarea#ausgabe{margin-top:10px;font-family:var(--num);font-size:.85rem;min-hei
       </table>
     </div>
     <ul class="ue-noten">
-      <li><b>Module dieses Jahr:</b> 440 (44 Tische) → Madenschrauben M5×8: <b>880</b> (2 je Modul).</li>
-      <li><b>PK steht, MT fehlt:</b> 16 Tische brauchen noch den Modulträger mit Modulen (160 Module).</li>
-      <li><b>Vormontiert, wartet:</b> 59 Modulträger haben ihre Module schon (590 Module, keine Modulschrauben mehr nötig).</li>
+      <li><b>PK steht, MT fehlt:</b> 16 Tische brauchen noch den Modulträger – dafür nur die Modulträger-Schrauben (24 × M12 je Tisch).</li>
+      <li><b>Vormontiert, wartet:</b> 59 Modulträger sind schon mit Modulen bestückt.</li>
       <li>Typ D ist durch die Traversen begrenzt: 18 kommen, rund 20 fehlen weiterhin.</li>
     </ul>
+
+    <h3 class="ue-h3">Schrauben je Tisch (Serie 2026)</h3>
+    <p class="ue-stand">Abgeleitet aus den Würth-Abrufen und den Mauchle-Plänen; jeder Typ ergibt 78 Schrauben je Tisch. Gegenprüfung mit den Befestigungslisten von Mauchle steht noch aus. Muttern: 1 je Schraube, 2 bei Kontermutter (alle M12, M30, M36). Scheiben: 2 je Schraube.</p>
+    <div class="tabelle">
+      <table>
+        <thead><tr><th>Schraube</th><th>wofür</th><th>B</th><th>C</th><th>D</th><th>E</th></tr></thead>
+        <tbody>
+          <tr><td>HV M20×75 10.9</td><td>Fussplatten</td><td>16</td><td>–</td><td>–</td><td>–</td></tr>
+          <tr><td>HV M24×85 10.9</td><td>Fussplatten</td><td>–</td><td>16</td><td>16</td><td>–</td></tr>
+          <tr><td>HV M27×100 10.9</td><td>Fussplatten</td><td>–</td><td>–</td><td>–</td><td>16</td></tr>
+          <tr><td>M16×65</td><td>Konstruktion</td><td>20</td><td>–</td><td>–</td><td>–</td></tr>
+          <tr><td>M20×80</td><td>Konstruktion</td><td>–</td><td>20</td><td>–</td><td>–</td></tr>
+          <tr><td>M24×75</td><td>Konstruktion</td><td>–</td><td>12</td><td>–</td><td>–</td></tr>
+          <tr><td>M24×90</td><td>Konstruktion</td><td>–</td><td>–</td><td>32</td><td>–</td></tr>
+          <tr><td>M24×100 8.8</td><td>Konstruktion</td><td>16</td><td>–</td><td>–</td><td>–</td></tr>
+          <tr><td>M24×100 10.9</td><td>Konstruktion</td><td>2</td><td>–</td><td>–</td><td>–</td></tr>
+          <tr><td>M24×110</td><td>Konstruktion</td><td>–</td><td>2</td><td>–</td><td>–</td></tr>
+          <tr><td>M27×120</td><td>Konstruktion</td><td>–</td><td>–</td><td>–</td><td>34</td></tr>
+          <tr><td>M30×120</td><td>Konstruktion, Kontermutter</td><td>–</td><td>4</td><td>–</td><td>–</td></tr>
+          <tr><td>M30×130</td><td>Konstruktion, Kontermutter</td><td>–</td><td>–</td><td>6</td><td>2</td></tr>
+          <tr><td>M36×150</td><td>Konstruktion, Kontermutter</td><td>–</td><td>–</td><td>–</td><td>2</td></tr>
+          <tr class="mt"><td>M12 (Modulträger)</td><td>Modulträger an Auflageträger, Kontermutter</td><td>24 × M12×50</td><td>24 × M12×40*</td><td>24 × M12×40*</td><td>24 × M12×45*</td></tr>
+        </tbody>
+        <tfoot><tr><td>Total je Tisch</td><td></td><td>78</td><td>78</td><td>78</td><td>78</td></tr></tfoot>
+      </table>
+    </div>
+    <p class="ue-stand">* Länge laut aktuellem Plan. Bestellt wurden M12×50 (C, D) und M12×55 (E) – klären, ob die längeren gelten. Serie 2025 (Baupiste B, 49 Tische): Liste fehlt noch.</p>
+
+    <h3 class="ue-h3">Bedarf dieses Jahr: 44 Tische + 16 Modulträger</h3>
+    <div class="tabelle">
+      <table>
+        <thead><tr><th>Schraube</th><th>B (11 + 4 MT)</th><th>C (8 + 1 MT)</th><th>D (24 + 10 MT)</th><th>E (1)</th><th>Total</th></tr></thead>
+        <tbody>
+          <tr><td>HV M20×75 10.9</td><td>176</td><td>–</td><td>–</td><td>–</td><td>176</td></tr>
+          <tr><td>HV M24×85 10.9</td><td>–</td><td>128</td><td>384</td><td>–</td><td>512</td></tr>
+          <tr><td>HV M27×100 10.9</td><td>–</td><td>–</td><td>–</td><td>16</td><td>16</td></tr>
+          <tr><td>M12×40</td><td>–</td><td>216</td><td>816</td><td>–</td><td>1'032</td></tr>
+          <tr><td>M12×45</td><td>–</td><td>–</td><td>–</td><td>24</td><td>24</td></tr>
+          <tr><td>M12×50</td><td>360</td><td>–</td><td>–</td><td>–</td><td>360</td></tr>
+          <tr><td>M16×65</td><td>220</td><td>–</td><td>–</td><td>–</td><td>220</td></tr>
+          <tr><td>M20×80</td><td>–</td><td>160</td><td>–</td><td>–</td><td>160</td></tr>
+          <tr><td>M24×75</td><td>–</td><td>96</td><td>–</td><td>–</td><td>96</td></tr>
+          <tr><td>M24×90</td><td>–</td><td>–</td><td>768</td><td>–</td><td>768</td></tr>
+          <tr><td>M24×100 8.8</td><td>176</td><td>–</td><td>–</td><td>–</td><td>176</td></tr>
+          <tr><td>M24×100 10.9</td><td>22</td><td>–</td><td>–</td><td>–</td><td>22</td></tr>
+          <tr><td>M24×110</td><td>–</td><td>16</td><td>–</td><td>–</td><td>16</td></tr>
+          <tr><td>M27×120</td><td>–</td><td>–</td><td>–</td><td>34</td><td>34</td></tr>
+          <tr><td>M30×120</td><td>–</td><td>32</td><td>–</td><td>–</td><td>32</td></tr>
+          <tr><td>M30×130</td><td>–</td><td>–</td><td>144</td><td>2</td><td>146</td></tr>
+          <tr><td>M36×150</td><td>–</td><td>–</td><td>–</td><td>2</td><td>2</td></tr>
+        </tbody>
+        <tfoot><tr><td>Total</td><td>954</td><td>648</td><td>2'112</td><td>78</td><td>3'792</td></tr></tfoot>
+      </table>
+    </div>
+    <p class="ue-stand">«MT» = Tische, bei denen die Primärkonstruktion schon steht und nur der Modulträger fehlt: nur die 24 M12 je Tisch. Ohne den Tisch E 2025 (Serie 2025).</p>
   </section>
 
   <div class="kopf">
@@ -142,7 +199,7 @@ textarea#ausgabe{margin-top:10px;font-family:var(--num);font-size:.85rem;min-hei
   </div>
 
   <div class="hilfe">
-    <b>So zählen:</b> Stück eintragen, nicht Kisten. Volle Kiste = Inhalt laut Etikett, dazu die losen Stück.
+    <b>So zählen:</b> Unter jedem Artikel steht der Bedarf für dieses Jahr (44 Tische + 16 Modulträger) und ob der Bestand reicht. Stück eintragen, nicht Kisten. Volle Kiste = Inhalt laut Etikett, dazu die losen Stück.
     <b>Leer lassen</b> = nicht gezählt, <b>0</b> = nichts da. Was nicht in der Liste steht, unten bei «Andere» eintragen.
     Alles wird sofort gespeichert und ist für alle mit dem Link sichtbar.
   </div>
@@ -178,9 +235,10 @@ var GRUPPEN=[
   {id:'sch',titel:'Unterlagsscheiben',text:'Normale Scheiben und HV-Scheiben getrennt zählen.',art:[
     'Scheibe M10','Scheibe M12','Scheibe M16','Scheibe M20','Scheibe M24','Scheibe M27','Scheibe M30','Scheibe M36',
     'HV-Scheibe 20','HV-Scheibe 24','HV-Scheibe 27','HV-Scheibe 30']},
-  {id:'mod',titel:'Modulbefestigung',text:'Schrauben für die Modulklemmen an den Pfetten und Madenschrauben in den Klemmen.',art:[
-    'SFS nonut TDBL-T-8.6×16','Madenschraube M5×8','Modulklemme AQ8 unten','Modulklemme AQ8 oben']},
+  {id:'mod',titel:'Modulbefestigung',text:'Schrauben für die Modulklemmen an den Pfetten.',art:[
+    'SFS nonut TDBL-T-8.6×16','Modulklemme AQ8 unten','Modulklemme AQ8 oben']},
 ];
+var NEED={"M12×40": 1032, "M12×45": 24, "M12×50": 360, "M16×65": 220, "M20×80": 160, "M24×75": 96, "M24×90": 768, "M24×100": 198, "M24×110": 16, "M27×120": 34, "M30×120": 32, "M30×130": 146, "M36×150": 2, "HV M20×75": 176, "HV M24×85": 512, "HV M27×100": 16, "Mutter M12": 2832, "Mutter M16": 220, "Mutter M20": 160, "Mutter M24": 1078, "Mutter M27": 34, "Mutter M30": 356, "Mutter M36": 4, "HV-Mutter M20": 176, "HV-Mutter M24": 512, "HV-Mutter M27": 16, "Scheibe M12": 2832, "Scheibe M16": 440, "Scheibe M20": 320, "Scheibe M24": 2156, "Scheibe M27": 68, "Scheibe M30": 356, "Scheibe M36": 4, "HV-Scheibe 20": 352, "HV-Scheibe 24": 1024, "HV-Scheibe 27": 32};
 var ANDERE=6;
 function key(g,a){return g+'-'+a.replace(/[^A-Za-z0-9]+/g,'_').replace(/^_|_$/g,'');}
 var ROWS=[];GRUPPEN.forEach(function(g){g.art.forEach(function(a){ROWS.push({id:key(g.id,a),g:g.id,name:a});});});
@@ -195,7 +253,7 @@ function zeileHtml(r){
   var s=STATE[r.id]||{};
   var name=r.frei
     ? '<input class="frei" id="n_'+r.id+'" data-f="name" data-id="'+r.id+'" placeholder="Artikel, z. B. M20×100" aria-label="Artikel">'
-    : '<div class="art">'+r.name+'</div>';
+    : '<div class="art">'+r.name+'<em>'+(NEED[r.name]!=null?'Bedarf 2026: '+NEED[r.name].toLocaleString('de-CH')+' · <span class="st" id="st_'+r.id+'"></span>':'kein Bedarf gerechnet')+'</em></div>';
   return '<div class="zeile" id="z_'+r.id+'">'+name
     +'<input class="zahl" id="b_'+r.id+'" data-f="berg" data-id="'+r.id+'" inputmode="numeric" pattern="[0-9]*" placeholder="Berg" aria-label="'+(r.name||'Andere')+' Berg">'
     +'<input class="zahl" id="t_'+r.id+'" data-f="tal" data-id="'+r.id+'" inputmode="numeric" pattern="[0-9]*" placeholder="Tal" aria-label="'+(r.name||'Andere')+' Tal">'
@@ -228,6 +286,11 @@ function zaehlen(){
   var feste=ROWS.filter(function(r){return !r.frei;}), n=0;
   feste.forEach(function(r){if(gezaehlt(STATE[r.id]))n++;});
   ROWS.forEach(function(r){var z=$('z_'+r.id);if(z)z.classList.toggle('voll',!!gezaehlt(STATE[r.id]));});
+  ROWS.forEach(function(r){var el=$('st_'+r.id);if(!el)return;var s=STATE[r.id],need=NEED[r.name];
+    if(!gezaehlt(s)){el.textContent='noch nicht gezählt';el.className='st';return;}
+    var hat=(Number(s.berg)||0)+(Number(s.tal)||0);
+    if(hat>=need){el.textContent='reicht ('+hat.toLocaleString('de-CH')+' da)';el.className='st gut';}
+    else{el.textContent='fehlen '+(need-hat).toLocaleString('de-CH');el.className='st schlecht';}});
   $('fortschritt').textContent=n+' von '+feste.length+' Artikeln gezählt';
   $('balken').style.width=(feste.length?100*n/feste.length:0)+'%';
   GRUPPEN.concat([{id:'andere'}]).forEach(function(g){var rs=ROWS.filter(function(r){return r.g===g.id;});
