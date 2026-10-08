@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<!-- Schrauben-Zählung (Dennis 08.10.2026, temporär während Victors Ferien).
+     Daten: RTDB erfassung/schrauben_zaehlung/{rows,kopf} – gleiche DB wie die übrigen Seiten.
+     Zugang: Portal-Code wie schrauben.html. -->
+<script>
+  window.NALP_GATE_TITEL = 'Schrauben-Zählung';
+  window.NALP_GATE_SUB   = 'Code eingeben / Enter code / Wpisz kod';
+</script>
+<script src="assets/js/nalp-gate.js"></script>
+<title>Schrauben-Zählung NalpSolar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one narrow column of count rows grouped by part family, sticky progress bar on top, actions at the bottom */
+:root{
+  --bg:#f3f4f2; --panel:#ffffff; --fg:#1d2124; --muted:#5f676d; --line:#d9dcd8;
+  --accent:#c4431c; --accent-soft:#f8e3da; --ok:#2f7d4f; --ok-soft:#e1f0e6; --field:#fbfbfa;
+  --display:"IBM Plex Sans Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"IBM Plex Sans Condensed",Arial,sans-serif;
+  --num:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#15181a; --panel:#1e2225; --fg:#e8eaeb; --muted:#9aa2a8; --line:#33393d;
+  --accent:#ec7a52; --accent-soft:#3a241c; --ok:#6cc08e; --ok-soft:#1d3226; --field:#24292c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#15181a; --panel:#1e2225; --fg:#e8eaeb; --muted:#9aa2a8; --line:#33393d;
+  --accent:#ec7a52; --accent-soft:#3a241c; --ok:#6cc08e; --ok-soft:#1d3226; --field:#24292c; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.45}
+.wrap{max-width:760px;margin:0 auto;padding-inline:16px;padding-block:20px 120px}
+h1{font-family:var(--display);font-weight:700;font-size:1.7rem;line-height:1.15;margin:0 0 6px;text-wrap:balance}
+.lead{color:var(--muted);margin:0 0 18px;max-width:62ch}
+.uebersicht{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:14px}
+.uebersicht h2{font-family:var(--display);font-size:1.25rem;margin:0 0 2px}
+.ue-stand{margin:0 0 12px;color:var(--muted);font-size:.85rem}
+.ue-kacheln{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.kachel{border:1px solid var(--line);border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.kachel b{font-family:var(--num);font-size:1.6rem;line-height:1.1;font-variant-numeric:tabular-nums}
+.kachel span{font-size:.8rem;color:var(--muted)}
+.kachel.haupt{background:var(--accent-soft);border-color:var(--accent)}
+.kachel.haupt b{color:var(--accent)}
+.tabelle{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:620px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums}
+th{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;vertical-align:bottom}
+th:first-child,td:first-child{text-align:left}
+td{font-family:var(--num)}
+td:first-child{font-family:var(--body);font-weight:600}
+tfoot td{font-weight:700;border-bottom:none}
+.ue-noten{margin:12px 0 0;padding-left:18px;font-size:.9rem;display:flex;flex-direction:column;gap:4px}
+@media (max-width:560px){.ue-kacheln{grid-template-columns:1fr 1fr}}
+.kopf{display:grid;grid-template-columns:1fr 1fr;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:14px}
+.kopf label{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.kopf .voll{grid-column:1/-1}
+input,textarea{font:inherit;color:var(--fg);background:var(--field);border:1px solid var(--line);border-radius:6px;padding:9px 10px;width:100%;min-width:0}
+input:focus-visible,textarea:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.hilfe{background:var(--accent-soft);border-radius:8px;padding:12px 14px;margin-bottom:18px;font-size:.95rem}
+.hilfe b{font-weight:700}
+.stand{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding:8px 0 10px;margin-bottom:6px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+.balken{flex:1 1 160px;height:8px;background:var(--line);border-radius:4px;overflow:hidden}
+.balken i{display:block;height:100%;width:0;background:var(--ok);transition:width .25s}
+.stand span{font-size:.9rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.speicher{font-size:.85rem;padding:3px 9px;border-radius:999px;background:var(--line);color:var(--muted)}
+.speicher.ok{background:var(--ok-soft);color:var(--ok)}
+.speicher.lokal{background:var(--accent-soft);color:var(--accent)}
+details{background:var(--panel);border:1px solid var(--line);border-radius:8px;margin-top:14px}
+summary{cursor:pointer;list-style:none;padding:12px 14px;display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-family:var(--display);font-weight:700;font-size:1.15rem}
+summary::-webkit-details-marker{display:none}
+summary small{font-family:var(--body);font-weight:400;font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.gruppe-text{padding:0 14px 6px;margin:0;color:var(--muted);font-size:.9rem}
+.kopfzeile,.zeile{display:grid;grid-template-columns:minmax(0,1.5fr) 5.2rem 5.2rem minmax(0,1.6fr);gap:8px;align-items:center;padding:7px 14px}
+.kopfzeile{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;border-top:1px solid var(--line);padding-block:8px 4px}
+.zeile{border-top:1px solid var(--line)}
+.zeile.voll{background:var(--ok-soft)}
+.art{font-family:var(--num);font-size:.98rem;min-width:0;overflow-wrap:anywhere}
+.art em{display:block;font-family:var(--body);font-style:normal;font-size:.78rem;color:var(--muted)}
+.zahl{font-family:var(--num);text-align:right;font-variant-numeric:tabular-nums}
+.zeile .frei{font-family:var(--num)}
+.aktionen{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+button{font:inherit;font-weight:600;border-radius:6px;padding:11px 16px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer}
+button.haupt{background:var(--accent);border-color:var(--accent);color:#fff}
+.meldung{margin-top:10px;font-size:.9rem;color:var(--muted);min-height:1.3em}
+textarea#ausgabe{margin-top:10px;font-family:var(--num);font-size:.85rem;min-height:160px}
+@media (max-width:560px){
+  .kopf{grid-template-columns:1fr}
+  .kopfzeile{display:none}
+  .zeile{grid-template-columns:1fr 1fr;row-gap:6px}
+  .zeile .art{grid-column:1/-1}
+  .zeile .bem{grid-column:1/-1}
+  .zeile .zahl::placeholder{text-align:right}
+}
+@media (prefers-reduced-motion:reduce){.balken i{transition:none}}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <h1>Schrauben-Zählung NalpSolar</h1>
+  <p class="lead">Bestand an Schrauben, Muttern und Scheiben für die Primärkonstruktion und die Modulbefestigung. Pro Artikel die Stückzahl am Berg und im Tal eintragen.</p>
+
+  <section class="uebersicht" aria-labelledby="ue_titel">
+    <h2 id="ue_titel">Was noch gebaut wird</h2>
+    <p class="ue-stand">Stand Nalpi-Export 06.10.2026. Module: 10 je 10er-Tisch, 8 je 8er-Tisch.</p>
+    <div class="ue-kacheln">
+      <div class="kachel"><b>26</b><span>Tische im Programm 2026<br>(Bereiche 4.3, 4.4, 5.1, 5.2)</span></div>
+      <div class="kachel"><b>+18</b><span>Tische Typ D<br>(18 Traversen D kommen)</span></div>
+      <div class="kachel haupt"><b>44</b><span>Tische dieses Jahr<br>= 440 Module</span></div>
+      <div class="kachel"><b>215</b><span>Tische total offen<br>= 2'128 Module</span></div>
+    </div>
+    <div class="tabelle">
+      <table>
+        <thead><tr><th>Typ</th><th>Programm 2026</th><th>mit 18 D</th><th>alle offen</th><th>davon 8er</th><th>Module alle offen</th><th>PK steht, MT fehlt</th><th>vormontiert, wartet</th></tr></thead>
+        <tbody>
+          <tr><td>B 2026</td><td>11</td><td>11</td><td>56</td><td>2</td><td>556</td><td>4</td><td>14</td></tr>
+          <tr><td>C 2026</td><td>8</td><td>8</td><td>37</td><td>3</td><td>364</td><td>1</td><td>2</td></tr>
+          <tr><td>D 2026</td><td>6</td><td>24</td><td>54</td><td>5</td><td>530</td><td>10</td><td>20</td></tr>
+          <tr><td>E 2026</td><td>1</td><td>1</td><td>19</td><td>1</td><td>188</td><td>–</td><td>–</td></tr>
+          <tr><td>B 2025 (Baupiste B)</td><td>–</td><td>–</td><td>49</td><td>–</td><td>490</td><td>–</td><td>22</td></tr>
+          <tr><td>E 2025</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>1</td><td>–</td></tr>
+        </tbody>
+        <tfoot><tr><td>Total</td><td>26</td><td>44</td><td>215</td><td>11</td><td>2'128</td><td>16</td><td>59</td></tr></tfoot>
+      </table>
+    </div>
+    <ul class="ue-noten">
+      <li><b>Module dieses Jahr:</b> 440 (44 Tische) → Madenschrauben M5×8: <b>880</b> (2 je Modul).</li>
+      <li><b>PK steht, MT fehlt:</b> 16 Tische brauchen noch den Modulträger mit Modulen (160 Module).</li>
+      <li><b>Vormontiert, wartet:</b> 59 Modulträger haben ihre Module schon (590 Module, keine Modulschrauben mehr nötig).</li>
+      <li>Typ D ist durch die Traversen begrenzt: 18 kommen, rund 20 fehlen weiterhin.</li>
+    </ul>
+  </section>
+
+  <div class="kopf">
+    <label>Gezählt von <input id="k_wer" autocomplete="name" placeholder="Name"></label>
+    <label>Datum <input id="k_datum" type="date"></label>
+    <label class="voll">Bemerkung allgemein <input id="k_bem" placeholder="z. B. Container Berg + Lager IP Tal 1"></label>
+  </div>
+
+  <div class="hilfe">
+    <b>So zählen:</b> Stück eintragen, nicht Kisten. Volle Kiste = Inhalt laut Etikett, dazu die losen Stück.
+    <b>Leer lassen</b> = nicht gezählt, <b>0</b> = nichts da. Was nicht in der Liste steht, unten bei «Andere» eintragen.
+    Alles wird sofort gespeichert und ist für alle mit dem Link sichtbar.
+  </div>
+
+  <div class="stand" aria-live="polite">
+    <div class="balken"><i id="balken"></i></div>
+    <span id="fortschritt">0 von 0 Artikeln gezählt</span>
+    <span class="speicher" id="speicher">Lädt …</span>
+  </div>
+
+  <div id="liste"></div>
+
+  <div class="aktionen">
+    <button class="haupt" id="b_kopie" type="button">Liste kopieren</button>
+    <button id="b_zeigen" type="button">Als Text anzeigen</button>
+  </div>
+  <p class="meldung" id="meldung"></p>
+  <textarea id="ausgabe" hidden readonly aria-label="Zählliste als Text"></textarea>
+</div>
+
+<script>
+(function(){
+'use strict';
+var GRUPPEN=[
+  {id:'s',titel:'Schrauben 8.8 (Sechskant, DIN 933)',text:'Normale Schrauben für die Verbindungen innerhalb der Primärkonstruktion.',art:[
+    'M10×35','M10×40','M12×40','M12×45','M12×50','M12×55','M16×55','M16×65','M20×70','M20×80','M20×90',
+    'M24×75','M24×80','M24×90','M24×100','M24×110','M27×120','M30×120','M30×125','M30×130','M36×150']},
+  {id:'hv',titel:'HV-Schrauben 10.9 (Garnituren)',text:'Fussplatten der Stützen auf den Pfahlköpfen. Auf dem Etikett steht «HV» oder EN 14399.',art:[
+    'HV M20×75','HV M20×90','HV M24×85','HV M24×90','HV M27×100','HV M30×105']},
+  {id:'mu',titel:'Muttern',text:'Normale Muttern (DIN 934) und HV-Muttern getrennt zählen.',art:[
+    'Mutter M10','Mutter M12','Mutter M16','Mutter M20','Mutter M24','Mutter M27','Mutter M30','Mutter M36',
+    'HV-Mutter M20','HV-Mutter M24','HV-Mutter M27','HV-Mutter M30']},
+  {id:'sch',titel:'Unterlagsscheiben',text:'Normale Scheiben und HV-Scheiben getrennt zählen.',art:[
+    'Scheibe M10','Scheibe M12','Scheibe M16','Scheibe M20','Scheibe M24','Scheibe M27','Scheibe M30','Scheibe M36',
+    'HV-Scheibe 20','HV-Scheibe 24','HV-Scheibe 27','HV-Scheibe 30']},
+  {id:'mod',titel:'Modulbefestigung',text:'Schrauben für die Modulklemmen an den Pfetten und Madenschrauben in den Klemmen.',art:[
+    'SFS nonut TDBL-T-8.6×16','Madenschraube M5×8','Modulklemme AQ8 unten','Modulklemme AQ8 oben']},
+];
+var ANDERE=6;
+function key(g,a){return g+'-'+a.replace(/[^A-Za-z0-9]+/g,'_').replace(/^_|_$/g,'');}
+var ROWS=[];GRUPPEN.forEach(function(g){g.art.forEach(function(a){ROWS.push({id:key(g.id,a),g:g.id,name:a});});});
+for(var i=1;i<=ANDERE;i++)ROWS.push({id:'andere-'+i,g:'andere',name:'',frei:true});
+
+var STATE={}, KOPF={}, db=null, LS='nalp_schrauben_zaehlung_v1', timers={};
+function $(id){return document.getElementById(id);}
+function lsLesen(){try{var o=JSON.parse(localStorage.getItem(LS)||'{}');STATE=o.rows||{};KOPF=o.kopf||{};}catch(e){}}
+function lsSchreiben(){try{localStorage.setItem(LS,JSON.stringify({rows:STATE,kopf:KOPF}));}catch(e){}}
+
+function zeileHtml(r){
+  var s=STATE[r.id]||{};
+  var name=r.frei
+    ? '<input class="frei" id="n_'+r.id+'" data-f="name" data-id="'+r.id+'" placeholder="Artikel, z. B. M20×100" aria-label="Artikel">'
+    : '<div class="art">'+r.name+'</div>';
+  return '<div class="zeile" id="z_'+r.id+'">'+name
+    +'<input class="zahl" id="b_'+r.id+'" data-f="berg" data-id="'+r.id+'" inputmode="numeric" pattern="[0-9]*" placeholder="Berg" aria-label="'+(r.name||'Andere')+' Berg">'
+    +'<input class="zahl" id="t_'+r.id+'" data-f="tal" data-id="'+r.id+'" inputmode="numeric" pattern="[0-9]*" placeholder="Tal" aria-label="'+(r.name||'Andere')+' Tal">'
+    +'<input class="bem" id="m_'+r.id+'" data-f="bem" data-id="'+r.id+'" placeholder="Bemerkung" aria-label="'+(r.name||'Andere')+' Bemerkung">'
+    +'</div>';
+}
+function bauen(){
+  var h='';
+  GRUPPEN.concat([{id:'andere',titel:'Andere',text:'Alles, was oben fehlt: Grösse und Art selbst eintragen.'}]).forEach(function(g){
+    var rows=ROWS.filter(function(r){return r.g===g.id;});
+    h+='<details open id="g_'+g.id+'"><summary>'+g.titel+'<small id="c_'+g.id+'"></small></summary>'
+      +'<p class="gruppe-text">'+g.text+'</p>'
+      +'<div class="kopfzeile"><span>Artikel</span><span style="text-align:right">Berg Stk</span><span style="text-align:right">Tal Stk</span><span>Bemerkung</span></div>'
+      +rows.map(zeileHtml).join('')+'</details>';
+  });
+  $('liste').innerHTML=h;
+  $('liste').addEventListener('input',beiEingabe);
+  ['wer','datum','bem'].forEach(function(f){$('k_'+f).addEventListener('input',function(){KOPF[f]=this.value;lsSchreiben();planen('_kopf');});});
+}
+function felderFuellen(){
+  ROWS.forEach(function(r){var s=STATE[r.id]||{};
+    [['b','berg'],['t','tal'],['m','bem'],['n','name']].forEach(function(p){var el=$(p[0]+'_'+r.id);
+      if(el && document.activeElement!==el){var v=s[p[1]];el.value=(v===undefined||v===null)?'':v;}});
+  });
+  ['wer','datum','bem'].forEach(function(f){var el=$('k_'+f);if(document.activeElement!==el)el.value=KOPF[f]||'';});
+  zaehlen();
+}
+function gezaehlt(s){return s && ((s.berg!==''&&s.berg!=null)||(s.tal!==''&&s.tal!=null));}
+function zaehlen(){
+  var feste=ROWS.filter(function(r){return !r.frei;}), n=0;
+  feste.forEach(function(r){if(gezaehlt(STATE[r.id]))n++;});
+  ROWS.forEach(function(r){var z=$('z_'+r.id);if(z)z.classList.toggle('voll',!!gezaehlt(STATE[r.id]));});
+  $('fortschritt').textContent=n+' von '+feste.length+' Artikeln gezählt';
+  $('balken').style.width=(feste.length?100*n/feste.length:0)+'%';
+  GRUPPEN.concat([{id:'andere'}]).forEach(function(g){var rs=ROWS.filter(function(r){return r.g===g.id;});
+    var k=rs.filter(function(r){return gezaehlt(STATE[r.id]);}).length;
+    $('c_'+g.id).textContent=g.id==='andere'?(k?k+' eingetragen':''):(k+' / '+rs.length);});
+}
+function beiEingabe(e){
+  var el=e.target,id=el.getAttribute('data-id'),f=el.getAttribute('data-f');if(!id)return;
+  var v=el.value;
+  if(f==='berg'||f==='tal'){v=v.replace(/[^0-9]/g,'');if(v!==el.value)el.value=v;v=v===''?'':Number(v);}
+  var s=STATE[id]=Object.assign({},STATE[id]||{});s[f]=v;
+  lsSchreiben();zaehlen();planen(id);
+}
+function planen(id){clearTimeout(timers[id]);timers[id]=setTimeout(function(){schreiben(id);},700);}
+var schreiben=function(id){
+  if(!db){status('lokal');return;}
+  var body=id==='_kopf'?Object.assign({},KOPF):Object.assign({},STATE[id]||{});
+  body.ts=Date.now();
+  var ref=id==='_kopf'?db.doc('kopf/aktuell'):db.collection('zaehlung').doc(id);
+  status('sync');
+  ref.set(body).then(function(){status('ok');}).catch(function(err){
+    if(err&&err.code==='invalid_argument'){db=null;status('lokal');meldung('Speichern im Formular ist für dich nicht freigegeben. Deine Zahlen bleiben auf diesem Gerät: unten «Liste kopieren» und per Mail oder WhatsApp schicken.');}
+    else if(err&&err.code==='unavailable'){setTimeout(function(){schreiben(id);},1500+Math.random()*1500);}
+    else status('fehler');
+  });
+};
+function status(s){var el=$('speicher');el.className='speicher';
+  if(s==='ok'){el.textContent='Gespeichert';el.classList.add('ok');}
+  else if(s==='sync'){el.textContent='Speichert …';}
+  else if(s==='lokal'){el.textContent='Nur auf diesem Gerät';el.classList.add('lokal');}
+  else if(s==='fehler'){el.textContent='Nicht gespeichert';el.classList.add('lokal');}
+  else el.textContent=s;}
+function meldung(t){$('meldung').textContent=t;}
+function text(){
+  var L=['Schrauben-Zählung NalpSolar','Gezählt von: '+(KOPF.wer||'–')+'   Datum: '+(KOPF.datum||'–')];
+  if(KOPF.bem)L.push('Bemerkung: '+KOPF.bem);
+  L.push('Artikel | Berg | Tal | Bemerkung');
+  GRUPPEN.concat([{id:'andere',titel:'Andere'}]).forEach(function(g){
+    var rs=ROWS.filter(function(r){return r.g===g.id&&gezaehlt(STATE[r.id]);});if(!rs.length)return;
+    L.push('','— '+g.titel+' —');
+    rs.forEach(function(r){var s=STATE[r.id];L.push((r.frei?(s.name||'?'):r.name)+' | '+(s.berg===''||s.berg==null?'-':s.berg)+' | '+(s.tal===''||s.tal==null?'-':s.tal)+(s.bem?' | '+s.bem:''));});
+  });
+  var offen=ROWS.filter(function(r){return !r.frei&&!gezaehlt(STATE[r.id]);}).map(function(r){return r.name;});
+  if(offen.length)L.push('','Nicht gezählt: '+offen.join(', '));
+  return L.join('\n');
+}
+$('b_zeigen').addEventListener('click',function(){var a=$('ausgabe');a.value=text();a.hidden=false;a.focus();a.select();});
+$('b_kopie').addEventListener('click',function(){
+  var t=text();
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(function(){meldung('Liste kopiert. In eine Mail oder WhatsApp einfügen.');},
+      function(){var a=$('ausgabe');a.value=t;a.hidden=false;a.select();meldung('Kopieren ging nicht automatisch. Text ist markiert: lange drücken oder Strg+C.');});
+  } else {var a=$('ausgabe');a.value=t;a.hidden=false;a.select();meldung('Text ist markiert: lange drücken oder Strg+C.');}
+});
+
+lsLesen();bauen();
+if(!KOPF.datum){var d=new Date();KOPF.datum=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+felderFuellen();status('lokal');
+
+var DB='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app/erfassung/schrauben_zaehlung';
+function laden(){
+  return fetch(DB+'.json?_='+Date.now(),{cache:'no-store'}).then(function(r){if(!r.ok)throw 0;return r.json();}).then(function(d){
+    d=d||{};var rows=d.rows||{};
+    Object.keys(rows).forEach(function(k){if(timers[k])return;var o=Object.assign({},rows[k]);delete o.ts;STATE[k]=o;});
+    if(d.kopf&&!timers._kopf){var o=Object.assign({},d.kopf);delete o.ts;KOPF=o;}
+    lsSchreiben();felderFuellen();online=true;status('ok');
+  }).catch(function(){online=false;status('lokal');});
+}
+var online=false;
+schreiben=function(id){
+  var body=id==='_kopf'?Object.assign({},KOPF):Object.assign({},STATE[id]||{});body.ts=Date.now();
+  var pfad=id==='_kopf'?'/kopf':'/rows/'+id;status('sync');
+  fetch(DB+pfad+'.json',{method:'PUT',body:JSON.stringify(body)}).then(function(r){
+    if(!r.ok)throw 0;delete timers[id];status('ok');
+  }).catch(function(){delete timers[id];status('lokal');meldung('Keine Verbindung – Zahlen bleiben auf diesem Gerät und werden beim nächsten Eintrag mit Netz gespeichert. Notfalls «Liste kopieren».');});
+};
+laden();
+setInterval(function(){if(!document.hidden&&!Object.keys(timers).length)laden();},20000);
+document.addEventListener('visibilitychange',function(){if(!document.hidden)laden();});
+})();
+</script>
+
+</body>
+</html>
