@@ -253,7 +253,7 @@ function zeileHtml(r){
   var s=STATE[r.id]||{};
   var name=r.frei
     ? '<input class="frei" id="n_'+r.id+'" data-f="name" data-id="'+r.id+'" placeholder="Artikel, z. B. M20×100" aria-label="Artikel">'
-    : '<div class="art">'+r.name+'<em>'+(NEED[r.name]!=null?'Bedarf 2026: '+NEED[r.name].toLocaleString('de-CH')+' · <span class="st" id="st_'+r.id+'"></span>':'kein Bedarf gerechnet')+'</em></div>';
+    : '<div class="art">'+r.name+'<em>'+(NEED[r.name]!=null?'Bedarf 2026: '+NEED[r.name].toLocaleString('de-CH')+' · <span class="st" id="st_'+r.id+'"></span>':'dieses Jahr kein Bedarf – trotzdem zählen')+'</em></div>';
   return '<div class="zeile" id="z_'+r.id+'">'+name
     +'<input class="zahl" id="b_'+r.id+'" data-f="berg" data-id="'+r.id+'" inputmode="numeric" pattern="[0-9]*" placeholder="Berg" aria-label="'+(r.name||'Andere')+' Berg">'
     +'<input class="zahl" id="t_'+r.id+'" data-f="tal" data-id="'+r.id+'" inputmode="numeric" pattern="[0-9]*" placeholder="Tal" aria-label="'+(r.name||'Andere')+' Tal">'
