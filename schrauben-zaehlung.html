@@ -46,6 +46,9 @@ h1{font-family:var(--display);font-weight:700;font-size:1.7rem;line-height:1.15;
 .kachel.haupt b{color:var(--accent)}
 .tabelle{overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:620px}
+table.schmal{min-width:0}
+.je td:nth-child(2),.je th:nth-child(2),.je td:nth-child(3),.je th:nth-child(3){text-align:left;font-family:var(--body)}
+tr.tal td{background:var(--field)}
 th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums}
 th{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;vertical-align:bottom}
 th:first-child,td:first-child{text-align:left}
@@ -118,78 +121,46 @@ textarea#ausgabe{margin-top:10px;font-family:var(--num);font-size:.85rem;min-hei
     </div>
     <div class="tabelle">
       <table>
-        <thead><tr><th>Typ</th><th>Programm 2026</th><th>mit 18 D</th><th>alle offen</th><th>davon 8er</th><th>Module alle offen</th><th>PK steht, MT fehlt</th><th>vormontiert, wartet</th></tr></thead>
+        <thead><tr><th>Typ</th><th>Programm 2026</th><th>mit 18 D</th><th>alle offen</th><th>davon 8er</th><th>Module alle offen</th><th>PK steht, MT fehlt</th><th>Seiten im Tal vormontiert</th></tr></thead>
         <tbody>
-          <tr><td>B 2026</td><td>11</td><td>11</td><td>56</td><td>2</td><td>556</td><td>4</td><td>14</td></tr>
-          <tr><td>C 2026</td><td>8</td><td>8</td><td>37</td><td>3</td><td>364</td><td>1</td><td>2</td></tr>
-          <tr><td>D 2026</td><td>6</td><td>24</td><td>54</td><td>5</td><td>530</td><td>10</td><td>20</td></tr>
+          <tr><td>B 2026</td><td>11</td><td>11</td><td>56</td><td>2</td><td>556</td><td>4</td><td>–</td></tr>
+          <tr><td>C 2026</td><td>8</td><td>8</td><td>37</td><td>3</td><td>364</td><td>1</td><td>–</td></tr>
+          <tr><td>D 2026</td><td>6</td><td>24</td><td>54</td><td>5</td><td>530</td><td>10</td><td>7</td></tr>
           <tr><td>E 2026</td><td>1</td><td>1</td><td>19</td><td>1</td><td>188</td><td>–</td><td>–</td></tr>
           <tr><td>B 2025 (Baupiste B)</td><td>–</td><td>–</td><td>49</td><td>–</td><td>490</td><td>–</td><td>22</td></tr>
           <tr><td>E 2025</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>1</td><td>–</td></tr>
         </tbody>
-        <tfoot><tr><td>Total</td><td>26</td><td>44</td><td>215</td><td>11</td><td>2'128</td><td>16</td><td>59</td></tr></tfoot>
+        <tfoot><tr><td>Total</td><td>26</td><td>44</td><td>215</td><td>11</td><td>2'128</td><td>16</td><td>29</td></tr></tfoot>
       </table>
     </div>
     <ul class="ue-noten">
       <li><b>PK steht, MT fehlt:</b> 16 Tische brauchen noch den Modulträger – dafür nur die Modulträger-Schrauben (24 × M12 je Tisch).</li>
-      <li><b>Vormontiert, wartet:</b> 59 Modulträger sind schon mit Modulen bestückt.</li>
+      <li><b>Seiten im Tal vormontiert:</b> 29 Konstruktionen (D 7, B 2025 22) – für diese sind die Tal-Schrauben schon verbaut.</li>
       <li>Typ D ist durch die Traversen begrenzt: 18 kommen, rund 20 fehlen weiterhin.</li>
     </ul>
 
-    <h3 class="ue-h3">Schrauben je Tisch (Serie 2026)</h3>
-    <p class="ue-stand">Abgeleitet aus den Würth-Abrufen und den Mauchle-Plänen; jeder Typ ergibt 78 Schrauben je Tisch. Gegenprüfung mit den Befestigungslisten von Mauchle steht noch aus. Muttern: 1 je Schraube, 2 bei Kontermutter (alle M12, M30, M36). Scheiben: 2 je Schraube.</p>
+    <h3 class="ue-h3">Schrauben je Tisch (Serie 2026) – wo sie gebraucht werden</h3>
+    <p class="ue-stand"><b>Tal:</b> die Seiten werden vormontiert (Auflageträger an die Stützen, Strebe). <b>Berg:</b> Fussplatten auf die Pfahlköpfe, Stützen in die Fussplatten, Querträger und Modulträger auf die Konstruktion.
+    Mengen abgeleitet aus den Würth-Abrufen und den Mauchle-Plänen: jeder Typ 78 Schrauben je Tisch, davon 56 Berg und 22 Tal. Gegenprüfung mit den Mauchle-Befestigungslisten steht noch aus.</p>
     <div class="tabelle">
-      <table>
-        <thead><tr><th>Schraube</th><th>wofür</th><th>B</th><th>C</th><th>D</th><th>E</th></tr></thead>
-        <tbody>
-          <tr><td>HV M20×75 10.9</td><td>Fussplatten</td><td>16</td><td>–</td><td>–</td><td>–</td></tr>
-          <tr><td>HV M24×85 10.9</td><td>Fussplatten</td><td>–</td><td>16</td><td>16</td><td>–</td></tr>
-          <tr><td>HV M27×100 10.9</td><td>Fussplatten</td><td>–</td><td>–</td><td>–</td><td>16</td></tr>
-          <tr><td>M16×65</td><td>Konstruktion</td><td>20</td><td>–</td><td>–</td><td>–</td></tr>
-          <tr><td>M20×80</td><td>Konstruktion</td><td>–</td><td>20</td><td>–</td><td>–</td></tr>
-          <tr><td>M24×75</td><td>Konstruktion</td><td>–</td><td>12</td><td>–</td><td>–</td></tr>
-          <tr><td>M24×90</td><td>Konstruktion</td><td>–</td><td>–</td><td>32</td><td>–</td></tr>
-          <tr><td>M24×100 8.8</td><td>Konstruktion</td><td>16</td><td>–</td><td>–</td><td>–</td></tr>
-          <tr><td>M24×100 10.9</td><td>Konstruktion</td><td>2</td><td>–</td><td>–</td><td>–</td></tr>
-          <tr><td>M24×110</td><td>Konstruktion</td><td>–</td><td>2</td><td>–</td><td>–</td></tr>
-          <tr><td>M27×120</td><td>Konstruktion</td><td>–</td><td>–</td><td>–</td><td>34</td></tr>
-          <tr><td>M30×120</td><td>Konstruktion, Kontermutter</td><td>–</td><td>4</td><td>–</td><td>–</td></tr>
-          <tr><td>M30×130</td><td>Konstruktion, Kontermutter</td><td>–</td><td>–</td><td>6</td><td>2</td></tr>
-          <tr><td>M36×150</td><td>Konstruktion, Kontermutter</td><td>–</td><td>–</td><td>–</td><td>2</td></tr>
-          <tr class="mt"><td>M12 (Modulträger)</td><td>Modulträger an Auflageträger, Kontermutter</td><td>24 × M12×50</td><td>24 × M12×40*</td><td>24 × M12×40*</td><td>24 × M12×45*</td></tr>
-        </tbody>
-        <tfoot><tr><td>Total je Tisch</td><td></td><td>78</td><td>78</td><td>78</td><td>78</td></tr></tfoot>
+      <table class="je">
+        <thead><tr><th>Schraube</th><th>wofür</th><th>wo</th><th>B</th><th>C</th><th>D</th><th>E</th></tr></thead>
+        <tbody><tr class="berg"><td>HV M20×75 10.9</td><td>Fussplatte auf Pfahlkopf</td><td>Berg</td><td>16</td><td>–</td><td>–</td><td>–</td></tr><tr class="berg"><td>HV M24×85 10.9</td><td>Fussplatte auf Pfahlkopf</td><td>Berg</td><td>–</td><td>16</td><td>16</td><td>–</td></tr><tr class="berg"><td>HV M27×100 10.9</td><td>Fussplatte auf Pfahlkopf</td><td>Berg</td><td>–</td><td>–</td><td>–</td><td>16</td></tr><tr class="berg"><td>M24×100</td><td>Stütze in Fussplatte (2 mit Kontermutter)</td><td>Berg</td><td>4</td><td>–</td><td>–</td><td>–</td></tr><tr class="berg"><td>M30×120</td><td>Stütze in Fussplatte, Kontermutter</td><td>Berg</td><td>–</td><td>4</td><td>–</td><td>–</td></tr><tr class="berg"><td>M30×130</td><td>Stütze in Fussplatte, Kontermutter</td><td>Berg</td><td>–</td><td>–</td><td>4</td><td>2</td></tr><tr class="berg"><td>M36×150</td><td>Stütze in Fussplatte, Kontermutter</td><td>Berg</td><td>–</td><td>–</td><td>–</td><td>2</td></tr><tr class="berg"><td>M24×100</td><td>Querträger</td><td>Berg</td><td>12</td><td>–</td><td>–</td><td>–</td></tr><tr class="berg"><td>M24×75</td><td>Querträger</td><td>Berg</td><td>–</td><td>12</td><td>–</td><td>–</td></tr><tr class="berg"><td>M24×90</td><td>Querträger</td><td>Berg</td><td>–</td><td>–</td><td>12</td><td>–</td></tr><tr class="berg"><td>M27×120</td><td>Querträger</td><td>Berg</td><td>–</td><td>–</td><td>–</td><td>12</td></tr><tr class="berg"><td>M12 (B ×50 · C/D ×40 · E ×45)</td><td>Modulträger an Auflageträger, Kontermutter</td><td>Berg</td><td>24</td><td>24</td><td>24</td><td>24</td></tr><tr class="tal"><td>M16×65</td><td>Seite: Auflageträger an Stützen</td><td>Tal</td><td>20</td><td>–</td><td>–</td><td>–</td></tr><tr class="tal"><td>M20×80</td><td>Seite: Auflageträger an Stützen</td><td>Tal</td><td>–</td><td>20</td><td>–</td><td>–</td></tr><tr class="tal"><td>M24×90</td><td>Seite: Auflageträger an Stützen</td><td>Tal</td><td>–</td><td>–</td><td>20</td><td>–</td></tr><tr class="tal"><td>M27×120</td><td>Seite: Auflageträger an Stützen</td><td>Tal</td><td>–</td><td>–</td><td>–</td><td>20</td></tr><tr class="tal"><td>M24×100 10.9</td><td>Seite: Strebe an Auflageträger, Kontermutter</td><td>Tal</td><td>2</td><td>–</td><td>–</td><td>–</td></tr><tr class="tal"><td>M24×110</td><td>Seite: Strebe an Auflageträger, Kontermutter</td><td>Tal</td><td>–</td><td>2</td><td>–</td><td>–</td></tr><tr class="tal"><td>M30×130</td><td>Seite: Strebe an Auflageträger, Kontermutter</td><td>Tal</td><td>–</td><td>–</td><td>2</td><td>–</td></tr><tr class="tal"><td>M27×120</td><td>Seite: Strebe an Auflageträger, Kontermutter</td><td>Tal</td><td>–</td><td>–</td><td>–</td><td>2</td></tr></tbody>
+        <tfoot><tr><td>Berg je Tisch</td><td></td><td></td><td>56</td><td>56</td><td>56</td><td>56</td></tr><tr><td>Tal je Tisch</td><td></td><td></td><td>22</td><td>22</td><td>22</td><td>22</td></tr></tfoot>
       </table>
     </div>
-    <p class="ue-stand">* Länge laut aktuellem Plan. Bestellt wurden M12×50 (C, D) und M12×55 (E) – klären, ob die längeren gelten. Serie 2025 (Baupiste B, 49 Tische): Liste fehlt noch.</p>
+    <p class="ue-stand">M12: Länge laut aktuellem Plan. Bestellt wurden M12×50 (C, D) und M12×55 (E) – klären, ob die längeren gelten. Muttern: 1 je Schraube, 2 bei Kontermutter. Scheiben: 2 je Schraube. Serie 2025 (Baupiste B, 49 Tische): Liste fehlt noch. Annahme: die Querträger-Verbindung ist die 6er-Gruppe an der talseitigen Stütze, die Strebe wird im Tal mit der Seite vormontiert.</p>
 
     <h3 class="ue-h3">Bedarf dieses Jahr: 44 Tische + 16 Modulträger</h3>
+    <p class="ue-stand">B 11 · C 8 · D 24 · E 1 Tische, dazu 16 Tische mit stehender Primärkonstruktion, die nur noch den Modulträger brauchen (B 4 · C 1 · D 10): für diese nur die 24 M12 am Berg.</p>
     <div class="tabelle">
-      <table>
-        <thead><tr><th>Schraube</th><th>B (11 + 4 MT)</th><th>C (8 + 1 MT)</th><th>D (24 + 10 MT)</th><th>E (1)</th><th>Total</th></tr></thead>
-        <tbody>
-          <tr><td>HV M20×75 10.9</td><td>176</td><td>–</td><td>–</td><td>–</td><td>176</td></tr>
-          <tr><td>HV M24×85 10.9</td><td>–</td><td>128</td><td>384</td><td>–</td><td>512</td></tr>
-          <tr><td>HV M27×100 10.9</td><td>–</td><td>–</td><td>–</td><td>16</td><td>16</td></tr>
-          <tr><td>M12×40</td><td>–</td><td>216</td><td>816</td><td>–</td><td>1'032</td></tr>
-          <tr><td>M12×45</td><td>–</td><td>–</td><td>–</td><td>24</td><td>24</td></tr>
-          <tr><td>M12×50</td><td>360</td><td>–</td><td>–</td><td>–</td><td>360</td></tr>
-          <tr><td>M16×65</td><td>220</td><td>–</td><td>–</td><td>–</td><td>220</td></tr>
-          <tr><td>M20×80</td><td>–</td><td>160</td><td>–</td><td>–</td><td>160</td></tr>
-          <tr><td>M24×75</td><td>–</td><td>96</td><td>–</td><td>–</td><td>96</td></tr>
-          <tr><td>M24×90</td><td>–</td><td>–</td><td>768</td><td>–</td><td>768</td></tr>
-          <tr><td>M24×100 8.8</td><td>176</td><td>–</td><td>–</td><td>–</td><td>176</td></tr>
-          <tr><td>M24×100 10.9</td><td>22</td><td>–</td><td>–</td><td>–</td><td>22</td></tr>
-          <tr><td>M24×110</td><td>–</td><td>16</td><td>–</td><td>–</td><td>16</td></tr>
-          <tr><td>M27×120</td><td>–</td><td>–</td><td>–</td><td>34</td><td>34</td></tr>
-          <tr><td>M30×120</td><td>–</td><td>32</td><td>–</td><td>–</td><td>32</td></tr>
-          <tr><td>M30×130</td><td>–</td><td>–</td><td>144</td><td>2</td><td>146</td></tr>
-          <tr><td>M36×150</td><td>–</td><td>–</td><td>–</td><td>2</td><td>2</td></tr>
-        </tbody>
-        <tfoot><tr><td>Total</td><td>954</td><td>648</td><td>2'112</td><td>78</td><td>3'792</td></tr></tfoot>
+      <table class="schmal">
+        <thead><tr><th>Schraube</th><th>Berg</th><th>Tal</th><th>Total</th></tr></thead>
+        <tbody><tr><td>HV M20×75 10.9</td><td>176</td><td>–</td><td>176</td></tr><tr><td>HV M24×85 10.9</td><td>512</td><td>–</td><td>512</td></tr><tr><td>HV M27×100 10.9</td><td>16</td><td>–</td><td>16</td></tr><tr><td>M12×40</td><td>1'032</td><td>–</td><td>1'032</td></tr><tr><td>M12×45</td><td>24</td><td>–</td><td>24</td></tr><tr><td>M12×50</td><td>360</td><td>–</td><td>360</td></tr><tr><td>M16×65</td><td>–</td><td>220</td><td>220</td></tr><tr><td>M20×80</td><td>–</td><td>160</td><td>160</td></tr><tr><td>M24×75</td><td>96</td><td>–</td><td>96</td></tr><tr><td>M24×90</td><td>288</td><td>480</td><td>768</td></tr><tr><td>M24×100 (Tal: 10.9)</td><td>176</td><td>22</td><td>198</td></tr><tr><td>M24×110</td><td>–</td><td>16</td><td>16</td></tr><tr><td>M27×120</td><td>12</td><td>22</td><td>34</td></tr><tr><td>M30×120</td><td>32</td><td>–</td><td>32</td></tr><tr><td>M30×130</td><td>98</td><td>48</td><td>146</td></tr><tr><td>M36×150</td><td>2</td><td>–</td><td>2</td></tr></tbody>
+        <tfoot><tr><td>Total</td><td>2'824</td><td>968</td><td>3'792</td></tr></tfoot>
       </table>
     </div>
-    <p class="ue-stand">«MT» = Tische, bei denen die Primärkonstruktion schon steht und nur der Modulträger fehlt: nur die 24 M12 je Tisch. Ohne den Tisch E 2025 (Serie 2025).</p>
+    <p class="ue-stand">Tal-Bedarf gilt, wenn noch keine dieser Seiten vormontiert ist. Im Programm 2026 ist keine vormontiert; im Tal stehen aber 7 vormontierte D-Konstruktionen – gehören sie zu den 18 neuen D, sinkt der Tal-Bedarf um 7 × 22 Schrauben (M24×90 −140, M30×130 −14).</p>
   </section>
 
   <div class="kopf">
@@ -199,7 +170,7 @@ textarea#ausgabe{margin-top:10px;font-family:var(--num);font-size:.85rem;min-hei
   </div>
 
   <div class="hilfe">
-    <b>So zählen:</b> Unter jedem Artikel steht der Bedarf für dieses Jahr (44 Tische + 16 Modulträger) und ob der Bestand reicht. Stück eintragen, nicht Kisten. Volle Kiste = Inhalt laut Etikett, dazu die losen Stück.
+    <b>So zählen:</b> Unter jedem Artikel steht der Bedarf für dieses Jahr (44 Tische + 16 Modulträger), getrennt nach Berg und Tal, und ob der Bestand reicht. Stück eintragen, nicht Kisten. Volle Kiste = Inhalt laut Etikett, dazu die losen Stück.
     <b>Leer lassen</b> = nicht gezählt, <b>0</b> = nichts da. Was nicht in der Liste steht, unten bei «Andere» eintragen.
     Alles wird sofort gespeichert und ist für alle mit dem Link sichtbar.
   </div>
@@ -238,7 +209,7 @@ var GRUPPEN=[
   {id:'mod',titel:'Modulbefestigung',text:'Schrauben für die Modulklemmen an den Pfetten.',art:[
     'SFS nonut TDBL-T-8.6×16','Modulklemme AQ8 unten','Modulklemme AQ8 oben']},
 ];
-var NEED={"M12×40": 1032, "M12×45": 24, "M12×50": 360, "M16×65": 220, "M20×80": 160, "M24×75": 96, "M24×90": 768, "M24×100": 198, "M24×110": 16, "M27×120": 34, "M30×120": 32, "M30×130": 146, "M36×150": 2, "HV M20×75": 176, "HV M24×85": 512, "HV M27×100": 16, "Mutter M12": 2832, "Mutter M16": 220, "Mutter M20": 160, "Mutter M24": 1078, "Mutter M27": 34, "Mutter M30": 356, "Mutter M36": 4, "HV-Mutter M20": 176, "HV-Mutter M24": 512, "HV-Mutter M27": 16, "Scheibe M12": 2832, "Scheibe M16": 440, "Scheibe M20": 320, "Scheibe M24": 2156, "Scheibe M27": 68, "Scheibe M30": 356, "Scheibe M36": 4, "HV-Scheibe 20": 352, "HV-Scheibe 24": 1024, "HV-Scheibe 27": 32};
+var NEED={"HV M20×75": [176, 0], "HV M24×85": [512, 0], "HV M27×100": [16, 0], "M24×100": [176, 22], "M30×120": [32, 0], "M30×130": [98, 48], "M36×150": [2, 0], "M24×75": [96, 0], "M24×90": [288, 480], "M27×120": [12, 22], "M12×50": [360, 0], "M12×40": [1032, 0], "M12×45": [24, 0], "M16×65": [0, 220], "M20×80": [0, 160], "M24×110": [0, 16], "HV-Mutter M20": [176, 0], "HV-Scheibe 20": [352, 0], "HV-Mutter M24": [512, 0], "HV-Scheibe 24": [1024, 0], "HV-Mutter M27": [16, 0], "HV-Scheibe 27": [32, 0], "Mutter M24": [582, 556], "Scheibe M24": [1120, 1036], "Mutter M30": [260, 96], "Scheibe M30": [260, 96], "Mutter M36": [4, 0], "Scheibe M36": [4, 0], "Mutter M27": [12, 24], "Scheibe M27": [24, 44], "Mutter M12": [2832, 0], "Scheibe M12": [2832, 0], "Mutter M16": [0, 220], "Scheibe M16": [0, 440], "Mutter M20": [0, 160], "Scheibe M20": [0, 320]};
 var ANDERE=6;
 function key(g,a){return g+'-'+a.replace(/[^A-Za-z0-9]+/g,'_').replace(/^_|_$/g,'');}
 var ROWS=[];GRUPPEN.forEach(function(g){g.art.forEach(function(a){ROWS.push({id:key(g.id,a),g:g.id,name:a});});});
@@ -253,7 +224,7 @@ function zeileHtml(r){
   var s=STATE[r.id]||{};
   var name=r.frei
     ? '<input class="frei" id="n_'+r.id+'" data-f="name" data-id="'+r.id+'" placeholder="Artikel, z. B. M20×100" aria-label="Artikel">'
-    : '<div class="art">'+r.name+'<em>'+(NEED[r.name]!=null?'Bedarf 2026: '+NEED[r.name].toLocaleString('de-CH')+' · <span class="st" id="st_'+r.id+'"></span>':'dieses Jahr kein Bedarf – trotzdem zählen')+'</em></div>';
+    : '<div class="art">'+r.name+'<em>'+(NEED[r.name]!=null?'Bedarf 2026: Berg '+NEED[r.name][0].toLocaleString('de-CH')+' · Tal '+NEED[r.name][1].toLocaleString('de-CH')+'<br><span class="st" id="st_'+r.id+'"></span>':'dieses Jahr kein Bedarf – trotzdem zählen')+'</em></div>';
   return '<div class="zeile" id="z_'+r.id+'">'+name
     +'<input class="zahl" id="b_'+r.id+'" data-f="berg" data-id="'+r.id+'" inputmode="numeric" pattern="[0-9]*" placeholder="Berg" aria-label="'+(r.name||'Andere')+' Berg">'
     +'<input class="zahl" id="t_'+r.id+'" data-f="tal" data-id="'+r.id+'" inputmode="numeric" pattern="[0-9]*" placeholder="Tal" aria-label="'+(r.name||'Andere')+' Tal">'
@@ -286,11 +257,12 @@ function zaehlen(){
   var feste=ROWS.filter(function(r){return !r.frei;}), n=0;
   feste.forEach(function(r){if(gezaehlt(STATE[r.id]))n++;});
   ROWS.forEach(function(r){var z=$('z_'+r.id);if(z)z.classList.toggle('voll',!!gezaehlt(STATE[r.id]));});
-  ROWS.forEach(function(r){var el=$('st_'+r.id);if(!el)return;var s=STATE[r.id],need=NEED[r.name];
-    if(!gezaehlt(s)){el.textContent='noch nicht gezählt';el.className='st';return;}
-    var hat=(Number(s.berg)||0)+(Number(s.tal)||0);
-    if(hat>=need){el.textContent='reicht ('+hat.toLocaleString('de-CH')+' da)';el.className='st gut';}
-    else{el.textContent='fehlen '+(need-hat).toLocaleString('de-CH');el.className='st schlecht';}});
+  ROWS.forEach(function(r){var el=$('st_'+r.id);if(!el)return;var s=STATE[r.id]||{},need=NEED[r.name];
+    function teil(lbl,val,n){if(!n)return '';if(val===''||val==null)return '<span class="st">'+lbl+' noch nicht gezählt</span>';
+      var v=Number(val)||0;return v>=n?'<span class="st gut">'+lbl+' reicht</span>':'<span class="st schlecht">'+lbl+' fehlen '+(n-v).toLocaleString('de-CH')+'</span>';}
+    var tot=(Number(s.berg)||0)+(Number(s.tal)||0),sum=need[0]+need[1];
+    var gesamt=gezaehlt(s)?(tot>=sum?' · <span class="st gut">zusammen reicht es</span>':' · <span class="st schlecht">zusammen fehlen '+(sum-tot).toLocaleString('de-CH')+'</span>'):'';
+    el.innerHTML=[teil('Berg',s.berg,need[0]),teil('Tal',s.tal,need[1])].filter(Boolean).join(' · ')+gesamt;});
   $('fortschritt').textContent=n+' von '+feste.length+' Artikeln gezählt';
   $('balken').style.width=(feste.length?100*n/feste.length:0)+'%';
   GRUPPEN.concat([{id:'andere'}]).forEach(function(g){var rs=ROWS.filter(function(r){return r.g===g.id;});
