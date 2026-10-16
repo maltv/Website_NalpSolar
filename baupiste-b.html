@@ -9,7 +9,8 @@
      Absteckliste ILF LI 0412 in allen Revisionen (A1 bis A10) gegen Instrument, Nalpi, Sondage 14.09.2026
      und alle Topo-/Aufnahmepunkte im Korridor; dazu die Zeitachse, was auf der Baupiste B wann gebaut wurde
      (Pfaehle aus Nalpi-Export 08.10.2026 + Tablet-Vermessungsprotokolle).
-     Daten: uploads/baupiste_b.json. Koordinaten LV95, Umrechnung nach WGS84 im Browser mit proj4 (EPSG:2056). -->
+     Daten: uploads/baupiste_b.json. Koordinaten LV95; WGS84 fuer die Karte vorab mit swisstopo REFRAME
+     berechnet (reframe.py im buero-Repo), im JSON unter «wgs». -->
 <script src="assets/js/nalp-gate.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -168,7 +169,7 @@
       Victor Malt, Mail 28.09.2026 «Kabelrohrblock Strang B Baupiste B»: LIESMICH, Sondagen 14.09.2026 (R. Dunovskis), Bohrpunkte_BaupisteB_KRB_260928 mit Klassen. Querschnitt PL 0414 A1: 27 KSR DN120 in 4 Lagen, Rohrfeld 1.224 m.<br>
       Nalpi: werkleitungen-modell.json (18.09.2026), DRILLING_POINT_DATA und Tisch-Export 08.10.2026, Bauphasenplan 09.04.2026, Erdung-Layer erdung.json (16.10.2026).
       Topo: Dropbox 04 Prüfungen/Erdleiter/Rohdaten (2025 Erdungsband, 2026 TOPO/FEINVERTEILUNG), Tablet-Vermessungsprotokolle RKDO Nalpsolar V10 bis V11.1 (recording.csv, «BAUPISTE REAL COORDINATES 10.06», ABSTECKUNG/INJECTION Sept./Okt. 2026).
-      Korridor = 20 m beidseits der Achse plus Bauphasen B_1 bis B_10, ohne Strang A und C. Bauphasen-Polygone aus WGS84 übernommen (±1 m).
+      Korridor = 20 m beidseits der Achse plus Bauphasen B_1 bis B_10, ohne Strang A und C. Bauphasen-Polygone aus WGS84 übernommen (±1 m). Kartenlage: LV95 nach WGS84 mit swisstopo REFRAME (cm-genau, gegen Tablet-Paare geprüft: 4 cm); die übliche Näherung liegt hier 0.63 m daneben.
     </div>
   </div>
 
@@ -182,9 +183,13 @@ function $(id){ return document.getElementById(id); }
 var fmt = function(s){ return s ? s.slice(8,10)+'.'+s.slice(5,7)+'.'+s.slice(0,4) : '–'; };
 var fmtShort = function(s){ return s ? s.slice(8,10)+'.'+s.slice(5,7)+'.'+s.slice(2,4) : '–'; };
 
-/* LV95 -> WGS84: proj4 mit EPSG:2056, Rueckfall auf die swisstopo-Naeherungsformel (ca. 1 m). */
+/* LV95 -> WGS84: exakt ueber die in baupiste_b.json mitgelieferten REFRAME-Koordinaten (swisstopo, cm-genau;
+   gegen die Tablet-Paare geprueft: 4 cm). Rueckfall nur fuer Punkte ohne Eintrag: proj4-Helmert bzw.
+   Naeherungsformel, beide ca. 0.6 m daneben (Nalpi-«Weltversatz» 0.62 m). */
 var LV95 = '+proj=somerc +lat_0=46.9524055555556 +lon_0=7.43958333333333 +k_0=1 +x_0=2600000 +y_0=1200000 +ellps=bessel +towgs84=674.374,15.056,405.346,0,0,0,0 +units=m +no_defs';
+var fallbackCount = 0;
 function toLL(e, n){
+  if (D && D.wgs){ var w = D.wgs[e.toFixed(3) + ',' + n.toFixed(3)]; if (w) return w; fallbackCount++; }
   if (window.proj4){ var r = proj4(LV95, 'WGS84', [e, n]); return [r[1], r[0]]; }
   var y = (e - 2600000)/1e6, x = (n - 1200000)/1e6;
   var lon = 2.6779094 + 4.728982*y + 0.791484*y*x + 0.1306*y*x*x - 0.0436*y*y*y;
@@ -319,6 +324,7 @@ fetch('uploads/baupiste_b.json', { cache:'no-store' }).then(function(r){ return 
   D = d; zeichneFest(); zeichneFV(); zeichnePfaehle(); zeichneTopo(); ebenen();
   $('kpBoh').textContent = D.piles.filter(function(p){ return p.boh; }).length; $('kpTopo').textContent = D.topo.length;
   karte.fitBounds(L.latLngBounds(ring(D.axis)).pad(.15));
+  if (fallbackCount) console.warn('Baupiste B: ' + fallbackCount + ' Koordinaten ohne REFRAME-Eintrag, Rueckfall ca. 0.6 m ungenau');
   zeitachse();
 }).catch(function(e){ $('karte').innerHTML = '<div style="padding:20px;color:#D72622">Daten konnten nicht geladen werden: ' + e + '</div>'; });
 </script>
