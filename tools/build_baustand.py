@@ -144,16 +144,44 @@ def ergaenze_bestehende(alle):
         print('  +%d aus %s' % (extra, name))
     return alle
 
+def tag_iso(wert):
+    """Nalpi-Datum -> 'JJJJ-MM-TT' (Schweizer Tag), leer wenn keins.
+
+    Die Seiten (nalp-sitzung.js, injektion.html, verschrauben.html) rechnen mit dem ISO-Tag.
+    Der Grid-Export der Erweiterung und das API (/api/w1/exports/table-id.csv) schreiben
+    "25.6.2026"; der alte Edge-Abgriff schrieb den rohen SharePoint-Zeitpunkt
+    "2026-06-24T22:00:00Z" - dessen [:10] ist einen Tag zu frueh (Mitternacht Schweizer
+    Zeit liegt am Vortag UTC). Beide Formen landen hier auf demselben, richtigen Tag.
+    """
+    import datetime as dt
+    s = (wert or '').strip()
+    if not s or s in ('—', '-'):
+        return ''
+    m = re.match(r'^(\d{1,2})\.(\d{1,2})\.(\d{4})$', s)
+    if m:
+        return '%s-%02d-%02d' % (m.group(3), int(m.group(2)), int(m.group(1)))
+    if re.match(r'^\d{4}-\d{2}-\d{2}$', s):
+        return s
+    try:
+        from zoneinfo import ZoneInfo
+        roh = dt.datetime.fromisoformat(s[:-1] if s.endswith('Z') else s)
+        if roh.tzinfo is None:
+            roh = roh.replace(tzinfo=dt.timezone.utc)
+        return roh.astimezone(ZoneInfo('Europe/Zurich')).date().isoformat()
+    except (ValueError, ImportError):
+        return s[:10]
+
+
 def lese_nalpi(csv_pfad):
     st = {}
     stati = {}
     with io.open(csv_pfad, encoding='utf-8-sig', newline='') as fh:
         for r in csv.DictReader(fh):
             tid = r['Nr.'].strip()
-            pk = r.get('Primärkonstruktion montiert', '').strip()
-            mt = r.get('Modulträger montiert', '').strip()
+            pk = tag_iso(r.get('Primärkonstruktion montiert', ''))
+            mt = tag_iso(r.get('Modulträger montiert', ''))
             # Spalte gibt es erst seit 18.08.2026 – aeltere CSV haben sie nicht
-            vs = r.get('Modultisch verschraubt', '').strip()
+            vs = tag_iso(r.get('Modultisch verschraubt', ''))
             stati[r.get('Baustatus', '?')] = stati.get(r.get('Baustatus', '?'), 0) + 1
             if pk in ('', '—', '-'):
                 continue
@@ -168,15 +196,21 @@ def lese_nalpi(csv_pfad):
 def main():
     csv_pfad = sys.argv[1] if len(sys.argv) > 1 else None
 
-    print('Belegung-Excels (Dropbox, nur lesen):')
-    alle = ergaenze_bestehende(lese_belegung())
-    print('Total Koordinaten: %d Tische' % len(alle))
-
     out1 = os.path.join(BASE, 'uploads', 'tables', 'modultische_all.json')
-    vals = sorted(alle.values(), key=lambda t: int(t[0]) if t[0].isdigit() else 0)
-    io.open(out1, 'w', encoding='utf-8').write(
-        '[\n' + ',\n'.join(json.dumps(v, ensure_ascii=False) for v in vals) + '\n]\n')
-    print('-> %s (%d)' % (out1, len(vals)))
+    if os.path.isdir(DROPBOX):
+        print('Belegung-Excels (Dropbox, nur lesen):')
+        alle = ergaenze_bestehende(lese_belegung())
+        print('Total Koordinaten: %d Tische' % len(alle))
+        vals = sorted(alle.values(), key=lambda t: int(t[0]) if t[0].isdigit() else 0)
+        io.open(out1, 'w', encoding='utf-8').write(
+            '[\n' + ',\n'.join(json.dumps(v, ensure_ascii=False) for v in vals) + '\n]\n')
+        print('-> %s (%d)' % (out1, len(vals)))
+    else:
+        # Ohne Dropbox (GitHub Actions, tools/nalpi_stand_api.py): die Koordinaten bleiben, wie sie
+        # sind; nur der Baustand aus dem Nalpi-/API-Export wird neu gebaut. Die Belegung-Excels
+        # aendern sich nur bei einer Planrevision - dann einmal vom Buero-PC aus laufen lassen.
+        alle = {str(t[0]).strip(): t for t in json.load(io.open(out1, encoding='utf-8'))}
+        print('Keine Dropbox erreichbar - Koordinaten bleiben (%s, %d Tische).' % (os.path.basename(out1), len(alle)))
 
     if not csv_pfad or not os.path.exists(csv_pfad):
         print('Kein Nalpi-Export uebergeben -> baustand.json bleibt unveraendert.')
