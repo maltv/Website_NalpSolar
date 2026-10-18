@@ -1,5 +1,5 @@
 {
- "stand": "2026-10-17",
+ "stand": "2026-10-18",
  "quelle": "api.buildtrack.ch /api/w1/exports/table-id.csv, Spalte Bauphasen_STRABAG_260410",
  "bereiche": {
   "10": "26_5.4",
