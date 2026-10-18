@@ -1,0 +1,81 @@
+# Baustand + Bohrstand taeglich aus dem Buildtrack-API (ersetzt den Edge-Abgriff auf Victors PC).
+#
+# Holt die zwei Nalpi-Exporte von api.buildtrack.ch (tools/nalpi_stand_api.py), baut
+# uploads/tables/{bohrstand,bohrpunkte_koo,baustand,bereiche,rapport}.json mit den bestehenden
+# Buildern und committet sie auf main - genau wie der bisherige Lauf um 06:30.
+#
+# Voraussetzung: Repository-Secret NALPS_API_TOKEN (Settings > Secrets and variables > Actions).
+# Ein Service-Konto-Token aus der Nalpi-Erweiterung mit den Lesebereichen plan:read + drill:read.
+# Ohne Secret endet der Lauf gruen mit einem Hinweis und schreibt nichts (der Nalps-Server aktualisiert derweil taeglich).
+#
+# Ein Push mit dem GITHUB_TOKEN startet keine anderen Workflows - darum stoesst der letzte Schritt
+# den Pages-Deploy (static.yml) selbst an, sonst bliebe die Website auf dem alten Stand.
+name: Baustand + Bohrstand (Buildtrack-API)
+
+on:
+  schedule:
+    - cron: '30 4 * * *'     # 06:30 Zuerich im Sommer, 05:30 im Winter
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: nalpi-stand
+  cancel-in-progress: false
+
+jobs:
+  stand:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Ohne Secret: Hinweis statt rotem Lauf (die Daten kommen derweil vom taeglichen Lauf auf dem Nalps-Server).
+      - name: Secret vorhanden?
+        id: secret
+        env:
+          NALPS_API_TOKEN: ${{ secrets.NALPS_API_TOKEN }}
+        run: |
+          if [ -z "$NALPS_API_TOKEN" ]; then
+            echo '::warning title=NALPS_API_TOKEN fehlt::Repository-Secret NALPS_API_TOKEN setzen (Service-Konto, Lesebereiche plan:read + drill:read). Bis dahin aktualisiert der Nalps-Server die Daten taeglich.'
+            echo 'present=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'present=true' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Exporte holen + bauen
+        if: steps.secret.outputs.present == 'true'
+        env:
+          NALPS_API_TOKEN: ${{ secrets.NALPS_API_TOKEN }}
+        run: python tools/nalpi_stand_api.py
+
+      - name: Commit + Push
+        id: commit
+        if: steps.secret.outputs.present == 'true'
+        run: |
+          git config user.name 'nalps-api'
+          git config user.email 'nalps-api@users.noreply.github.com'
+          git add uploads/tables
+          if git diff --cached --quiet; then
+            echo 'Keine Aenderung an uploads/tables - nichts zu committen.'
+            echo 'pushed=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          TAG=$(TZ=Europe/Zurich date +%Y-%m-%d)
+          git commit -m "Baustand + Bohrstand aktualisiert ($TAG) - api.buildtrack.ch"
+          git push
+          echo 'pushed=true' >> "$GITHUB_OUTPUT"
+
+      - name: Pages-Deploy anstossen
+        if: steps.commit.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run static.yml --ref main
