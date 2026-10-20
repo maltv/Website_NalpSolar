@@ -1133,8 +1133,13 @@ window.leitAuswahlLoesen=function(){
    Der Strang endet an einem Pfahl. Nächster Bohrpunkt aus
    uploads/tables/bohrstand.json ([tid, s, E, N, H, …], s = S1–S4 wie in
    Nalpi) zum Rohrende = das Bein. Markiert mit Ring + Säule + Schild,
-   dazu das Verbindungsstück vom Rohrende bis zum Pfahl. */
+   dazu das Verbindungsstück vom Rohrende bis zum Pfahl.
+   REGEL (Victor 20.10.2026): die Feinverteilung wird IMMER am bergseitigen
+   Bein angeschlossen, das sind S2 und S3 (S1/S4 = talseitig; geprüft an den
+   Pfahlkopfhöhen in bohrstand.json). Nur diese beiden kommen in Frage, auch
+   wenn das Rohrende im ILF-Modell näher bei S1 oder S4 liegt. */
 var beinMarker=null, beinDaten=null, beinLaedt=null;
+var BEIN_BERG=[2,3];                 // zugelassene Beine = bergseitig
 function beinDatenHolen(){
   if(beinDaten) return Promise.resolve(beinDaten);
   if(bohrDaten && bohrDaten.punkte){ beinDaten=bohrDaten.punkte; return Promise.resolve(beinDaten); }
@@ -1146,11 +1151,13 @@ function beinDatenHolen(){
   return beinLaedt;
 }
 /* nächster Pfahl zu einem Rohrende (raw-Frame), höchstens maxD Meter */
-function beinNaechster(q,maxD){
+function beinNaechster(q,maxD,nurS){
   if(!q || !beinDaten) return null;
   var ex=q[0]+OE, ny=q[1]+ON, best=null, bd=(maxD||8);
   for(var i=0;i<beinDaten.length;i++){
-    var p=beinDaten[i], dx=p[2]-ex, dy=p[3]-ny, d=Math.sqrt(dx*dx+dy*dy);
+    var p=beinDaten[i];
+    if(nurS && nurS.indexOf(p[1])<0) continue;      // nur zugelassene Beine (bergseitig S2/S3)
+    var dx=p[2]-ex, dy=p[3]-ny, d=Math.sqrt(dx*dx+dy*dy);
     if(d<bd){ bd=d; best=p; }
   }
   return best ? {tid:String(best[0]), s:best[1], E:best[2], N:best[3], H:best[4], d:bd, q:q} : null;
@@ -1181,7 +1188,7 @@ function beinMarkerZeichnen(b){
   }
   var div=document.createElement('div');
   div.className='bein-schild';
-  div.innerHTML='Bein <b>S'+b.s+'</b><br>Tisch '+b.tid;
+  div.innerHTML='Bein <b>S'+b.s+'</b> bergseitig<br>Tisch '+b.tid;
   var lbl=new THREE.CSS2DObject(div); lbl.position.set(x,y+7.4,z); g.add(lbl);
   g.traverse(function(o){ if(o.isMesh) o.renderOrder=21; });
   g.userData.mat=mat;
@@ -1248,18 +1255,18 @@ function leitPanelFuellen(st){
   if(e) z.push('Ende LV95 <b>'+Math.round(e[0]+OE)+' / '+Math.round(e[1]+ON)+'</b>');
   document.getElementById('lpBody').innerHTML=z.join('<br>');
   panel.classList.add('show');
-  // Welches Bein? Nächster Pfahl zu einem der beiden Rohrenden (max. 8 m).
+  // Welches Bein? Nächstes BERGSEITIGES Bein (S2/S3) zu einem der beiden Rohrenden (max. 10 m).
   beinMarkerLoeschen();
   if(st.k!=='schacht' && (st.a||st.b)){
     var meinIdx=leitSel;
     beinDatenHolen().then(function(){
       if(leitSel!==meinIdx) return;                 // inzwischen anderes Rohr gewählt
-      var ba=beinNaechster(st.a,8), bb=beinNaechster(st.b,8);
+      var ba=beinNaechster(st.a,10,BEIN_BERG), bb=beinNaechster(st.b,10,BEIN_BERG);
       var b=(bb && (!ba || bb.d<ba.d)) ? bb : ba;
       if(!b) return;
       beinMarkerZeichnen(b);
       var body=document.getElementById('lpBody');
-      if(body) body.innerHTML+='<br>→ Bein <b>S'+b.s+'</b> von Tisch <b>'+b.tid+'</b>'
+      if(body) body.innerHTML+='<br>→ Bein <b>S'+b.s+'</b> (bergseitig) von Tisch <b>'+b.tid+'</b>'
         +' (Rohrende '+b.d.toFixed(1).replace('.',',')+' m vom Pfahl)';
       if(!pkOn && pkAuto && !arActive && !fpvOn) togglePkModelle();   // Stahlbau dazu, damit man das Bein sieht
     });
