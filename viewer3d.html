@@ -143,6 +143,10 @@ html, body { width:100%; height:100%; overflow:hidden; background:#0d1117;
 }
 #compassNeedle { transition:transform .2s; }
 
+/* Schild am markierten Tischbein (Strangende) */
+.bein-schild { background:rgba(255,224,102,.95); color:#1b1b1b; font:600 12px/1.25 system-ui,sans-serif;
+  padding:4px 8px; border-radius:6px; white-space:nowrap; pointer-events:none; text-align:center;
+  box-shadow:0 1px 6px rgba(0,0,0,.45); }
 /* ── Legend ─────────────────────────────────────────────── */
 #legend {
   position:fixed; left:10px; bottom:28px; z-index:99;
@@ -600,7 +604,8 @@ body.ar-mode { background:transparent!important; }
   <div class="leg"><div class="leg-dot" style="background:#FF9800"></div>Erdung</div>
   <div class="leg"><div class="leg-dot" style="background:rgba(140,210,140,.7)"></div>Terrain</div>
   <div class="leg"><div class="leg-dot" style="background:rgba(80,160,255,.7);border:1px solid #ffd700"></div>Modultische</div>
-  <div class="leg" style="opacity:.85">👆 Leitung antippen = ganzer Verlauf leuchtet</div>
+  <div class="leg" style="opacity:.85">👆 Leitung antippen = Verlauf + Tischbein (S1–S4)</div>
+  <div class="leg" style="opacity:.85">🔍 Nah ranzoomen = echter Stahlbau</div>
   <div id="bohrLeg"></div>
 </div>
 
@@ -1120,8 +1125,69 @@ window.leitAuswahlLoesen=function(){
   var mesh=layers['leitungen'];
   if(mesh && mesh.material.userData.uSel) mesh.material.userData.uSel.value=-1;
   if(leitLinie){ scene.remove(leitLinie); leitLinie.geometry.dispose(); leitLinie.material.dispose(); leitLinie=null; }
+  beinMarkerLoeschen();
   var p=document.getElementById('leitPanel'); if(p) p.classList.remove('show');
 };
+
+/* ── Welches Tischbein? (Auftrag Victor 20.10.2026) ───────────────────
+   Der Strang endet an einem Pfahl. Nächster Bohrpunkt aus
+   uploads/tables/bohrstand.json ([tid, s, E, N, H, …], s = S1–S4 wie in
+   Nalpi) zum Rohrende = das Bein. Markiert mit Ring + Säule + Schild,
+   dazu das Verbindungsstück vom Rohrende bis zum Pfahl. */
+var beinMarker=null, beinDaten=null, beinLaedt=null;
+function beinDatenHolen(){
+  if(beinDaten) return Promise.resolve(beinDaten);
+  if(bohrDaten && bohrDaten.punkte){ beinDaten=bohrDaten.punkte; return Promise.resolve(beinDaten); }
+  if(beinLaedt) return beinLaedt;
+  beinLaedt=fetch('uploads/tables/bohrstand.json',{cache:'no-store'})
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){ beinDaten=(d&&d.punkte)||[]; return beinDaten; })
+    .catch(function(){ beinDaten=[]; return beinDaten; });
+  return beinLaedt;
+}
+/* nächster Pfahl zu einem Rohrende (raw-Frame), höchstens maxD Meter */
+function beinNaechster(q,maxD){
+  if(!q || !beinDaten) return null;
+  var ex=q[0]+OE, ny=q[1]+ON, best=null, bd=(maxD||8);
+  for(var i=0;i<beinDaten.length;i++){
+    var p=beinDaten[i], dx=p[2]-ex, dy=p[3]-ny, d=Math.sqrt(dx*dx+dy*dy);
+    if(d<bd){ bd=d; best=p; }
+  }
+  return best ? {tid:String(best[0]), s:best[1], E:best[2], N:best[3], H:best[4], d:bd, q:q} : null;
+}
+function beinMarkerLoeschen(){
+  if(!beinMarker) return;
+  beinMarker.traverse(function(o){
+    if(o.isCSS2DObject && o.element && o.element.parentNode) o.element.parentNode.removeChild(o.element);
+  });
+  scene.remove(beinMarker);
+  beinMarker=null;
+}
+function beinMarkerZeichnen(b){
+  beinMarkerLoeschen();
+  var x=b.E-OE, z=-(b.N-ON);
+  var y=(typeof b.H==='number') ? b.H-OZ : null;
+  if(y===null||y===undefined){ y=terraY(x,z); if(y===null||y===undefined) y=0; }
+  var g=new THREE.Group();
+  var mat=new THREE.MeshBasicMaterial({color:0xffe066, transparent:true, opacity:0.85, depthTest:false});
+  var ring=new THREE.Mesh(new THREE.TorusGeometry(0.9,0.09,8,40), mat);
+  ring.rotation.x=Math.PI/2; ring.position.set(x,y+0.05,z); g.add(ring);
+  var saeule=new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.16,7,10), mat);
+  saeule.position.set(x,y+3.5,z); g.add(saeule);
+  // Verbindungsstück Rohrende → Pfahl (das letzte Stück, das im Modell fehlt)
+  var pe=leitPt(b.q), pb=new THREE.Vector3(x,y,z);
+  if(pe.distanceTo(pb)>0.3){
+    g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.LineCurve3(pe,pb),1,0.25,6,false), mat));
+  }
+  var div=document.createElement('div');
+  div.className='bein-schild';
+  div.innerHTML='Bein <b>S'+b.s+'</b><br>Tisch '+b.tid;
+  var lbl=new THREE.CSS2DObject(div); lbl.position.set(x,y+7.4,z); g.add(lbl);
+  g.traverse(function(o){ if(o.isMesh) o.renderOrder=21; });
+  g.userData.mat=mat;
+  beinMarker=g;
+  scene.add(g);
+}
 
 function leitLinieZeichnen(st){
   if(leitLinie){ scene.remove(leitLinie); leitLinie.geometry.dispose(); leitLinie.material.dispose(); leitLinie=null; }
@@ -1153,6 +1219,7 @@ function updateLeitPuls(now){
   var u=mesh.material.userData.uPulse;
   if(u) u.value=0.5+0.5*Math.sin(now/260);
   if(leitLinie) leitLinie.material.opacity=0.55+0.35*Math.sin(now/260);
+  if(beinMarker) beinMarker.userData.mat.opacity=0.6+0.35*Math.sin(now/260);
 }
 
 function leitPanelFuellen(st){
@@ -1181,6 +1248,22 @@ function leitPanelFuellen(st){
   if(e) z.push('Ende LV95 <b>'+Math.round(e[0]+OE)+' / '+Math.round(e[1]+ON)+'</b>');
   document.getElementById('lpBody').innerHTML=z.join('<br>');
   panel.classList.add('show');
+  // Welches Bein? Nächster Pfahl zu einem der beiden Rohrenden (max. 8 m).
+  beinMarkerLoeschen();
+  if(st.k!=='schacht' && (st.a||st.b)){
+    var meinIdx=leitSel;
+    beinDatenHolen().then(function(){
+      if(leitSel!==meinIdx) return;                 // inzwischen anderes Rohr gewählt
+      var ba=beinNaechster(st.a,8), bb=beinNaechster(st.b,8);
+      var b=(bb && (!ba || bb.d<ba.d)) ? bb : ba;
+      if(!b) return;
+      beinMarkerZeichnen(b);
+      var body=document.getElementById('lpBody');
+      if(body) body.innerHTML+='<br>→ Bein <b>S'+b.s+'</b> von Tisch <b>'+b.tid+'</b>'
+        +' (Rohrende '+b.d.toFixed(1).replace('.',',')+' m vom Pfahl)';
+      if(!pkOn && pkAuto && !arActive && !fpvOn) togglePkModelle();   // Stahlbau dazu, damit man das Bein sieht
+    });
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1805,9 +1888,31 @@ function pkAktualisieren(force){
   Object.keys(neu).forEach(function(id){
     var it2=neu[id];
     it2.mesh.visible=false;
-    it2.legs.forEach(function(l){ l.visible=false; });
+    it2.legs.forEach(function(l){ if(!l.userData.istSchild) l.visible=false; });  // ID-Schild bleibt
     pkGezeigt[id]=it2;
   });
+}
+
+/* Nahzoom-Automatik (Auftrag Victor 20.10.2026): kommt die Kamera näher als
+   PK_AUTO_EIN an ihr Ziel, erscheinen die echten Primärkonstruktionen von
+   selbst über den Leitungen; beim Herauszoomen (> PK_AUTO_AUS) kommen die
+   Platzhalter zurück. Kein Knopf – die Ebene war am 12.08.2026 aus der
+   Leiste genommen worden, jetzt nur noch automatisch im Nahbereich. */
+var PK_AUTO_EIN=260, PK_AUTO_AUS=700, pkAuto=true, pkHinweisGezeigt=false;
+function pkAutomatik(){
+  if(!pkAuto || arActive || fpvOn || !tischeItems || !tischeItems.length) return;
+  var d=camera.position.distanceTo(controls.target);
+  if(!pkOn && d<PK_AUTO_EIN) togglePkModelle();
+  else if(pkOn && d>PK_AUTO_AUS) togglePkModelle();
+}
+/* Nahebene der Kamera dem Abstand nachführen: fest 0.5 m schneidet beim
+   Nahzoom Beine und Rohre weg, fest 0.05 m ruiniert die Tiefenauflösung
+   in der Übersicht (Flimmern am Terrain). */
+var _nearIst=0.5;
+function nahEbeneNachfuehren(){
+  var d=camera.position.distanceTo(controls.target);
+  var soll=d<25 ? 0.05 : (d<150 ? 0.2 : 0.5);
+  if(soll!==_nearIst){ _nearIst=soll; camera.near=soll; camera.updateProjectionMatrix(); }
 }
 
 window.togglePkModelle=function(){
@@ -1818,8 +1923,10 @@ window.togglePkModelle=function(){
     pkLaden().then(function(){
       PK_TYPEN.forEach(function(t){ if(pkMesh[t]) pkMesh[t].visible=true; });
       pkAktualisieren(true);
-      if(typeof flashMsg==='function')
-        flashMsg('🏗 Echte Primärkonstruktionen (Typ A/B/D/E) – die nächsten '+PK_MAX+' Tische');
+      if(typeof flashMsg==='function' && !pkHinweisGezeigt){
+        pkHinweisGezeigt=true;
+        flashMsg('🏗 Nahzoom: echte Primärkonstruktionen (Typ A/B/D/E) – die nächsten '+PK_MAX+' Tische');
+      }
     });
     return;
   }
@@ -6246,6 +6353,7 @@ function animate(){
   updateBauablauf(gdt);
   updateTischLinks();
   updateStahlLabels();
+  if(frameN%30===0) pkAutomatik();      // Nahzoom: echte PK-Modelle von selbst ein/aus
   if(pkOn) pkAktualisieren(false);      // echte PK-Modelle der Kamera nachführen
   updateCrane(gdt);
   updatePG(gdt);
@@ -6359,7 +6467,7 @@ function animate(){
   }
 
   // OrbitControls must NOT run in AR/FPV (would override camera position/rotation)
-  if(!arActive && !fpvOn) controls.update();
+  if(!arActive && !fpvOn){ controls.update(); nahEbeneNachfuehren(); }
   updateCompass();
 
   // Tisch-Label fade by distance (throttled)
@@ -6432,7 +6540,7 @@ async function init(){
     controls.enableDamping=true;
     controls.dampingFactor=0.07;
     controls.maxPolarAngle=Math.PI*0.88;
-    controls.minDistance=5;
+    controls.minDistance=0.4;          // Nahzoom bis ans Tischbein (Victor 20.10.2026), vorher 5 m
     controls.maxDistance=4000;
     controls.screenSpacePanning=false;
     // Strava-Stil: 1 Finger = schieben (Pan), 2 Finger = drehen + zoomen
