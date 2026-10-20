@@ -1137,18 +1137,45 @@ window.leitAuswahlLoesen=function(){
    REGEL (Victor 20.10.2026): die Feinverteilung wird IMMER am bergseitigen
    Bein angeschlossen, das sind S2 und S3 (S1/S4 = talseitig; geprüft an den
    Pfahlkopfhöhen in bohrstand.json). Nur diese beiden kommen in Frage, auch
-   wenn das Rohrende im ILF-Modell näher bei S1 oder S4 liegt. */
+   wenn das Rohrende im ILF-Modell näher bei S1 oder S4 liegt. Beleg dazu:
+   ILF-Typenplan PL 0490 A2 «Rohrführung – GAK im Schacht»: die KSR DN60
+   unterquert das lotrechte Talbein und steigt am GENEIGTEN Bein hoch –
+   geneigt = Bergstütze = S2/S3 (Normalien, Mäder-Längendefinition, §64).
+   Gegenprobe 20.10.2026 (ILF-Modell, 265 DN60-Stränge): 173 von 530
+   Strangenden sind KNOTEN (anderes Strangende < 0.3 m, die Leitung geht
+   weiter – kein Tischanschluss), 113 Stränge laufen Tisch-zu-Tisch. Darum
+   werden BEIDE Enden klassiert (Bein / Knoten / nichts) und der Tisch kommt
+   NUR aus dem Bein – nicht aus der Tischmitte, sonst widerspricht sich das
+   Panel selbst (bei 93 von 265 Strängen liegt eine andere Tischmitte näher). */
 var beinMarker=null, beinDaten=null, beinLaedt=null;
 var BEIN_BERG=[2,3];                 // zugelassene Beine = bergseitig
+var KNOTEN_R=0.3;                    // m: so nah = Strangenden stossen zusammen
+var BEIN_MAX_D=4;                    // m: weiter weg ist kein Tischanschluss (ILF-Modell: max. 3.9 m)
 function beinDatenHolen(){
   if(beinDaten) return Promise.resolve(beinDaten);
   if(bohrDaten && bohrDaten.punkte){ beinDaten=bohrDaten.punkte; return Promise.resolve(beinDaten); }
   if(beinLaedt) return beinLaedt;
+  // Schlägt der Abruf fehl (Funkloch), bleibt nichts gemerkt – nächster Tap versucht es neu
   beinLaedt=fetch('uploads/tables/bohrstand.json',{cache:'no-store'})
     .then(function(r){ return r.ok ? r.json() : null; })
-    .then(function(d){ beinDaten=(d&&d.punkte)||[]; return beinDaten; })
-    .catch(function(){ beinDaten=[]; return beinDaten; });
+    .then(function(d){
+      var p=(d&&d.punkte&&d.punkte.length) ? d.punkte : null;
+      beinDaten=p; beinLaedt=null; return p||[];
+    })
+    .catch(function(){ beinDaten=null; beinLaedt=null; return []; });
   return beinLaedt;
+}
+/* Ist dieses Rohrende ein Knoten? (ein ANDERER Strang beginnt/endet hier) */
+function leitIstKnoten(q, eigenerIdx){
+  if(!q) return false;
+  var mesh=layers['leitungen'], st=(mesh&&mesh.userData.straenge)||[], r2=KNOTEN_R*KNOTEN_R;
+  for(var i=0;i<st.length;i++){
+    if(i===eigenerIdx) continue;
+    var o=st[i]; if(!o || o.k==='schacht') continue;
+    var e=o.a; if(e && (e[0]-q[0])*(e[0]-q[0])+(e[1]-q[1])*(e[1]-q[1])<r2) return true;
+    e=o.b;     if(e && (e[0]-q[0])*(e[0]-q[0])+(e[1]-q[1])*(e[1]-q[1])<r2) return true;
+  }
+  return false;
 }
 /* nächster Pfahl zu einem Rohrende (raw-Frame), höchstens maxD Meter */
 function beinNaechster(q,maxD,nurS){
@@ -1170,26 +1197,29 @@ function beinMarkerLoeschen(){
   scene.remove(beinMarker);
   beinMarker=null;
 }
-function beinMarkerZeichnen(b){
+function beinMarkerZeichnen(liste){
   beinMarkerLoeschen();
-  var x=b.E-OE, z=-(b.N-ON);
-  var y=(typeof b.H==='number') ? b.H-OZ : null;
-  if(y===null||y===undefined){ y=terraY(x,z); if(y===null||y===undefined) y=0; }
+  if(!liste || !liste.length) return;
   var g=new THREE.Group();
   var mat=new THREE.MeshBasicMaterial({color:0xffe066, transparent:true, opacity:0.85, depthTest:false});
-  var ring=new THREE.Mesh(new THREE.TorusGeometry(0.9,0.09,8,40), mat);
-  ring.rotation.x=Math.PI/2; ring.position.set(x,y+0.05,z); g.add(ring);
-  var saeule=new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.16,7,10), mat);
-  saeule.position.set(x,y+3.5,z); g.add(saeule);
-  // Verbindungsstück Rohrende → Pfahl (das letzte Stück, das im Modell fehlt)
-  var pe=leitPt(b.q), pb=new THREE.Vector3(x,y,z);
-  if(pe.distanceTo(pb)>0.3){
-    g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.LineCurve3(pe,pb),1,0.25,6,false), mat));
-  }
-  var div=document.createElement('div');
-  div.className='bein-schild';
-  div.innerHTML='Bein <b>S'+b.s+'</b> bergseitig<br>Tisch '+b.tid;
-  var lbl=new THREE.CSS2DObject(div); lbl.position.set(x,y+7.4,z); g.add(lbl);
+  liste.forEach(function(b){
+    var x=b.E-OE, z=-(b.N-ON);
+    var y=(typeof b.H==='number') ? b.H-OZ : null;
+    if(y===null||y===undefined){ y=terraY(x,z); if(y===null||y===undefined) y=0; }
+    var ring=new THREE.Mesh(new THREE.TorusGeometry(0.9,0.09,8,40), mat);
+    ring.rotation.x=Math.PI/2; ring.position.set(x,y+0.05,z); g.add(ring);
+    var saeule=new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.16,7,10), mat);
+    saeule.position.set(x,y+3.5,z); g.add(saeule);
+    // Verbindungsstück Rohrende → Pfahl (das letzte Stück, das im Modell fehlt)
+    var pe=leitPt(b.q), pb=new THREE.Vector3(x,y,z);
+    if(pe.distanceTo(pb)>0.3){
+      g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.LineCurve3(pe,pb),1,0.25,6,false), mat));
+    }
+    var div=document.createElement('div');
+    div.className='bein-schild';
+    div.innerHTML='Bein <b>S'+b.s+'</b> bergseitig<br>Tisch '+b.tid;
+    var lbl=new THREE.CSS2DObject(div); lbl.position.set(x,y+7.4,z); g.add(lbl);
+  });
   g.traverse(function(o){ if(o.isMesh) o.renderOrder=21; });
   g.userData.mat=mat;
   beinMarker=g;
@@ -1246,31 +1276,51 @@ function leitPanelFuellen(st){
     z.push('Rohr auf <b>'+Math.round(Math.min(h1,h2))+'–'+Math.round(Math.max(h1,h2))+' m ü.M.</b>');
   }
   // Wo endet der Strang? Für die Feinverteilung ist das die Kernfrage.
-  var ta=leitNaechsterTisch(st.a), tb=leitNaechsterTisch(st.b);
-  if(tb && (!ta || tb.d<ta.d)) z.push('führt zu Tisch <b>'+tb.id+'</b>');
-  else if(ta) z.push('führt zu Tisch <b>'+ta.id+'</b>');
-  if(ta && tb && ta.id!==tb.id) z.push('anderes Ende: Tisch <b>'+ta.id+'</b>');
-  // LV95 des Endpunkts – direkt für die Absteckung ablesbar
-  var e=st.b||st.a;
-  if(e) z.push('Ende LV95 <b>'+Math.round(e[0]+OE)+' / '+Math.round(e[1]+ON)+'</b>');
-  document.getElementById('lpBody').innerHTML=z.join('<br>');
-  panel.classList.add('show');
-  // Welches Bein? Nächstes BERGSEITIGES Bein (S2/S3) zu einem der beiden Rohrenden (max. 10 m).
+  // Der Tisch kommt NUR aus dem Bein (eine Stelle, kein Widerspruch im Panel);
+  // die Tischmitte dient nur als Rückfall, wenn die Bohrpunkte nicht geladen sind.
+  var basis=z.slice(), body=document.getElementById('lpBody');
   beinMarkerLoeschen();
-  if(st.k!=='schacht' && (st.a||st.b)){
-    var meinIdx=leitSel;
-    beinDatenHolen().then(function(){
-      if(leitSel!==meinIdx) return;                 // inzwischen anderes Rohr gewählt
-      var ba=beinNaechster(st.a,10,BEIN_BERG), bb=beinNaechster(st.b,10,BEIN_BERG);
-      var b=(bb && (!ba || bb.d<ba.d)) ? bb : ba;
-      if(!b) return;
-      beinMarkerZeichnen(b);
-      var body=document.getElementById('lpBody');
-      if(body) body.innerHTML+='<br>→ Bein <b>S'+b.s+'</b> (bergseitig) von Tisch <b>'+b.tid+'</b>'
-        +' (Rohrende '+b.d.toFixed(1).replace('.',',')+' m vom Pfahl)';
-      if(!pkOn && pkAuto && !arActive && !fpvOn) togglePkModelle();   // Stahlbau dazu, damit man das Bein sieht
-    });
+  if(st.k==='schacht' || !(st.a||st.b)){
+    body.innerHTML=basis.join('<br>'); panel.classList.add('show'); return;
   }
+  body.innerHTML=basis.concat(['Tischbein wird gesucht …']).join('<br>');
+  panel.classList.add('show');
+  var meinIdx=leitSel;
+  beinDatenHolen().then(function(daten){
+    if(leitSel!==meinIdx) return;                   // inzwischen anderes Rohr gewählt
+    var zeilen=basis.slice(), beine=[], rest=[];
+    if(!daten || !daten.length){
+      var ta=leitNaechsterTisch(st.a), tb=leitNaechsterTisch(st.b);
+      var t=(tb && (!ta || tb.d<ta.d)) ? tb : ta;
+      zeilen.push(t ? 'führt zu Tisch <b>'+t.id+'</b> (nach Tischmitte – Bohrpunkte nicht geladen)'
+                    : 'Bohrpunkte nicht geladen – Tischbein unbekannt');
+    } else {
+      [st.a, st.b].forEach(function(q){
+        if(!q) return;
+        var lv='LV95 '+Math.round(q[0]+OE)+' / '+Math.round(q[1]+ON);
+        if(leitIstKnoten(q, meinIdx)){ rest.push('Knoten: Leitung geht weiter ('+lv+')'); return; }
+        var b=beinNaechster(q, BEIN_MAX_D, BEIN_BERG);
+        if(!b){ rest.push('Ende ohne Tischbein in '+BEIN_MAX_D+' m – Hauptleitung/Verteiler? ('+lv+')'); return; }
+        // beide Enden am selben Bein (kurzes Stück am Pfahl): nur das nähere behalten
+        for(var i=0;i<beine.length;i++){
+          if(beine[i].tid===b.tid && beine[i].s===b.s){ if(b.d<beine[i].d) beine[i]=b; return; }
+        }
+        beine.push(b);
+      });
+      beine.sort(function(a,b){ return a.d-b.d; });
+      beine.forEach(function(b){
+        zeilen.push('→ Bein <b>S'+b.s+'</b> (bergseitig) von Tisch <b>'+b.tid+'</b>, Rohrende '
+          +b.d.toFixed(1).replace('.',',')+' m vom Pfahl · LV95 '+Math.round(b.q[0]+OE)+' / '+Math.round(b.q[1]+ON));
+      });
+      zeilen=zeilen.concat(rest);
+      if(beine.length) beinMarkerZeichnen(beine);
+    }
+    body.innerHTML=zeilen.join('<br>');
+    // Stahlbau dazu, damit man das Bein sieht – aber nur, wenn die Kamera schon im
+    // Bereich der Automatik ist (sonst schaltet pkAutomatik sofort wieder aus)
+    if(beine.length && !pkOn && pkAuto && !arActive && !fpvOn
+       && camera.position.distanceTo(controls.target)<PK_AUTO_AUS) togglePkModelle();
+  });
 }
 
 /* ═══════════════════════════════════════════════════════════
