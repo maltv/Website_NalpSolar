@@ -71,6 +71,8 @@ jobs:
           fi
           TAG=$(TZ=Europe/Zurich date +%Y-%m-%d)
           git commit -m "Baustand + Bohrstand aktualisiert ($TAG) - api.buildtrack.ch"
+          # Victors PC pusht als Fallback auf denselben Branch: erst nachziehen, sonst wird der Push abgewiesen.
+          git pull --rebase origin main
           git push
           echo 'pushed=true' >> "$GITHUB_OUTPUT"
 
