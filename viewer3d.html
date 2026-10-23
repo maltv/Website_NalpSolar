@@ -543,7 +543,10 @@ body.ar-mode { background:transparent!important; }
 </div>
 
 <div id="menuLayers" class="tb-menu">
-  <div class="tb-menu-h">Ebenen ein/aus</div>
+  <div class="tb-menu-h">Ausmass</div>
+  <button class="tb-btn" id="btnAusmass" onclick="toggleAusmass()"
+          title="Pneukran, Bohrgeräte, Arbeiter, Kühe, Gras und Büsche ausblenden – nur die Anlage bleibt">📏 Nur Anlage (Ausmass)</button>
+  <div class="tb-menu-h" style="margin-top:6px">Ebenen ein/aus</div>
   <button class="tb-btn active" id="btnTerrain" onclick="toggleTerrain()">🏔 Terrain</button>
   <button class="tb-btn active" id="btnSat"     onclick="toggleSat()">🛰 Satellit</button>
   <button class="tb-btn active" id="btnLeit"    onclick="toggleLayer('leitungen')">🟩 Werkleitungen PZ1–PZ3</button>
@@ -839,6 +842,7 @@ var layers={}, allLbls=[], labelsOn=false;
 var terrainMesh=null, satTex=null, terrainOn=true, satOn=true, terrainData=null;
 var gpsGroup=null, gpsWid=null, gpsOn=false;
 var tischeGroup=null, tischeLbls=[], tischeOn=true;
+var ausmassOn=false, menziOn=true;  // «Nur Anlage (Ausmass)»: Kran/Geräte/Leute/Kühe/Pflanzen aus (setAusmass)
 var tischeItems=[];                 // {mesh, legs[], lbl, x, z} pro Tisch (für AR-Cull)
 var baustand=null;                  // uploads/tables/baustand.json – nur gestellte Tische anzeigen
 var AR_TISCH_HIDE_R=10;             // Tische im 10m-Umkreis im AR ausblenden
@@ -5769,6 +5773,7 @@ function menziSet(farbe, lat, lon, quelle, live){
   var m=menzis[farbe];
   if(!m){
     m=menzis[farbe]={g:makeMenzi(farbe==='gelb'?0xf2b705:0xd8232a), live:false};
+    m.g.visible=menziOn;                             // «Nur Anlage (Ausmass)» blendet die Geräte aus
     scene.add(m.g);                                  // bewusst OHNE Beschriftung
   }
   if(m.live && !live) return;                        // Plan überschreibt nie live
@@ -5825,6 +5830,33 @@ function standorteTick(){
         ? gpsToScene(pk.lat,pk.lon,null) : null;
     }).catch(function(){ /* offline: Plan-Positionen bleiben */ });
 }
+
+/* ── «Nur Anlage (Ausmass)» ──────────────────────────────────
+   EIN Schalter für alles, was fürs Ausmass nicht zählt: Pneukran,
+   Menzi-Bohrgeräte, Bauarbeiter (+ Kletterer, Samuel), Kühe, Gräser
+   und Büsche. Nutzt die bestehenden Flags workersOn/cowsOn/craneOn/
+   vegetationOn (+ menziOn) – die Animationsschleife setzt die
+   Sichtbarkeit jedes Bild daraus. Merkt sich die Wahl im Browser
+   (localStorage nalp3dAusmass) und geht per Direktlink
+   viewer3d.html#ausmass gleich an. Auftrag Victor 23.10.2026 (Barbara). */
+function setAusmass(on){
+  ausmassOn=!!on;
+  workersOn=cowsOn=craneOn=vegetationOn=menziOn=!ausmassOn;
+  if(workerGroup)   workerGroup.visible  =workersOn    && !arActive;
+  if(climbersGroup) climbersGroup.visible=workersOn    && !arActive;
+  if(cowGroup)      cowGroup.visible     =cowsOn       && !arActive;
+  if(craneGroup)    craneGroup.visible   =craneOn      && !arActive;
+  if(vegGroup)      vegGroup.visible     =vegetationOn && !arActive;
+  Object.keys(menzis).forEach(function(k){ if(menzis[k] && menzis[k].g) menzis[k].g.visible=menziOn; });
+  var b=document.getElementById('btnAusmass'); if(b) b.classList.toggle('active',ausmassOn);
+  try{ localStorage.setItem('nalp3dAusmass', ausmassOn?'1':'0'); }catch(e){}
+}
+window.toggleAusmass=function(){
+  setAusmass(!ausmassOn);
+  if(typeof flashMsg==='function')
+    flashMsg(ausmassOn ? '📏 Nur Anlage: Kran, Geräte, Leute, Kühe und Pflanzen ausgeblendet'
+                       : 'Kran, Geräte, Leute, Kühe und Pflanzen wieder eingeblendet');
+};
 
 /* ── Toggle UI ───────────────────────────────────────────── */
 window.toggleTerrain=function(){
@@ -6661,6 +6693,11 @@ async function init(){
     perimeter.hx=Math.max(pS.x/2,80); perimeter.hz=Math.max(pS.z/2,80);
     // Bauarbeiter laufen im gleichen Projektgebiet
     workerArea={cx:pC.x, cz:pC.z, hx:Math.max(pS.x/2,80), hz:Math.max(pS.z/2,80)};
+    // «Nur Anlage (Ausmass)»: gemerkte Wahl oder Direktlink #ausmass – nicht in der Spiel-App
+    try{
+      var _am=false; try{ _am=localStorage.getItem('nalp3dAusmass')==='1'; }catch(e){}
+      if(!GAME_APP && (/ausmass/i.test(location.hash) || _am)) setAusmass(true);
+    }catch(e){ console.warn('ausmass',e); }
     spawnWorkers(5); if(workerGroup) setCast(workerGroup);
     try{ spawnCows(4); }catch(e){ console.warn('cows',e); }
     try{ spawnSamuel(); }catch(e){ console.warn('samuel',e); }
