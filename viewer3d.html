@@ -1600,8 +1600,9 @@ function footprintsSchreiben(){
 var fpMesh=null;
 async function loadTische(){
   txt('Lade Modultische …');
-  // Volldatensatz: alle Tische aus den ILF-Belegungslisten (PZ2025 A9 / PZ1 A3 /
-  // PZ2 A2 / PZ3 A1 + Serie 2025 aus A5) – Generator: tools/build_baustand.py
+  // Volldatensatz: alle Tische aus dem Buildtrack-API (/api/w1/q/tables, seit
+  // 23.10.2026 inkl. Bereich 9) – Generator: tools/build_modultische_api.py.
+  // Zeile [id,E,N,Z,az,len,typ,h_soll,[[e,n,h] S1..S4]]
   var data=null;
   try{
     var ra=await fetch('uploads/tables/modultische_all.json');
@@ -1697,12 +1698,15 @@ async function loadTische(){
     var id=t[0],E=t[1],N=t[2],Z=t[3],az=t[4],len=t[5];
     var azR=az*Math.PI/180;
     var ca=Math.cos(azR), sa=Math.sin(azR);
-    // Höhe: modul_hoehe (t[7]) = Unterkante Modulträger am Auflagerkopf
-    // (Bezugspunkt-Skizze ILF). Fallback/13 D_2026-Ausreisser: zentrum+4.2
-    // (Standard, belegt in allen ILF-2026-Listen + Nalpi H_SOLL).
+    // Höhe: t[7] = h_soll aus dem API (SOLL UK Modul am Auflagerkopf) – OHNE
+    // Klemme auf zentrum+4.2: bei der Serie 2025 liegt h_soll nur 0.2–0.9 m über
+    // dem Zentrum, und genau damit trifft die Nalpi-Passstückformel 1597 von 1618
+    // Tal-Passstücken auf < 5 mm (Prüfung 23.10.2026). Die alte Klemme hob diese
+    // 345 Tische um ~3.8 m. Fallback ohne t[7]: zentrum+4.2 (Serien 2026/2027).
     var mh=(t.length>7 && typeof t[7]==='number') ? t[7] : (Z+4.2);
-    if(mh-Z<3.0) mh=Z+4.2;
     var px=E-OE, py=mh-OZ, pz=-(N-ON);
+    // t[8] = SOLL-Pfahlpunkte [[e,n,h] S1..S4] (tools/build_modultische_api.py)
+    var pfaehle=(t.length>8 && t[8] && t[8].length===4) ? t[8] : null;
 
     // Rotation matrix M = Ry(-az)*Rx(-60°)
     // Col X (long axis):   (ca, 0, sa)
@@ -1737,27 +1741,46 @@ async function loadTische(){
         tischeGroup.add(rail); legsForItem.push(rail);
       });
     }
-    // Two legs at front (lower) edge corners: local (±len/2, -0.125, -1.5)
-    var half=len/2;
-    [[half,-0.125,-1.5],[-half,-0.125,-1.5]].forEach(function(lc){
-      // Transform corner to world space
-      var wc=new THREE.Vector3(lc[0],lc[1],lc[2]).applyMatrix4(rotM)
-              .add(new THREE.Vector3(px,py,pz));
-      if(!terrainMesh) return;
-      // Raycast down to terrain
-      var orig=new THREE.Vector3(wc.x, wc.y+15, wc.z);
-      var ray=new THREE.Raycaster(orig, downDir);
-      var hits=ray.intersectObject(terrainMesh);
-      if(!hits.length) return;
-      var gY=hits[0].point.y;
-      var legLen=wc.y-gY;
-      if(legLen<0.1||legLen>25) return;
-      // Scaled cylinder
-      var leg=new THREE.Mesh(legGeom, legMat);
-      leg.position.set(wc.x, gY+legLen/2, wc.z);
-      leg.scale.y=legLen;
-      tischeGroup.add(leg); legsForItem.push(leg);
-    });
+    // Stützen auf den SOLL-Pfahlköpfen (Victor 23.10.2026: Höhen vorne und
+    // hinten beziehen sich auf die Sollhöhen, nicht aufs 22-m-Geländeraster).
+    // Auflagerkopf = lotrecht über dem Talpfahl auf Höhe mh (ILF-Zentrum =
+    // Mitte S1–S4, geprüft). Talstütze S1/S4 lotrecht hinauf, Bergstütze S2/S3
+    // geneigt vom Bergpfahlkopf zum selben Auflagerkopf – ergibt an den
+    // Realdaten 47–50° Neigung, wie aus den Freigaben rückgerechnet (§Passstück).
+    if(pfaehle){
+      var kopf=function(p){ return new THREE.Vector3(p[0]-OE, mh-OZ, -(p[1]-ON)); };
+      var fuss=function(p){ return new THREE.Vector3(p[0]-OE, p[2]-OZ, -(p[1]-ON)); };
+      var k1=kopf(pfaehle[0]), k4=kopf(pfaehle[3]);
+      [[pfaehle[0],k1],[pfaehle[3],k4],[pfaehle[1],k1],[pfaehle[2],k4]].forEach(function(pr){
+        var p=pr[0]; if(typeof p[2]!=='number') return;
+        var a=fuss(p), b=pr[1], d=new THREE.Vector3().subVectors(b,a), L=d.length();
+        if(L<0.3||L>12) return;
+        var leg=new THREE.Mesh(legGeom, legMat);
+        leg.position.copy(a).addScaledVector(d,0.5);
+        leg.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), d.multiplyScalar(1/L));
+        leg.scale.y=L;
+        tischeGroup.add(leg); legsForItem.push(leg);
+      });
+    } else {
+      // Fallback ohne Pfahlpunkte: zwei Beine an der Vorderkante aufs Gelände
+      var half=len/2;
+      [[half,-0.125,-1.5],[-half,-0.125,-1.5]].forEach(function(lc){
+        var wc=new THREE.Vector3(lc[0],lc[1],lc[2]).applyMatrix4(rotM)
+                .add(new THREE.Vector3(px,py,pz));
+        if(!terrainMesh) return;
+        var orig=new THREE.Vector3(wc.x, wc.y+15, wc.z);
+        var ray=new THREE.Raycaster(orig, downDir);
+        var hits=ray.intersectObject(terrainMesh);
+        if(!hits.length) return;
+        var gY=hits[0].point.y;
+        var legLen=wc.y-gY;
+        if(legLen<0.1||legLen>25) return;
+        var leg=new THREE.Mesh(legGeom, legMat);
+        leg.position.set(wc.x, gY+legLen/2, wc.z);
+        leg.scale.y=legLen;
+        tischeGroup.add(leg); legsForItem.push(leg);
+      });
+    }
 
     // ID auf der Fläche (nur bei gestellten Tischen – spart Speicher)
     if(bsVis){

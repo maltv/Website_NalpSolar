@@ -1,8 +1,9 @@
 # Baustand + Bohrstand taeglich aus dem Buildtrack-API (ersetzt den Edge-Abgriff auf Victors PC).
 #
 # Holt die zwei Nalpi-Exporte von api.buildtrack.ch (tools/nalpi_stand_api.py), baut
-# uploads/tables/{bohrstand,bohrpunkte_koo,baustand,bereiche,rapport}.json mit den bestehenden
-# Buildern und committet sie auf main - genau wie der bisherige Lauf um 06:30.
+# uploads/tables/{modultische_all,bohrstand,bohrpunkte_koo,baustand,bereiche,rapport}.json mit den
+# bestehenden Buildern (modultische_all seit 23.10.2026 aus der Query-Engine /api/w1/q/tables, mit
+# SOLL-Pfahlpunkten fuer den 3D-Viewer) und committet sie auf main - genau wie der Lauf um 06:30.
 #
 # Voraussetzung: Repository-Secret NALPS_API_TOKEN (Settings > Secrets and variables > Actions).
 # Ein Service-Konto-Token aus der Nalpi-Erweiterung mit den Lesebereichen plan:read + drill:read.

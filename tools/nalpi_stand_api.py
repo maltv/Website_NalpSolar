@@ -8,11 +8,13 @@ denselben Datumsformen ("18.8.2026" bzw. "2026-08-17T22:00:00Z") und derselben R
     GET https://api.buildtrack.ch/api/w1/exports/drilling-point-data.csv -> uploads/_nalpi/DRILLING_POINT_DATA-<Tag>.csv
     GET https://api.buildtrack.ch/api/w1/exports/table-id.csv            -> uploads/_nalpi/export-tableId-<Tag>.csv
 
-Danach laufen die bestehenden Builder unveraendert:
+Danach laufen die Builder:
 
+    build_modultische_api.py (Query-Engine /api/w1/q/tables) -> uploads/tables/modultische_all.json
+                        (alle Tische mit Zentrum, Azimut, h_soll und SOLL-Pfahlpunkten S1-S4; seit 23.10.2026
+                         statt der ILF-Belegung-Excels aus der Dropbox - dort fehlten 229 Tische aus Bereich 9)
     build_bohrstand.py <DRILLING_POINT_DATA-<Tag>.csv>  -> uploads/tables/bohrstand.json + bohrpunkte_koo.json
     build_baustand.py  <export-tableId-<Tag>.csv>       -> uploads/tables/baustand.json
-                        (ohne Dropbox bleiben die Koordinaten modultische_all.json wie sie sind)
     build_rapport.py                                    -> uploads/tables/rapport.json
     und direkt aus dem Tischexport:                        uploads/tables/bereiche.json
                         (Tisch -> Bauphasen_STRABAG_260410, fuer schrauben/verschrauben/injektion)
@@ -181,13 +183,14 @@ def main() -> int:
     if a.nur_holen:
         return 0
 
+    bauen('build_modultische_api.py', '--basis', a.basis)
     bauen('build_bohrstand.py', bohr_csv)
     bauen('build_baustand.py', tisch_csv)
     bereiche_bauen(tisch_csv)
     bauen('build_rapport.py', bohr_csv, tisch_csv)
     if a.mit_leistung:
         bauen('build_leistung.py')
-    print('Fertig: uploads/tables/{bohrstand,bohrpunkte_koo,baustand,bereiche,rapport}.json')
+    print('Fertig: uploads/tables/{modultische_all,bohrstand,bohrpunkte_koo,baustand,bereiche,rapport}.json')
     return 0
 
 
