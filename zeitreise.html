@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NalpSolar · Zeitreise</title>
+<meta name="theme-color" content="#ffffff">
+<script>
+  window.NALP_GATE_CODE  = '6460';
+  window.NALP_GATE_KEY   = 'nalp_portal_unlock_v1';
+  window.NALP_GATE_TITEL = 'Zeitreise';
+  window.NALP_GATE_SUB   = 'Code eingeben / Enter code / Wpisz kod';
+</script>
+<script src="assets/js/nalp-gate.js"></script>
+<link rel="stylesheet" href="assets/js/leaflet/leaflet.css">
+<style>
+  /* Reiter «Zeitreise» (Auftrag Victor 23.10.2026): historische Luftbilder von swisstopo
+     (SWISSIMAGE Zeitreise, WMTS ch.swisstopo.swissimage-product) mit den Tischen darüber.
+     Tische: uploads/tables/modultische_all.json (täglich aus dem Buildtrack-API, alle Serien).
+     Jahre: nur die Befliegungen, die das Baufeld wirklich abdecken – FLUEGE unten. */
+  :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
+         --s25:#ffd400; --s26:#ff3b30; --s27:#00c8ff; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; height:100%; }
+  body{ display:flex; flex-direction:column; height:100dvh; color:var(--ink);
+        font-family:Arial,"Helvetica Neue",sans-serif; background:#2b2f33; }
+  header{ display:flex; align-items:center; gap:8px; padding:9px 10px; background:#fff;
+          border-bottom:4px solid var(--rot); flex:none; z-index:10; }
+  header a.home{ color:var(--ink); text-decoration:none; font-size:20px; }
+  header .logo img{ height:20px; display:block; }
+  header h1{ font-size:14.5px; margin:0; flex:1; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #map{ flex:1; min-height:0; background:#2b2f33; }
+
+  /* Jahresleiste unten */
+  .leiste{ flex:none; background:#fff; border-top:1px solid var(--line);
+           padding:8px 10px calc(8px + env(safe-area-inset-bottom)); }
+  .zeile{ display:flex; align-items:center; gap:8px; }
+  .zeile + .zeile{ margin-top:7px; }
+  #play{ flex:none; width:40px; height:40px; border-radius:50%; border:none; background:var(--rot);
+         color:#fff; font-size:17px; cursor:pointer; }
+  .jahre{ flex:1; min-width:0; display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; padding:2px 0; }
+  .jahre::-webkit-scrollbar{ display:none; }
+  .jahre button{ flex:none; border:1px solid var(--line); background:#f4f5f7; color:var(--ink);
+                 border-radius:999px; padding:9px 12px; font-size:14px; font-weight:800; cursor:pointer; }
+  .jahre button.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .info{ flex:1; min-width:0; font-size:12px; color:var(--mut); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .info b{ color:var(--ink); }
+  label.tg{ flex:none; display:flex; align-items:center; gap:5px; font-size:13px; font-weight:700; cursor:pointer; }
+  label.tg input{ width:18px; height:18px; margin:0; }
+  #suche{ flex:none; width:96px; border:1px solid var(--line); border-radius:6px; padding:7px 8px; font-size:14px; }
+
+  /* Legende oben links */
+  .legende{ background:rgba(255,255,255,.92); border-radius:6px; padding:6px 9px; font:12px Arial,sans-serif;
+            line-height:1.6; box-shadow:0 1px 4px rgba(0,0,0,.25); }
+  .legende i{ display:inline-block; width:14px; height:9px; margin-right:6px; vertical-align:middle; border:1.5px solid #111; }
+
+  /* Tischnummern ab Zoom 19 */
+  .tnr{ background:none; border:none; }
+  .tnr span{ position:absolute; transform:translate(-50%,-50%); white-space:nowrap; font:700 11px Arial,sans-serif;
+             color:#fff; text-shadow:0 0 3px #000,0 0 3px #000,0 0 2px #000; pointer-events:none; }
+  .leaflet-popup-content{ font-size:13px; line-height:1.5; }
+</style>
+</head>
+<body>
+<header>
+  <a class="home" href="index.html" title="Portal">‹</a>
+  <div class="logo"><img src="assets/img/strabag-logo.png" alt="STRABAG"></div>
+  <h1>Zeitreise · Luftbilder mit Tischen</h1>
+</header>
+
+<div id="map"></div>
+
+<div class="leiste">
+  <div class="zeile">
+    <button id="play" title="Abspielen">▶</button>
+    <div class="jahre" id="jahre"></div>
+  </div>
+  <div class="zeile">
+    <div class="info" id="info">Tische werden geladen …</div>
+    <label class="tg"><input type="checkbox" id="tischeAn" checked> Tische</label>
+    <input id="suche" type="search" inputmode="numeric" placeholder="Tisch Nr." enterkeyhint="search">
+  </div>
+</div>
+
+<script src="assets/js/leaflet/leaflet.js"></script>
+<script>
+// Befliegungen über dem Baufeld laut swisstopo-Metadaten
+// (api3.geo.admin.ch identify, Ebene ch.swisstopo.swissimage-product.metadata, Punkt LV95 2701850/1165967,
+// abgefragt 23.10.2026). Vor 1959 liefert swisstopo hier nur leere Kacheln; «current» = Flug 2025.
+// Der Jahreswert ist derselbe wie im Zeitregler von map.geo.admin.ch.
+const FLUEGE = [
+  [1959,'s/w','50 cm'], [1961,'s/w','50 cm'], [1973,'s/w','50 cm'], [1979,'s/w','50 cm'],
+  [1985,'s/w','50 cm'], [1990,'s/w','50 cm'], [1997,'s/w','50 cm'], [2000,'Farbe','50 cm'],
+  [2003,'Farbe','50 cm'], [2007,'Farbe','50 cm'], [2010,'Farbe','50 cm'], [2013,'Farbe','50 cm'],
+  [2016,'Farbe','50 cm'], [2019,'Farbe','25 cm'], [2022,'Farbe','25 cm'], [2025,'Farbe','25 cm']
+];
+const SERIE_FARBE = { '2025': '#ffd400', '2026': '#ff3b30', '2027': '#00c8ff' };
+const TISCH_TIEFE = 3;   // m quer zur Tischachse – gleiche Tiefe wie die Tischflächen in karte.html
+
+// LV95 -> WGS84, dieselbe Näherung wie ch1903PlusToWgs84() in karte.html (± 1 m)
+function lv95ZuWgs(east, north) {
+  const x = (north - 1200000) / 1000000, y = (east - 2600000) / 1000000;
+  const lat = 16.9023892 + 3.238272*x - 0.270978*y*y - 0.002528*x*x - 0.0447*y*y*x - 0.0140*x*x*x;
+  const lng = 2.6779094 + 4.728982*y + 0.791484*y*x + 0.1306*y*x*x - 0.0436*y*y*y;
+  return L.latLng(lat * 100 / 36, lng * 100 / 36);
+}
+
+const map = L.map('map', { zoomControl: true, maxZoom: 21, minZoom: 12 })
+  .setView([46.6375, 8.7685], 17);
+map.attributionControl.setPrefix(false);
+
+// ── Luftbild je Jahr ───────────────────────────────────────────────
+// Beim Wechsel kommt die neue Ebene über die alte; die alte geht erst weg, wenn die neue geladen ist
+// (kein Flackern beim Abspielen). Wird schneller geklickt als geladen, räumt die zuletzt gewählte
+// Ebene beim Laden alle älteren weg.
+let bild = null, jahr = null;
+const bildEbenen = [];
+function luftbild(j) {
+  const neu = L.tileLayer(
+    'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage-product/default/' + j + '/3857/{z}/{x}/{y}.jpeg',
+    { maxNativeZoom: 19, maxZoom: 21, attribution: 'Luftbild © <a href="https://map.geo.admin.ch" target="_blank">swisstopo</a> SWISSIMAGE Zeitreise' });
+  bild = neu;
+  bildEbenen.forEach(e => e.bringToBack());
+  bildEbenen.push(neu);
+  neu.on('load', () => {
+    if (neu !== bild) return;
+    bildEbenen.splice(0).forEach(e => { if (e !== neu) map.removeLayer(e); });
+    bildEbenen.push(neu);
+  });
+  neu.addTo(map);
+}
+
+function setzeJahr(j) {
+  const f = FLUEGE.find(x => x[0] === j) || FLUEGE[0];
+  jahr = f[0];
+  luftbild(jahr);
+  document.querySelectorAll('#jahre button').forEach(b => {
+    const an = Number(b.dataset.j) === jahr;
+    b.classList.toggle('on', an);
+    if (an) b.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+  });
+  zeigeInfo();
+  try { history.replaceState(null, '', '#' + jahr); } catch (e) {}
+}
+
+const jahreEl = document.getElementById('jahre');
+FLUEGE.forEach(f => {
+  const b = document.createElement('button');
+  b.textContent = f[0];
+  b.dataset.j = f[0];
+  b.onclick = () => { stopp(); setzeJahr(f[0]); };
+  jahreEl.appendChild(b);
+});
+
+// Abspielen: alle 2.5 s ein Flug weiter, am Ende stehen bleiben
+let spielTimer = null;
+function stopp() { clearInterval(spielTimer); spielTimer = null; document.getElementById('play').textContent = '▶'; }
+document.getElementById('play').onclick = () => {
+  if (spielTimer) return stopp();
+  let i = FLUEGE.findIndex(f => f[0] === jahr);
+  if (i >= FLUEGE.length - 1) { i = -1; }
+  document.getElementById('play').textContent = '❚❚';
+  const schritt = () => {
+    i++;
+    if (i >= FLUEGE.length) return stopp();
+    setzeJahr(FLUEGE[i][0]);
+    if (i === FLUEGE.length - 1) stopp();
+  };
+  schritt();
+  spielTimer = setInterval(schritt, 2500);
+};
+
+// ── Tische ─────────────────────────────────────────────────────────
+// modultische_all.json: [id, E, N, Z, az, len, typ, h_soll, [[e,n,h] S1..S4]] (tools/build_modultische_api.py).
+// az = Modul-Blickrichtung, die Tischachse steht senkrecht dazu (az + 90°).
+// Fläche = Länge × TISCH_TIEFE, mittig auf dem Tischzentrum (= Mitte der Pfähle S1–S4).
+const tischeLayer = L.layerGroup().addTo(map);
+const nummernLayer = L.layerGroup();
+const tischIndex = new Map();
+let anzahl = 0, zaehlung = {};
+
+function tischFlaeche(E, N, az, len) {
+  const a = az * Math.PI / 180;
+  const ax = { e: Math.sin(a + Math.PI / 2), n: Math.cos(a + Math.PI / 2) };   // längs
+  const qu = { e: Math.sin(a), n: Math.cos(a) };                               // quer
+  const l = len / 2, t = TISCH_TIEFE / 2;
+  return [[l, t], [-l, t], [-l, -t], [l, -t]]
+    .map(([u, v]) => lv95ZuWgs(E + ax.e * u + qu.e * v, N + ax.n * u + qu.n * v));
+}
+
+function zeigeInfo() {
+  const f = FLUEGE.find(x => x[0] === jahr);
+  const bildTxt = f ? '<b>Luftbild ' + f[0] + '</b> · ' + f[1] + ' · ' + f[2] : '';
+  const tischTxt = anzahl ? ' · ' + anzahl + ' Tische' : '';
+  document.getElementById('info').innerHTML = bildTxt + tischTxt;
+}
+
+fetch('uploads/tables/modultische_all.json', { cache: 'no-cache' })
+  .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+  .then(rows => {
+    rows.forEach(t => {
+      const [id, E, N, , az, len, typ] = t;
+      if (!isFinite(E) || !isFinite(N) || !isFinite(az)) return;
+      const serie = String(typ || '').split('_')[1] || '';
+      const farbe = SERIE_FARBE[serie] || '#ffffff';
+      const pg = L.polygon(tischFlaeche(E, N, az, len || 12.394), {
+        color: '#111', weight: 1, fillColor: farbe, fillOpacity: .6
+      }).addTo(tischeLayer);
+      pg.bindPopup(() =>
+        '<b>Tisch ' + id + '</b><br>Typ ' + String(typ || '').replace('_', ' · Serie ') +
+        '<br>Länge ' + Number(len).toFixed(2) + ' m' +
+        '<br><small>LV95 ' + E.toFixed(1) + ' / ' + N.toFixed(1) + '</small>' +
+        '<br><small>Luftbild ' + jahr + '</small>');
+      L.marker(lv95ZuWgs(E, N), {
+        interactive: false, keyboard: false,
+        icon: L.divIcon({ className: 'tnr', html: '<span>' + id + '</span>', iconSize: [0, 0] })
+      }).addTo(nummernLayer);
+      tischIndex.set(String(id).trim().toLowerCase(), pg);
+      zaehlung[serie] = (zaehlung[serie] || 0) + 1;
+      anzahl++;
+    });
+    if (anzahl) map.fitBounds(L.featureGroup(tischeLayer.getLayers()).getBounds(), { padding: [10, 10] });
+    legende();
+    zeigeInfo();
+    nummernNachZoom();
+  })
+  .catch(e => { document.getElementById('info').textContent = 'Tische konnten nicht geladen werden (' + e.message + ')'; });
+
+function legende() {
+  const c = L.control({ position: 'topright' });
+  c.onAdd = () => {
+    const d = L.DomUtil.create('div', 'legende');
+    d.innerHTML = Object.keys(SERIE_FARBE).map(s =>
+      '<div><i style="background:' + SERIE_FARBE[s] + '"></i>Serie ' + s + ' (' + (zaehlung[s] || 0) + ')</div>').join('');
+    return d;
+  };
+  c.addTo(map);
+}
+
+// Nummern erst ab Zoom 19 – vorher stehen sie übereinander
+function nummernNachZoom() {
+  const zeigen = document.getElementById('tischeAn').checked && map.getZoom() >= 19;
+  if (zeigen && !map.hasLayer(nummernLayer)) nummernLayer.addTo(map);
+  if (!zeigen && map.hasLayer(nummernLayer)) map.removeLayer(nummernLayer);
+}
+map.on('zoomend', nummernNachZoom);
+
+document.getElementById('tischeAn').onchange = (e) => {
+  if (e.target.checked) tischeLayer.addTo(map); else map.removeLayer(tischeLayer);
+  nummernNachZoom();
+};
+
+document.getElementById('suche').addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  const pg = tischIndex.get(e.target.value.trim().toLowerCase());
+  if (!pg) { e.target.style.borderColor = 'var(--rot)'; return; }
+  e.target.style.borderColor = '';
+  e.target.blur();
+  if (!document.getElementById('tischeAn').checked) document.getElementById('tischeAn').click();
+  map.setView(pg.getBounds().getCenter(), 19);
+  pg.openPopup();
+});
+
+// Start: Jahr aus der Adresse (zeitreise.html#1973), sonst der älteste Flug
+const ausHash = Number((location.hash || '').replace('#', ''));
+setzeJahr(FLUEGE.some(f => f[0] === ausHash) ? ausHash : FLUEGE[0][0]);
+</script>
+</body>
+</html>
