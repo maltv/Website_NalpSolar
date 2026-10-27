@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NalpSolar · Deckbleche Einzelfundamente</title>
+<meta name="theme-color" content="#ffffff">
+<script>
+  window.NALP_GATE_CODE  = '6460';
+  window.NALP_GATE_KEY   = 'nalp_portal_unlock_v1';
+  window.NALP_GATE_TITEL = 'Deckbleche Einzelfundamente';
+  window.NALP_GATE_SUB   = 'Code eingeben / Enter code / Wpisz kod';
+</script>
+<script src="assets/js/nalp-gate.js"></script>
+<link rel="stylesheet" href="assets/js/leaflet/leaflet.css">
+<style>
+  /* Reiter «Deckbleche» – Verstärkung Einzelfundamente nach BA 0272 A1 (ILF, 10.09.2026)
+     + Mail Borner 09.10.2026 (15 Fundamente, ein Blechtyp, Blech = Bohrschablone).
+     Fundamente + Lieferung: uploads/deckbleche.json (EINE Stelle). Planausschnitte: Tools/Deckbleche_Bilder_Bauen.py.
+     WERKZEUGE.md §84. Optik wie zugproben.html. */
+  :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
+         --blau:#1565c0; --lila:#8e24aa; --grau:#8a8e94; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body{ margin:0; background:#eef0f3; min-height:100vh; color:var(--ink);
+        font-family:Arial,"Helvetica Neue",sans-serif; }
+  header{ position:sticky; top:0; z-index:10; display:flex; align-items:center; gap:8px;
+          padding:9px 10px; background:#fff; border-bottom:4px solid var(--rot); }
+  header a.home{ color:var(--ink); text-decoration:none; font-size:20px; }
+  header .logo img{ height:20px; display:block; }
+  header h1{ font-size:14.5px; margin:0; flex:1; font-weight:800; }
+  .tabs{ display:flex; background:#fff; border-bottom:1px solid var(--line); position:sticky; top:52px; z-index:9; }
+  .tabs button{ flex:1 1 25%; border:none; background:none; padding:11px 2px; font-size:12px; font-weight:800;
+        white-space:nowrap; color:var(--mut); cursor:pointer; border-bottom:3px solid transparent; }
+  .tabs button.on{ color:var(--rot); border-bottom-color:var(--rot); }
+  main{ max-width:760px; margin:0 auto; padding:12px 12px 80px; }
+  section[hidden]{ display:none; }
+  .box{ background:#fff; border:1px solid var(--line); border-left:5px solid var(--rot);
+        border-radius:6px; padding:13px; margin-bottom:13px; box-shadow:0 1px 4px rgba(20,25,32,.07); }
+  .box.lila{ border-left-color:var(--lila); }
+  .box.blau{ border-left-color:var(--blau); }
+  .box.grau{ border-left-color:#9aa0a6; }
+  .box.warn{ background:#fdecea; border-color:#f3b8b5; border-left-color:var(--rot); }
+  .box h2{ margin:0 0 6px; font-size:15.5px; }
+  .box p{ margin:0 0 8px; font-size:14px; line-height:1.5; }
+  .box .sub{ font-size:12px; color:var(--mut); line-height:1.45; }
+  .box ul{ margin:4px 0 0; padding-left:18px; font-size:14px; line-height:1.5; }
+  ol.todo{ margin:6px 0 0; padding-left:0; list-style:none; counter-reset:s; }
+  ol.todo li{ counter-increment:s; display:flex; gap:10px; align-items:flex-start; padding:9px 0;
+              border-top:1px solid var(--line); font-size:14.5px; line-height:1.45; }
+  ol.todo li::before{ content:counter(s); flex:0 0 28px; height:28px; border-radius:50%; background:var(--lila);
+              color:#fff; font-weight:900; display:flex; align-items:center; justify-content:center; font-size:14px; }
+  .big{ font-size:30px; font-weight:900; color:var(--lila); line-height:1; }
+  .btn{ display:inline-block; border:none; border-radius:6px; padding:12px 16px; font-size:14.5px;
+        font-weight:800; cursor:pointer; color:#fff; background:var(--rot); text-decoration:none; text-align:center; }
+  .btn.w{ background:#fff; color:var(--ink); border:1px solid #c9ccd2; }
+  .btnrow{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  .bild{ width:100%; border-radius:6px; border:1px solid var(--line); display:block; margin-top:8px; background:#fff; }
+  .kartebox{ position:relative; isolation:isolate; }
+  #map2d{ position:relative; z-index:0; height:calc(100vh - 230px); min-height:380px; border-radius:6px; border:1px solid var(--line); background:#d9dde3; }
+  .gps{ position:absolute; right:10px; top:10px; z-index:900; }
+  .legende{ display:flex; flex-wrap:wrap; gap:8px 14px; font-size:12px; color:var(--mut); margin:8px 0 0; align-items:center; }
+  .legende i{ display:inline-block; width:16px; height:16px; border-radius:50%; vertical-align:-3px; margin-right:4px; border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.25); }
+  .stand{ font-size:11.5px; color:var(--mut); margin-top:6px; }
+  .leaflet-container{ font-family:inherit; }
+  .mk{ display:inline-flex; align-items:center; gap:4px; height:24px; padding:0 8px 0 4px; border-radius:12px; border:2px solid #fff;
+       box-shadow:0 1px 4px rgba(0,0,0,.5); color:#fff; font-weight:900; font-size:12px; white-space:nowrap; cursor:pointer;
+       transform:translate(-12px,-12px); }
+  .mk::before{ content:''; width:10px; height:10px; border-radius:50%; background:#fff; flex:0 0 10px; opacity:.9; }
+  .weit .mk{ width:18px; height:18px; padding:0; transform:translate(-9px,-9px); }
+  .weit .mk::before, .weit .mk .l{ display:none; }
+  .leaflet-marker-icon.mkw{ overflow:visible; background:none; border:0; }
+  .berg{ background:var(--rot)!important; } .tal{ background:var(--blau)!important; }
+  .pos{ background:#fff; border:1px solid var(--line); border-left:5px solid var(--blau); border-radius:6px;
+        padding:10px 12px; margin-bottom:8px; box-shadow:0 1px 4px rgba(20,25,32,.07); display:flex; gap:10px; align-items:flex-start; cursor:pointer; }
+  .pos.k-berg{ border-left-color:var(--rot); }
+  .pos .nr{ flex:0 0 52px; height:44px; border-radius:22px; color:#fff; font-weight:900; font-size:12.5px;
+        display:flex; align-items:center; justify-content:center; line-height:1.1; text-align:center; }
+  .pos .tx{ flex:1; min-width:0; }
+  .pos .was{ font-size:15px; font-weight:800; }
+  .pos .kom{ font-size:12.5px; color:var(--mut); line-height:1.45; margin-top:2px; }
+  .pos .tun{ font-size:13px; font-weight:800; margin-top:5px; }
+  .gruppe{ font-size:12.5px; font-weight:900; color:var(--mut); text-transform:uppercase; letter-spacing:.04em; margin:14px 2px 6px; }
+  .klein{ font-size:11.5px; color:var(--mut); margin-top:6px; line-height:1.45; }
+</style>
+</head>
+<body>
+<header>
+  <a class="home" href="index.html" title="Portal">‹</a>
+  <div class="logo"><img src="assets/img/strabag-logo.png" alt="STRABAG"></div>
+  <h1>🔩 Deckbleche Einzelfundamente</h1>
+</header>
+
+<div class="tabs">
+  <button class="on" data-t="info" onclick="tab('info')">📋 Was tun</button>
+  <button data-t="k2d" onclick="tab('k2d')">🗺 Karte</button>
+  <button data-t="liste" onclick="tab('liste')">🔢 Fundamente</button>
+  <button data-t="plan" onclick="tab('plan')">📐 Plan</button>
+</div>
+
+<main>
+  <!-- ================= WAS TUN ================= -->
+  <section id="t-info">
+    <div class="box lila">
+      <div class="big" id="anz">15</div>
+      <h2>Fundamente – je 2 Deckbleche = <span id="anzBl">30</span> Bleche</h2>
+      <p>Zwei Deckbleche auf die Fussplatte, mit <b>4 Ankern M27</b> in den Beton, dann untergiessen.
+         <b id="anzBerg">7</b> bergseitige bekommen zusätzlich <b>20 cm Aufbeton</b> rundherum.</p>
+      <div class="sub">Wo: Reiter <a href="#k2d" onclick="tab('k2d');return false;">🗺 Karte</a> und
+        <a href="#liste" onclick="tab('liste');return false;">🔢 Fundamente</a>.</div>
+    </div>
+
+    <div class="box blau">
+      <h2>🚚 Lieferung <span id="liefTag">Mo 02.11.2026</span> – IP Tal 1</h2>
+      <p id="liefTx">30 Deckbleche von Debrunner, zusammen 616 kg (je Blech 20.5 kg).
+         <b>LKW OHNE Kran</b> – Abladen vorbereiten. Der Fahrer ruft 1 Stunde vorher bei Victor an.</p>
+      <div class="sub">Alle 30 Bleche sind gleich: 570 × 150 × 30 mm, S355, feuerverzinkt.
+        Ein Typ für alle Fundamente (Typ E 2025).</div>
+    </div>
+
+    <div class="box warn">
+      <h2>⚠ Anker M27 erst bohren, wenn das Blech liegt</h2>
+      <p>Das Blech ist die <b>Bohrschablone</b>. Durch die Langlöcher bohren – sonst passen die Löcher nicht.</p>
+      <p><b>Talseitig:</b> nichts anfangen, bevor die Bleche da sind.</p>
+    </div>
+
+    <div class="box">
+      <h2>Ablauf je Fundament</h2>
+      <ol class="todo">
+        <li><div><b>M20-Löcher ins Blech bohren.</b> Die Bleche kommen <b>ohne</b> die 2 mittleren Löcher.
+            Am Fundament den Abstand der 2 M20-Gewinde messen (ein Paar je Blech), aufs Blech übertragen,
+            <b>Ø 22 mm</b> bohren – Magnetbohrer.</div></li>
+        <li><div><b>Bleche auflegen:</b> zwei Bleche parallel auf die Fussplatte, je eins über ein M20-Paar
+            (Reiter <a href="#plan" onclick="tab('plan');return false;">📐 Plan</a>). Die äusseren Langlöcher liegen neben der Fussplatte über dem Beton.</div></li>
+        <li><div><b>Anker M27 bohren – durch die Langlöcher.</b> Bohrloch reinigen und <b>HAS-U M27</b> mit
+            <b>Hilti HIT-HY 200-A</b> einkleben, nach der Hilti-Setzanleitung. Aushärtezeit abwarten (steht auf der Kartusche).</div></li>
+        <li><div><b>Höhe:</b> Stütze mit den Muttern unter der Fussplatte auf Höhe stellen.
+            Muttern zu klein → Schiftbleche unterlegen, die werden mit vergossen.</div></li>
+        <li><div><b>Untergiessen</b> mit <b>SikaGrout-314 N</b> (oder gleichwertig): bis Unterkante Fussplatte,
+            auch die Langlöcher der Fussplatte füllen. <b>Keine Luftblasen</b> unter der Fussplatte.</div></li>
+        <li><div><b>Verschrauben:</b> M27 mit Mutter und Unterlegscheibe. Die M20 auch, wenn das Gewinde lang genug ist.</div></li>
+      </ol>
+    </div>
+
+    <div class="box">
+      <h2>Bergseitig zusätzlich: 20 cm Aufbeton</h2>
+      <ul>
+        <li>Betonfläche <b>50 cm hoch aufrauen</b> (ca. 1.5 mm) – leicht aufspitzen mit dem Hilti-Bohrhammer.</li>
+        <li><b>Schubverbinder HCC-K Ø 12, L 230 mm</b> mit HIT-HY 200-A einkleben, 90 mm tief im Bestand (ca. 24 je Fundament).</li>
+        <li><b>Netz K355</b> an die Schubverbinder binden.</li>
+        <li>Beton <b>NPK F</b> (C30/37, XC4, XD3, XF2), AAR-beständig, Überdeckung 55 mm.</li>
+      </ul>
+    </div>
+
+    <div class="box grau">
+      <h2>Material</h2>
+      <ul>
+        <li><b>30 Deckbleche</b> – Debrunner, kommen am <span id="liefTag2">02.11.</span> auf IP Tal 1.</li>
+        <li><b>60 Ankerstangen HAS-U M27</b> mit Mutter + Scheibe (4 je Fundament) – Hilti.</li>
+        <li>Hilti <b>HIT-HY 200-A</b> · <b>SikaGrout-314 N</b> · Magnetbohrer mit Bohrer Ø 22.</li>
+        <li>Bergseitig: HCC-K 12 × 230, Netz K355, Beton NPK F.</li>
+      </ul>
+    </div>
+
+    <div class="box grau">
+      <h2>Noch offen – vor dem ersten Fundament mit François klären</h2>
+      <ul>
+        <li><b>Setztiefe M27:</b> der Plan sagt 250 mm (gerechnet mit einer Stange ≥ 400 mm). Bestellt sind
+            HAS-U <b>M27 × 340 mm</b>. Setztiefe festlegen, bevor das erste Loch gebohrt wird.</li>
+        <li><b>M27-Muttern:</b> vor oder nach dem Untergiessen anziehen – und mit welchem Moment?</li>
+        <li><b>M20:</b> reicht das Gewinde über 30 mm Blech + Mutter? Der Plan sagt «wenn möglich».</li>
+        <li><b>Verzinkung</b> an den neu gebohrten Ø 22-Löchern ausbessern?</li>
+      </ul>
+    </div>
+
+    <div class="box grau">
+      <h2>Quelle</h2>
+      <p class="sub">Baustellenanweisung <b>NalpSolar_51_BA_0272_A1_MT-S-Fund-Garnitur_260910</b>
+         «Anpassung Betongarnitur Einzelfundamente Typ D/E», ILF, 10.09.2026 (10 Fundamente, Plan S. 3).<br>
+         Mail François Borner 09.10.2026: 5 Fundamente zusätzlich (2192 S3, 2094 S2/S3, 2024 S1/S4),
+         nur noch ein Blechtyp, Anker erst mit dem Blech als Schablone, talseitig auf die Bleche warten.<br>
+         Liefertermin: Auftragsbestätigung Debrunner vom 21.10.2026. Lage = Nalpi-Bohrpunkt des Beins.</p>
+      <div class="btnrow">
+        <a class="btn w" href="uploads/deckbleche/BA_0272_A1_Betongarnitur_Einzelfundamente_260910.pdf" target="_blank">📄 Anweisung (PDF)</a>
+      </div>
+      <div class="stand" id="standInfo"></div>
+    </div>
+  </section>
+
+  <!-- ================= KARTE ================= -->
+  <section id="t-k2d" hidden>
+    <div class="kartebox">
+      <div id="map2d"></div>
+      <button class="btn w gps" onclick="gps()" title="Mein Standort">📍</button>
+    </div>
+    <div class="legende">
+      <span><i class="berg"></i>bergseitig – Bleche + Aufbeton</span>
+      <span><i class="tal"></i>talseitig – nur Bleche</span>
+      <span>Punkt antippen = Angaben + hinführen</span>
+    </div>
+  </section>
+
+  <!-- ================= FUNDAMENTE ================= -->
+  <section id="t-liste" hidden>
+    <div id="liste"></div>
+  </section>
+
+  <!-- ================= PLAN ================= -->
+  <section id="t-plan" hidden>
+    <div class="box">
+      <h2>Draufsicht: so liegen die 2 Bleche</h2>
+      <img class="bild" src="uploads/deckbleche/Draufsicht_E2025.png" alt="Fundament mit Deckblech E 2025, Draufsicht 1:10 (BA 0272 A1)" loading="lazy">
+      <div class="klein">BA 0272 A1, Seite 3. Die roten Punkte aussen = Anker M27. Der rote Rahmen = Aufbeton (nur bergseitig).</div>
+    </div>
+    <div class="box">
+      <h2>Schnitt</h2>
+      <img class="bild" src="uploads/deckbleche/Schnitt.png" alt="Schematischer Schnitt (BA 0272 A1)" loading="lazy">
+      <div class="klein">Von unten: Beton – SikaGrout 20 mm – Fussplatte – Deckblech 30 mm – Mutter mit Scheibe.</div>
+    </div>
+    <div class="box">
+      <h2>Das Blech</h2>
+      <img class="bild" src="uploads/deckbleche/Blech_E2025.png" alt="Fussplatte E 2025 und Deckblech E 2025, 1:5 (BA 0272 A1)" loading="lazy">
+      <div class="klein">Im Plan mit den 2 mittleren Löchern Ø 22 für M20. Geliefert werden die Bleche OHNE diese Löcher –
+        die bohren wir passend zum Fundament (Ablauf Schritt 1).</div>
+    </div>
+    <div class="btnrow">
+      <a class="btn w" href="uploads/deckbleche/BA_0272_A1_Betongarnitur_Einzelfundamente_260910.pdf" target="_blank">📄 ganze Anweisung (PDF)</a>
+    </div>
+  </section>
+</main>
+
+<script src="assets/js/leaflet/leaflet.js"></script>
+<script>
+(function(){
+  'use strict';
+  var DATEN='uploads/deckbleche.json', BOHR='uploads/tables/bohrstand.json';
+  var db=null, bohr=null, map=null, MK={}, gpsMarker=null;
+  var SEITE={
+    berg:{t:'bergseitig', tun:'2 Bleche + 20 cm Aufbeton', farbe:'#D72622'},
+    tal: {t:'talseitig',  tun:'2 Bleche, untergiessen – kein Aufbeton', farbe:'#1565c0'}
+  };
+  var TAGE=['So','Mo','Di','Mi','Do','Fr','Sa'];
+
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function key(p){ return p.tisch+'_S'+p.s; }
+  window.tab=function(t){
+    document.querySelectorAll('.tabs button').forEach(function(b){ b.classList.toggle('on', b.dataset.t===t); });
+    ['info','k2d','liste','plan'].forEach(function(k){ $('t-'+k).hidden=(k!==t); });
+    try{ history.replaceState(null,'','#'+t); }catch(e){}
+    if(t==='k2d'){ mapBauen(); setTimeout(function(){ if(map) map.invalidateSize(); },50); }
+  };
+
+  /* LV95 -> WGS84 (swisstopo Näherungsformel, gleiche Funktion wie in karte.html) */
+  function ll(E,N){
+    var x=(N-1200000)/1e6, y=(E-2600000)/1e6;
+    var lat=16.9023892+3.238272*x-0.270978*y*y-0.002528*x*x-0.0447*y*y*x-0.0140*x*x*x;
+    var lng=2.6779094+4.728982*y+0.791484*y*x+0.1306*y*x*x-0.0436*y*y*y;
+    return [lat*100/36, lng*100/36];
+  }
+  function json(u){ return fetch(u,{cache:'no-store'}).then(function(r){ if(!r.ok) throw new Error(u+' '+r.status); return r.json(); }); }
+
+  function infoBauen(){
+    var F=db.fundamente, nb=F.filter(function(p){ return p.seite==='berg'; }).length, L=db.lieferung;
+    $('anz').textContent=F.length;
+    $('anzBl').textContent=F.length*2;
+    $('anzBerg').textContent=nb;
+    var d=new Date(L.datum+'T12:00:00'), tag=TAGE[d.getDay()]+' '+L.datum.split('-').reverse().join('.');
+    $('liefTag').textContent=tag;
+    $('liefTag2').textContent=tag;
+    $('standInfo').textContent='Stand '+db.stand.split('-').reverse().join('.')+' · '+F.length+' Fundamente, '+nb+' bergseitig, '+(F.length-nb)+' talseitig';
+  }
+
+  function zeile(p){
+    var S=SEITE[p.seite];
+    return '<div class="pos k-'+p.seite+'" onclick="zeige(\''+key(p)+'\')">'
+      +'<div class="nr" style="background:'+S.farbe+'">'+esc(p.tisch)+'<br>S'+p.s+'</div>'
+      +'<div class="tx"><div class="was">Tisch '+esc(p.tisch)+' · S'+p.s+' · '+S.t+'</div>'
+      +'<div class="kom">'+(p.fuss?'Fussplatte '+esc(p.fuss)+' · ':'')+(p.quelle==='BA'?'BA 0272':'zusätzlich (François 09.10.)')+'</div>'
+      +'<div class="tun">'+esc(S.tun)+'</div></div></div>';
+  }
+  function listeBauen(){
+    var h='';
+    ['berg','tal'].forEach(function(s){
+      var ps=db.fundamente.filter(function(p){ return p.seite===s; });
+      h+='<div class="gruppe">'+SEITE[s].t+' – '+ps.length+' Fundamente</div>'+ps.map(zeile).join('');
+    });
+    $('liste').innerHTML=h;
+  }
+
+  function mapBauen(){
+    if(map || typeof L==='undefined' || !db) return;
+    map=L.map('map2d',{ zoomSnap:0.25, maxZoom:22, attributionControl:true });
+    map.attributionControl.setPrefix('');
+    L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg',
+      { maxNativeZoom:20, maxZoom:22, attribution:'© swisstopo' }).addTo(map);
+    L.control.scale({imperial:false, maxWidth:110}).addTo(map);
+    /* Umfeld: alle Bohrpunkte blass (Canvas, nicht anklickbar – schont das Handy) */
+    var cv=L.canvas({padding:.3}), DB={};
+    db.fundamente.forEach(function(p){ DB[key(p)]=1; });
+    ((bohr&&bohr.punkte)||[]).forEach(function(r){
+      if(DB[r[0]+'_S'+r[1]]) return;
+      L.circleMarker(ll(+r[2],+r[3]),{renderer:cv, radius:2.4, stroke:false, interactive:false,
+        fillColor:'#ffffff', fillOpacity:.55}).addTo(map);
+    });
+    var alle=[];
+    db.fundamente.forEach(function(p){
+      var S=SEITE[p.seite], q=ll(p.E,p.N); alle.push(q);
+      var m=L.marker(q,{ icon:L.divIcon({ className:'mkw', html:'<div class="mk '+p.seite+'"><span class="l">'+esc(p.tisch)+' S'+p.s+'</span></div>',
+        iconSize:[0,0], iconAnchor:[0,0] }), title:p.tisch+' S'+p.s }).addTo(map);
+      m.bindPopup('<b>Tisch '+esc(p.tisch)+' · S'+p.s+'</b> · '+S.t
+        +'<br><b style="color:'+S.farbe+'">'+esc(S.tun)+'</b>'
+        +(p.fuss?'<br>Fussplatte '+esc(p.fuss):'')
+        +'<br><span style="color:#63676d">E '+p.E.toFixed(2)+' · N '+p.N.toFixed(2)+' · H '+p.H.toFixed(2)+'</span>'
+        +'<br><a href="https://www.google.com/maps/dir/?api=1&destination='+q[0].toFixed(7)+','+q[1].toFixed(7)+'&travelmode=walking" target="_blank">🧭 hinführen</a>');
+      MK[key(p)]=m;
+    });
+    map.fitBounds(L.latLngBounds(alle).pad(0.12));
+    function weit(){ $('map2d').classList.toggle('weit', map.getZoom()<18.5); }
+    map.on('zoomend', weit); weit();
+  }
+
+  window.zeige=function(k){
+    tab('k2d');
+    var m=MK[k]; if(!m) return;
+    map.setView(m.getLatLng(), Math.max(map.getZoom(),20));
+    m.openPopup();
+  };
+
+  window.gps=function(){
+    if(!navigator.geolocation || !map){ alert('Kein GPS verfügbar.'); return; }
+    navigator.geolocation.getCurrentPosition(function(p){
+      var pt=[p.coords.latitude,p.coords.longitude];
+      if(!gpsMarker) gpsMarker=L.circleMarker(pt,{radius:8,color:'#fff',weight:2,fillColor:'#1565c0',fillOpacity:1}).addTo(map);
+      gpsMarker.setLatLng(pt); map.setView(pt, Math.max(map.getZoom(),18));
+    }, function(){ alert('Standort nicht bestimmbar.'); }, {enableHighAccuracy:true, timeout:8000});
+  };
+
+  Promise.all([
+    json(DATEN).then(function(j){ db=j; }),
+    json(BOHR).then(function(j){ bohr=j; }).catch(function(){ bohr=null; })
+  ]).then(function(){
+    infoBauen(); listeBauen();
+    var h=(location.hash||'').replace('#','');
+    if(['k2d','liste','plan'].indexOf(h)>=0) tab(h);
+  }).catch(function(e){ $('standInfo').textContent='Daten nicht ladbar: '+e.message; });
+})();
+if('serviceWorker' in navigator){ window.addEventListener('load',function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
+</script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v213';
+var CACHE = 'nalpsolar-v214';
 var PRECACHE = [
   './index.html',
   // Webapp-Manifest + Icons des Portals (22.09.2026, Tools\Portal_Icons_Bauen.py) und die
@@ -15,6 +15,7 @@ var PRECACHE = [
   './assets/img/ico/altlasten.png',
   './assets/img/ico/pfahlkopf.png',   // Kachel Injektion Einzelbeine (28.09.2026)
   './assets/img/ico/zugprobe.png',   // Kachel Zugproben PZ3/PZ4 (29.09.2026)
+  './assets/img/ico/schrauben.png',   // Kachel Deckbleche Einzelfundamente (27.10.2026)
   './assets/img/ico/wasserleitung.png',
   './assets/img/ico/vormontage.png',
   './assets/img/ico/stahlbau.png',
@@ -41,6 +42,8 @@ var PRECACHE = [
   './injektion.html',   // Injektion Einzelbeine ablaufen (28.09.2026, WERKZEUGE §68)
   './zugproben.html',   // Zugproben PZ3/PZ4 nach BA 0269 (29.09.2026, WERKZEUGE §71)
   './uploads/zugproben.json',   // liest auch injektion.html (Zugproben-Beine nie als Einzelbein)
+  './deckbleche.html',   // Deckbleche Einzelfundamente nach BA 0272 + Borner 09.10. (27.10.2026, WERKZEUGE §84)
+  './uploads/deckbleche.json',
   // './gewinde.html',   abgeschaltet 28.08.2026 (Auftrag Victor)
   // './pfahlkopf.html',   abgeschaltet 28.08.2026 (Auftrag Victor)
   './einzelfundamente.html',

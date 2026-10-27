@@ -1,0 +1,24 @@
+{
+"stand": "2026-10-27",
+"quelle": "Baustellenanweisung NalpSolar_51_BA_0272_A1_MT-S-Fund-Garnitur_260910 (ILF, 10.09.2026) – 10 Fundamente, Plan S. 3; Mail François Borner 09.10.2026 07:33 – 5 Fundamente zusätzlich, nur EIN Blechtyp, Anker M27 erst mit Blech als Schablone; AB Debrunner 3009799172 vom 21.10.2026 – Liefertermin",
+"hinweis": "EINE Stelle für den Reiter «Deckbleche» (deckbleche.html). Lage = Nalpi-Bohrpunkt des Beins aus uploads/tables/bohrstand.json (Stand 27.10.2026). fuss = Fussplatte laut BA 0272 Tabelle (bei den 5 Zusätzen nicht angegeben). WERKZEUGE.md §84.",
+"lieferung": {"datum": "2026-11-02", "lieferant": "Debrunner Acifer", "ort": "IP Tal 1, Via Tgamaura 16a", "stueck": 30, "kg": 615.6, "kran": false},
+"blech": {"masse": "570 × 150 × 30 mm", "stahl": "S355", "schutz": "feuerverzinkt", "loecher": "2 Langlöcher M27 aussen – die 2 mittleren Löcher M20 fehlen absichtlich"},
+"fundamente": [
+  {"tisch": "364",  "s": 2, "seite": "berg", "fuss": "E 2025 (KF)", "quelle": "BA", "E": 2701678.15, "N": 1166035.22, "H": 1982.71},
+  {"tisch": "1847", "s": 3, "seite": "berg", "fuss": "E 2025 (KF)", "quelle": "BA", "E": 2701674.10, "N": 1166058.38, "H": 1986.41},
+  {"tisch": "1840", "s": 2, "seite": "berg", "fuss": "D 2025",      "quelle": "BA", "E": 2701833.90, "N": 1165873.14, "H": 1989.99},
+  {"tisch": "1741", "s": 2, "seite": "berg", "fuss": "E 2025 (KF)", "quelle": "BA", "E": 2701669.26, "N": 1166044.40, "H": 1981.22},
+  {"tisch": "2192", "s": 3, "seite": "berg", "fuss": "",            "quelle": "Borner", "E": 2701615.96, "N": 1166041.32, "H": 1969.46},
+  {"tisch": "2094", "s": 2, "seite": "berg", "fuss": "",            "quelle": "Borner", "E": 2701641.62, "N": 1166088.75, "H": 1979.48},
+  {"tisch": "2094", "s": 3, "seite": "berg", "fuss": "",            "quelle": "Borner", "E": 2701642.30, "N": 1166081.38, "H": 1980.11},
+  {"tisch": "349",  "s": 1, "seite": "tal",  "fuss": "E 2026",      "quelle": "BA", "E": 2701796.72, "N": 1165884.21, "H": 1982.00},
+  {"tisch": "344",  "s": 1, "seite": "tal",  "fuss": "E 2025 (KF)", "quelle": "BA", "E": 2701675.49, "N": 1166030.71, "H": 1978.75},
+  {"tisch": "297",  "s": 4, "seite": "tal",  "fuss": "E 2025 (KF)", "quelle": "BA", "E": 2701797.48, "N": 1165836.63, "H": 1971.71},
+  {"tisch": "1847", "s": 4, "seite": "tal",  "fuss": "E 2025 (KF)", "quelle": "BA", "E": 2701671.58, "N": 1166056.14, "H": 1985.17},
+  {"tisch": "1742", "s": 1, "seite": "tal",  "fuss": "E 2025 (KF)", "quelle": "BA", "E": 2701677.97, "N": 1166037.12, "H": 1982.89},
+  {"tisch": "1078", "s": 1, "seite": "tal",  "fuss": "D 2026",      "quelle": "BA", "E": 2701882.52, "N": 1165881.35, "H": 2010.61},
+  {"tisch": "2024", "s": 1, "seite": "tal",  "fuss": "",            "quelle": "Borner", "E": 2701618.23, "N": 1166039.52, "H": 1969.76},
+  {"tisch": "2024", "s": 4, "seite": "tal",  "fuss": "",            "quelle": "Borner", "E": 2701623.73, "N": 1166034.57, "H": 1969.84}
+]
+}
