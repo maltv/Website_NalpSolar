@@ -115,7 +115,7 @@
       <video controls preload="none" playsinline poster="uploads/video/deckbleche_poster.jpg" style="width:100%;margin-top:4px;border-radius:6px;background:#000">
         <source src="uploads/video/deckbleche_de.mp4" type="video/mp4">
       </video>
-      <div class="sub">3:16 min, Deutsch. Wo, Blech als Schablone, Ablauf, Untergiessen, vor dem Start.</div>
+      <div class="sub">3:18 min, Deutsch. Wo, Blech als Schablone, Ablauf, Untergiessen, vor dem Start.</div>
     </div>
 
     <div class="box blau">
@@ -171,21 +171,20 @@
     </div>
 
     <div class="box grau">
-      <h2>Noch offen – vor dem ersten Fundament mit François klären</h2>
+      <h2>Anker M27 – so steht es in der Anweisung</h2>
       <ul>
-        <li><b>Setztiefe M27:</b> der Plan sagt 250 mm (gerechnet mit einer Stange ≥ 400 mm). Bestellt sind
-            HAS-U <b>M27 × 340 mm</b>. Setztiefe festlegen, bevor das erste Loch gebohrt wird.</li>
-        <li><b>M27-Muttern:</b> vor oder nach dem Untergiessen anziehen – und mit welchem Moment?</li>
-        <li><b>M20:</b> reicht das Gewinde über 30 mm Blech + Mutter? Der Plan sagt «wenn möglich».</li>
-        <li><b>Verzinkung</b> an den neu gebohrten Ø 22-Löchern ausbessern?</li>
+        <li><b>Setztiefe 250 mm</b> im Beton, je Blech 2 × HAS-U M27.</li>
+        <li><b>Verschrauben</b> mit passender Mutter und Unterlegscheibe. Anziehen nach der Hilti-Setzanleitung.</li>
+        <li><b>M20</b> mitverschrauben, wenn es geht.</li>
       </ul>
+      <div class="sub">Baustellenanweisung BA 0272 A1, Seite 2 und Plan Seite 3.</div>
     </div>
 
     <div class="box grau">
       <h2>Quelle</h2>
       <p class="sub">Baustellenanweisung <b>NalpSolar_51_BA_0272_A1_MT-S-Fund-Garnitur_260910</b>
          «Anpassung Betongarnitur Einzelfundamente Typ D/E», ILF, 10.09.2026 (10 Fundamente, Plan S. 3).<br>
-         Mail François Borner 09.10.2026: 5 Fundamente zusätzlich (2192 S3, 2094 S2/S3, 2024 S1/S4),
+         Mail Borner 09.10.2026: 5 Fundamente zusätzlich (2192 S3, 2094 S2/S3, 2024 S1/S4),
          nur noch ein Blechtyp, Anker erst mit dem Blech als Schablone, talseitig auf die Bleche warten.<br>
          Liefertermin: Auftragsbestätigung Debrunner vom 21.10.2026. Lage = Nalpi-Bohrpunkt des Beins.</p>
       <div class="btnrow">
@@ -284,7 +283,7 @@
     return '<div class="pos k-'+p.seite+'" onclick="zeige(\''+key(p)+'\')">'
       +'<div class="nr" style="background:'+S.farbe+'">'+esc(p.tisch)+'<br>S'+p.s+'</div>'
       +'<div class="tx"><div class="was">Tisch '+esc(p.tisch)+' · S'+p.s+' · '+S.t+'</div>'
-      +'<div class="kom">'+(p.fuss?'Fussplatte '+esc(p.fuss)+' · ':'')+(p.quelle==='BA'?'BA 0272':'zusätzlich (François 09.10.)')+'</div>'
+      +'<div class="kom">'+(p.fuss?'Fussplatte '+esc(p.fuss)+' · ':'')+(p.quelle==='BA'?'BA 0272':'zusätzlich (Mail 09.10.)')+'</div>'
       +'<div class="tun">'+esc(S.tun)+'</div></div></div>';
   }
   function listeBauen(){
