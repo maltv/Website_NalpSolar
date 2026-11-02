@@ -177,11 +177,7 @@
     <!-- Pfahl -->
     <div class="box" id="formG">
       <label class="f" style="margin-top:0">Gewinde <span class="pf">* Pflicht</span></label>
-      <div class="wahl" id="wGew">
-        <button class="g5" data-v="5" onclick="setze('gew',5)">🔵 5.0 mm<small>Union Pipe · 60°</small></button>
-        <button class="g6" data-v="6.35" onclick="setze('gew',6.35)">🟡 6.35 mm<small>Merigo · Vierkant</small></button>
-        <button data-v="0" onclick="setze('gew',0)">❓ nicht messbar<small>Bemerkung schreiben</small></button>
-      </div>
+      <div class="wahl" id="wGew"></div>
       <label class="f">Schaden <span>– optional</span></label>
       <div class="wahl klein" id="wSchaden">
         <button data-v="nein" onclick="setze('schaden','nein')">✔ Nein</button>
@@ -325,7 +321,8 @@
   var RTDB='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app/erfassung';
   var P_BASIS='inventur26', P_FOT='inventur26_fotos', P_GEW_ALT='gewinde';
   var LS_VON='nalp_erfasser_v1', LS_CACHE='nalp_inventur26_cache_v1', LS_ORT='nalp_inventur26_ort_v1',
-      LS_AUTO='nalp_inventur26_auto_v1', LS_MODUS='nalp_inventur26_modus_v1', LS_LETZTE='nalp_inventur26_letzte_v1';
+      LS_AUTO='nalp_inventur26_auto_v1', LS_MODUS='nalp_inventur26_modus_v1', LS_LETZTE='nalp_inventur26_letzte_v1',
+      LS_GEW='nalp_inventur26_gewinde_v1';
   var IDB_NAME='nalp_inventur26_v1', IDB_STORE='warteschlange', MAX_FOTOS=3;
   var STUFE={0:'geplant',1:'abgesteckt',2:'gebohrt',3:'fixiert',4:'injiziert'};
 
@@ -587,6 +584,31 @@
   }
   window.setze=function(k,v){ if(!sel){ toast('Erst einen Punkt wählen',true); return; }
     form[k]=(form[k]===v && k!=='gew' && k!=='eft')?null:v; beruehrt=true; knoepfeMalen(); if(navigator.vibrate) navigator.vibrate(15); };
+  /* Gewinde-Knöpfe: 5.0 + 6.35 fest, dazu jedes neue Gewinde (2-m-Pfähle, Victor 02.11.) – aus «➕ anderes» auf diesem
+     Gerät und aus allen gespeicherten Messungen, damit es auf jedem Gerät erscheint */
+  var GEW_STD=[[5,'🔵 5.0 mm','Union Pipe · 60°','g5'],[6.35,'🟡 6.35 mm','Merigo · Vierkant','g6']];
+  function gewText(v){ var s=String(Math.round(v*100)/100); return s.indexOf('.')<0?s+'.0':s; }
+  function gewExtra(){
+    var s={}; try{ JSON.parse(lsGet(LS_GEW,'[]')||'[]').forEach(function(v){ s[+v]=1; }); }catch(e){}
+    for(var id in R.pfaehle){ var g=+((R.pfaehle[id]||{}).gew); if(g>0 && g!==5 && g!==6.35) s[g]=1; }
+    return Object.keys(s).map(Number).filter(function(v){ return v>0; }).sort(function(a,b){ return a-b; });
+  }
+  function gewKnoepfe(){
+    var h=GEW_STD.map(function(g){ return '<button class="'+g[3]+'" data-v="'+g[0]+'" onclick="setze(\'gew\','+g[0]+')">'+g[1]+'<small>'+g[2]+'</small></button>'; });
+    gewExtra().forEach(function(v){ h.push('<button data-v="'+v+'" onclick="setze(\'gew\','+v+')">⚪ '+gewText(v)+' mm<small>neues Gewinde</small></button>'); });
+    h.push('<button data-v="0" onclick="setze(\'gew\',0)">❓ nicht messbar<small>Bemerkung schreiben</small></button>');
+    h.push('<button onclick="gewNeu()">➕ anderes<small>Steigung in mm</small></button>');
+    $('wGew').innerHTML=h.join(''); knoepfeMalen();
+  }
+  window.gewNeu=function(){
+    var t=prompt('Neues Gewinde – Steigung in mm (z.B. 7.0):',''); if(t==null) return;
+    var v=parseFloat(String(t).replace(',','.'));
+    if(!(v>=1 && v<=20)){ toast('Bitte die Steigung in mm, z.B. 7.0',true); return; }
+    v=Math.round(v*100)/100;
+    var a=[]; try{ a=JSON.parse(lsGet(LS_GEW,'[]')||'[]'); }catch(e){}
+    if(a.indexOf(v)<0 && v!==5 && v!==6.35){ a.push(v); lsSet(LS_GEW,JSON.stringify(a)); }
+    gewKnoepfe(); if(sel) setze('gew',v); else toast('⚪ '+gewText(v)+' mm als Knopf angelegt');
+  };
   function efKnoepfe(){
     $('wEf').innerHTML=EF_TYPEN.map(function(t){ return '<button data-v="'+t[0]+'" onclick="setze(\'eft\','+t[0]+')">'+esc(t[1])
       +(+t[0]===4?'<small>in Nalpi «1.6 × 1.6»</small>':'')+'</button>'; }).join('');
@@ -666,12 +688,13 @@
     var h=heute(), k=kandidaten(), e=ERL[art()], fertig=0, heuteN=0;
     k.forEach(function(p){ if(e[p.f]) fertig++; });
     for(var f in e){ if(e[f].datum===h) heuteN++; }
-    var g5=0,g6=0,g0=0; if(modusAkt==='g') for(var f2 in ERL.pfaehle){ var gw=+ERL.pfaehle[f2].gew; if(gw===5) g5++; else if(gw===6.35) g6++; else g0++; }
+    var zg={}; for(var f2 in ERL.pfaehle){ var gw=+ERL.pfaehle[f2].gew; zg[gw]=(zg[gw]||0)+1; }
+    var gz=[5,6.35].concat(gewExtra()).map(function(v){ return gewText(v)+' mm: '+(zg[v]||0); }).concat(['nicht messbar: '+(zg[0]||0)]).join(' · ');
     $('stand').innerHTML='<b>'+fertig+' / '+k.length+'</b> '+(modusAkt==='ef'?'Einzelfundamente':'Pfähle')+' erfasst · heute '+heuteN
-      +(modusAkt==='g'?'<br>5.0 mm: '+g5+' · 6.35 mm: '+g6+' · nicht messbar: '+g0:'')
+      +(modusAkt==='g'?'<br>'+gz:'')
       +'<br><span class="sub">Daten Nalpi Stand '+esc(STAND.split('-').reverse().join('.'))+' – nur gebohrt/injiziert, ohne Primärkonstruktion.</span>';
   }
-  function allesMalen(){ erledigtRechnen(); kopfMalen(); standMalen(); if(mini) punkteLayer(); miniMalen(); if(gross) grossPunkte(); if(!$('s-berg').hidden) bListe(); }
+  function allesMalen(){ erledigtRechnen(); gewKnoepfe(); kopfMalen(); standMalen(); if(mini) punkteLayer(); miniMalen(); if(gross) grossPunkte(); if(!$('s-berg').hidden) bListe(); }
 
   /* ── Mini-Karte oben rechts + grosse Karte ── */
   var mini=null, miniPunkte=null, miniIch=null, miniKreis=null, miniSel=null, gross=null, grossLayer=null, grossIch=null, grossSel=null;
@@ -805,7 +828,7 @@
   $('fVon').value=lsGet(LS_VON,''); $('bOrt').value=lsGet(LS_ORT,'');
   $('fVon').addEventListener('change',function(){ lsSet(LS_VON,this.value.trim()); });
   auto=lsGet(LS_AUTO,'1')!=='0'; $('autoBtn').classList.toggle('on',auto); $('autoBtn').textContent=auto?'an':'aus';
-  bMalen(); cacheLesen();
+  bMalen(); cacheLesen(); gewKnoepfe();
   var start=(location.hash||'').replace('#','');
   laden().catch(function(){ toast('Daten nicht geladen – einmal mit Netz öffnen',true); })
     .then(function(){ return warteMischen(); })
