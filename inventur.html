@@ -345,6 +345,7 @@
     toast.t=setTimeout(function(){ e.className=err?'err':''; },2600); }
   function meter(a,b){ var r=Math.PI/180, dx=(b.lon-a.lon)*r*Math.cos((a.lat+b.lat)/2*r), dy=(b.lat-a.lat)*r;
     return Math.sqrt(dx*dx+dy*dy)*6371000; }
+  function weg(d){ return d<10?d.toFixed(1)+' m':(d<1000?Math.round(d)+' m':(d/1000).toFixed(1)+' km'); }
   function efLabel(c){ for(var i=0;i<EF_TYPEN.length;i++) if(+EF_TYPEN[i][0]===+c) return EF_TYPEN[i][1]; return ''; }
   function neueId(){ return 'i'+Date.now().toString(36)+Math.round(Math.random()*1e6).toString(36); }
   function art(){ return modusAkt==='ef'?'fundamente':'pfaehle'; }
@@ -532,7 +533,7 @@
       $('kNalpi').innerHTML='Nalpi: '+esc(STUFE[sel.st]||'?')+(sel.kopf?' · Kopf ✔':'')+(sel.ef&&modusAkt!=='ef'?' · <b>Einzelfundament</b>':'')
         +(ALT[sel.f]&&modusAkt==='g'?' · Aug: '+ALT[sel.f].g+' mm':'');
       var d=gps?meter(gps,sel):null;
-      $('kWeg').textContent=d==null?'':(d<1?'📍 du stehst drauf ('+d.toFixed(1)+' m)':'📍 '+(d<10?d.toFixed(1):Math.round(d))+' m entfernt');
+      $('kWeg').textContent=d==null?'':(d<1?'📍 du stehst drauf ('+d.toFixed(1)+' m)':'📍 '+weg(d)+' entfernt');
       var e=ERL[art()][sel.f];
       $('kBadge').innerHTML=e?'<span class="badge ok">✔ erfasst '+esc(zeit(e.ts||0))+' · '+esc(e.von||'')
         +(e.gew!=null&&modusAkt==='g'?' · '+(+e.gew?e.gew+' mm':'nicht messbar'):'')+(e.ef_label?' · '+esc(e.ef_label):'')
@@ -547,7 +548,7 @@
       .sort(function(a,b){ return a.d-b.d; }).slice(0,4);
     $('nachbarn').innerHTML=liste.map(function(x){
       return '<button class="'+(istErledigt(x.p)?'ok':'')+'" onclick="waehleF(\''+esc(x.p.f)+'\')">'+esc(x.p.tisch+' '+x.p.fuss)
-        +'<small>'+(x.d<10?x.d.toFixed(1):Math.round(x.d))+' m'+(istErledigt(x.p)?' ✔':'')+'</small></button>';
+        +'<small>'+weg(x.d)+(istErledigt(x.p)?' ✔':'')+'</small></button>';
     }).join('');
   }
   window.naechsterOffener=function(){
