@@ -166,6 +166,8 @@
     <div class="box">
       <div class="schalt"><span>📍 Pfahl automatisch nach GPS</span><button id="autoBtn" class="on" onclick="autoUmschalten()">an</button></div>
       <div class="nachbarn" id="nachbarn"></div>
+      <input type="text" id="suche" inputmode="numeric" placeholder="🔎 Tisch-Nr. suchen, z.B. 64" oninput="suchen()" style="margin-top:8px">
+      <div class="nachbarn" id="treffer"></div>
       <div class="reihe" style="margin-top:8px">
         <button class="btn w" onclick="naechsterOffener()">➡ Nächster offener</button>
         <button class="btn w" onclick="grossAuf()">🗺 Karte</button>
@@ -551,6 +553,23 @@
         +'<small>'+weg(x.d)+(istErledigt(x.p)?' ✔':'')+'</small></button>';
     }).join('');
   }
+  /* Suche: Tischnummer (alle Beine) oder Bein «64 S2» */
+  window.suchen=function(){
+    var q=$('suche').value.trim().toUpperCase().replace(/[\s_-]+/g,'_'), z=$('treffer');
+    if(!q){ z.innerHTML=''; return; }
+    var t=q.split('_')[0], s=q.split('_')[1]||'';
+    var a=kandidaten().filter(function(p){ return p.tisch===t && (!s || p.fuss===s || p.fuss==='S'+s); });
+    if(!a.length){
+      var anders=PUNKTE.some(function(p){ return p.tisch===t; });
+      z.innerHTML='<div class="sub" style="padding:6px 2px">Tisch '+esc(t)+(anders?' hat hier keine '+(modusAkt==='ef'?'Einzelfundamente':'Pfähle zum Prüfen')
+        :' ist nicht in der Inventur (nicht gebohrt oder Primärkonstruktion steht schon)')+'.</div>';
+      return;
+    }
+    z.innerHTML=a.map(function(p){
+      return '<button class="'+(istErledigt(p)?'ok':'')+'" onclick="waehleF(\''+esc(p.f)+'\');suche.value=\'\';treffer.innerHTML=\'\'">'
+        +esc(p.tisch+' '+p.fuss)+'<small>'+esc(p.typ)+(gps?' · '+weg(meter(gps,p)):'')+(istErledigt(p)?' ✔':'')+'</small></button>';
+    }).join('');
+  };
   window.naechsterOffener=function(){
     var n=naechste(1,true)[0];
     if(!n && sel){ var o=kandidaten().filter(function(p){ return !istErledigt(p); }).map(function(p){ return {p:p,d:meter(sel,p)}; })
