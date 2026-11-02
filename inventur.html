@@ -24,6 +24,7 @@
   :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
          --gruen:#1e9e5a; --blau:#1565c0; --orange:#e08a00; --gelb:#f2b600; --grau:#8a8e94; }
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  [hidden]{ display:none !important; }
   body{ margin:0; background:#eef0f3; min-height:100vh; color:var(--ink); font-family:Arial,"Helvetica Neue",sans-serif; }
   header{ position:sticky; top:0; z-index:20; display:flex; align-items:center; gap:8px; height:50px;
           padding:0 10px; background:#fff; border-bottom:4px solid var(--rot); }
@@ -120,6 +121,28 @@
   #gross .leiste button{ min-width:52px; min-height:44px; font:800 20px Arial; border:1px solid #c9ccd2; border-radius:8px; background:#fff; cursor:pointer; }
   #grossMap{ flex:1; }
   .legende{ font-size:12px; padding:6px 10px; color:var(--mut); display:flex; gap:12px; flex-wrap:wrap; }
+
+  /* Schnellmodus */
+  .tipp{ position:relative; border-left:5px solid var(--gelb); }
+  .tipp b{ font-size:15px; } .tipp ol{ margin:6px 0 6px 18px; padding:0; font-size:14px; line-height:1.5; }
+  .tipp .zu{ position:absolute; top:6px; right:6px; width:38px; height:38px; border:none; background:#f1f2f4; border-radius:50%; font-size:16px; cursor:pointer; }
+  .tisch{ position:relative; height:300px; margin-bottom:10px; background:#fff; border:1px solid var(--line); border-radius:10px;
+          box-shadow:0 1px 4px rgba(20,25,32,.07); overflow:hidden; }
+  @media (min-width:700px){ .tisch{ height:380px; } }
+  .tisch .rand{ position:absolute; left:50%; transform:translateX(-50%); font-size:12px; font-weight:800; color:var(--mut); }
+  .tisch .rahmen{ position:absolute; left:25%; right:25%; top:27%; bottom:27%; border:3px dashed #d5d8dd; border-radius:4px; }
+  .bein{ position:absolute; transform:translate(-50%,-50%); width:44%; height:41%; border:3px solid #c9ccd2; border-radius:14px;
+         background:#f7f8fa; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; text-align:center; }
+  .bein b{ font-size:20px; line-height:1; } .bein .wert{ font-size:36px; font-weight:900; line-height:1.1; }
+  .bein small{ font-size:11.5px; color:var(--mut); }
+  .bein.ok{ background:#e4f5ec; border-color:#a9dcbf; }
+  .bein.akt{ border-color:var(--rot); box-shadow:0 0 0 4px rgba(215,38,34,.22); background:#fff; }
+  .bein.ok.akt{ background:#f0faf4; }
+  .bein .wert.g5{ color:var(--blau); } .bein .wert.g6{ color:#8a6a00; } .bein .wert.gx{ color:#5b2a86; } .bein .wert.g0{ color:var(--rot); font-size:22px; }
+  .ich{ position:absolute; width:16px; height:16px; margin:-8px 0 0 -8px; border-radius:50%; background:#1565c0; border:3px solid #fff;
+        box-shadow:0 0 0 2px #1565c0; pointer-events:none; }
+  .wahl.gross button{ min-height:84px; font-size:23px; }
+  .pfeil{ display:inline-block; font-size:22px; line-height:1; }
   .legende i{ display:inline-block; width:11px; height:11px; border-radius:50%; vertical-align:-1px; margin-right:4px; }
 </style>
 </head>
@@ -144,6 +167,18 @@
 
   <!-- ───────────── PERIMETER ───────────── -->
   <section id="s-perimeter">
+    <div class="box tipp" id="tipp" hidden>
+      <button class="zu" onclick="tippZu()">✕</button>
+      <b>⚡ Schnellmodus – so schaffst du 1000 Pfähle</b>
+      <ol>
+        <li><b>Hinlaufen</b> – das GPS wählt den ganzen Tisch (nicht das Bein, dafür ist GPS zu ungenau). Pfeil + Meter oben = wohin.</li>
+        <li><b>Messen → Wert antippen</b> – speichert sofort (Piep + Ansage) und springt zum nächsten Bein. <b>1 Tipp je Pfahl.</b></li>
+        <li><b>Tisch fertig</b> = es geht von selbst zum nächsten offenen Tisch.</li>
+      </ol>
+      <div class="sub">Falsches Bein? Kachel antippen, Wert neu tippen. «❓» = Grund mit 1 Tipp. Schaden / Kopfplatte / Foto = «✏ Details».
+        Kein Netz? Egal – alles wartet auf dem Tablet. Zu zweit: das Handy kann gleichzeitig einen anderen Bereich machen.
+        Am Morgen im WLAN einmal «🗺 Satellitenbild offline laden» (unten).</div>
+    </div>
     <div class="modus">
       <button id="m-g" class="on" onclick="modus('g')">🔩 Pfähle · Gewinde</button>
       <button id="m-ef" onclick="modus('ef')">🧱 Einzelfundamente</button>
@@ -174,8 +209,29 @@
       </div>
     </div>
 
+    <!-- Schnellmodus Pfähle: ein Tisch, vier Kacheln, Berg oben -->
+    <div id="tischView" hidden>
+      <div class="tisch" id="tisch"></div>
+      <div class="wahl gross" id="tWerte"></div>
+      <div class="wahl klein" id="tGruende" hidden>
+        <button onclick="grund('Kopf drauf')">🔩 Kopf drauf</button>
+        <button onclick="grund('verdeckt / Erde')">🪨 verdeckt</button>
+        <button onclick="grund('Schnee / Eis')">❄ Schnee</button>
+        <button onclick="grund('Gewinde beschädigt')">⚠ beschädigt</button>
+        <button onclick="grund('Pfahl nicht gefunden')">🔍 nicht gefunden</button>
+        <button onclick="grundAbbruch()">‹ zurück</button>
+      </div>
+      <div class="reihe" style="margin-top:8px">
+        <button class="btn w" id="tRest" onclick="restGleich()">⇉ Rest gleich</button>
+        <button class="btn w" onclick="details()">✏ Details</button>
+        <button class="btn w" onclick="tischWeiter()">⏭ Tisch später</button>
+      </div>
+    </div>
+
+    <div id="detailView">
     <!-- Pfahl -->
     <div class="box" id="formG">
+      <div class="sub" id="detailTitel" style="font-weight:800;margin-bottom:6px"></div>
       <label class="f" style="margin-top:0">Gewinde <span class="pf">* Pflicht</span></label>
       <div class="wahl" id="wGew"></div>
       <label class="f">Schaden <span>– optional</span></label>
@@ -212,6 +268,8 @@
     </div>
 
     <button class="btn" id="btnSave" onclick="speichern()">✔ Speichern</button>
+    <button class="btn w" id="btnZurueck" onclick="detailZu()" style="margin-top:8px" hidden>‹ zurück zum Tisch</button>
+    </div>
     <div class="reihe" style="margin-top:8px">
       <button class="btn w" onclick="rueckgaengig()">↶ Letzte rückgängig</button>
       <button class="btn w" onclick="csvPerimeter()">📋 CSV</button>
@@ -219,6 +277,11 @@
 
     <div class="box" style="margin-top:10px">
       <div class="stand" id="stand"></div>
+      <div class="reihe" style="margin-top:8px">
+        <button class="btn w" id="btnKacheln" onclick="kachelnLaden()">🗺 Satellitenbild offline laden</button>
+        <button class="btn w" id="btnAnsage" onclick="ansageUmschalten()">🔊 Ansage an</button>
+      </div>
+      <div class="sub" id="kachelStand" style="margin-top:6px"></div>
     </div>
   </section>
 
@@ -322,7 +385,8 @@
   var P_BASIS='inventur26', P_FOT='inventur26_fotos', P_GEW_ALT='gewinde';
   var LS_VON='nalp_erfasser_v1', LS_CACHE='nalp_inventur26_cache_v1', LS_ORT='nalp_inventur26_ort_v1',
       LS_AUTO='nalp_inventur26_auto_v1', LS_MODUS='nalp_inventur26_modus_v1', LS_LETZTE='nalp_inventur26_letzte_v1',
-      LS_GEW='nalp_inventur26_gewinde_v1';
+      LS_GEW='nalp_inventur26_gewinde_v1', LS_ANSAGE='nalp_inventur26_ansage_v1', LS_TIPP='nalp_inventur26_tipp_v1',
+      LS_KACHEL='nalp_inventur26_kacheln_v1';
   var IDB_NAME='nalp_inventur26_v1', IDB_STORE='warteschlange', MAX_FOTOS=3;
   var STUFE={0:'geplant',1:'abgesteckt',2:'gebohrt',3:'fixiert',4:'injiziert'};
 
@@ -367,7 +431,7 @@
         return {f:f, tisch:t[0], fuss:t[1]||'', lat:+z[1], lon:+z[2], typ:z[3]||'', ber:z[4]||'', st:+z[5], kopf:+z[6],
                 g:+z[7], ef:+z[8], eft:z[9]==null?null:+z[9]};
       });
-      PI={}; PUNKTE.forEach(function(p){ PI[p.f]=p; });
+      PI={}; PUNKTE.forEach(function(p){ PI[p.f]=p; }); tischeBauen();
       efKnoepfe();
     });
   }
@@ -503,6 +567,7 @@
      zurück). Gewechselt wird nur, wenn am aktuellen Punkt noch nichts angetippt ist und der neue klar näher liegt
      (0.7 m, sonst springt es bei zwei Beinen nebeneinander hin und her). */
   function autoWaehlen(){
+    if(modusAkt==='g' && !detailOffen){ autoTisch(); return; }
     if(!auto||!gps||!PUNKTE.length||beruehrt) { kopfMalen(); return; }
     var n=naechste(1,true)[0]; if(!n){ kopfMalen(); return; }
     if(n.d>40){ if(sel&&meter(gps,sel)>40){ sel=null; formLeeren(); } kopfMalen(); return; }
@@ -522,6 +587,7 @@
   }
   window.waehleF=function(f){ var p=PI[f]; if(p) waehle(p,false); };
   function kopfMalen(){
+    if(modusAkt==='g' && !detailOffen){ tischKopfMalen(); return; }
     if(!sel){
       $('kPid').className='pid leer';
       $('kPid').textContent=gps?(PUNKTE.length?'Kein Punkt in der Nähe':'Daten laden …'):'GPS sucht …';
@@ -542,19 +608,33 @@
     nachbarnMalen();
   }
   function nachbarnMalen(){
-    var basis=sel||gps; if(!basis){ $('nachbarn').innerHTML=''; return; }
+    /* nur neu zeichnen, wenn sich etwas ändert (Meter auf 5 gerundet) – ein Neuzeichnen mitten im Tippen schluckt den Tipp */
+    function setzen(html){ var el=$('nachbarn'); if(el._h!==html){ el._h=html; el.innerHTML=html; } }
+    function w5(d){ return d<10?weg(d):(Math.round(d/5)*5<1000?Math.round(d/5)*5+' m':weg(d)); }
+    if(modusAkt==='g' && !detailOffen){
+      var b=gps||TI[tischAkt]; if(!b){ setzen(''); return; }
+      setzen(offeneTische(b).filter(function(x){ return x.t.t!==tischAkt; }).slice(0,4).map(function(x){
+        return '<button onclick="tischWaehlen(\''+esc(x.t.t)+'\',false)">Tisch '+esc(x.t.t)+'<small>'+w5(x.d)+' · '+zaehl(x.t)+'</small></button>'; }).join(''));
+      return;
+    }
+    var basis=sel||gps; if(!basis){ setzen(''); return; }
     var liste=kandidaten().filter(function(p){ return p!==sel; }).map(function(p){ return {p:p, d:meter(basis,p)}; })
       .sort(function(a,b){ return a.d-b.d; }).slice(0,4);
-    $('nachbarn').innerHTML=liste.map(function(x){
+    setzen(liste.map(function(x){
       return '<button class="'+(istErledigt(x.p)?'ok':'')+'" onclick="waehleF(\''+esc(x.p.f)+'\')">'+esc(x.p.tisch+' '+x.p.fuss)
-        +'<small>'+weg(x.d)+(istErledigt(x.p)?' ✔':'')+'</small></button>';
-    }).join('');
+        +'<small>'+w5(x.d)+(istErledigt(x.p)?' ✔':'')+'</small></button>';
+    }).join(''));
   }
   /* Suche: Tischnummer (alle Beine) oder Bein «64 S2» */
   window.suchen=function(){
     var q=$('suche').value.trim().toUpperCase().replace(/[\s_-]+/g,'_'), z=$('treffer');
     if(!q){ z.innerHTML=''; return; }
     var t=q.split('_')[0], s=q.split('_')[1]||'';
+    if(modusAkt==='g' && !detailOffen && TI[t]){
+      z.innerHTML='<button onclick="tischWaehlen(\''+esc(t)+'\',false);suche.value=\'\';treffer.innerHTML=\'\'">Tisch '+esc(t)
+        +'<small>'+esc(TI[t].typ)+' · '+zaehl(TI[t])+(gps?' · '+weg(meter(gps,TI[t])):'')+'</small></button>';
+      return;
+    }
     var a=kandidaten().filter(function(p){ return p.tisch===t && (!s || p.fuss===s || p.fuss==='S'+s); });
     if(!a.length){
       var anders=PUNKTE.some(function(p){ return p.tisch===t; });
@@ -568,6 +648,7 @@
     }).join('');
   };
   window.naechsterOffener=function(){
+    if(modusAkt==='g' && !detailOffen){ naechsterTisch(); return; }
     var n=naechste(1,true)[0];
     if(!n && sel){ var o=kandidaten().filter(function(p){ return !istErledigt(p); }).map(function(p){ return {p:p,d:meter(sel,p)}; })
       .sort(function(a,b){ return a.d-b.d; })[0]; n=o; }
@@ -598,7 +679,7 @@
     gewExtra().forEach(function(v){ h.push('<button data-v="'+v+'" onclick="setze(\'gew\','+v+')">⚪ '+gewText(v)+' mm<small>neues Gewinde</small></button>'); });
     h.push('<button data-v="0" onclick="setze(\'gew\',0)">❓ nicht messbar<small>Bemerkung schreiben</small></button>');
     h.push('<button onclick="gewNeu()">➕ anderes<small>Steigung in mm</small></button>');
-    $('wGew').innerHTML=h.join(''); knoepfeMalen();
+    $('wGew').innerHTML=h.join(''); knoepfeMalen(); tWerteMalen();
   }
   window.gewNeu=function(){
     var t=prompt('Neues Gewinde – Steigung in mm (z.B. 7.0):',''); if(t==null) return;
@@ -607,7 +688,9 @@
     v=Math.round(v*100)/100;
     var a=[]; try{ a=JSON.parse(lsGet(LS_GEW,'[]')||'[]'); }catch(e){}
     if(a.indexOf(v)<0 && v!==5 && v!==6.35){ a.push(v); lsSet(LS_GEW,JSON.stringify(a)); }
-    gewKnoepfe(); if(sel) setze('gew',v); else toast('⚪ '+gewText(v)+' mm als Knopf angelegt');
+    gewKnoepfe();
+    if(modusAkt==='g' && !detailOffen){ if(legAkt) wert(v); else toast('⚪ '+gewText(v)+' mm als Knopf angelegt'); return; }
+    if(sel) setze('gew',v); else toast('⚪ '+gewText(v)+' mm als Knopf angelegt');
   };
   function efKnoepfe(){
     $('wEf').innerHTML=EF_TYPEN.map(function(t){ return '<button data-v="'+t[0]+'" onclick="setze(\'eft\','+t[0]+')">'+esc(t[1])
@@ -618,8 +701,8 @@
     $('m-g').classList.toggle('on',m==='g'); $('m-ef').classList.toggle('on',m==='ef');
     $('formG').hidden=(m!=='g'); $('formEF').hidden=(m!=='ef');
     $('fotoLabel').innerHTML=m==='ef'?'Foto <span class="pf">* Pflicht – das ganze Fundament</span>':'Foto <span>– optional</span>';
-    sel=null; formLeeren(); beruehrt=false;
-    if(mini){ punkteLayer(); } autoWaehlen(); miniMalen(); standMalen();
+    sel=null; formLeeren(); beruehrt=false; detailOffen=false; tischAkt=null; legAkt=null; viewMalen();
+    if(mini){ punkteLayer(); } autoWaehlen(); if(m==='g') tischMalen(); miniMalen(); standMalen();
     if(gross){ grossPunkte(); }
   };
 
@@ -671,8 +754,13 @@
            nalpi_ef_typ:sel.eft, text:text, von:von, ts:Date.now(), datum:heute(), quelle:'inventur.html'};
     }
     var alt=ERL[artName][sel.f];
-    if(alt && !confirm(sel.f+' ist schon erfasst ('+zeit(alt.ts||0)+', '+(alt.von||'')+').\nNochmals erfassen? Der neue Stand gilt.')) return;
+    if(alt && !detailOffen && !confirm(sel.f+' ist schon erfasst ('+zeit(alt.ts||0)+', '+(alt.von||'')+').\nNochmals erfassen? Der neue Stand gilt.')) return;
     var f=sel.f;
+    if(detailOffen){
+      ablegen(artName,gpsFeld(rec),fotos.slice()).then(function(){ toast('✔ '+f.replace('_',' ')+' Details gespeichert'); });
+      if(navigator.vibrate) navigator.vibrate(60); piep();
+      erledigtRechnen(); formLeeren(); detailZu(); standMalen(); if(mini) punkteLayer(); miniMalen(); return;
+    }
     ablegen(artName,gpsFeld(rec),fotos.slice()).then(function(){
       toast('✔ '+f.replace('_',' ')+' gespeichert'+(netzAn()?'':' – offline, geht später raus'));
     });
@@ -680,6 +768,213 @@
     erledigtRechnen(); formLeeren(); beruehrt=false;
     if(auto){ var n=naechste(1,true)[0]; if(n && n.d<15) waehle(n.p,true); else kopfMalen(); } else kopfMalen();
     miniMalen(); standMalen();
+  };
+
+  /* ── Schnellmodus Pfähle (Victor 02.11.: «1000 Pfähle an einem Tag»). GPS wählt den TISCH – auf ±2 m sicher, das Bein
+     nicht. Vier Kacheln in echter Lage, Berg oben (S2/S3 bergseitig bei 1179 von 1201 Tischen mit Gefälle). Wert antippen =
+     sofort gespeichert (Piep + Ansage), weiter zum nächsten Bein; Tisch fertig = nächster offener Tisch. Gleiche Sätze wie
+     die Einzelerfassung. GPS-Meldungen zeichnen nur Pfeil + Punkt neu, nie die Knöpfe (sonst gehen Tipps verloren). */
+  var TI={}, tischAkt=null, legAkt=null, tischBeruehrt=false, UEB={}, detailOffen=false, grundOffen=false;
+  var ansage=lsGet(LS_ANSAGE,'1')!=='0';
+  function tischeBauen(){
+    TI={};
+    PUNKTE.forEach(function(p){ if(!p.g) return; var t=TI[p.tisch]||(TI[p.tisch]={t:p.tisch, beine:[], typ:p.typ, ber:p.ber}); t.beine.push(p); });
+    Object.keys(TI).forEach(function(k){ var t=TI[k], la=0, lo=0;
+      t.beine.sort(function(a,b){ return a.fuss<b.fuss?-1:1; });
+      t.beine.forEach(function(p){ la+=p.lat; lo+=p.lon; }); t.lat=la/t.beine.length; t.lon=lo/t.beine.length;
+      rahmen(t); });
+  }
+  /* Bild-Achsen je Tisch: oben = bergauf (Mitte S2/S3 minus Mitte S1/S4), ohne beide Seiten Norden */
+  function rahmen(t){
+    var c=Math.cos(t.lat*Math.PI/180);
+    t.m=function(p){ return {x:(p.lon-t.lon)*111320*c, y:(p.lat-t.lat)*110574}; };
+    var berg=t.beine.filter(function(p){ return p.fuss==='S2'||p.fuss==='S3'; }), tal=t.beine.filter(function(p){ return p.fuss==='S1'||p.fuss==='S4'; });
+    var u={x:0,y:1};
+    if(berg.length&&tal.length){ var a={x:0,y:0}, b={x:0,y:0};
+      berg.forEach(function(p){ var q=t.m(p); a.x+=q.x/berg.length; a.y+=q.y/berg.length; });
+      tal.forEach(function(p){ var q=t.m(p); b.x+=q.x/tal.length; b.y+=q.y/tal.length; });
+      var dx=a.x-b.x, dy=a.y-b.y, l=Math.sqrt(dx*dx+dy*dy); if(l>0.5) u={x:dx/l, y:dy/l}; }
+    t.u=u; t.r={x:u.y, y:-u.x};
+    var xs=[], ys=[]; t.beine.forEach(function(p){ var q=bild(t,p.lat,p.lon); xs.push(q.sx); ys.push(q.sy); });
+    t.n={x0:Math.min.apply(null,xs), x1:Math.max.apply(null,xs), y0:Math.min.apply(null,ys), y1:Math.max.apply(null,ys)};
+  }
+  function bild(t,lat,lon){ var q=t.m({lat:lat,lon:lon}); return {sx:q.x*t.r.x+q.y*t.r.y, sy:-(q.x*t.u.x+q.y*t.u.y)}; }
+  function nx(t,x){ return t.n.x1-t.n.x0<0.5?0.5:(x-t.n.x0)/(t.n.x1-t.n.x0); }
+  function ny(t,y){ return t.n.y1-t.n.y0<0.5?0.5:(y-t.n.y0)/(t.n.y1-t.n.y0); }
+  function wertVon(f){ var e=ERL.pfaehle[f]; return e?+e.gew:null; }
+  function offenBeine(t){ return t.beine.filter(function(p){ return !ERL.pfaehle[p.f]; }); }
+  function zaehl(t){ return (t.beine.length-offenBeine(t).length)+'/'+t.beine.length; }
+  function offeneTische(von){
+    var a=[]; for(var k in TI){ var t=TI[k]; if(UEB[k]||!offenBeine(t).length) continue; a.push({t:t, d:meter(von,t)}); }
+    return a.sort(function(x,y){ return x.d-y.d; });
+  }
+  function autoTisch(){
+    if(!PUNKTE.length) return;
+    var akt=TI[tischAkt];
+    if(auto && gps && !(akt && tischBeruehrt && offenBeine(akt).length)){
+      var n=offeneTische(gps)[0];
+      if(n && n.d<80 && (!akt || !offenBeine(akt).length || (n.t!==akt && n.d < meter(gps,akt)-2))){ tischWaehlen(n.t.t,true); return; }
+    }
+    tischKopfMalen(); if(!akt) tischMalen(); else ichMalen();
+  }
+  window.tischWaehlen=function(k,vonAuto){
+    var t=TI[k]; if(!t) return;
+    tischAkt=k; tischBeruehrt=!vonAuto; grundOffen=false;
+    var o=offenBeine(t);
+    if(gps && o.length) o.sort(function(a,b){ return meter(gps,a)-meter(gps,b); });
+    legAkt=o.length?o[0].f:t.beine[0].f; sel=PI[legAkt];
+    if(vonAuto){ if(navigator.vibrate) navigator.vibrate([30,40,30]); sag('Tisch '+k); }
+    tischKopfMalen(); tischMalen(); miniMalen(); if(gross && $('gross').classList.contains('an')) grossMalen();
+  };
+  function naechstesBein(t,von){
+    var o=offenBeine(t); if(!o.length) return null;
+    o.sort(function(a,b){ return meter(von,a)-meter(von,b); }); return o[0].f;
+  }
+  function naechsterTisch(){
+    var akt=TI[tischAkt], von=gps||akt;
+    if(!von){ toast('Noch kein GPS – oben Tisch-Nr. suchen',true); return; }
+    var n=offeneTische(von).filter(function(x){ return x.t!==akt; })[0];
+    if(!n){ toast('Alle Tische erfasst 🎉'); sag('Alle Tische erfasst'); return; }
+    tischWaehlen(n.t.t,false); tischBeruehrt=false;
+    sag('Nächster Tisch '+n.t.t+', '+Math.round(n.d)+' Meter');
+  }
+  window.tischWeiter=function(){ if(tischAkt){ UEB[tischAkt]=1; toast('⏭ Tisch '+tischAkt+' kommt später'); } naechsterTisch(); };
+  window.beinWaehlen=function(f){ legAkt=f; sel=PI[f]; grundOffen=false; tischBeruehrt=true; tischMalen(); miniMalen(); if(navigator.vibrate) navigator.vibrate(15); };
+  window.wert=function(v){
+    if(!legAkt){ toast('Erst ein Bein antippen',true); return; }
+    if(v===0){ grundOffen=true; tWerteMalen(); return; }
+    beinSpeichern(legAkt,v,'');
+  };
+  window.grund=function(txt){ grundOffen=false; if(legAkt) beinSpeichern(legAkt,0,txt); else tWerteMalen(); };
+  window.grundAbbruch=function(){ grundOffen=false; tWerteMalen(); };
+  function beinSpeichern(f,v,text,still){
+    var von=name(); if(!von) return false;
+    var p=PI[f], t=TI[p.tisch], alt=ERL.pfaehle[f];
+    var rec={fid:p.f, tisch:p.tisch, fuss:p.fuss, typ:p.typ, bereich:p.ber, gew:v, schaden:alt?alt.schaden||'':'',
+             kopfplatte:alt?alt.kopfplatte||'':'', text:text||(alt?alt.text||'':''), von:von, ts:Date.now(), datum:heute(), quelle:'inventur.html#tisch'};
+    sel=p; gpsFeld(rec);
+    ablegen('pfaehle',rec,[]);
+    erledigtRechnen(); tischBeruehrt=true; grundOffen=false;
+    if(still) return true;
+    if(navigator.vibrate) navigator.vibrate(45); piep();
+    var naechst=naechstesBein(t,p), sprich=p.fuss+', '+(v?gewSprache(v):'nicht messbar');
+    if(naechst){ legAkt=naechst; sel=PI[naechst]; sag(sprich+'. Weiter '+PI[naechst].fuss); }
+    else { legAkt=null; toast('✔ Tisch '+t.t+' fertig'); sag(sprich+'. Tisch '+t.t+' fertig.');
+      setTimeout(function(){ if(tischAkt===t.t && !offenBeine(t).length) naechsterTisch(); },1300); }
+    tischKopfMalen(); tischMalen(); standMalen(); if(mini) punkteLayer(); miniMalen();
+    return true;
+  }
+  window.restGleich=function(){
+    var t=TI[tischAkt]; if(!t) return;
+    var fertig=t.beine.filter(function(p){ return ERL.pfaehle[p.f]; }).sort(function(a,b){ return (ERL.pfaehle[b.f].ts||0)-(ERL.pfaehle[a.f].ts||0); });
+    var o=offenBeine(t);
+    if(!fertig.length||!o.length){ toast('Erst ein Bein messen',true); return; }
+    var v=wertVon(fertig[0].f); if(!v){ toast('Letzter Wert ist «nicht messbar» – bitte einzeln',true); return; }
+    for(var i=0;i<o.length;i++){ if(!beinSpeichern(o[i].f,v,'',true)) return; }
+    legAkt=null; if(navigator.vibrate) navigator.vibrate(60); piep();
+    toast('✔ Tisch '+t.t+' fertig – Rest '+gewText(v)); sag('Rest '+gewSprache(v)+'. Tisch '+t.t+' fertig.');
+    tischKopfMalen(); tischMalen(); standMalen(); if(mini) punkteLayer(); miniMalen();
+    setTimeout(function(){ if(tischAkt===t.t && !offenBeine(t).length) naechsterTisch(); },1300);
+  };
+  window.details=function(){
+    var t=TI[tischAkt], f=legAkt||(t&&t.beine[0].f); if(!f){ toast('Erst einen Tisch wählen',true); return; }
+    detailOffen=true; sel=PI[f]; formLeeren();
+    var e=ERL.pfaehle[f]; if(e){ form.gew=e.gew!=null?+e.gew:null; form.schaden=e.schaden||null; form.kopf=e.kopfplatte||null; $('fText').value=e.text||''; }
+    beruehrt=true; viewMalen(); knoepfeMalen(); kopfMalen();
+    $('detailTitel').textContent='Details zu '+sel.tisch+' '+sel.fuss+' – Gewinde prüfen, Rest nach Bedarf';
+    window.scrollTo(0,0);
+  };
+  window.detailZu=function(){ detailOffen=false; viewMalen(); var t=TI[tischAkt]; if(t) legAkt=naechstesBein(t,sel||t); tischKopfMalen(); tischMalen(); };
+  function viewMalen(){
+    var g=modusAkt==='g';
+    $('tischView').hidden=!g||detailOffen; $('detailView').hidden=g&&!detailOffen; $('btnZurueck').hidden=!(g&&detailOffen);
+    $('detailTitel').textContent='';
+  }
+  function tischKopfMalen(){
+    var t=TI[tischAkt];
+    if(!t){ $('kPid').className='pid leer'; $('kPid').textContent=gps?(PUNKTE.length?'Kein offener Tisch in der Nähe':'Daten laden …'):'GPS sucht …';
+      $('kTyp').textContent=''; $('kNalpi').textContent=''; $('kWeg').innerHTML=''; $('kBadge').innerHTML=''; $('efNalpi').textContent=''; nachbarnMalen(); return; }
+    $('kPid').className='pid'; $('kPid').textContent='Tisch '+t.t;
+    $('kTyp').innerHTML='Typ <b>'+esc(t.typ||'?')+'</b> · '+esc(t.ber||'–');
+    var kopf=t.beine.filter(function(p){ return p.kopf; }).length;
+    $('kNalpi').textContent=t.beine.length+' Pfähle zu prüfen'+(kopf?' · Nalpi: Kopf drauf bei '+kopf:'');
+    if(gps){ var d=meter(gps,t);
+      if(d<5) $('kWeg').innerHTML='📍 du bist am Tisch';
+      else { var b=bild(t,gps.lat,gps.lon), w=Math.atan2(-b.sx,b.sy)*180/Math.PI;   /* Richtung ich → Tisch im Bild «Berg oben» */
+        $('kWeg').innerHTML='<span class="pfeil" style="transform:rotate('+Math.round(w)+'deg)">⬆</span> '+weg(d)+' <span class="sub">(⬆ = bergauf)</span>'; }
+    } else $('kWeg').textContent='';
+    var o=offenBeine(t).length;
+    $('kBadge').innerHTML=o?'<span class="badge offen">'+zaehl(t)+' erfasst</span>':'<span class="badge ok">✔ Tisch fertig</span>';
+    $('efNalpi').textContent='';
+    nachbarnMalen();
+  }
+  function tischMalen(){
+    if(modusAkt!=='g') return;
+    var t=TI[tischAkt], box=$('tisch');
+    if(!t){ box.innerHTML='<div class="sub" style="padding:50px 16px;text-align:center;font-size:15px">'+(gps?'Lauf zu einem Tisch – oder oben «🔎 Tisch-Nr.» suchen.'
+      :'Warte auf GPS … oder oben «🔎 Tisch-Nr.» suchen.')+'</div>'; tWerteMalen(); return; }
+    var h='<div class="rand" style="top:3px">⛰ Berg</div><div class="rand" style="bottom:3px">Tal</div><div class="rahmen"></div>';
+    t.beine.forEach(function(p){
+      var q=bild(t,p.lat,p.lon), v=wertVon(p.f), e=ERL.pfaehle[p.f], kl='bein'+(e?' ok':'')+(p.f===legAkt?' akt':'');
+      var wk=v==null?'':(v===5?'g5':(v===6.35?'g6':(v===0?'g0':'gx'))), wt=e?(v?gewText(v):(e.text||'nicht messbar')):'—';
+      var info=[]; if(ALT[p.f]) info.push('Aug '+gewText(ALT[p.f].g)); if(p.kopf) info.push('Kopf drauf'); if(e&&e.schaden==='ja') info.push('⚠');
+      if(e&&e._wartet) info.push('⏳');
+      h+='<div class="'+kl+'" style="left:'+(25+nx(t,q.sx)*50)+'%;top:'+(27+ny(t,q.sy)*46)+'%" onclick="beinWaehlen(\''+esc(p.f)+'\')">'
+        +'<b>'+esc(p.fuss)+'</b><span class="wert '+wk+'">'+esc(wt)+'</span><small>'+esc(info.join(' · '))+'</small></div>';
+    });
+    box.innerHTML=h; ichMalen(); tWerteMalen();
+    var fertig=t.beine.filter(function(p){ return ERL.pfaehle[p.f]; }).sort(function(a,b){ return (ERL.pfaehle[b.f].ts||0)-(ERL.pfaehle[a.f].ts||0); });
+    var lv=fertig.length?wertVon(fertig[0].f):null, rest=offenBeine(t).length;
+    $('tRest').textContent=lv&&rest?'⇉ Rest auch '+gewText(lv):'⇉ Rest gleich'; $('tRest').disabled=!(lv&&rest);
+  }
+  function ichMalen(){
+    var t=TI[tischAkt], box=$('tisch'); if(!t||!box) return;
+    var el=box.querySelector('.ich');
+    if(!gps||meter(gps,t)>=25){ if(el) el.parentNode.removeChild(el); return; }
+    var b=bild(t,gps.lat,gps.lon), ix=Math.max(-0.4,Math.min(1.4,nx(t,b.sx))), iy=Math.max(-0.5,Math.min(1.5,ny(t,b.sy)));
+    if(!el){ el=document.createElement('div'); el.className='ich'; box.appendChild(el); }
+    el.style.left=Math.max(2,Math.min(98,25+ix*50))+'%'; el.style.top=Math.max(3,Math.min(97,27+iy*46))+'%';
+  }
+  function tWerteMalen(){
+    $('tGruende').hidden=!grundOffen; $('tWerte').hidden=grundOffen;
+    var akt=legAkt?ERL.pfaehle[legAkt]:null, av=akt?+akt.gew:null;
+    var h=GEW_STD.map(function(g){ return '<button class="'+g[3]+(av===g[0]?' on':'')+'" onclick="wert('+g[0]+')">'+g[1].replace(' mm','')+'<small>'+g[2]+'</small></button>'; });
+    gewExtra().forEach(function(v){ h.push('<button class="'+(av===v?'on':'')+'" onclick="wert('+v+')">⚪ '+gewText(v)+'<small>neues Gewinde</small></button>'); });
+    h.push('<button class="'+(akt&&av===0?'on':'')+'" onclick="wert(0)">❓<small>nicht messbar</small></button>');
+    h.push('<button onclick="gewNeu()">➕<small>anderes Gewinde</small></button>');
+    $('tWerte').innerHTML=h.join('');
+  }
+  /* Rückmeldung ohne hinzuschauen: Piep (WebAudio) + kurze Ansage (Sprachausgabe des Geräts, geht offline) */
+  var AC=null;
+  function piep(){ try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); var o=AC.createOscillator(), g=AC.createGain();
+    o.frequency.value=1046; g.gain.value=0.12; o.connect(g); g.connect(AC.destination); o.start(); o.stop(AC.currentTime+0.09); }catch(e){} }
+  function gewSprache(v){ return gewText(v).replace('.',' Komma '); }
+  function sag(txt){ if(!ansage||!window.speechSynthesis) return; try{ speechSynthesis.cancel(); var u=new SpeechSynthesisUtterance(txt);
+    u.lang='de-DE'; u.rate=1.15; speechSynthesis.speak(u); }catch(e){} }
+  window.ansageUmschalten=function(){ ansage=!ansage; lsSet(LS_ANSAGE,ansage?'1':'0'); $('btnAnsage').textContent=ansage?'🔊 Ansage an':'🔇 Ansage aus'; if(ansage) sag('Ansage an'); };
+  window.tippZu=function(){ lsSet(LS_TIPP,'zu'); $('tipp').hidden=true; };
+
+  /* Satellitenbild des ganzen Perimeters in den Cache (z16–20, ~700 Kacheln, ~14 MB). Der Service Worker holt Kacheln
+     ohne Netz aus jedem Cache; «nalp-keep-…» löscht er beim Update nicht (sw.js activate). */
+  var KACHEL='https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/';
+  window.kachelnLaden=function(){
+    if(!window.caches){ toast('Dieses Gerät kann keine Karten speichern',true); return; }
+    if(!netzAn()){ toast('Dafür braucht es Netz (am besten WLAN)',true); return; }
+    var la=PUNKTE.map(function(p){ return p.lat; }), lo=PUNKTE.map(function(p){ return p.lon; });
+    var s=Math.min.apply(null,la)-0.0004, n=Math.max.apply(null,la)+0.0004, w=Math.min.apply(null,lo)-0.0006, e=Math.max.apply(null,lo)+0.0006;
+    function tx(lon,z){ return Math.floor((lon+180)/360*Math.pow(2,z)); }
+    function ty(lat,z){ var r=lat*Math.PI/180; return Math.floor((1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*Math.pow(2,z)); }
+    var urls=[]; for(var z=16;z<=20;z++) for(var x=tx(w,z);x<=tx(e,z);x++) for(var y=ty(n,z);y<=ty(s,z);y++) urls.push(KACHEL+z+'/'+x+'/'+y+'.jpeg');
+    var ok=0, fehl=0, i=0, btn=$('btnKacheln'); btn.disabled=true;
+    caches.open('nalp-keep-kacheln').then(function(c){
+      function eins(){ if(i>=urls.length) return Promise.resolve(); var u=urls[i++];
+        return c.match(u).then(function(hit){ if(hit) return; return fetch(u,{mode:'cors'}).then(function(r){ if(!r.ok) throw 0; return c.put(u,r); }); })
+          .then(function(){ ok++; },function(){ fehl++; })
+          .then(function(){ if((ok+fehl)%25===0) $('kachelStand').textContent='Satellitenbild: '+(ok+fehl)+' / '+urls.length+' …'; return eins(); }); }
+      return Promise.all([eins(),eins(),eins(),eins(),eins(),eins()]);
+    }).then(function(){ btn.disabled=false; lsSet(LS_KACHEL,String(Date.now()));
+      $('kachelStand').textContent='✔ Satellitenbild offline gespeichert: '+ok+' Kacheln'+(fehl?' ('+fehl+' fehlten – nochmals tippen)':'')+' · '+zeit(Date.now());
+      toast('✔ Karte offline bereit'); }).catch(function(){ btn.disabled=false; toast('Speichern ging nicht',true); });
   };
 
   /* ── Stand ── */
@@ -690,11 +985,18 @@
     for(var f in e){ if(e[f].datum===h) heuteN++; }
     var zg={}; for(var f2 in ERL.pfaehle){ var gw=+ERL.pfaehle[f2].gew; zg[gw]=(zg[gw]||0)+1; }
     var gz=[5,6.35].concat(gewExtra()).map(function(v){ return gewText(v)+' mm: '+(zg[v]||0); }).concat(['nicht messbar: '+(zg[0]||0)]).join(' · ');
+    var ts=[]; for(var f3 in ERL.pfaehle){ if(ERL.pfaehle[f3].datum===h) ts.push(ERL.pfaehle[f3].ts||0); } ts.sort(function(a,b){ return a-b; });
+    var tempo='';
+    if(modusAkt==='g'){
+      if(ts.length>=5){ var std=Math.max((ts[ts.length-1]-ts[0])/3600000,0.2), pro=ts.length/std, rest=k.length-fertig;
+        tempo='<br>⏱ Tempo <b>'+Math.round(pro)+' Pfähle/h</b> ('+Math.round(3600/pro)+' s je Pfahl) · Rest '+rest+' ≈ '+(rest/pro).toFixed(1).replace('.',',')+' h'; }
+      else tempo='<br>⏱ 1000 Pfähle in 9 h = 111 je Stunde = 32 s je Pfahl. Das Tempo erscheint ab dem 5. Pfahl.';
+    }
     $('stand').innerHTML='<b>'+fertig+' / '+k.length+'</b> '+(modusAkt==='ef'?'Einzelfundamente':'Pfähle')+' erfasst · heute '+heuteN
-      +(modusAkt==='g'?'<br>'+gz:'')
+      +(modusAkt==='g'?'<br>'+gz+tempo:'')
       +'<br><span class="sub">Daten Nalpi Stand '+esc(STAND.split('-').reverse().join('.'))+' – nur gebohrt/injiziert, ohne Primärkonstruktion.</span>';
   }
-  function allesMalen(){ erledigtRechnen(); gewKnoepfe(); kopfMalen(); standMalen(); if(mini) punkteLayer(); miniMalen(); if(gross) grossPunkte(); if(!$('s-berg').hidden) bListe(); }
+  function allesMalen(){ erledigtRechnen(); gewKnoepfe(); kopfMalen(); if(modusAkt==='g' && !detailOffen) tischMalen(); standMalen(); if(mini) punkteLayer(); miniMalen(); if(gross) grossPunkte(); if(!$('s-berg').hidden) bListe(); }
 
   /* ── Mini-Karte oben rechts + grosse Karte ── */
   var mini=null, miniPunkte=null, miniIch=null, miniKreis=null, miniSel=null, gross=null, grossLayer=null, grossIch=null, grossSel=null;
@@ -749,7 +1051,9 @@
     var cv=L.canvas({padding:.4}); grossLayer=L.layerGroup();
     kandidaten().forEach(function(p){
       var m=L.circleMarker([p.lat,p.lon],{renderer:cv,radius:7,weight:1.5,color:'#fff',fillColor:farbe(p),fillOpacity:.95});
-      m.on('click',function(){ waehle(p,false); grossZu(); toast(p.tisch+' '+p.fuss+' gewählt'); });
+      m.on('click',function(){
+        if(modusAkt==='g' && !detailOffen && TI[p.tisch]){ tischWaehlen(p.tisch,false); beinWaehlen(p.f); } else waehle(p,false);
+        grossZu(); toast(p.tisch+' '+p.fuss+' gewählt'); });
       m.addTo(grossLayer);
     });
     grossLayer.addTo(gross);
@@ -829,6 +1133,9 @@
   $('fVon').addEventListener('change',function(){ lsSet(LS_VON,this.value.trim()); });
   auto=lsGet(LS_AUTO,'1')!=='0'; $('autoBtn').classList.toggle('on',auto); $('autoBtn').textContent=auto?'an':'aus';
   bMalen(); cacheLesen(); gewKnoepfe();
+  $('tipp').hidden=lsGet(LS_TIPP,'')==='zu';
+  $('btnAnsage').textContent=ansage?'🔊 Ansage an':'🔇 Ansage aus';
+  (function(){ var k=+lsGet(LS_KACHEL,'0'); $('kachelStand').textContent=k?'✔ Satellitenbild offline gespeichert am '+zeit(k):'Satellitenbild noch nicht offline gespeichert.'; })();
   var start=(location.hash||'').replace('#','');
   laden().catch(function(){ toast('Daten nicht geladen – einmal mit Netz öffnen',true); })
     .then(function(){ return warteMischen(); })

@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v216';
+var CACHE = 'nalpsolar-v217';
 var PRECACHE = [
   './index.html',
   // Webapp-Manifest + Icons des Portals (22.09.2026, Tools\Portal_Icons_Bauen.py) und die
@@ -172,7 +172,7 @@ self.addEventListener('install', function(e) {
 self.addEventListener('activate', function(e) {
   e.waitUntil(
     caches.keys().then(function(keys) {
-      return Promise.all(keys.filter(function(k){ return k !== CACHE; }).map(function(k){ return caches.delete(k); }));
+      return Promise.all(keys.filter(function(k){ return k !== CACHE && k.indexOf('nalp-keep-') !== 0; /* nalp-keep-kacheln = Satellitenbild offline, inventur.html 02.11.2026 */ }).map(function(k){ return caches.delete(k); }));
     }).then(function() { return self.clients.claim(); })
   );
 });
