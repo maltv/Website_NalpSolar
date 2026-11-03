@@ -79,11 +79,11 @@
   .badge{ display:inline-block; font-size:12.5px; font-weight:800; border-radius:6px; padding:3px 7px; margin-top:3px; }
   .badge.ok{ background:#e4f5ec; color:var(--gruen); }
   .badge.offen{ background:#fff1dc; color:#a86400; }
-  .mini{ flex:0 0 auto; width:132px; display:flex; flex-direction:column; gap:4px; }
-  #miniMap{ width:132px; height:132px; border-radius:7px; border:1px solid #c9ccd2; background:#dfe3e8; cursor:pointer; }
+  .mini{ flex:0 0 auto; width:156px; display:flex; flex-direction:column; gap:4px; }
+  #miniMap{ width:156px; height:156px; border-radius:7px; border:1px solid #c9ccd2; background:#dfe3e8; cursor:pointer; }
   .gps{ font-size:12px; font-weight:800; text-align:center; border-radius:5px; padding:3px 2px; background:#f1f2f4; color:var(--mut); }
   .gps.gut{ background:#e4f5ec; color:var(--gruen); } .gps.mittel{ background:#fff1dc; color:#a86400; } .gps.schlecht{ background:#fdecec; color:var(--rot); }
-  @media (min-width:700px){ .mini{ width:220px; } #miniMap{ width:220px; height:220px; } .kopf .pid{ font-size:40px; } }
+  @media (min-width:700px){ .mini{ width:310px; } #miniMap{ width:310px; height:310px; } .kopf .pid{ font-size:40px; } }
 
   .modus{ display:flex; gap:8px; margin-bottom:10px; }
   .modus button{ flex:1; min-height:54px; border:2px solid #c9ccd2; border-radius:10px; background:#fff; font:800 15.5px Arial;
@@ -146,6 +146,15 @@
   .bein.akt{ border-color:var(--rot); box-shadow:0 0 0 4px rgba(215,38,34,.22); background:#fff; }
   .bein.ok.akt{ background:#f0faf4; }
   .bein .wert.g5{ color:var(--blau); } .bein .wert.g6{ color:#8a6a00; } .bein .wert.gx{ color:#5b2a86; } .bein .wert.g0{ color:var(--rot); font-size:22px; }
+  .bein .wert.gk{ color:var(--ink); font-size:24px; }
+  .wahl button.gk.on{ border-color:var(--ink); background:#eceef1; color:var(--ink); box-shadow:inset 0 0 0 2px var(--ink); }
+  .mic{ display:flex; align-items:center; justify-content:center; gap:8px; }
+  .mic.rec{ background:var(--rot)!important; border-color:var(--rot)!important; color:#fff!important; }
+  .mic.busy{ opacity:.6; }
+  .sprach{ display:flex; gap:6px; flex-wrap:wrap; margin:6px 0; }
+  .sprach span{ display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:800; background:#fff1dc; color:#a86400;
+                border-radius:6px; padding:5px 8px; }
+  .sprach button{ border:none; background:rgba(0,0,0,.12); border-radius:50%; width:24px; height:24px; cursor:pointer; font-size:12px; }
   .ich{ position:absolute; width:16px; height:16px; margin:-8px 0 0 -8px; border-radius:50%; background:#1565c0; border:3px solid #fff;
         box-shadow:0 0 0 2px #1565c0; pointer-events:none; }
   .wahl.gross button{ min-height:84px; font-size:23px; }
@@ -182,7 +191,7 @@
         <li><b>Messen → Wert antippen</b> – speichert sofort (Piep + Ansage) und springt zum nächsten Bein. <b>1 Tipp je Pfahl.</b></li>
         <li><b>Tisch fertig</b> = es geht von selbst zum nächsten offenen Tisch.</li>
       </ol>
-      <div class="sub">Falsches Bein? Kachel antippen, Wert neu tippen. «❓» = Grund mit 1 Tipp. Schaden / Kopfplatte / Foto = «✏ Details».
+      <div class="sub">Falsches Bein? Kachel antippen, Wert neu tippen. «🔩 Kopf» = Pfahlkopf montiert, «❓» = Grund mit 1 Tipp. Schaden / Foto / Problem (auch 🎤 sprechen) = «✏ Details».
         Kein Netz? Egal – alles wartet auf dem Tablet. Zu zweit: das Handy kann gleichzeitig einen anderen Bereich machen.
         Am Morgen im WLAN einmal «🗺 Satellitenbild offline laden» (unten).</div>
     </div>
@@ -235,7 +244,6 @@
       <div class="tisch" id="tisch"></div>
       <div class="wahl gross" id="tWerte"></div>
       <div class="wahl klein" id="tGruende" hidden>
-        <button onclick="grund('Kopf drauf')">🔩 Kopf drauf</button>
         <button onclick="grund('verdeckt / Erde')">🪨 verdeckt</button>
         <button onclick="grund('Schnee / Eis')">❄ Schnee</button>
         <button onclick="grund('Gewinde beschädigt')">⚠ beschädigt</button>
@@ -285,7 +293,9 @@
       <input type="file" id="fDat" accept="image/*" multiple hidden>
       <div class="fotos" id="prev"></div>
       <label class="f">Bemerkung <span>– optional</span></label>
-      <textarea id="fText" placeholder="z.B. Gewinde verbogen, Kopf fehlt …" oninput="beruehrt=true"></textarea>
+      <button class="btn w mic" id="bMic" onclick="micKlick()">🎤 Sprechen <small class="sub">– geht auch offline</small></button>
+      <div class="sprach" id="sprach"></div>
+      <textarea id="fText" placeholder="z.B. Gewinde verbogen, Kopf fehlt …" oninput="beruehrt=true" style="margin-top:6px"></textarea>
     </div>
 
     <button class="btn" id="btnSave" onclick="speichern()">✔ Speichern</button>
@@ -404,7 +414,8 @@
   'use strict';
   var DATEN='uploads/inventur.json';
   var RTDB='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app/erfassung';
-  var P_BASIS='inventur26', P_FOT='inventur26_fotos', P_GEW_ALT='gewinde';
+  var P_BASIS='inventur26', P_FOT='inventur26_fotos', P_AUD='inventur26_audio', P_GEW_ALT='gewinde';
+  var FN_STIMME='https://europe-west1-highscore-test-2e784.cloudfunctions.net/rapport_stimme', CODE='6460';
   var LS_VON='nalp_erfasser_v1', LS_CACHE='nalp_inventur26_cache_v1', LS_ORT='nalp_inventur26_ort_v1',
       LS_AUTO='nalp_inventur26_auto_v1', LS_MODUS='nalp_inventur26_modus_v1', LS_LETZTE='nalp_inventur26_letzte_v1',
       LS_GEW='nalp_inventur26_gewinde_v1', LS_ANSAGE='nalp_inventur26_ansage_v1', LS_TIPP='nalp_inventur26_tipp_v1',
@@ -575,14 +586,15 @@
     };
   })();
   function warteMischen(){ return Q.alle().then(function(a){ a.forEach(function(j){ if(j.del) { delete R[j.art][j.k]; return; }
-    var r={}; for(var s in j.rec) r[s]=j.rec[s]; r.anzahl_fotos=(j.fotos||[]).length; r._wartet=1; R[j.art][j.k]=r; }); return a; }); }
+    var r={}; for(var s in j.rec) r[s]=j.rec[s]; r.anzahl_fotos=(j.fotos||[]).length; r._wartet=1; r._sprach=(j.audios||[]).length; R[j.art][j.k]=r; }); return a; }); }
   function netzMalen(){ Q.alle().then(function(a){ var e=$('netz'); e.className='netz'+(netzAn()?'':' off');
     e.textContent=(netzAn()?'online':'offline')+(a.length?' · '+a.length+' wartet':''); }); }
   window.addEventListener('online',function(){ netzMalen(); senden(); });
   window.addEventListener('offline',netzMalen);
   setInterval(function(){ Q.alle().then(function(a){ if(a.length) senden(); }); },45000);
 
-  /* Erst die Fotos, dann der Satz mit dem Verweis. PUT mit eigener id = ein zweiter Versuch schreibt nichts doppelt. */
+  /* Erst die Fotos, dann die Sprachnotizen (Text in die Bemerkung), dann der Satz mit dem Verweis.
+     PUT mit eigener id = ein zweiter Versuch schreibt nichts doppelt. */
   var laeuft=null, nochmal=false;
   function einLauf(){
     return Q.alle().then(function(jobs){
@@ -591,7 +603,7 @@
           var url=RTDB+'/'+P_BASIS+'/'+j.art+'/'+j.k+'.json';
           if(j.del) return fetch(url,{method:'DELETE'}).then(function(r){ if(r.ok){ delete R[j.art][j.k]; return Q.weg(j.k); } }).catch(function(){});
           var rec={}; for(var s in j.rec) rec[s]=j.rec[s];
-          var bilder=j.fotos||[];
+          var bilder=j.fotos||[], toene=j.audios||[];
           return bilder.reduce(function(k2,data,ix){
             return k2.then(function(){
               var fid='f_'+j.k+'_'+ix;
@@ -600,6 +612,24 @@
                 .then(function(r){ if(!r.ok) throw 0; rec.fotos=rec.fotos||{}; rec.fotos[fid]=true; FOTO_CACHE[fid]=data; });
             });
           },Promise.resolve()).then(function(){
+            return toene.reduce(function(k3,a,ix){
+              return k3.then(function(){
+                return verstehen(a,60000).then(function(t){ rec.text=(rec.text?rec.text+' · ':'')+'🎤 '+t; rec.sprachnotiz=(rec.sprachnotiz||0)+1; },
+                  function(e){
+                    if(e==='netz') throw e;     /* kein Netz: Job bleibt, nächster Lauf */
+                    var aid='a_'+j.k+'_'+ix;
+                    return fetch(RTDB+'/'+P_AUD+'/'+aid+'.json',{method:'PUT',body:JSON.stringify({eintrag:j.k,art:j.art,punkt:rec.fid||'',
+                      von:rec.von,ts:rec.ts,data:'data:'+a.mime+';base64,'+a.b64,mime:a.mime,dauer:a.dauer,fehler:String(e).slice(0,200)})})
+                      .then(function(r){ if(!r.ok) throw 0; rec.audio=rec.audio||{}; rec.audio[aid]=true;
+                        rec.text=(rec.text?rec.text+' · ':'')+'🎤 Sprachnotiz nicht verstanden – Aufnahme gespeichert'; });
+                  });
+              });
+            },Promise.resolve()).then(function(){
+              if(!toene.length) return;     /* Text gesichert → nicht nochmals verstehen, falls der Satz unten scheitert */
+              ['text','sprachnotiz','audio'].forEach(function(s){ if(rec[s]!=null) j.rec[s]=rec[s]; }); j.audios=[];
+              return Q.alle().then(function(a){ if(a.some(function(x){ return x.k===j.k && !x.del; })) return Q.add(j); });   /* nicht über ein «rückgängig» schreiben */
+            });
+          }).then(function(){
             rec.anzahl_fotos=bilder.length;
             return fetch(url,{method:'PUT',body:JSON.stringify(rec)});
           }).then(function(r){ if(r&&r.ok){ R[j.art][j.k]=rec; return Q.weg(j.k); } }).catch(function(){});
@@ -614,11 +644,12 @@
       .then(function(){ cacheSchreiben(); netzMalen(); allesMalen(); });
     return laeuft;
   }
-  function ablegen(artName,rec,bilder){
-    var k=neueId(), lokal={}; for(var s in rec) lokal[s]=rec[s]; lokal.anzahl_fotos=bilder.length; lokal._wartet=1;
+  function ablegen(artName,rec,bilder,toene){
+    toene=toene||[];
+    var k=neueId(), lokal={}; for(var s in rec) lokal[s]=rec[s]; lokal.anzahl_fotos=bilder.length; lokal._wartet=1; lokal._sprach=toene.length;
     R[artName][k]=lokal;
     lsSet(LS_LETZTE,JSON.stringify({art:artName,k:k}));
-    return Q.add({k:k, art:artName, rec:rec, fotos:bilder}).then(function(){ netzMalen(); senden(); return k; });
+    return Q.add({k:k, art:artName, rec:rec, fotos:bilder, audios:toene}).then(function(){ netzMalen(); senden(); return k; });
   }
   window.rueckgaengig=function(){
     var l=null; try{ l=JSON.parse(lsGet(LS_LETZTE,'')||'null'); }catch(e){}
@@ -771,7 +802,75 @@
   };
 
   /* ── Formular ── */
-  function formLeeren(){ form={}; fotos=[]; beruehrt=false; $('fText').value=''; fotosMalen(); knoepfeMalen(); }
+  function formLeeren(){ form={}; fotos=[]; beruehrt=false; $('fText').value=''; fotosMalen(); knoepfeMalen();
+    if(mrec&&mrec.state==='recording'){ mrec._weg=1; mrec.stop(); } audios=[]; micMalen(); }
+
+  /* ── Sprachnotiz (Victor 03.11.: «Problem per Texteingabe braucht Zeit – geht offline Spracheingabe?»). NICHT die
+     Browser-Diktierfunktion (Victor traut ihr nicht), sondern Aufnahme auf dem Gerät + Gemini über die Cloud Function
+     rapport_stimme wie im Tagesrapport §65. Mit Netz steht der Text nach ein paar Sekunden im Feld (korrigierbar); ohne Netz
+     geht die Aufnahme mit der Erfassung in die Warteschlange und wird beim Senden verstanden («🎤 …» in der Bemerkung).
+     Versteht Gemini sie nicht, landet die Aufnahme unter erfassung/inventur26_audio – nichts geht verloren. */
+  var audios=[], mrec=null, mStart=0, mTimer=null, MAX_SEK=90;
+  function mimeWahl(){ var k=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus'];
+    if(!window.MediaRecorder||!MediaRecorder.isTypeSupported) return '';
+    for(var i=0;i<k.length;i++) if(MediaRecorder.isTypeSupported(k[i])) return k[i]; return ''; }
+  function blobB64(blob){ return new Promise(function(ok,fehl){ var r=new FileReader(); r.onload=function(){ ok(String(r.result).split(',')[1]||''); };
+    r.onerror=fehl; r.readAsDataURL(blob); }); }
+  function micMalen(){
+    var b=$('bMic'); if(!b) return;
+    var an=!!(mrec&&mrec.state==='recording'), s=an?Math.floor((Date.now()-mStart)/1000):0;
+    b.classList.toggle('rec',an);
+    b.innerHTML=an?'■ Stopp · '+Math.floor(s/60)+':'+zz(s%60):'🎤 Sprechen <small class="sub">– geht auch offline</small>';
+    $('sprach').innerHTML=audios.map(function(a,i){ return '<span>'+(a.laeuft?'⏳ verstehe '+a.dauer+' s …':'🎤 '+a.dauer+' s · wird mit Netz verstanden')
+      +' <button onclick="audioWeg('+i+')" aria-label="weg">✕</button></span>'; }).join('');
+  }
+  window.audioWeg=function(i){ audios.splice(i,1); micMalen(); };
+  window.micKlick=function(){
+    if(mrec&&mrec.state==='recording'){ mrec.stop(); return; }
+    if(!sel){ toast('Erst einen Punkt wählen',true); return; }
+    if(!window.MediaRecorder||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ toast('Dieses Gerät kann nicht aufnehmen – bitte schreiben',true); return; }
+    beruehrt=true;                     /* GPS wechselt den Punkt nicht, solange gesprochen wird */
+    navigator.mediaDevices.getUserMedia({audio:true}).then(function(s){
+      var mime=mimeWahl(), opt={audioBitsPerSecond:32000}, teile=[], r;
+      if(mime) opt.mimeType=mime;
+      try{ r=new MediaRecorder(s,opt); }catch(e){ r=new MediaRecorder(s); }
+      mrec=r;
+      r.ondataavailable=function(e){ if(e.data&&e.data.size) teile.push(e.data); };
+      r.onstop=function(){
+        s.getTracks().forEach(function(t){ t.stop(); }); clearInterval(mTimer); if(mrec===r) mrec=null;
+        var dauer=Math.round((Date.now()-mStart)/1000), blob=new Blob(teile,{type:r.mimeType||mime||'audio/webm'});
+        if(r._weg){ micMalen(); return; }
+        if(blob.size<1500||dauer<1){ micMalen(); toast('Aufnahme war leer',true); return; }
+        blobB64(blob).then(function(b64){
+          var a={b64:b64, mime:(blob.type||'audio/webm').split(';')[0], dauer:dauer};
+          audios.push(a); micMalen(); if(navigator.vibrate) navigator.vibrate(20);
+          if(r._danach) speichern(); else if(netzAn()) jetztVerstehen(a);
+        });
+      };
+      r.start(1000); mStart=Date.now(); if(navigator.vibrate) navigator.vibrate(30);
+      mTimer=setInterval(function(){ if(Date.now()-mStart>=MAX_SEK*1000){ if(mrec) mrec.stop(); } else micMalen(); },500);
+      micMalen();
+    }).catch(function(e){ toast('Mikrofon nicht freigegeben ('+(e.name||e.message)+')',true); });
+  };
+  function jetztVerstehen(a){
+    a.laeuft=1; micMalen();
+    verstehen(a,25000).then(function(t){
+      a.laeuft=0; var i=audios.indexOf(a); if(i<0) return;   /* schon gespeichert: geht mit der Warteschlange */
+      audios.splice(i,1); var f=$('fText'); f.value=(f.value.trim()?f.value.trim()+' ':'')+t; beruehrt=true; micMalen();
+    },function(){ a.laeuft=0; micMalen(); });
+  }
+  /* → Text; wirft 'netz' (später nochmals) oder den Grund, wenn Gemini die Aufnahme nicht versteht */
+  function verstehen(a,ms){
+    var ctl=window.AbortController?new AbortController():null, t=ctl?setTimeout(function(){ ctl.abort(); },ms):0;
+    return fetch(FN_STIMME,{method:'POST',headers:{'Content-Type':'application/json'},signal:ctl?ctl.signal:undefined,
+      body:JSON.stringify({code:CODE,audio:a.b64,mime:a.mime,kontext:{name:lsGet(LS_VON,''),datum:heute(),personen:[]}})})
+      .then(function(r){ return r.json().catch(function(){ throw 'netz'; }); },function(){ throw 'netz'; })
+      .then(function(j){ clearTimeout(t);
+        if(!j||!j.ok) throw String((j&&j.fehler)||'keine Antwort');
+        var s=String(j.deutsch||j.original||'').trim(); if(!s) throw 'nichts verstanden'; return s; },
+        function(e){ clearTimeout(t); throw e; });
+  }
+  function toeneFuerJob(){ return audios.map(function(a){ return {b64:a.b64, mime:a.mime, dauer:a.dauer}; }); }
   function knoepfeMalen(){
     [['wGew','gew'],['wSchaden','schaden'],['wKopf','kopf'],['wEf','eft']].forEach(function(x){
       Array.prototype.forEach.call($(x[0]).querySelectorAll('button'),function(b){ b.classList.toggle('on', form[x[1]]!=null && String(form[x[1]])===b.getAttribute('data-v')); });
@@ -855,17 +954,18 @@
 
   window.speichern=function(){
     if(!sel){ toast('Kein Punkt gewählt',true); return; }
+    if(mrec&&mrec.state==='recording'){ mrec._danach=1; mrec.stop(); return; }   /* Aufnahme läuft: erst stoppen, dann speichern */
     var von=name(); if(!von) return;
-    var text=$('fText').value.trim(), rec, artName=art();
+    var text=$('fText').value.trim(), rec, artName=art(), toene=toeneFuerJob();
     if(modusAkt==='g'){
       if(form.gew==null){ toast('Gewinde fehlt – 5.0, 6.35 oder nicht messbar',true); return; }
-      if(form.gew===0 && !text){ toast('Nicht messbar: bitte kurz schreiben warum',true); $('fText').focus(); return; }
+      if(form.gew===0 && !text && !toene.length && form.kopf!=='ja'){ toast('Nicht messbar: bitte kurz schreiben oder 🎤 sprechen, warum',true); $('fText').focus(); return; }
       rec={fid:sel.f, tisch:sel.tisch, fuss:sel.fuss, typ:sel.typ, bereich:sel.ber, gew:form.gew,
            schaden:form.schaden||'', kopfplatte:form.kopf||'', text:text, von:von, ts:Date.now(), datum:heute(), quelle:'inventur.html'};
     } else {
       if(form.eft==null){ toast('Typ fehlt',true); return; }
       if(!fotos.length){ toast('Foto vom Fundament fehlt',true); return; }
-      if(sel.nurGps && !text){ toast('Ohne Bein: bitte in der Bemerkung schreiben, wo das Fundament steht',true); $('fText').focus(); return; }
+      if(sel.nurGps && !text && !toene.length){ toast('Ohne Bein: bitte schreiben oder 🎤 sprechen, wo das Fundament steht',true); $('fText').focus(); return; }
       rec={fid:sel.f, tisch:sel.tisch, fuss:sel.fuss, typ:sel.typ, bereich:sel.ber, ef_typ:form.eft, ef_label:efLabel(form.eft),
            nalpi_ef_typ:sel.eft, text:text, von:von, ts:Date.now(), datum:heute(), quelle:'inventur.html'};
       if(sel.neu){ rec.neu=1; rec.lat=+sel.lat.toFixed(7); rec.lon=+sel.lon.toFixed(7);
@@ -875,11 +975,11 @@
     if(alt && !detailOffen && !confirm(sel.f+' ist schon erfasst ('+zeit(alt.ts||0)+', '+(alt.von||'')+').\nNochmals erfassen? Der neue Stand gilt.')) return;
     var f=sel.f;
     if(detailOffen){
-      ablegen(artName,gpsFeld(rec),fotos.slice()).then(function(){ toast('✔ '+f.replace('_',' ')+' Details gespeichert'); });
+      ablegen(artName,gpsFeld(rec),fotos.slice(),toene).then(function(){ toast('✔ '+f.replace('_',' ')+' Details gespeichert'); });
       if(navigator.vibrate) navigator.vibrate(60); piep();
       erledigtRechnen(); formLeeren(); detailZu(); standMalen(); if(mini) punkteLayer(); if(gross) grossPunkte(); miniMalen(); return;
     }
-    ablegen(artName,gpsFeld(rec),fotos.slice()).then(function(){
+    ablegen(artName,gpsFeld(rec),fotos.slice(),toene).then(function(){
       toast('✔ '+f.replace('_',' ')+' gespeichert'+(netzAn()?'':' – offline, geht später raus'));
     });
     if(navigator.vibrate) navigator.vibrate(60);
@@ -965,17 +1065,23 @@
   };
   window.grund=function(txt){ grundOffen=false; if(legAkt) beinSpeichern(legAkt,0,txt); else tWerteMalen(); };
   window.grundAbbruch=function(){ grundOffen=false; tWerteMalen(); };
-  function beinSpeichern(f,v,text,still){
+  /* «Pfahlkopf montiert» (Victor 03.11.): ein Tipp wie ein Gewinde – Gewinde nicht messbar, Pfahlkopfplatte ja */
+  var KOPF_TXT='Pfahlkopf montiert', GRUENDE=['Kopf drauf','verdeckt / Erde','Schnee / Eis','Gewinde beschädigt','Pfahl nicht gefunden',KOPF_TXT];
+  function istKopf(e){ return !!e && !+e.gew && e.kopfplatte==='ja'; }
+  window.kopfMontiert=function(){ if(!legAkt){ toast('Erst ein Bein antippen',true); return; } grundOffen=false; beinSpeichern(legAkt,0,KOPF_TXT,false,'ja'); };
+  function beinSpeichern(f,v,text,still,kopf){
     var von=name(); if(!von) return false;
     var p=PI[f], t=TI[p.tisch], alt=ERL.pfaehle[f];
+    var aText=alt?alt.text||'':'', aKopf=alt?alt.kopfplatte||'':'';
+    if(GRUENDE.indexOf(aText)>=0){ if(aText===KOPF_TXT) aKopf=''; aText=''; }   /* alter Knopf-Grund gilt nach einem neuen Tipp nicht mehr */
     var rec={fid:p.f, tisch:p.tisch, fuss:p.fuss, typ:p.typ, bereich:p.ber, gew:v, schaden:alt?alt.schaden||'':'',
-             kopfplatte:alt?alt.kopfplatte||'':'', text:text||(alt?alt.text||'':''), von:von, ts:Date.now(), datum:heute(), quelle:'inventur.html#tisch'};
+             kopfplatte:kopf||aKopf, text:text||aText, von:von, ts:Date.now(), datum:heute(), quelle:'inventur.html#tisch'};
     sel=p; gpsFeld(rec);
     ablegen('pfaehle',rec,[]);
     erledigtRechnen(); tischBeruehrt=true; grundOffen=false;
     if(still) return true;
     if(navigator.vibrate) navigator.vibrate(45); piep();
-    var naechst=naechstesBein(t,p), sprich=p.fuss+', '+(v?gewSprache(v):'nicht messbar');
+    var naechst=naechstesBein(t,p), sprich=p.fuss+', '+(v?gewSprache(v):(kopf?'Kopf montiert':'nicht messbar'));
     if(naechst){ legAkt=naechst; sel=PI[naechst]; sag(sprich+'. Weiter '+PI[naechst].fuss); }
     else { legAkt=null; toast('✔ Tisch '+t.t+' fertig'); sag(sprich+'. Tisch '+t.t+' fertig.');
       setTimeout(function(){ if(tischAkt===t.t && !offenBeine(t).length) naechsterTisch(); },1300); }
@@ -987,10 +1093,11 @@
     var fertig=t.beine.filter(function(p){ return ERL.pfaehle[p.f]; }).sort(function(a,b){ return (ERL.pfaehle[b.f].ts||0)-(ERL.pfaehle[a.f].ts||0); });
     var o=offenBeine(t);
     if(!fertig.length||!o.length){ toast('Erst ein Bein messen',true); return; }
-    var v=wertVon(fertig[0].f); if(!v){ toast('Letzter Wert ist «nicht messbar» – bitte einzeln',true); return; }
-    for(var i=0;i<o.length;i++){ if(!beinSpeichern(o[i].f,v,'',true)) return; }
+    var v=wertVon(fertig[0].f), k=istKopf(ERL.pfaehle[fertig[0].f]);
+    if(!v && !k){ toast('Letzter Wert ist «nicht messbar» – bitte einzeln',true); return; }
+    for(var i=0;i<o.length;i++){ if(!(k?beinSpeichern(o[i].f,0,KOPF_TXT,true,'ja'):beinSpeichern(o[i].f,v,'',true))) return; }
     legAkt=null; if(navigator.vibrate) navigator.vibrate(60); piep();
-    toast('✔ Tisch '+t.t+' fertig – Rest '+gewText(v)); sag('Rest '+gewSprache(v)+'. Tisch '+t.t+' fertig.');
+    toast('✔ Tisch '+t.t+' fertig – Rest '+(k?'Kopf montiert':gewText(v))); sag('Rest '+(k?'Kopf montiert':gewSprache(v))+'. Tisch '+t.t+' fertig.');
     tischKopfMalen(); tischMalen(); standMalen(); if(mini) punkteLayer(); if(gross) grossPunkte(); miniMalen();
     setTimeout(function(){ if(tischAkt===t.t && !offenBeine(t).length) naechsterTisch(); },1300);
   };
@@ -1034,16 +1141,18 @@
     var h='<div class="rand" style="top:3px">⛰ Berg</div><div class="rand" style="bottom:3px">Tal</div><div class="rahmen"></div>';
     t.beine.forEach(function(p){
       var q=bild(t,p.lat,p.lon), v=wertVon(p.f), e=ERL.pfaehle[p.f], kl='bein'+(e?' ok':'')+(p.f===legAkt?' akt':'');
-      var wk=v==null?'':(v===5?'g5':(v===6.35?'g6':(v===0?'g0':'gx'))), wt=e?(v?gewText(v):(e.text||'nicht messbar')):'—';
+      var kurz=e&&GRUENDE.indexOf(e.text||'')>=0;   /* Knopf-Grund passt in die Kachel, lange Bemerkungen nur als 📝 */
+      var wk=v==null?'':(v===5?'g5':(v===6.35?'g6':(v===0?'g0':'gx'))), wt=e?(v?gewText(v):(kurz?e.text:'nicht messbar')):'—';
+      if(istKopf(e)){ wk='gk'; wt='🔩 Kopf'; }
       var info=[]; if(ALT[p.f]) info.push('Aug '+gewText(ALT[p.f].g)); if(p.kopf) info.push('Kopf drauf'); if(e&&e.schaden==='ja') info.push('⚠');
-      if(e&&e._wartet) info.push('⏳');
+      if(e&&e.text&&!kurz) info.push('📝'); if(e&&e._sprach) info.push('🎤'); if(e&&e._wartet) info.push('⏳');
       h+='<div class="'+kl+'" style="left:'+(25+nx(t,q.sx)*50)+'%;top:'+(27+ny(t,q.sy)*46)+'%" onclick="beinWaehlen(\''+esc(p.f)+'\')">'
         +'<b>'+esc(p.fuss)+'</b><span class="wert '+wk+'">'+esc(wt)+'</span><small>'+esc(info.join(' · '))+'</small></div>';
     });
     box.innerHTML=h; ichMalen(); tWerteMalen();
     var fertig=t.beine.filter(function(p){ return ERL.pfaehle[p.f]; }).sort(function(a,b){ return (ERL.pfaehle[b.f].ts||0)-(ERL.pfaehle[a.f].ts||0); });
-    var lv=fertig.length?wertVon(fertig[0].f):null, rest=offenBeine(t).length;
-    $('tRest').textContent=lv&&rest?'⇉ Rest auch '+gewText(lv):'⇉ Rest gleich'; $('tRest').disabled=!(lv&&rest);
+    var lv=fertig.length?wertVon(fertig[0].f):null, lk=fertig.length&&istKopf(ERL.pfaehle[fertig[0].f]), rest=offenBeine(t).length;
+    $('tRest').textContent=lk&&rest?'⇉ Rest auch Kopf':(lv&&rest?'⇉ Rest auch '+gewText(lv):'⇉ Rest gleich'); $('tRest').disabled=!((lv||lk)&&rest);
   }
   function ichMalen(){
     var t=TI[tischAkt], box=$('tisch'); if(!t||!box) return;
@@ -1058,7 +1167,8 @@
     var akt=legAkt?ERL.pfaehle[legAkt]:null, av=akt?+akt.gew:null;
     var h=GEW_STD.map(function(g){ return '<button class="'+g[3]+(av===g[0]?' on':'')+'" onclick="wert('+g[0]+')">'+g[1].replace(' mm','')+'<small>'+g[2]+'</small></button>'; });
     gewExtra().forEach(function(v){ h.push('<button class="'+(av===v?'on':'')+'" onclick="wert('+v+')">⚪ '+gewText(v)+'<small>neues Gewinde</small></button>'); });
-    h.push('<button class="'+(akt&&av===0?'on':'')+'" onclick="wert(0)">❓<small>nicht messbar</small></button>');
+    h.push('<button class="gk'+(istKopf(akt)?' on':'')+'" onclick="kopfMontiert()">🔩 Kopf<small>Pfahlkopf montiert</small></button>');
+    h.push('<button class="'+(akt&&av===0&&!istKopf(akt)?'on':'')+'" onclick="wert(0)">❓<small>nicht messbar</small></button>');
     h.push('<button onclick="gewNeu()">➕<small>anderes Gewinde</small></button>');
     $('tWerte').innerHTML=h.join('');
   }
@@ -1101,8 +1211,8 @@
     var h=heute(), k=kandidaten(), e=ERL[art()], fertig=0, heuteN=0;
     k.forEach(function(p){ if(e[p.f]) fertig++; });
     for(var f in e){ if(e[f].datum===h) heuteN++; }
-    var zg={}; for(var f2 in ERL.pfaehle){ var gw=+ERL.pfaehle[f2].gew; zg[gw]=(zg[gw]||0)+1; }
-    var gz=[5,6.35].concat(gewExtra()).map(function(v){ return gewText(v)+' mm: '+(zg[v]||0); }).concat(['nicht messbar: '+(zg[0]||0)]).join(' · ');
+    var zg={}, zk=0; for(var f2 in ERL.pfaehle){ var gw=+ERL.pfaehle[f2].gew; if(istKopf(ERL.pfaehle[f2])) zk++; else zg[gw]=(zg[gw]||0)+1; }
+    var gz=[5,6.35].concat(gewExtra()).map(function(v){ return gewText(v)+' mm: '+(zg[v]||0); }).concat(['Kopf montiert: '+zk,'nicht messbar: '+(zg[0]||0)]).join(' · ');
     var ts=[]; for(var f3 in ERL.pfaehle){ if(ERL.pfaehle[f3].datum===h) ts.push(ERL.pfaehle[f3].ts||0); } ts.sort(function(a,b){ return a-b; });
     var tempo='';
     if(modusAkt==='g'){
