@@ -207,6 +207,19 @@
         <button class="btn w" onclick="naechsterOffener()">➡ Nächster offener</button>
         <button class="btn w" onclick="grossAuf()">🗺 Karte</button>
       </div>
+      <button class="btn w" id="btnNeuEf" onclick="neuAuf()" style="margin-top:8px" hidden>➕ Neues Einzelfundament (nicht in Nalpi)</button>
+    </div>
+
+    <div class="box" id="neuBox" hidden style="border-left:5px solid var(--rot)">
+      <b style="font-size:15px">➕ Neues Einzelfundament – in Nalpi noch keins</b>
+      <div class="sub" style="margin:4px 0 8px">Bein antippen, an dem das Fundament steht (nächste nach GPS zuerst). Danach Typ + Foto wie immer.</div>
+      <div class="nachbarn" id="neuBeine"></div>
+      <input type="text" id="neuSuche" placeholder="🔎 Tisch + Bein, z.B. 845 S2" oninput="neuSuchen()" style="margin-top:8px">
+      <div class="nachbarn" id="neuTreffer"></div>
+      <div class="reihe" style="margin-top:8px">
+        <button class="btn w" onclick="neuNurGps()">📍 kein Bein – nur GPS</button>
+        <button class="btn w" onclick="neuZu()">✕ Abbrechen</button>
+      </div>
     </div>
 
     <!-- Schnellmodus Pfähle: ein Tisch, vier Kacheln, Berg oben -->
@@ -452,7 +465,70 @@
   /* letzter Stand je Punkt (Server + noch wartende Sätze) */
   function letzter(k,f){ var best=null, o=R[k]; for(var id in o){ var e=o[id]; if(e && e.fid===f && (!best||(e.ts||0)>(best.ts||0))) best=e; } return best; }
   var ERL={pfaehle:{}, fundamente:{}};
+  /* ── Neues Einzelfundament, das in Nalpi (noch) nicht als EF markiert ist (Victor 03.11.) ──
+     Alle Beine aus uploads/tables/bohrstand.json (alle 5108, im SW-Precache = offline), Tischtyp aus modultische_all.json.
+     Der Satz trägt neu:1 + Lage; neueEinmischen() nimmt ihn in die Punktliste (Karte, Stand), auch auf anderen Geräten. */
+  var BEINE=null, TYPEN_ALL={};
+  function ll(E,N){ var x=(N-1200000)/1e6, y=(E-2600000)/1e6;   /* swisstopo-Näherung, ~1 m – reicht zum Bein-Vorschlagen */
+    var lat=16.9023892+3.238272*x-0.270978*y*y-0.002528*x*x-0.0447*y*y*x-0.0140*x*x*x;
+    var lng=2.6779094+4.728982*y+0.791484*y*x+0.1306*y*x*x-0.0436*y*y*y; return [lat*100/36, lng*100/36]; }
+  function beineLaden(){
+    if(BEINE) return Promise.resolve();
+    function hol(u){ return fetch(u).then(function(r){ if(!r.ok) throw 0; return r.json(); }); }
+    return Promise.all([hol('uploads/tables/bohrstand.json'), hol('uploads/tables/modultische_all.json').catch(function(){ return []; })])
+      .then(function(x){
+        (x[1]||[]).forEach(function(z){ TYPEN_ALL[String(z[0])]=z[6]||''; });
+        BEINE=(x[0].punkte||[]).map(function(z){ var g=ll(+z[2],+z[3]), f=z[0]+'_S'+z[1];
+          var p=PI[f]; return {f:f, tisch:String(z[0]), fuss:'S'+z[1], lat:p?p.lat:g[0], lon:p?p.lon:g[1], st:+z[5]}; });
+      });
+  }
+  function neuKnopf(b,d){ var ist=PI[b.f]&&PI[b.f].ef;
+    return '<button onclick="neuWaehlen(\''+esc(b.f)+'\')">'+esc(b.tisch+' '+b.fuss)+'<small>'+(d!=null?weg(d):'')+(ist?' · schon EF':'')+'</small></button>'; }
+  window.neuAuf=function(){
+    $('neuBox').hidden=false; $('neuBeine').innerHTML='<div class="sub">lade Beine …</div>';
+    beineLaden().then(neuBeineMalen).catch(function(){ $('neuBeine').innerHTML='<div class="sub">Beine nicht geladen – einmal mit Netz öffnen.</div>'; });
+    setTimeout(function(){ $('neuBox').scrollIntoView({behavior:'smooth', block:'center'}); },50);
+  };
+  window.neuZu=function(){ $('neuBox').hidden=true; $('neuSuche').value=''; $('neuTreffer').innerHTML=''; };
+  function neuBeineMalen(){
+    if(!BEINE) return;
+    if(!gps){ $('neuBeine').innerHTML='<div class="sub">Noch kein GPS – unten Tisch + Bein suchen.</div>'; return; }
+    $('neuBeine').innerHTML=BEINE.map(function(b){ return {b:b, d:meter(gps,b)}; }).sort(function(x,y){ return x.d-y.d; }).slice(0,6)
+      .map(function(x){ return neuKnopf(x.b,x.d); }).join('');
+  }
+  window.neuSuchen=function(){
+    var q=$('neuSuche').value.trim().toUpperCase().replace(/[\s_-]+/g,'_'); if(!q||!BEINE){ $('neuTreffer').innerHTML=''; return; }
+    var t=q.split('_')[0], s=q.split('_')[1]||'';
+    var a=BEINE.filter(function(b){ return b.tisch===t && (!s || b.fuss===s || b.fuss==='S'+s); });
+    $('neuTreffer').innerHTML=a.length?a.map(function(b){ return neuKnopf(b,gps?meter(gps,b):null); }).join('')
+      :'<div class="sub" style="padding:6px 2px">Tisch '+esc(t)+' gibt es nicht.</div>';
+  };
+  window.neuWaehlen=function(f){
+    var b=null; for(var i=0;i<BEINE.length;i++) if(BEINE[i].f===f){ b=BEINE[i]; break; }
+    if(!b) return;
+    if(PI[f] && PI[f].ef){ neuZu(); waehle(PI[f],false); toast(f.replace('_',' ')+' ist schon Einzelfundament – normal erfassen'); return; }
+    var a=PI[f]||{};
+    var p={f:f, tisch:b.tisch, fuss:b.fuss, lat:b.lat, lon:b.lon, typ:a.typ||TYPEN_ALL[b.tisch]||'', ber:a.ber||'', st:a.st!=null?a.st:b.st,
+           kopf:a.kopf||0, g:a.g||0, ef:1, eft:null, neu:1};
+    neuZu(); waehle(p,false); toast(f.replace('_',' ')+': NEUES Einzelfundament – Typ + Foto');
+  };
+  window.neuNurGps=function(){
+    if(!gps){ toast('Noch kein GPS',true); return; }
+    var p={f:'GPS_'+Date.now().toString(36), tisch:'', fuss:'', lat:gps.lat, lon:gps.lon, typ:'', ber:'', st:null, kopf:0, g:0, ef:1, eft:null, neu:1, nurGps:1};
+    neuZu(); waehle(p,false); toast('Neues Fundament am GPS-Punkt – Typ, Foto und in der Bemerkung: wo genau?');
+  };
+  function neueEinmischen(){
+    for(var id in R.fundamente){ var e=R.fundamente[id]; if(!e||!e.neu||!e.fid) continue;
+      var p=PI[e.fid];
+      if(p){ if(!p.ef){ p.ef=1; p.neu=1; } continue; }
+      if(e.lat==null||e.lon==null) continue;
+      p={f:e.fid, tisch:e.tisch||'', fuss:e.fuss||'', lat:+e.lat, lon:+e.lon, typ:e.typ||'', ber:e.bereich||'', st:null, kopf:0, g:0, ef:1, eft:null, neu:1,
+         nurGps:/^GPS_/.test(e.fid)?1:0};
+      PUNKTE.push(p); PI[p.f]=p;
+    }
+  }
   function erledigtRechnen(){
+    neueEinmischen();
     ['pfaehle','fundamente'].forEach(function(k){ var m={}; for(var id in R[k]){ var e=R[k][id]; if(!e||!e.fid) continue;
       if(!m[e.fid]||(e.ts||0)>(m[e.fid].ts||0)) m[e.fid]=e; } ERL[k]=m; });
   }
@@ -596,9 +672,9 @@
       $('kPid').textContent=gps?(PUNKTE.length?'Kein Punkt in der Nähe':'Daten laden …'):'GPS sucht …';
       $('kTyp').textContent=''; $('kNalpi').textContent=''; $('kWeg').textContent=''; $('kBadge').innerHTML='';
     } else {
-      $('kPid').className='pid'; $('kPid').textContent=sel.tisch+' '+sel.fuss;
-      $('kTyp').innerHTML='Typ <b>'+esc(sel.typ||'?')+'</b> · '+esc(sel.ber||'–');
-      $('kNalpi').innerHTML='Nalpi: '+esc(STUFE[sel.st]||'?')+(sel.kopf?' · Kopf ✔':'')+(sel.ef&&modusAkt!=='ef'?' · <b>Einzelfundament</b>':'')
+      $('kPid').className='pid'; $('kPid').textContent=sel.nurGps?'Neues Fundament':sel.tisch+' '+sel.fuss;
+      $('kTyp').innerHTML=sel.nurGps?'nur GPS-Punkt, kein Bein':'Typ <b>'+esc(sel.typ||'?')+'</b> · '+esc(sel.ber||'–');
+      $('kNalpi').innerHTML=(sel.neu&&modusAkt==='ef'?'<b style="color:#D72622">NEU – in Nalpi kein Einzelfundament</b> · ':'')+'Nalpi: '+esc(STUFE[sel.st]||'?')+(sel.kopf?' · Kopf ✔':'')+(sel.ef&&modusAkt!=='ef'?' · <b>Einzelfundament</b>':'')
         +(ALT[sel.f]&&modusAkt==='g'?' · Aug: '+ALT[sel.f].g+' mm':'');
       var d=gps?meter(gps,sel):null;
       $('kWeg').textContent=d==null?'':(d<1?'📍 du stehst drauf ('+d.toFixed(1)+' m)':'📍 '+weg(d)+' entfernt');
@@ -607,7 +683,8 @@
         +(e.gew!=null&&modusAkt==='g'?' · '+(+e.gew?e.gew+' mm':'nicht messbar'):'')+(e.ef_label?' · '+esc(e.ef_label):'')
         +(e._wartet?' · wartet aufs Netz':'')+'</span>':'<span class="badge offen">noch offen</span>';
     }
-    $('efNalpi').textContent=(sel&&modusAkt==='ef')?('In Nalpi: '+(sel.eft!=null?efLabel(sel.eft):'Typ noch nicht bestimmt')):'';
+    $('efNalpi').textContent=(sel&&modusAkt==='ef')?(sel.neu?'In Nalpi: noch kein Einzelfundament – wird als NEU gemeldet':
+      'In Nalpi: '+(sel.eft!=null?efLabel(sel.eft):'Typ noch nicht bestimmt')):'';
     nachbarnMalen();
   }
   function nachbarnMalen(){
@@ -705,6 +782,7 @@
     $('formG').hidden=(m!=='g'); $('formEF').hidden=(m!=='ef');
     $('fotoLabel').innerHTML=m==='ef'?'Foto <span class="pf">* Pflicht – das ganze Fundament</span>':'Foto <span>– optional</span>';
     sel=null; formLeeren(); beruehrt=false; detailOffen=false; tischAkt=null; legAkt=null; viewMalen();
+    $('btnNeuEf').hidden=(m!=='ef'); neuZu();
     if(mini){ punkteLayer(); } autoWaehlen(); if(m==='g') tischMalen(); miniMalen(); standMalen();
     if(gross){ grossPunkte(); }
   };
@@ -753,8 +831,11 @@
     } else {
       if(form.eft==null){ toast('Typ fehlt',true); return; }
       if(!fotos.length){ toast('Foto vom Fundament fehlt',true); return; }
+      if(sel.nurGps && !text){ toast('Ohne Bein: bitte in der Bemerkung schreiben, wo das Fundament steht',true); $('fText').focus(); return; }
       rec={fid:sel.f, tisch:sel.tisch, fuss:sel.fuss, typ:sel.typ, bereich:sel.ber, ef_typ:form.eft, ef_label:efLabel(form.eft),
            nalpi_ef_typ:sel.eft, text:text, von:von, ts:Date.now(), datum:heute(), quelle:'inventur.html'};
+      if(sel.neu){ rec.neu=1; rec.lat=+sel.lat.toFixed(7); rec.lon=+sel.lon.toFixed(7);
+        if(!PI[sel.f]){ PUNKTE.push(sel); PI[sel.f]=sel; } else { PI[sel.f].ef=1; PI[sel.f].neu=1; } }
     }
     var alt=ERL[artName][sel.f];
     if(alt && !detailOffen && !confirm(sel.f+' ist schon erfasst ('+zeit(alt.ts||0)+', '+(alt.von||'')+').\nNochmals erfassen? Der neue Stand gilt.')) return;
@@ -1122,11 +1203,12 @@
   }
   window.csvPerimeter=function(){
     erledigtRechnen();
-    var z=[['Art','Punkt','Tisch','Fuss','Typ','Bereich','Gewinde_mm','Schaden','Pfahlkopfplatte','EF_Typ','EF_Nalpi','Bemerkung','Fotos','Von','Datum','Zeit','GPS_m','Abstand_m']];
+    var z=[['Art','Punkt','Tisch','Fuss','Typ','Bereich','Gewinde_mm','Schaden','Pfahlkopfplatte','EF_Typ','EF_Nalpi','Bemerkung','Fotos','Von','Datum','Zeit','GPS_m','Abstand_m','Neu_nicht_in_Nalpi','Lat','Lon']];
     [['pfaehle','Pfahl'],['fundamente','Einzelfundament']].forEach(function(x){
       Object.keys(ERL[x[0]]).sort().forEach(function(f){ var e=ERL[x[0]][f];
         z.push([x[1],f,e.tisch,e.fuss,e.typ,e.bereich,e.gew==null?'':(+e.gew?e.gew:'nicht messbar'),e.schaden,e.kopfplatte,e.ef_label||'',
-          e.nalpi_ef_typ==null?'':efLabel(e.nalpi_ef_typ),e.text,e.anzahl_fotos||0,e.von,e.datum,zeit(e.ts||0).slice(-5),e.gps_acc,e.dist]); });
+          e.nalpi_ef_typ==null?'':efLabel(e.nalpi_ef_typ),e.text,e.anzahl_fotos||0,e.von,e.datum,zeit(e.ts||0).slice(-5),e.gps_acc,e.dist,
+          e.neu?'ja':'',e.lat!=null?e.lat:(PI[f]?PI[f].lat:''),e.lon!=null?e.lon:(PI[f]?PI[f].lon:'')]); });
     });
     csvLaden('Inventur_Perimeter_'+heute()+'.csv',z);
   };
