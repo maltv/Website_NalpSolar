@@ -69,7 +69,6 @@
   #erg.weg{ display:block; background:var(--rot); }
   #erg.pruefen{ display:block; background:#f2b400; color:#1e1600; }
   #erg .kopf{ font-size:23px; font-weight:900; line-height:1.15; }
-  #erg .pl{ font-size:14px; font-weight:800; opacity:.9; margin-top:2px; }
   #erg .pos{ font-size:19px; font-weight:900; margin-top:10px; font-family:ui-monospace,Consolas,monospace; }
   #erg .txt{ font-size:14.5px; margin-top:6px; }
   #erg .ziel{ font-size:16px; font-weight:900; margin-top:8px; }
@@ -106,9 +105,8 @@
 <main>
   <div class="box">
     <h2>🏷 Etikett scannen</h2>
-    <div class="sub">Zeile «Position 469-S2-1216» in den Rahmen halten. Das Ergebnis kommt sofort – der Scanner läuft weiter zum nächsten Stück.<br>
-      <i>Linię «Position …» trzymać w ramce – wynik od razu.</i>
-      <a href="#video" style="display:block;margin-top:4px;font-weight:800">🎬 Erklärvideo: was weg darf, was zu Mauchle muss · film PL</a></div>
+    <div class="sub">Zeile «Position 469-S2-1216» in den Rahmen halten. Das Ergebnis kommt sofort – der Scanner läuft weiter zum nächsten Stück.
+      <a href="#video" style="display:block;margin-top:4px;font-weight:800">🎬 Erklärvideo: was weg darf, was zu Mauchle muss</a></div>
     <button class="btn gross gruen" id="btnScan" onclick="scannerUm()" style="margin-top:10px">🎥 Scanner starten</button>
     <div id="scanBox">
       <div class="scanWrap">
@@ -167,9 +165,6 @@
     <h2>🎬 Erklärvideo: Passstücke aufräumen</h2>
     <div class="sub">Was zu Mauchle geht, was wir entsorgen dürfen, wie man prüft – und welche Batches komplett weg dürfen.
       Stand 03.11.2026.</div>
-    <div class="sBtns" id="vidSpr" style="margin-top:8px">
-      <button class="on" onclick="vidSprache('de',this)">Deutsch</button><button onclick="vidSprache('pl',this)">Polski</button>
-    </div>
     <video id="vid" controls preload="none" playsinline poster="uploads/video/passstuecke_tal_poster.jpg"
       style="width:100%;margin-top:8px;border-radius:8px;background:#000">
       <source src="uploads/video/passstuecke_tal_de.mp4" type="video/mp4">
@@ -195,12 +190,9 @@ fetch('uploads/tables/ps_tal.json',{cache:'no-cache'}).then(function(r){ if(!r.o
   .catch(function(){ $('stand').textContent='Daten fehlen – Netz prüfen'; $('stand').className='err'; });
 
 /* ══════════ Ergebnis-Texte ══════════ */
-var KOPF={ behalten:['BEHALTEN – wird gebraucht','ZOSTAWIĆ – potrzebny'],
-           weg:['WEG – übrig','NIEPOTRZEBNY'],
-           pruefen:['PRÜFEN – vorerst behalten','SPRAWDZIĆ – na razie zostawić'] };
-var ZIEL={ mauchle:['→ an Mauchle zurück (Typ B 2025)','zwrot do Mauchle'],
-           entsorgen:['→ entsorgen (Typ A/D/E 2025)','na złom'],
-           klaeren:['→ Ziel offen (Serie 2026) – Victor fragen','zapytać Victora'] };
+var KOPF={ behalten:'BEHALTEN – wird gebraucht', weg:'WEG – übrig', pruefen:'PRÜFEN – vorerst behalten' };
+var ZIEL={ mauchle:'→ an Mauchle zurück (Typ B 2025)', entsorgen:'→ entsorgen (Typ A/D/E 2025)',
+           klaeren:'→ Ziel offen (Serie 2026) – Victor fragen' };
 function grundText(u){
   var t=u.tisch, b=u.bereich?' ('+u.bereich+')':'', s=rund(u.soll);
   switch(u.grund){
@@ -226,10 +218,10 @@ function grundText(u){
 function zeigen(u, quelle){
   var e=$('erg'); e.className=u.klasse;
   var z=u.klasse==='weg' && ZIEL[u.ziel];
-  e.innerHTML='<div class="kopf">'+KOPF[u.klasse][0]+'</div><div class="pl">'+KOPF[u.klasse][1]+'</div>'
+  e.innerHTML='<div class="kopf">'+KOPF[u.klasse]+'</div>'
     +'<div class="pos">'+u.tisch+'-'+u.s+'-'+u.l+'</div>'
     +'<div class="txt">'+grundText(u)+'</div>'
-    +(z?'<div class="ziel">'+z[0]+'<br><span style="font-size:13px;opacity:.9">'+z[1]+'</span></div>':'')
+    +(z?'<div class="ziel">'+z+'</div>':'')
     +'<div class="klein">Typ '+(u.typ||'?')+(u.bereich?' · '+u.bereich:'')+(quelle?' · '+quelle:'')+'</div>';
   try{ if(navigator.vibrate) navigator.vibrate(u.klasse==='behalten'?[120]:u.klasse==='weg'?[200,80,200]:[90,60,90,60,90]); }catch(x){}
   verlaufDazu(u);
@@ -428,7 +420,7 @@ function scanSchleife(){
     if(u){
       $('rahmen').className='scanRahmen'+(hoch?' hoch ':' ')+u.klasse;
       setTimeout(function(){ if(scanLaeuft) $('rahmen').className='scanRahmen'+(hoch?' hoch':''); }, 1800);
-      $('scanStatus').className=''; $('scanStatus').textContent=k+' → '+KOPF[u.klasse][0]+' – nächstes Stück';
+      $('scanStatus').className=''; $('scanStatus').textContent=k+' → '+KOPF[u.klasse]+' – nächstes Stück';
     }
   }).catch(function(){}).then(function(){
     scanBusy=false;
@@ -436,12 +428,6 @@ function scanSchleife(){
   });
 }
 document.addEventListener('visibilitychange', function(){ if(document.hidden && scanLaeuft) scannerZu(); });
-
-/* Erklärvideo DE / PL */
-function vidSprache(sp, btn){
-  var v=$('vid'); v.pause(); v.querySelector('source').src='uploads/video/passstuecke_tal_'+sp+'.mp4'; v.load();
-  [].forEach.call($('vidSpr').children,function(b){ b.className=(b===btn)?'on':''; });
-}
 </script>
 </body>
 </html>
