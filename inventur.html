@@ -122,6 +122,13 @@
   #grossMap{ flex:1; }
   .legende{ font-size:12px; padding:6px 10px; color:var(--mut); display:flex; gap:12px; flex-wrap:wrap; }
 
+  .kfotos{ display:flex; gap:6px; flex-wrap:wrap; margin-top:5px; }
+  .kfotos img{ width:58px; height:58px; object-fit:cover; border-radius:6px; border:1px solid var(--line); cursor:pointer; }
+  #fotoGross{ position:fixed; inset:0; z-index:70; background:rgba(0,0,0,.93); display:flex; flex-direction:column;
+              align-items:center; justify-content:center; padding:10px; }
+  #fotoGross img{ max-width:100%; max-height:88vh; border-radius:6px; }
+  #fotoGross span{ color:#fff; font-size:14px; margin-top:10px; }
+
   /* Schnellmodus */
   .tipp{ position:relative; border-left:5px solid var(--gelb); }
   .tipp b{ font-size:15px; } .tipp ol{ margin:6px 0 6px 18px; padding:0; font-size:14px; line-height:1.5; }
@@ -191,6 +198,7 @@
         <div class="zeile" id="kNalpi"></div>
         <div class="weg" id="kWeg"></div>
         <div id="kBadge"></div>
+        <div class="kfotos" id="kFotos"></div>
       </div>
       <div class="mini">
         <div id="miniMap" title="Karte gross"></div>
@@ -387,6 +395,7 @@
   <div class="legende"><span><i style="background:#e08a00"></i>offen</span><span><i style="background:#1e9e5a"></i>erfasst</span>
     <span><i style="background:#1565c0"></i>ich</span><span><i style="border:3px solid #D72622;background:#fff"></i>gewählt</span></div>
 </div>
+<div id="fotoGross" hidden onclick="this.hidden=true"><img id="fotoGrossImg" alt=""><span>✕ antippen = schliessen</span></div>
 <div id="toast"></div>
 
 <script src="assets/js/leaflet/leaflet.js"></script>
@@ -588,7 +597,7 @@
               var fid='f_'+j.k+'_'+ix;
               return fetch(RTDB+'/'+P_FOT+'/'+fid+'.json',{method:'PUT',body:JSON.stringify({eintrag:j.k,art:j.art,punkt:rec.fid||'',
                 von:rec.von,ts:rec.ts,data:data,mime:'image/jpeg',nr:ix+1})})
-                .then(function(r){ if(!r.ok) throw 0; rec.fotos=rec.fotos||{}; rec.fotos[fid]=true; });
+                .then(function(r){ if(!r.ok) throw 0; rec.fotos=rec.fotos||{}; rec.fotos[fid]=true; FOTO_CACHE[fid]=data; });
             });
           },Promise.resolve()).then(function(){
             rec.anzahl_fotos=bilder.length;
@@ -685,8 +694,33 @@
     }
     $('efNalpi').textContent=(sel&&modusAkt==='ef')?(sel.neu?'In Nalpi: noch kein Einzelfundament – wird als NEU gemeldet':
       'In Nalpi: '+(sel.eft!=null?efLabel(sel.eft):'Typ noch nicht bestimmt')):'';
-    nachbarnMalen();
+    nachbarnMalen(); kopfFotos();
   }
+  /* Fotos des gewählten Punkts im Kopf (Victor 03.11.: «wo sind die Fotos? sehe die nicht»): vom Server (mit Netz, dann im
+     Speicher) und aus der Warteschlange (noch nicht gesendet). Neu geholt wird nur, wenn sich Punkt oder Sätze ändern. */
+  var FOTO_CACHE={}, fotoKey='';
+  function kopfFotos(){
+    var el=$('kFotos'), a=art(), f=sel?sel.f:null;
+    if(!f || (modusAkt==='g' && !detailOffen)){ if(fotoKey){ fotoKey=''; el.innerHTML=''; } return; }
+    var ids=[]; for(var id in R[a]){ var e=R[a][id]; if(e && e.fid===f && e.fotos) Object.keys(e.fotos).forEach(function(x){ ids.push(x); }); }
+    var key=f+'|'+ids.join(',')+'|'+Object.keys(R[a]).length;
+    if(key===fotoKey) return; fotoKey=key; el.innerHTML='';
+    Q.alle().then(function(jobs){
+      var bilder=[]; jobs.forEach(function(j){ if(j.art===a && j.rec && j.rec.fid===f) (j.fotos||[]).forEach(function(d){ bilder.push(d); }); });
+      return Promise.all(ids.map(function(x){
+        if(FOTO_CACHE[x]) return FOTO_CACHE[x];
+        if(!netzAn()) return null;
+        return fetch(RTDB+'/'+P_FOT+'/'+x+'.json').then(function(r){ return r.ok?r.json():null; })
+          .then(function(o){ if(o && o.data){ FOTO_CACHE[x]=o.data; return o.data; } return null; }).catch(function(){ return null; });
+      })).then(function(srv){ return { liste:bilder.concat(srv.filter(Boolean)), fehlt:srv.filter(function(x){ return !x; }).length }; });
+    }).then(function(r){
+      if(fotoKey!==key) return;
+      el._liste=r.liste;
+      el.innerHTML=r.liste.map(function(d,i){ return '<img src="'+d+'" alt="" onclick="fotoGrossZeigen('+i+')">'; }).join('')
+        +(r.fehlt?'<span class="sub">📷 '+r.fehlt+' Foto(s) – ansehen mit Netz</span>':'');
+    });
+  }
+  window.fotoGrossZeigen=function(i){ var l=$('kFotos')._liste||[]; if(!l[i]) return; $('fotoGrossImg').src=l[i]; $('fotoGross').hidden=false; };
   function nachbarnMalen(){
     /* nur neu zeichnen, wenn sich etwas ändert (Meter auf 5 gerundet) – ein Neuzeichnen mitten im Tippen schluckt den Tipp */
     function setzen(html){ var el=$('nachbarn'); if(el._h!==html){ el._h=html; el.innerHTML=html; } }
