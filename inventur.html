@@ -571,7 +571,10 @@
     if(!auto||!gps||!PUNKTE.length||beruehrt) { kopfMalen(); return; }
     var n=naechste(1,true)[0]; if(!n){ kopfMalen(); return; }
     if(n.d>40){ if(sel&&meter(gps,sel)>40){ sel=null; formLeeren(); } kopfMalen(); return; }
-    if(!sel || istErledigt(sel) || (n.p!==sel && n.d < meter(gps,sel)-0.7)){ waehle(n.p,true); return; }
+    /* Gerade Gespeichertes bleibt grün stehen, bis man weggeht (> 4 m) oder ein offener Punkt klar näher ist –
+       sonst sieht man die Bestätigung nie (Victor 03.11.: «blieb immer orange») */
+    var ds=sel?meter(gps,sel):1e9;
+    if(!sel || (n.p!==sel && n.d < ds-0.7) || (istErledigt(sel) && ds>4)){ waehle(n.p,true); return; }
     kopfMalen();
   }
   window.autoUmschalten=function(){ auto=!auto; lsSet(LS_AUTO,auto?'1':'0'); $('autoBtn').classList.toggle('on',auto);
@@ -759,15 +762,15 @@
     if(detailOffen){
       ablegen(artName,gpsFeld(rec),fotos.slice()).then(function(){ toast('✔ '+f.replace('_',' ')+' Details gespeichert'); });
       if(navigator.vibrate) navigator.vibrate(60); piep();
-      erledigtRechnen(); formLeeren(); detailZu(); standMalen(); if(mini) punkteLayer(); miniMalen(); return;
+      erledigtRechnen(); formLeeren(); detailZu(); standMalen(); if(mini) punkteLayer(); if(gross) grossPunkte(); miniMalen(); return;
     }
     ablegen(artName,gpsFeld(rec),fotos.slice()).then(function(){
       toast('✔ '+f.replace('_',' ')+' gespeichert'+(netzAn()?'':' – offline, geht später raus'));
     });
     if(navigator.vibrate) navigator.vibrate(60);
     erledigtRechnen(); formLeeren(); beruehrt=false;
-    if(auto){ var n=naechste(1,true)[0]; if(n && n.d<15) waehle(n.p,true); else kopfMalen(); } else kopfMalen();
-    miniMalen(); standMalen();
+    kopfMalen();                       /* bleibt auf dem gespeicherten Punkt: Kopf grün «✔ erfasst», Karte grün */
+    if(mini) punkteLayer(); if(gross) grossPunkte(); miniMalen(); standMalen();
   };
 
   /* ── Schnellmodus Pfähle (Victor 02.11.: «1000 Pfähle an einem Tag»). GPS wählt den TISCH – auf ±2 m sicher, das Bein
@@ -861,7 +864,7 @@
     if(naechst){ legAkt=naechst; sel=PI[naechst]; sag(sprich+'. Weiter '+PI[naechst].fuss); }
     else { legAkt=null; toast('✔ Tisch '+t.t+' fertig'); sag(sprich+'. Tisch '+t.t+' fertig.');
       setTimeout(function(){ if(tischAkt===t.t && !offenBeine(t).length) naechsterTisch(); },1300); }
-    tischKopfMalen(); tischMalen(); standMalen(); if(mini) punkteLayer(); miniMalen();
+    tischKopfMalen(); tischMalen(); standMalen(); if(mini) punkteLayer(); if(gross) grossPunkte(); miniMalen();
     return true;
   }
   window.restGleich=function(){
@@ -873,7 +876,7 @@
     for(var i=0;i<o.length;i++){ if(!beinSpeichern(o[i].f,v,'',true)) return; }
     legAkt=null; if(navigator.vibrate) navigator.vibrate(60); piep();
     toast('✔ Tisch '+t.t+' fertig – Rest '+gewText(v)); sag('Rest '+gewSprache(v)+'. Tisch '+t.t+' fertig.');
-    tischKopfMalen(); tischMalen(); standMalen(); if(mini) punkteLayer(); miniMalen();
+    tischKopfMalen(); tischMalen(); standMalen(); if(mini) punkteLayer(); if(gross) grossPunkte(); miniMalen();
     setTimeout(function(){ if(tischAkt===t.t && !offenBeine(t).length) naechsterTisch(); },1300);
   };
   window.details=function(){
@@ -1037,6 +1040,16 @@
     if(!gross){
       gross=L.map('grossMap',{zoomSnap:0.5, maxZoom:22}); gross.attributionControl.setPrefix(''); kachel().addTo(gross);
       L.control.scale({imperial:false, maxWidth:110}).addTo(gross);
+      /* Tipp irgendwo auf die Karte = nächster Punkt im Umkreis von 40 px. Den 7-px-Kreis selbst trifft der Finger kaum
+         (Victor 03.11.: «wählt nicht direkt an») */
+      gross.on('click',function(ev){
+        var c=gross.latLngToContainerPoint(ev.latlng), best=null, bd=40;
+        kandidaten().forEach(function(p){ var q=gross.latLngToContainerPoint([p.lat,p.lon]), d=Math.sqrt((q.x-c.x)*(q.x-c.x)+(q.y-c.y)*(q.y-c.y));
+          if(d<bd){ bd=d; best=p; } });
+        if(!best){ toast('Kein Punkt hier – näher hinzoomen',true); return; }
+        if(modusAkt==='g' && !detailOffen && TI[best.tisch]){ tischWaehlen(best.tisch,false); beinWaehlen(best.f); } else waehle(best,false);
+        grossZu(); toast(best.tisch+' '+best.fuss+' gewählt');
+      });
       grossPunkte();
       var z=sel?[sel.lat,sel.lon]:(gps?[gps.lat,gps.lon]:null);
       if(z) gross.setView(z,19); else { var k=kandidaten(); if(k.length) gross.fitBounds(L.latLngBounds(k.map(function(p){ return [p.lat,p.lon]; })).pad(.05)); }
@@ -1050,11 +1063,7 @@
     if(grossLayer) gross.removeLayer(grossLayer);
     var cv=L.canvas({padding:.4}); grossLayer=L.layerGroup();
     kandidaten().forEach(function(p){
-      var m=L.circleMarker([p.lat,p.lon],{renderer:cv,radius:7,weight:1.5,color:'#fff',fillColor:farbe(p),fillOpacity:.95});
-      m.on('click',function(){
-        if(modusAkt==='g' && !detailOffen && TI[p.tisch]){ tischWaehlen(p.tisch,false); beinWaehlen(p.f); } else waehle(p,false);
-        grossZu(); toast(p.tisch+' '+p.fuss+' gewählt'); });
-      m.addTo(grossLayer);
+      L.circleMarker([p.lat,p.lon],{renderer:cv,radius:7,weight:1.5,color:'#fff',fillColor:farbe(p),fillOpacity:.95,interactive:false}).addTo(grossLayer);
     });
     grossLayer.addTo(gross);
     $('grossTitel').textContent=(modusAkt==='ef'?'Einzelfundament':'Pfahl')+' antippen';
