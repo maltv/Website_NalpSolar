@@ -21,7 +21,7 @@ window.nalpBT = (function () {
   'use strict';
 
   var BASIS = 'https://api.buildtrack.ch';
-  var KEY = '';   /* <- Victor: Lese-Schluessel hier eintragen, oder leer lassen (nur Offline-Stand) */
+  var KEY = 'b23CBdyHH4e15koZDKATwdxR5cOaIx8iirsNA5BiX9c';   /* Lese-Schluessel (nur Bohrpunkte + Maengel lesen), Konto victor-website-read, widerrufbar; Dennis 2026-11-03 */   /* <- Victor: Lese-Schluessel hier eintragen, oder leer lassen (nur Offline-Stand) */
   var LS_TOKEN = 'nalp_buildtrack_token_v1';
   var SEITE = 5000;          /* Zeilen je Abruf; die Engine deckelt bei 10000 */
   var MAX_SEITEN = 10;
