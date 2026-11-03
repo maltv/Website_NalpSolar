@@ -17,7 +17,7 @@
   /* Reiter «Injektion Einzelbeine» (Auftrag Victor 28.09.2026, WERKZEUGE.md §68).
      Einzelbein = gebohrter Pfahl ohne Injektion in Nalpi, während ein anderes Bein desselben Tisches injiziert ist.
      Die Seite rechnet selbst: uploads/tables/bohrstand.json (06:30 automatisch gepusht) + baustand.json (PK montiert)
-     + live api.buildtrack.ch/api/v1/drillpoints/changes (Injektions-Klicks seit dem letzten Export).
+     + live api.buildtrack.ch/api/w1/q/drillpoints (Injektions-Klicks seit dem letzten Export; Zugang: assets/js/nalp-buildtrack.js).
      Rückmeldung mit Foto: RTDB erfassung/injektion_rueck/<fuss>/<key>, Fotos in erfassung/injektion_fotos/<fid>
      – Bausteine 1:1 aus altlasten.html (Blatt, Warteschlange, Foto 1400 px). Nalpi bleibt die Stelle fürs Abhaken. */
   :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
@@ -261,11 +261,13 @@
 </div>
 
 <script src="assets/js/leaflet/leaflet.js"></script>
+<script src="assets/js/nalp-buildtrack.js"></script>
 <script>
 (function(){
   'use strict';
   var BOHR='uploads/tables/bohrstand.json', BAU='uploads/tables/baustand.json', BER='uploads/tables/bereiche.json';
-  var API='https://api.buildtrack.ch/api/v1/drillpoints/changes';
+  /* Live-Stand: Query-Engine-Sicht drillpoints (nur die vier Spalten, Tische ohne Rückzug). Token: nalp-buildtrack.js. */
+  var API_Q='select=foundation_id,drilled_on,drilled_at,injected_at&table_withdrawn_on=is.null&order=foundation_id';
   var RTDB='https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app/erfassung';
   var P_RUECK='injektion_rueck', P_FOT='injektion_fotos';
   var LS_VON='nalp_injektion_von_v1', LS_CACHE='nalp_injektion_rueck_v1', LS_LANG='nalp_injektion_lang_v1', LS_API='nalp_injektion_api_v1';
@@ -403,21 +405,17 @@
 
   /* ── Daten laden ── */
   function json(url){ return fetch(url,{cache:'no-store'}).then(function(r){ if(!r.ok) throw new Error(url+' '+r.status); return r.json(); }); }
-  /* Live-Stand vom BuildTrack-Server (nur lesen, CORS für maltv.github.io offen, limit max. 500).
-     Er kennt nur einen Teil der Punkte, darum nur als Überlagerung auf bohrstand.json. */
+  /* Live-Stand vom BuildTrack-Server (nur lesen; seit dem SharePoint-Aus ist der Server die Akte, die Sicht kennt
+     JEDEN Bohrpunkt – darum gilt jede Zeile als «dem Server gehörend», früher stageOwnedAt). Ohne Token
+     (nalp-buildtrack.js) kommt sofort der Rückfall auf die letzte Kopie. */
   function apiLaden(){
-    var A={}, since=0, runde=0;
+    var A={};
     function seite(){
-      var ctl=window.AbortController?new AbortController():null, to=setTimeout(function(){ if(ctl) ctl.abort(); },12000);
-      return fetch(API+'?since='+since+'&limit=500',{cache:'no-store', signal:ctl?ctl.signal:undefined})
-        .then(function(r){ clearTimeout(to); if(!r.ok) throw new Error('api '+r.status); return r.json(); })
-        .then(function(d){
-          (d.states||[]).forEach(function(s){
-            A[s.foundationId]=[s.injectedAt?1:0, s.drilledAt?1:0, s.stageOwnedAt?1:0, tagLokal(s.drilledAt)];
-          });
-          runde++;
-          if(d.hasMore && d.watermark!==since && runde<12){ since=d.watermark; return seite(); }
+      return nalpBT.q('drillpoints', API_Q, {timeout:12000}).then(function(rows){
+        rows.forEach(function(s){
+          A[s.foundation_id]=[s.injected_at?1:0, s.drilled_at?1:0, 1, s.drilled_on||tagLokal(s.drilled_at)];
         });
+      });
     }
     /* sw.js reicht diese Anfragen ungecacht durch – was hier ankommt, ist wirklich live. Der Rückfall auf die
        letzte Kopie (LS_API) gilt als NICHT frisch: dann nur Injektionen übernehmen, nie 4 → 3 zurückstufen. */

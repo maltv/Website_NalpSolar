@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v217';
+var CACHE = 'nalpsolar-v218';
 var PRECACHE = [
   './index.html',
   // Webapp-Manifest + Icons des Portals (22.09.2026, Tools\Portal_Icons_Bauen.py) und die
@@ -86,6 +86,7 @@ var PRECACHE = [
   './erfassungen.html',
   './viewer3d.html',
   './assets/js/nalp-gate.js',
+  './assets/js/nalp-buildtrack.js',   // BuildTrack-Zugang (w1-Sichten, v2-Ops) der Seiten injektion/zugproben/stahlbau/verschrauben
   './assets/js/nalp-auth.js',
   './assets/js/nalp-stahlteile.js',
   './assets/js/nalp-status.js',
@@ -182,9 +183,10 @@ self.addEventListener('fetch', function(e) {
   var url = e.request.url;
   var isExternal = url.includes('geo.admin.ch') || url.includes('api3.geo.admin.ch');
 
-  // BuildTrack-Live-Feed (injektion.html): nie über den Service Worker, sonst friert der Live-Abgleich ein und
-  // in Nalpi abgehakte Beine bleiben offen. Die Seite hat ohne Netz ihre eigene Kopie (localStorage). 28.09.2026
-  if (url.indexOf('api.buildtrack.ch/api/v1/drillpoints/') !== -1) return;
+  // BuildTrack-Live-Feed (injektion.html, zugproben.html): nie über den Service Worker, sonst friert der Live-Abgleich
+  // ein und in Nalpi abgehakte Beine bleiben offen. Die Seite hat ohne Netz ihre eigene Kopie (localStorage). 28.09.2026
+  // Seit dem v1-Aus liest die Seite die Query-Engine-Sicht /api/w1/q/drillpoints (nalp-buildtrack.js).
+  if (url.indexOf('api.buildtrack.ch/api/w1/q/drillpoints') !== -1 || url.indexOf('api.buildtrack.ch/api/v1/drillpoints/') !== -1) return;
 
   // Firebase-RTDB (erdung-fotos.html «noch nicht übernommen», 02.10.2026): nie über den Service Worker.
   // `….json?shallow=true` endet nicht auf .json und lief deshalb cache-first – die Zahl blieb stehen.

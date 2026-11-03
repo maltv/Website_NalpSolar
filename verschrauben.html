@@ -13,6 +13,7 @@
 </script>
 <script src="assets/js/nalp-gate.js"></script>
 <script src="assets/js/nalp-anweisungen.js"></script>
+<script src="assets/js/nalp-buildtrack.js"></script>
 <link rel="stylesheet" href="assets/js/leaflet/leaflet.css">
 <script src="assets/js/leaflet/leaflet.js"></script>
 <style>
@@ -292,22 +293,28 @@
    Typ      : uploads/tables/typen.json     (ILF-Belegungslisten)
    Bereich  : uploads/tables/bereiche.json  (Nalpi, Bauphasen_STRABAG_260410)
    Montage  : uploads/tables/baustand.json  (Nalpi TABLE_DATA, Task 06:30)
-   Mängel   : api.buildtrack.ch  (live)  ·  uploads/maengel.json (Offline-Stand)
+   Mängel   : api.buildtrack.ch /api/w1/q/maengel (live, Token: assets/js/nalp-buildtrack.js)
+              ·  uploads/maengel.json (Offline-Stand)
 
    Erfassung: Firebase RTDB
      erfassung/verschrauben/<TischId>          = {am, von, ts}   (fehlt = offen)
      erfassung/verschrauben_anweisungen/<Id>   = {text, von, ts, bis, erledigt}
 
    Problem melden geht NICHT in die RTDB, sondern direkt als Mangel ins
-   Nalpi-Mängelmanagement (Buildtrack-Op `create_mangel`). Reihenfolge ist
-   Pflicht: erst die Fotos hochladen, dann die Op senden – eine Op, die eine
-   dem Server unbekannte assetId nennt, wird DAUERHAFT abgewiesen.
+   Nalpi-Mängelmanagement: Kommando `mangel.create` auf POST /api/v2/ops
+   (nalpBT.ops; die Op wird hier noch in der alten v1-Form gebaut und in
+   nalpBT.mangelOp uebersetzt, damit die Warteschlange gleich bleibt).
+   Reihenfolge ist Pflicht: erst die Fotos hochladen (POST /api/v1/assets,
+   bleibt), dann die Op senden – eine Op, die eine dem Server unbekannte
+   assetId nennt, wird DAUERHAFT abgewiesen.
    ══════════════════════════════════════════════════════════════════════════ */
 
 var RTDB = 'https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app/erfassung';
 var P_VER = RTDB + '/verschrauben';
 var P_ANW = RTDB + '/verschrauben_anweisungen';
-var BT    = 'https://api.buildtrack.ch';
+/* Mängel-Sicht: nur pendente Tisch-Mängel (Bohrpunkt-Mängel gehören dem Bohr-/Pfahlkopfteam, Entscheid Victor 18.08.2026). */
+var MG_Q  = 'select=display_no,entity_type,entity_key,title,severity,status,created_on'
+          + '&status=in.(OFFEN,IN_BEARBEITUNG)&entity_type=eq.table&order=display_no';
 
 var LS_VON = 'nalp_erfasser_v1';
 var LS_PEND_V = 'nalp_verschraubt_pending_v1';   /* Verschraubt-Meldungen, offline */
@@ -468,9 +475,7 @@ function fotoLoeschen(id){
 
 /* ─────────── Buildtrack: Mangel anlegen ─────────── */
 function fotoHochladen(id, blob){
-  return fetch(BT+'/api/v1/assets/'+id+'?feature=maengel', {
-    method:'POST', headers:{'content-type': blob.type||'image/jpeg'}, body: blob
-  }).then(function(r){ return r.ok; });
+  return nalpBT.fotoHochladen(id, blob);
 }
 /* Alle noch nicht hochgeladenen Fotos nachreichen. Erst wenn ein Foto oben ist,
    darf die zugehörige Op raus – sonst wird sie unwiderruflich abgewiesen. */
@@ -484,21 +489,22 @@ function fotosOffenSenden(){
   });
 }
 function opsSenden(ops){
-  return fetch(BT+'/api/v1/maengel/ops', {
-    method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ops:ops})
-  }).then(function(r){
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    return r.json();
-  }).then(function(j){
-    /* Ergebnisse kommen in der Reihenfolge der Ops zurueck, je Op ein status:
-         'applied'   – neu angekommen
-         'duplicate' – war schon da (Wiederholung nach wackligem Empfang) → auch gut
-         'rejected'  – ENDGUELTIG abgewiesen und beim Server vermerkt; ein erneutes
-                       Senden bringt nie ein anderes Ergebnis.
-       Geworfen wird nur, wenn die Anfrage selbst nicht durchkam – dann darf und
-       muss wiederholt werden. */
-    return (j && j.results) || [];
-  });
+  /* Die Ops liegen hier (und in der Warteschlange LS_PEND_M) in der alten v1-Form {kind, idempotencyKey, …};
+     nalpBT.mangelOp macht daraus das v2-Kommando. Ergebnisse kommen in der Reihenfolge der Ops zurueck, je Op
+     ein status:
+       'applied'   – neu angekommen
+       'duplicate' – war schon da (Wiederholung nach wackligem Empfang) → auch gut
+       'rejected'  – ENDGUELTIG abgewiesen und beim Server vermerkt (error.code, error.message);
+                     ein erneutes Senden bringt nie ein anderes Ergebnis.
+     Geworfen wird nur, wenn die Anfrage selbst nicht durchkam (auch: kein Token) – dann darf und
+     muss wiederholt werden. */
+  return nalpBT.ops(ops.map(nalpBT.mangelOp));
+}
+function abweisText(r){
+  var e = r && r.error;
+  if(!e) return 'abgewiesen';
+  if(typeof e === 'string') return e;
+  return (e.message || e.code || 'abgewiesen');
 }
 
 /* ─────────── Daten laden ─────────── */
@@ -613,35 +619,16 @@ function maengelLaden(){
   btMaengel().then(function(rows){ nutz(rows,'live'); }).catch(offline);
 }
 function btMaengel(){
-  var alle = [], since = 0, runden = 0;
-  function seite(){
-    return jget(BT+'/api/v1/maengel/changes?since='+since+'&limit=2000').then(function(p){
-      if(!p) throw new Error('keine Antwort');
-      var rows = p.maengel||[];
-      alle = alle.concat(rows);
-      runden++;
-      var wm = p.watermark;
-      if(!rows.length || wm==null || wm===since || runden>=50) return alle;
-      since = wm; return seite();
-    });
-  }
-  return seite().then(function(rows){
-    /* letzter Satz je id gewinnt, Gelöschte und Duplikate raus */
-    var letzt = {};
-    rows.forEach(function(m){ if(m && m.id) letzt[m.id] = m; });
-    return Object.keys(letzt).map(function(k){ return letzt[k]; })
-      /* NUR Tisch-Mängel. Bohrpunkt-Mängel (entityType 'drillpoint', z.B.
-         «Kopf nicht montiert» an 202_S1) gehören dem Bohr-/Pfahlkopfteam und
-         haben mit dem Verschrauben nichts zu tun – sie würden die Karte
-         zurotten (Entscheid Victor 18.08.2026). */
-      .filter(function(m){ return !m.deletedAt && !m.duplicateOf
-                && (m.status==='OFFEN' || m.status==='IN_BEARBEITUNG')
-                && m.entityType==='table'; })
-      .map(function(m){ return {
-        nr:m.displayNo, art:m.entityType, key:m.entityKey,
-        tisch:String(m.entityKey||'').split('_')[0], titel:m.title,
-        schwere:m.severity, status:m.status,
-        erfasst:(m.createdAt||'').slice(0,10), von:m.createdBy }; });
+  /* Die Sicht maengel liefert je Mangel eine Zeile, Gelöschte und Duplikate sind schon draussen; pendent und
+     NUR Tisch-Mängel filtert MG_Q (Bohrpunkt-Mängel, z.B. «Kopf nicht montiert» an 202_S1, gehören dem
+     Bohr-/Pfahlkopfteam – Entscheid Victor 18.08.2026). Wer erfasst hat (von) gibt die Sicht nicht her.
+     Ohne Token (nalpBT) wird geworfen → Offline-Stand. */
+  return nalpBT.q('maengel', MG_Q, {timeout:12000}).then(function(rows){
+    return rows.map(function(m){ return {
+      nr:m.display_no, art:m.entity_type, key:m.entity_key,
+      tisch:String(m.entity_key||'').split('_')[0], titel:m.title,
+      schwere:m.severity, status:m.status,
+      erfasst:m.created_on||'', von:null }; });
   });
 }
 
@@ -1031,7 +1018,7 @@ function problemSenden(id){
   .then(function(res){
     var r = res[0];
     /* Abgewiesen ist endgueltig – nachsenden wuerde nur ewig wiederholt. */
-    if(r && r.status === 'rejected') throw new Error('ENDGUELTIG:' + (r.error || 'abgewiesen'));
+    if(r && r.status === 'rejected') throw new Error('ENDGUELTIG:' + abweisText(r));
     toast('⚠ Mangel an Tisch '+id+' in Nalpi angelegt');
     maengelLaden();
     oeffnen(id);

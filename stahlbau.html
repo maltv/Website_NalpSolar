@@ -7,6 +7,7 @@
 <meta name="theme-color" content="#0b1826">
 <script src="assets/js/nalp-gate.js"></script>
 <script src="assets/js/nalp-anweisungen.js"></script>
+<script src="assets/js/nalp-buildtrack.js"></script>
 <!-- Montage-Erfassung entfernt 27.07.2026: laeuft offiziell in Nalpi (Dennis) -->
 <style>
   :root{
@@ -888,11 +889,14 @@ function pzIdsBauen(){ PZ_IDS={}; PZ.forEach(function(t){ PZ_IDS[t.id]=1; }); }
 /* ═══════════════════════════════════════════════════════════════
    PENDENTE MÄNGEL – Nalpi-Mängelmanagement
    Quelle ist NICHT SharePoint, sondern das Buildtrack-Backend
-   (Postgres) auf api.buildtrack.ch – derselbe Delta-Feed wie in
-   der Nalpi-Extension. Endpunkt ist ohne Token lesbar und
-   erlaubt CORS → live. Ohne Empfang: uploads/maengel.json.
+   (Postgres) auf api.buildtrack.ch: die Query-Engine-Sicht
+   maengel (/api/w1/q/maengel; gelöschte und zusammengeführte
+   Mängel sind dort schon draussen). Braucht ein Token
+   (assets/js/nalp-buildtrack.js). Ohne Token oder Empfang:
+   uploads/maengel.json.
    ═══════════════════════════════════════════════════════════════ */
-var MG_API='https://api.buildtrack.ch/api/v1/maengel/changes?since=0&limit=2000';
+var MG_Q='select=display_no,kind,entity_type,entity_key,title,severity,status,created_on,beheben_bis'
+  +'&status=in.(OFFEN,IN_BEARBEITUNG)&entity_type=in.(table,drillpoint)&order=display_no';
 var MG=[], mgQuelle='', mgAktiv='pz';
 /* PZ_IDS wird gebaut, sobald uploads/pz2025.json da ist – siehe pzIdsBauen(). */
 
@@ -984,23 +988,18 @@ function mgRender(){
         '<div class="mgLeer">Mängel konnten nicht geladen werden ('+esc(grund)+').</div>';
     });
   }
+  if(!nalpBT.hatToken()){ ausSnapshot('kein Zugang zur Live-Quelle'); return; }
   var abbruch=setTimeout(function(){ ausSnapshot('keine Antwort'); }, 8000);
-  fetch(MG_API,{headers:{accept:'application/json'}}).then(function(r){
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    return r.json();
-  }).then(function(d){
+  /* Status und Art filtert schon die Abfrage (MG_Q); gelöscht/zusammengeführt ist in der Sicht nie drin.
+     Wer den Mangel erfasst hat (von), gibt die Sicht nicht her – Personendaten bleiben im Mängeltool. */
+  nalpBT.q('maengel', MG_Q, {timeout:8000}).then(function(rows){
     clearTimeout(abbruch);
-    var roh=d.maengel||[];
-    MG=roh.filter(function(m){
-      return !m.deletedAt && !m.duplicateOf
-        && (m.status==='OFFEN'||m.status==='IN_BEARBEITUNG')
-        && (m.entityType==='table'||m.entityType==='drillpoint');
-    }).map(function(m){
-      return { nr:m.displayNo, art:m.entityType, key:m.entityKey,
-               tisch:String(m.entityKey||'').split('_')[0], titel:m.title,
+    MG=rows.map(function(m){
+      return { nr:m.display_no, art:m.entity_type, key:m.entity_key,
+               tisch:String(m.entity_key||'').split('_')[0], titel:m.title,
                schwere:m.severity, status:m.status, kind:m.kind,
-               erfasst:(m.createdAt||'').slice(0,10), von:m.createdBy,
-               frist:(m.behebenBis||'').slice(0,10)||null };
+               erfasst:m.created_on||'', von:null,
+               frist:m.beheben_bis||null };
     });
     mgQuelle='live aus dem Mängeltool<br>abgerufen '+new Date().toLocaleString('de-CH',
       {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});

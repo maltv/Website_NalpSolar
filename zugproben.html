@@ -16,7 +16,7 @@
 <style>
   /* Reiter «Zugproben PZ3 / PZ4» – Baustellenanweisung NalpSolar_51_BA_0269_A1 (ILF, 25.09.2026).
      Pfähle + Laststufen: uploads/zugproben.json (EINE Stelle, liest auch injektion.html).
-     Stand je Pfahl rechnet die Seite selbst: uploads/tables/bohrstand.json + live api.buildtrack.ch.
+     Stand je Pfahl rechnet die Seite selbst: uploads/tables/bohrstand.json + live api.buildtrack.ch (/api/w1/q/drillpoints, Zugang: assets/js/nalp-buildtrack.js).
      WERKZEUGE.md §71. Optik wie wasserleitung.html / injektion.html. */
   :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
          --gruen:#1e9e5a; --blau:#1565c0; --orange:#e08a00; --lila:#8e24aa; --grau:#8a8e94; --dunkel:#123f4c; }
@@ -221,11 +221,13 @@
 </main>
 
 <script src="assets/js/leaflet/leaflet.js"></script>
+<script src="assets/js/nalp-buildtrack.js"></script>
 <script>
 (function(){
   'use strict';
   var DATEN='uploads/zugproben.json', BOHR='uploads/tables/bohrstand.json';
-  var API='https://api.buildtrack.ch/api/v1/drillpoints/changes';
+  /* Live-Stand: Query-Engine-Sicht drillpoints (gleiche Abfrage wie injektion.html). Token: nalp-buildtrack.js. */
+  var API_Q='select=foundation_id,drilled_at,injected_at&table_withdrawn_on=is.null&order=foundation_id';
   var zp=null, bohr=null, api={}, apiOk=false, ST={}, map=null, MK={}, gpsMarker=null;
   /* Nalpi-Status je Bein: 0 geplant · 1 abgesteckt · 2 gebohrt · 3 Pfähle fixiert · 4 injiziert */
   var ZUST={
@@ -255,20 +257,13 @@
   }
   function json(u){ return fetch(u,{cache:'no-store'}).then(function(r){ if(!r.ok) throw new Error(u+' '+r.status); return r.json(); }); }
 
-  /* Live-Stand BuildTrack (nur lesen, gleiche Quelle wie injektion.html): injectedAt → injiziert, drilledAt → mind. gebohrt */
+  /* Live-Stand BuildTrack (nur lesen, gleiche Quelle wie injektion.html): injected_at → injiziert, drilled_at → mind. gebohrt.
+     Ohne Token (nalp-buildtrack.js) bleibt apiOk false und die Seite zeigt den Export-Stand. */
   function apiLaden(){
-    var since=0, runde=0;
-    function seite(){
-      var ctl=window.AbortController?new AbortController():null, to=setTimeout(function(){ if(ctl) ctl.abort(); },12000);
-      return fetch(API+'?since='+since+'&limit=500',{cache:'no-store', signal:ctl?ctl.signal:undefined})
-        .then(function(r){ clearTimeout(to); if(!r.ok) throw new Error('api '+r.status); return r.json(); })
-        .then(function(d){
-          (d.states||[]).forEach(function(s){ api[s.foundationId]=[s.injectedAt?1:0, s.drilledAt?1:0]; });
-          runde++;
-          if(d.hasMore && d.watermark!==since && runde<12){ since=d.watermark; return seite(); }
-        });
-    }
-    return seite().then(function(){ apiOk=true; }).catch(function(){ apiOk=false; });
+    return nalpBT.q('drillpoints', API_Q, {timeout:12000}).then(function(rows){
+      rows.forEach(function(s){ api[s.foundation_id]=[s.injected_at?1:0, s.drilled_at?1:0]; });
+      apiOk=true;
+    }).catch(function(){ apiOk=false; });
   }
 
   function rechnen(){
