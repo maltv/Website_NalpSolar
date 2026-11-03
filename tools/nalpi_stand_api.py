@@ -188,9 +188,10 @@ def main() -> int:
     bauen('build_baustand.py', tisch_csv)
     bereiche_bauen(tisch_csv)
     bauen('build_rapport.py', bohr_csv, tisch_csv)
+    bauen('build_ps_tal.py', '--basis', a.basis)   # ps-tal.html; ohne office:read nur Warnung, alte Datei bleibt
     if a.mit_leistung:
         bauen('build_leistung.py')
-    print('Fertig: uploads/tables/{modultische_all,bohrstand,bohrpunkte_koo,baustand,bereiche,rapport}.json')
+    print('Fertig: uploads/tables/{modultische_all,bohrstand,bohrpunkte_koo,baustand,bereiche,rapport,ps_tal}.json')
     return 0
 
 

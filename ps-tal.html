@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NalpSolar · Passstück-Check Tal</title>
+<meta name="theme-color" content="#ffffff">
+<script>
+  window.NALP_GATE_CODE  = '6460';
+  window.NALP_GATE_KEY   = 'nalp_portal_unlock_v1';
+  window.NALP_GATE_TITEL = 'Passstück-Check Tal';
+  window.NALP_GATE_SUB   = 'Code eingeben / Enter code / Wpisz kod';
+</script>
+<script src="assets/js/nalp-gate.js"></script>
+<!--
+  ps-tal.html – Passstück-Check im Tal-Lager (WERKZEUGE §88, seit 03.11.2026).
+  Etikett «Position <Tisch>-<Stütze>-<Länge>» scannen → sofort: BEHALTEN / WEG (Mauchle oder entsorgen) / PRÜFEN.
+  Regel: assets/js/nalp-passstueck-tal.js (EINE Stelle). Daten: uploads/tables/ps_tal.json (tools/build_ps_tal.py,
+  täglich im Workflow nalpi-stand). Scanner-Teil nach vormontage.html (FALLE: dort geändert → hier nachziehen).
+-->
+<style>
+  :root{ --ink:#14202e; --mut:#5b6b7c; --line:#dfe3e8; --bg:#f2f4f7; --rot:#d63a3f; --gruen:#1c8a4a;
+         --gelb:#c98a00; --blau:#1f5fa8; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; }
+  body{ background:var(--bg); color:var(--ink); font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+        line-height:1.4; padding-bottom:40px; }
+  header{ position:sticky; top:0; z-index:20; background:#fff; border-bottom:1px solid var(--line);
+          padding:10px 14px; padding-top:calc(10px + env(safe-area-inset-top)); display:flex; gap:10px; align-items:center; }
+  header a.home{ color:var(--ink); text-decoration:none; font-size:26px; line-height:1; padding:2px 6px; }
+  header h1{ font-size:17px; margin:0; font-weight:900; }
+  header .stand{ font-size:11.5px; color:var(--mut); }
+  main{ max-width:640px; margin:0 auto; padding:10px 12px; }
+  .box{ background:#fff; border:1px solid var(--line); border-radius:12px; padding:13px; margin-bottom:12px; }
+  .box h2{ font-size:15.5px; margin:0 0 6px; }
+  .sub{ font-size:12.5px; color:var(--mut); }
+  .btn{ display:inline-block; border:0; border-radius:9px; padding:12px 14px; font:inherit; font-size:15px;
+        font-weight:800; cursor:pointer; color:#fff; background:var(--rot); text-align:center; }
+  .btn.gross{ width:100%; padding:16px; font-size:17px; }
+  .btn.gruen{ background:var(--gruen); }
+  .btn.ghost{ background:#fff; color:var(--ink); border:1px solid #c9ccd2; font-weight:700; padding:10px 12px; font-size:14px; }
+  .btn.ghost.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  /* Live-Scanner (wie vormontage.html) */
+  #scanBox{ display:none; margin-top:9px; }
+  #scanBox.an{ display:block; }
+  .scanWrap{ position:relative; background:#000; border-radius:8px; overflow:hidden; }
+  #scanVid{ width:100%; display:block; max-height:52vh; object-fit:cover; background:#000; }
+  .scanRahmen{ position:absolute; left:4%; width:92%; top:33%; height:30%; border:3px solid #fff; border-radius:6px;
+        box-shadow:0 0 0 2000px rgba(0,0,0,.42); pointer-events:none; transition:all .15s; }
+  .scanRahmen.hoch{ left:33%; width:34%; top:4%; height:92%; }
+  .scanRahmen.behalten{ border-color:var(--gruen); } .scanRahmen.weg{ border-color:var(--rot); }
+  .scanRahmen.pruefen{ border-color:#f2b400; }
+  .scanHilfe{ position:absolute; left:0; right:0; bottom:6px; text-align:center; color:#fff; font-size:12.5px;
+        font-weight:700; text-shadow:0 1px 3px #000; padding:0 8px; }
+  .scanLeiste{ display:flex; gap:8px; margin-top:8px; }
+  .scanLeiste .btn{ flex:1; }
+  #scanStatus,#ocrStatus{ font-size:13px; font-weight:700; margin-top:7px; min-height:18px; }
+  .err{ color:var(--rot); }
+  .reihe{ display:flex; gap:8px; margin-top:10px; align-items:flex-end; }
+  .reihe label{ font-size:11.5px; font-weight:800; color:var(--mut); display:block; margin-bottom:3px; }
+  .reihe input{ width:100%; font:inherit; font-size:17px; padding:10px; border:1px solid #c9ccd2; border-radius:8px; }
+  .sBtns{ display:flex; gap:5px; margin-top:8px; }
+  .sBtns button{ flex:1; padding:11px 2px; font-size:15px; font-weight:900; border:2px solid #c9ccd2; background:#fff;
+        border-radius:8px; }
+  .sBtns button.on{ background:var(--ink); border-color:var(--ink); color:#fff; }
+  /* Ergebnis */
+  #erg{ display:none; border-radius:12px; padding:14px; margin-bottom:12px; color:#fff; }
+  #erg.behalten{ display:block; background:var(--gruen); }
+  #erg.weg{ display:block; background:var(--rot); }
+  #erg.pruefen{ display:block; background:#f2b400; color:#1e1600; }
+  #erg .kopf{ font-size:23px; font-weight:900; line-height:1.15; }
+  #erg .pl{ font-size:14px; font-weight:800; opacity:.9; margin-top:2px; }
+  #erg .pos{ font-size:19px; font-weight:900; margin-top:10px; font-family:ui-monospace,Consolas,monospace; }
+  #erg .txt{ font-size:14.5px; margin-top:6px; }
+  #erg .ziel{ font-size:16px; font-weight:900; margin-top:8px; }
+  #erg .klein{ font-size:12px; opacity:.85; margin-top:8px; }
+  /* Verlauf + Batches */
+  .zahl{ display:flex; gap:6px; margin:6px 0 8px; }
+  .zahl span{ flex:1; text-align:center; border-radius:8px; padding:7px 2px; font-weight:900; font-size:15px; color:#fff; }
+  .z-b{ background:var(--gruen); } .z-w{ background:var(--rot); } .z-p{ background:#f2b400; color:#1e1600 !important; }
+  ul.liste{ list-style:none; margin:0; padding:0; max-height:300px; overflow-y:auto; }
+  ul.liste li{ display:flex; gap:8px; padding:7px 2px; border-bottom:1px solid var(--line); font-size:13.5px; align-items:baseline; }
+  ul.liste li i{ flex:none; width:11px; height:11px; border-radius:50%; display:inline-block; }
+  ul.liste li b{ font-family:ui-monospace,Consolas,monospace; flex:none; }
+  ul.liste li small{ color:var(--mut); }
+  .batch{ border-top:1px solid var(--line); padding:9px 0; font-size:13.5px; }
+  .batch .bk{ display:flex; justify-content:space-between; gap:8px; font-weight:900; font-size:15px; }
+  .batch .ok{ color:var(--gruen); } .batch .no{ color:var(--rot); } .batch .ach{ color:var(--gelb); }
+  .batch .det{ color:var(--mut); font-size:12.5px; margin-top:3px; }
+  .hinweis{ font-size:12.5px; background:#fff8e6; border-left:4px solid #f2b400; padding:8px 10px; border-radius:6px; margin-top:8px; }
+  #toast{ position:fixed; left:50%; bottom:22px; transform:translateX(-50%); background:var(--ink); color:#fff;
+        padding:10px 16px; border-radius:9px; font-weight:700; font-size:14px; opacity:0; transition:opacity .2s;
+        pointer-events:none; z-index:50; max-width:90vw; }
+  #toast.on{ opacity:.95; }
+</style>
+</head>
+<body>
+<header>
+  <a class="home" href="index.html" aria-label="Portal">‹</a>
+  <div>
+    <h1>Passstück-Check Tal</h1>
+    <div class="stand" id="stand">Daten laden …</div>
+  </div>
+</header>
+
+<main>
+  <div class="box">
+    <h2>🏷 Etikett scannen</h2>
+    <div class="sub">Zeile «Position 469-S2-1216» in den Rahmen halten. Das Ergebnis kommt sofort – der Scanner läuft weiter zum nächsten Stück.<br>
+      <i>Linię «Position …» trzymać w ramce – wynik od razu.</i></div>
+    <button class="btn gross gruen" id="btnScan" onclick="scannerUm()" style="margin-top:10px">🎥 Scanner starten</button>
+    <div id="scanBox">
+      <div class="scanWrap">
+        <video id="scanVid" playsinline muted autoplay></video>
+        <div class="scanRahmen" id="rahmen"></div>
+        <div class="scanHilfe" id="scanHilfe">Zeile «Position …» in den Rahmen</div>
+      </div>
+      <div class="scanLeiste">
+        <button class="btn ghost" id="btnHoch" onclick="hochUm()">↻ Etikett hochkant</button>
+        <button class="btn ghost" onclick="scanLicht()">💡 Licht</button>
+        <button class="btn ghost" onclick="scannerZu()">✕ Stopp</button>
+      </div>
+      <div id="scanStatus"></div>
+    </div>
+    <input type="file" id="f_foto" accept="image/*" capture="environment" style="display:none">
+    <button class="btn ghost" style="width:100%;margin-top:8px" onclick="document.getElementById('f_foto').click()">📷 Foto vom Etikett</button>
+    <div id="ocrStatus"></div>
+
+    <div class="reihe">
+      <div style="flex:1"><label>Tisch</label><input id="m_t" inputmode="numeric" placeholder="469"></div>
+      <div style="flex:1"><label>Länge mm</label><input id="m_l" inputmode="numeric" placeholder="1216"></div>
+    </div>
+    <div class="sBtns" id="sBtns">
+      <button onclick="sWahl('S1')">S1</button><button onclick="sWahl('S2')">S2</button>
+      <button onclick="sWahl('S3')">S3</button><button onclick="sWahl('S4')">S4</button>
+    </div>
+    <button class="btn" style="width:100%;margin-top:8px;background:var(--blau)" onclick="vonHand()">Prüfen</button>
+  </div>
+
+  <div id="erg"></div>
+
+  <div class="box">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h2 style="margin:0">Gescannt</h2>
+      <button class="btn ghost" style="padding:6px 10px;font-size:12.5px" onclick="verlaufLeeren()">Liste leeren</button>
+    </div>
+    <div class="zahl"><span class="z-b" id="nB">0</span><span class="z-w" id="nW">0</span><span class="z-p" id="nP">0</span></div>
+    <ul class="liste" id="verlauf"></ul>
+  </div>
+
+  <div class="box">
+    <h2>📦 Welche Batches können komplett weg?</h2>
+    <div class="sub">Je Bestellbatch: steckt jedes Stück im fertigen Tisch oder ist es ersetzt, ist der Batch erledigt –
+      was davon im Tal liegt, ist übrig. Stand Nalpi siehe oben.</div>
+    <div id="batches" style="margin-top:8px">…</div>
+    <div class="hinweis"><b>Etikett ≠ Batch-Nummer:</b> Stücke der Version 2025 tragen «Serie» statt «Batch» –
+      auf den Fotos vom 03.11. war Serie 18 = Batch 2 und Serie 19 = Batch 3. Altes Etikett mit Logo «mauchle stahlbau»
+      und Serie 4 / 6 / 16 = Lieferung 2025: <b>nie pauschal weg</b>, z. B. 469 S2, 470 S3, 471 S2/S3 werden für die
+      Baupiste B gebraucht. Im Zweifel immer scannen.</div>
+    <div class="hinweis">Wohin: Typ <b>B 2025 → an Mauchle</b>, Typ <b>A/D/E 2025 → entsorgen</b> (Christian Schmuckle 19.08.2026).
+      Serie 2026: Ziel offen – Victor fragen. <b>Reserve-Rohlinge</b> (ohne Etikett, ohne Fussplatte) immer behalten.</div>
+  </div>
+</main>
+<div id="toast"></div>
+
+<script src="assets/js/tesseract/tesseract.min.js"></script>
+<script src="assets/js/nalp-passstueck-tal.js"></script>
+<script>
+'use strict';
+var $=function(id){ return document.getElementById(id); };
+var D=null, sSel='';
+function toast(t,err){ var e=$('toast'); e.textContent=t; e.className='on'; e.style.background=err?'var(--rot)':'';
+  clearTimeout(toast._t); toast._t=setTimeout(function(){ e.className=''; },2600); }
+function rund(x){ return x==null?'–':String(Math.round(+x)); }
+function datum(iso){ if(!iso) return ''; var p=String(iso).slice(0,10).split('-'); return p.length===3?(+p[2])+'.'+(+p[1])+'.':iso; }
+
+/* ══════════ Daten ══════════ */
+fetch('uploads/tables/ps_tal.json',{cache:'no-cache'}).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+  .then(function(d){ D=d; $('stand').textContent='Stand Nalpi: '+d.stand; batchesZeigen(); verlaufZeigen(); })
+  .catch(function(){ $('stand').textContent='Daten fehlen – Netz prüfen'; $('stand').className='err'; });
+
+/* ══════════ Ergebnis-Texte ══════════ */
+var KOPF={ behalten:['BEHALTEN – wird gebraucht','ZOSTAWIĆ – potrzebny'],
+           weg:['WEG – übrig','NIEPOTRZEBNY'],
+           pruefen:['PRÜFEN – vorerst behalten','SPRAWDZIĆ – na razie zostawić'] };
+var ZIEL={ mauchle:['→ an Mauchle zurück (Typ B 2025)','zwrot do Mauchle'],
+           entsorgen:['→ entsorgen (Typ A/D/E 2025)','na złom'],
+           klaeren:['→ Ziel offen (Serie 2026) – Victor fragen','zapytać Victora'] };
+function grundText(u){
+  var t=u.tisch, b=u.bereich?' ('+u.bereich+')':'', s=rund(u.soll);
+  switch(u.grund){
+    case 'gebraucht': return 'Tisch '+t+b+' steht noch nicht. Soll '+s+' mm.'
+      +(u.vormontiert?' Tisch ist vormontiert seit '+datum(u.vormontiert)+' – liegt das Stück lose, gehört es an diesen Rahmen (Tausch?).':'')
+      +(u.nachmessen?' ⚠ Nalpi meldet hier «falsch geliefert» – mit Massband nachmessen.':'');
+    case 'montiert': return 'Tisch '+t+b+' steht seit '+datum(u.montiert)+' – gebaut wurde '+s+' mm, dieses Stück ist übrig.'
+      +(u.batch?' (Batch '+u.batch+')':'');
+    case 'montiert_soll': return 'Tisch '+t+b+' steht seit '+datum(u.montiert)+', aber die Länge passt genau'
+      +(u.soll2?' (Nalpi '+s+' / bestellt '+rund(u.soll2)+' mm)':'')+'. Doppelt geliefert oder Tausch offen? Am Tisch nachschauen – bis dahin behalten.';
+    case 'ersetzt': return 'Altes Stück aus Batch '+u.batch+'. Neu bestellt'+(u.neu?' in Batch '+u.neu.batch+' mit '+rund(u.neu.l)+' mm':'')+'.';
+    case 'passt_nicht': return 'Passt nicht: Tisch '+t+b+' braucht '+s+' mm (bei ILF freigegeben).';
+    case 'nicht_berechnet': return 'Passstück für Tisch '+t+b+' ist noch nicht berechnet – vorerst behalten.';
+    case 'nicht_freigegeben': return 'Nalpi rechnet '+s+' mm, noch nicht freigegeben – vorerst behalten.';
+    case 'veraltet': return 'Berechnung in Nalpi veraltet (Pfahl neu gemessen?) – behalten, bis neu gerechnet.';
+    case 'widerspruch': return 'Nalpi rechnet '+s+' mm, bestellt wurden '+rund(u.soll2)+' mm – nicht wegwerfen, Victor fragen.';
+    case 'zurueckgezogen': return 'Tisch '+t+' ist zurückgezogen – Victor fragen.';
+    case 'tisch_unbekannt': return 'Tisch '+t+' gibt es in Nalpi nicht – Etikett prüfen (handschriftlich korrigiert?).';
+    case 'bekannt': return u.text;
+  }
+  return '';
+}
+function zeigen(u, quelle){
+  var e=$('erg'); e.className=u.klasse;
+  var z=u.klasse==='weg' && ZIEL[u.ziel];
+  e.innerHTML='<div class="kopf">'+KOPF[u.klasse][0]+'</div><div class="pl">'+KOPF[u.klasse][1]+'</div>'
+    +'<div class="pos">'+u.tisch+'-'+u.s+'-'+u.l+'</div>'
+    +'<div class="txt">'+grundText(u)+'</div>'
+    +(z?'<div class="ziel">'+z[0]+'<br><span style="font-size:13px;opacity:.9">'+z[1]+'</span></div>':'')
+    +'<div class="klein">Typ '+(u.typ||'?')+(u.bereich?' · '+u.bereich:'')+(quelle?' · '+quelle:'')+'</div>';
+  try{ if(navigator.vibrate) navigator.vibrate(u.klasse==='behalten'?[120]:u.klasse==='weg'?[200,80,200]:[90,60,90,60,90]); }catch(x){}
+  verlaufDazu(u);
+}
+function pruefen(tisch, s, l, quelle){
+  if(!D){ toast('Daten noch nicht geladen',true); return null; }
+  var u=NALP_PS_TAL.urteil(D, tisch, s, l);
+  zeigen(u, quelle);
+  return u;
+}
+
+/* ══════════ Von Hand ══════════ */
+function sWahl(s){ sSel=s; [].forEach.call($('sBtns').children,function(b){ b.className=(b.textContent===s)?'on':''; }); }
+function vonHand(){
+  var t=$('m_t').value.trim(), l=$('m_l').value.trim();
+  if(!/^\d{1,4}$/.test(t)){ toast('Tisch fehlt',true); return; }
+  if(!sSel){ toast('Stütze S1–S4 wählen',true); return; }
+  if(!/^\d{2,4}$/.test(l)){ toast('Länge fehlt',true); return; }
+  pruefen(t, sSel, +l, 'von Hand');
+}
+
+/* ══════════ Verlauf (nur dieses Handy) ══════════ */
+var LS_V='nalp_ps_tal_verlauf_v1';
+function verlaufLaden(){ try{ return JSON.parse(localStorage.getItem(LS_V)||'[]'); }catch(e){ return []; } }
+function verlaufDazu(u){
+  var v=verlaufLaden(), k=u.tisch+'-'+u.s+'-'+u.l;
+  v=v.filter(function(x){ return x.k!==k; });
+  v.unshift({k:k, c:u.klasse, z:u.ziel||'', g:u.grund, t:Date.now()});
+  try{ localStorage.setItem(LS_V, JSON.stringify(v.slice(0,400))); }catch(e){}
+  verlaufZeigen();
+}
+function verlaufLeeren(){ if(!confirm('Liste auf diesem Handy leeren?')) return; try{ localStorage.removeItem(LS_V); }catch(e){} verlaufZeigen(); }
+function verlaufZeigen(){
+  var v=verlaufLaden(), n={behalten:0,weg:0,pruefen:0}, farbe={behalten:'var(--gruen)',weg:'var(--rot)',pruefen:'#f2b400'};
+  var html=v.map(function(x){
+    n[x.c]=(n[x.c]||0)+1;
+    var zz=x.c==='weg'?(x.z==='mauchle'?'Mauchle':x.z==='entsorgen'?'entsorgen':'Ziel offen'):(x.c==='behalten'?'gebraucht':'prüfen');
+    var d=new Date(x.t), uhr=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+    return '<li><i style="background:'+farbe[x.c]+'"></i><b>'+x.k+'</b><span>'+zz+'</span><small style="margin-left:auto">'+uhr+'</small></li>';
+  }).join('');
+  $('verlauf').innerHTML=html||'<li><small>Noch nichts gescannt.</small></li>';
+  $('nB').textContent='✔ '+n.behalten; $('nW').textContent='✕ '+n.weg; $('nP').textContent='? '+n.pruefen;
+}
+
+/* ══════════ Batch-Übersicht ══════════ */
+function gruppiert(liste){
+  var g={}, reihe=[];
+  liste.forEach(function(u){ if(!g[u.tisch]){ g[u.tisch]=[]; reihe.push(u.tisch); } if(g[u.tisch].indexOf(u.s)<0) g[u.tisch].push(u.s); });
+  return reihe.map(function(t){ return t+' '+(g[t].length===4?'(alle 4)':g[t].sort().join('/')); }).join(' · ');
+}
+function batchesZeigen(){
+  var html=NALP_PS_TAL.batches(D).map(function(e){
+    var kopf, det='';
+    if(e.komplett) kopf='<span class="ok">✅ komplett weg</span>';
+    else if(e.behalten.length) kopf='<span class="no">❗ '+e.behalten.length+' Stück gebraucht</span>';
+    else kopf='<span class="ach">⚠ fast – '+e.pruefen.length+' prüfen</span>';
+    if(e.behalten.length){
+      var ber={}; e.behalten.forEach(function(u){ ber[u.bereich]=1; });
+      det+='<div class="det"><b>Behalten</b> ('+Object.keys(ber).join(', ')+'): '+gruppiert(e.behalten)+'</div>';
+    }
+    if(e.pruefen.length) det+='<div class="det"><b>Prüfen</b>: '+gruppiert(e.pruefen)+'</div>';
+    det+='<div class="det">'+e.n+' Stück bestellt · '+e.verbaut+' verbaut · '+e.weg+' übrig/ersetzt</div>';
+    return '<div class="batch"><div class="bk"><span>Batch '+e.batch+'</span>'+kopf+'</div>'+det+'</div>';
+  }).join('');
+  $('batches').innerHTML=html;
+}
+
+/* ══════════ OCR (wie vormontage.html) ══════════ */
+var ocrWorker=null, ocrBereit=false;
+function ocrWorkerHolen(){
+  if(ocrWorker) return Promise.resolve(ocrWorker);
+  if(typeof Tesseract==='undefined') return Promise.reject(new Error('OCR fehlt'));
+  return Tesseract.createWorker('eng', 1, {
+    workerPath:'assets/js/tesseract/worker.min.js', corePath:'assets/js/tesseract/', langPath:'assets/js/tesseract/',
+    cacheMethod:'none'
+  }).then(function(w){ ocrWorker=w; return w; });
+}
+/* KEIN Zeichenfilter (Befund 10.08.: tessedit_char_whitelist verschlechtert), PSM 6 = ein Textblock. */
+function ocrDurchgang(bild){
+  return ocrWorkerHolen().then(function(w){
+    var p=ocrBereit?Promise.resolve():w.setParameters({ tessedit_pageseg_mode:'6', user_defined_dpi:'300' })
+      .then(function(){ ocrBereit=true; });
+    return p.then(function(){ return w.recognize(bild); });
+  });
+}
+/* Graustufen + Kontrast auf 2 %/98 % gespreizt, Drehung in Grad (0/90/270). */
+function aufbereiten(quelle, sx, sy, sw, sh, grad, ziel){
+  var f=Math.min(3, Math.max(1, ziel/Math.max(sw,sh)));
+  var bw=Math.round(sw*f), bh=Math.round(sh*f), quer=(grad===90||grad===270);
+  var cv=document.createElement('canvas'); cv.width=quer?bh:bw; cv.height=quer?bw:bh;
+  var ctx=cv.getContext('2d');
+  ctx.translate(cv.width/2, cv.height/2); if(grad) ctx.rotate(grad*Math.PI/180);
+  ctx.drawImage(quelle, sx,sy,sw,sh, -bw/2,-bh/2,bw,bh); ctx.setTransform(1,0,0,1,0,0);
+  var d=ctx.getImageData(0,0,cv.width,cv.height), p=d.data, hist=new Uint32Array(256), i, g;
+  for(i=0;i<p.length;i+=4){ g=(p[i]*0.299+p[i+1]*0.587+p[i+2]*0.114)|0; p[i]=p[i+1]=p[i+2]=g; hist[g]++; }
+  var n=cv.width*cv.height, lo=0, hi=255, s=0;
+  for(i=0;i<256;i++){ s+=hist[i]; if(s>n*0.02){ lo=i; break; } }
+  for(s=0,i=255;i>=0;i--){ s+=hist[i]; if(s>n*0.02){ hi=i; break; } }
+  if(hi-lo<25){ lo=0; hi=255; }
+  var lut=new Uint8Array(256), sp=255/(hi-lo);
+  for(i=0;i<256;i++) lut[i]=Math.max(0, Math.min(255, Math.round((i-lo)*sp)));
+  for(i=0;i<p.length;i+=4){ p[i]=p[i+1]=p[i+2]=lut[p[i]]; }
+  ctx.putImageData(d,0,0);
+  return cv.toDataURL('image/png');
+}
+
+/* ══════════ Einzelfoto: 0°, 90°, 270° ══════════ */
+$('f_foto').addEventListener('change', function(ev){
+  var f=ev.target.files&&ev.target.files[0]; ev.target.value='';
+  if(!f) return;
+  var img=new Image(), url=URL.createObjectURL(f);
+  img.onload=function(){
+    var grade=[0,90,270], i=0;
+    function versuch(){
+      if(i>=grade.length){ $('ocrStatus').className='err'; $('ocrStatus').textContent='Etikett nicht lesbar – näher ran oder von Hand eingeben.'; URL.revokeObjectURL(url); return; }
+      var g=grade[i++];
+      $('ocrStatus').className=''; $('ocrStatus').textContent='Lese Foto … ('+g+'°)';
+      ocrDurchgang(aufbereiten(img,0,0,img.width,img.height,g,1600)).then(function(res){
+        var e=NALP_PS_TAL.etikett((res&&res.data&&res.data.text)||'');
+        if(!e){ versuch(); return; }
+        $('ocrStatus').textContent=''; URL.revokeObjectURL(url);
+        pruefen(e.tisch, e.s, e.l, 'Foto');
+      }).catch(function(){ $('ocrStatus').className='err'; $('ocrStatus').textContent='Texterkennung fehlt (Netz?)'; });
+    }
+    versuch();
+  };
+  img.src=url;
+});
+
+/* ══════════ Live-Scanner ══════════
+   Kamera läuft IN der Seite, der Rahmeninhalt wird laufend gelesen. Ein Etikett gilt erst, wenn es in ZWEI Bildern
+   gleich gelesen wurde (Rauschen fällt raus). Anders als in vormontage.html läuft der Scanner nach einem Treffer
+   weiter – im Lager wird Stück um Stück geprüft. Dasselbe Etikett wird 6 s lang nicht nochmals gemeldet. */
+var QUER={x:0.04,w:0.92,y:0.33,h:0.30}, HOCH={x:0.33,w:0.34,y:0.04,h:0.92};
+var hoch=false, dreh=90, scanStream=null, scanLaeuft=false, scanBusy=false, scanStimmen={}, scanTimer=null, zuletzt={k:'',t:0};
+
+function hochUm(){
+  hoch=!hoch; $('rahmen').classList.toggle('hoch',hoch); $('btnHoch').classList.toggle('on',hoch);
+  $('scanHilfe').textContent=hoch?'Etikett hochkant in den Rahmen':'Zeile «Position …» in den Rahmen';
+  scanStimmen={};
+}
+function scannerUm(){ if(scanLaeuft) scannerZu(); else scannerAuf(); }
+function scannerAuf(){
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ toast('Keine Kamera verfügbar',true); return; }
+  $('scanBox').classList.add('an'); $('btnScan').textContent='✕ Scanner stoppen';
+  $('scanStatus').className=''; $('scanStatus').textContent='Kamera startet …';
+  navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080} }, audio:false })
+    .then(function(s){
+      scanStream=s; scanLaeuft=true; scanStimmen={};
+      var v=$('scanVid'); v.srcObject=s; v.play();
+      $('scanStatus').textContent='Suche Etikett …';
+      scanTimer=setTimeout(scanSchleife, 900);
+    })
+    .catch(function(){
+      $('scanStatus').className='err'; $('scanStatus').textContent='Kamera nicht erlaubt – Browser-Einstellungen prüfen.';
+      $('scanBox').classList.remove('an'); $('btnScan').textContent='🎥 Scanner starten';
+    });
+}
+function scannerZu(){
+  scanLaeuft=false;
+  if(scanTimer){ clearTimeout(scanTimer); scanTimer=null; }
+  if(scanStream){ scanStream.getTracks().forEach(function(t){ t.stop(); }); scanStream=null; }
+  $('scanVid').srcObject=null; $('scanBox').classList.remove('an');
+  $('rahmen').className='scanRahmen'+(hoch?' hoch':''); $('btnScan').textContent='🎥 Scanner starten';
+}
+function scanLicht(){
+  if(!scanStream) return;
+  var t=scanStream.getVideoTracks()[0], f=t.getCapabilities && t.getCapabilities();
+  if(!f || !f.torch){ toast('Kein Licht an diesem Handy',true); return; }
+  var an=!(t.getSettings && t.getSettings().torch);
+  t.applyConstraints({advanced:[{torch:an}]}).catch(function(){ toast('Kein Licht an diesem Handy',true); });
+}
+function scanAusschnitt(){
+  var v=$('scanVid'), vw=v.videoWidth, vh=v.videoHeight;
+  if(!vw || !vh) return null;
+  var r=hoch?HOCH:QUER;
+  /* Hochkant geklebt: abwechselnd 90° und 270° drehen – welche Richtung, weiss man vorher nicht. */
+  var g=0; if(hoch){ dreh=(dreh===90)?270:90; g=dreh; }
+  return aufbereiten(v, Math.round(vw*r.x), Math.round(vh*r.y), Math.round(vw*r.w), Math.round(vh*r.h), g, 1500);
+}
+function scanSchleife(){
+  if(!scanLaeuft || scanBusy) return;
+  var bild=scanAusschnitt();
+  if(!bild){ scanTimer=setTimeout(scanSchleife, 500); return; }
+  scanBusy=true;
+  ocrDurchgang(bild).then(function(res){
+    if(!scanLaeuft) return;
+    var e=NALP_PS_TAL.etikett((res&&res.data&&res.data.text)||'');
+    if(!e){ $('scanStatus').className=''; $('scanStatus').textContent='Suche Etikett …'; return; }
+    var k=e.tisch+'-'+e.s+'-'+e.l;
+    if(k===zuletzt.k && Date.now()-zuletzt.t<6000) return;      // gerade gemeldet
+    scanStimmen[k]=(scanStimmen[k]||0)+1;
+    if(scanStimmen[k]<2){ $('scanStatus').className=''; $('scanStatus').textContent='Lese '+k+' … ruhig halten'; return; }
+    scanStimmen={}; zuletzt={k:k, t:Date.now()};
+    var u=pruefen(e.tisch, e.s, e.l, 'Scanner');
+    if(u){
+      $('rahmen').className='scanRahmen'+(hoch?' hoch ':' ')+u.klasse;
+      setTimeout(function(){ if(scanLaeuft) $('rahmen').className='scanRahmen'+(hoch?' hoch':''); }, 1800);
+      $('scanStatus').className=''; $('scanStatus').textContent=k+' → '+KOPF[u.klasse][0]+' – nächstes Stück';
+    }
+  }).catch(function(){}).then(function(){
+    scanBusy=false;
+    if(scanLaeuft) scanTimer=setTimeout(scanSchleife, 250);
+  });
+}
+document.addEventListener('visibilitychange', function(){ if(document.hidden && scanLaeuft) scannerZu(); });
+</script>
+</body>
+</html>
