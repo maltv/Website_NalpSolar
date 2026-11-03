@@ -107,7 +107,8 @@
   <div class="box">
     <h2>🏷 Etikett scannen</h2>
     <div class="sub">Zeile «Position 469-S2-1216» in den Rahmen halten. Das Ergebnis kommt sofort – der Scanner läuft weiter zum nächsten Stück.<br>
-      <i>Linię «Position …» trzymać w ramce – wynik od razu.</i></div>
+      <i>Linię «Position …» trzymać w ramce – wynik od razu.</i>
+      <a href="#video" style="display:block;margin-top:4px;font-weight:800">🎬 Erklärvideo: was weg darf, was zu Mauchle muss · film PL</a></div>
     <button class="btn gross gruen" id="btnScan" onclick="scannerUm()" style="margin-top:10px">🎥 Scanner starten</button>
     <div id="scanBox">
       <div class="scanWrap">
@@ -159,6 +160,20 @@
       Baupiste B gebraucht. Im Zweifel immer scannen.</div>
     <div class="hinweis">Wohin: Typ <b>B 2025 → an Mauchle</b>, Typ <b>A/D/E 2025 → entsorgen</b> (Christian Schmuckle 19.08.2026).
       Serie 2026: Ziel offen – Victor fragen. <b>Reserve-Rohlinge</b> (ohne Etikett, ohne Fussplatte) immer behalten.</div>
+  </div>
+
+  <!-- Erklärvideo (03.11.2026, Film-Werkzeug WERKZEUGE §72, filme/passstuecke_tal.json) -->
+  <div class="box" id="video">
+    <h2>🎬 Erklärvideo: Passstücke aufräumen</h2>
+    <div class="sub">Was zu Mauchle geht, was wir entsorgen dürfen, wie man prüft – und welche Batches komplett weg dürfen.
+      Stand 03.11.2026.</div>
+    <div class="sBtns" id="vidSpr" style="margin-top:8px">
+      <button class="on" onclick="vidSprache('de',this)">Deutsch</button><button onclick="vidSprache('pl',this)">Polski</button>
+    </div>
+    <video id="vid" controls preload="none" playsinline poster="uploads/video/passstuecke_tal_poster.jpg"
+      style="width:100%;margin-top:8px;border-radius:8px;background:#000">
+      <source src="uploads/video/passstuecke_tal_de.mp4" type="video/mp4">
+    </video>
   </div>
 </main>
 <div id="toast"></div>
@@ -421,6 +436,12 @@ function scanSchleife(){
   });
 }
 document.addEventListener('visibilitychange', function(){ if(document.hidden && scanLaeuft) scannerZu(); });
+
+/* Erklärvideo DE / PL */
+function vidSprache(sp, btn){
+  var v=$('vid'); v.pause(); v.querySelector('source').src='uploads/video/passstuecke_tal_'+sp+'.mp4'; v.load();
+  [].forEach.call($('vidSpr').children,function(b){ b.className=(b===btn)?'on':''; });
+}
 </script>
 </body>
 </html>
