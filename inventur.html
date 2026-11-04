@@ -160,6 +160,7 @@
   .wahl.gross button{ min-height:84px; font-size:23px; }
   .pfeil{ display:inline-block; font-size:22px; line-height:1; }
   .legende i{ display:inline-block; width:11px; height:11px; border-radius:50%; vertical-align:-1px; margin-right:4px; }
+.legende i.z{ width:auto; height:auto; background:none; border-radius:0; color:#1e9e5a; font:900 15px/1 system-ui,Arial,sans-serif; font-style:normal; vertical-align:-1px; }
 </style>
 </head>
 <body>
@@ -405,6 +406,7 @@
   <div class="leiste"><b id="grossTitel">Punkt antippen</b><button onclick="zuMir()" title="zu mir">📍</button><button onclick="grossZu()">✕</button></div>
   <div id="grossMap"></div>
   <div class="legende"><span><i style="background:#e08a00"></i>offen</span><span><i style="background:#1e9e5a"></i>erfasst</span>
+    <span><i class="z">5</i>5.0 mm</span><span><i class="z">6</i>6.35 mm</span><span><i class="z">P</i>Pfahlkopf</span>
     <span><i style="background:#1565c0"></i>ich</span><span><i style="border:3px solid #D72622;background:#fff"></i>gewählt</span></div>
 </div>
 <div id="fotoGross" hidden onclick="this.hidden=true"><img id="fotoGrossImg" alt=""><span>✕ antippen = schliessen</span></div>
@@ -1248,6 +1250,26 @@
   function kachel(){ return L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg',
     {maxNativeZoom:20, maxZoom:22}); }
   function farbe(p){ return istErledigt(p)?'#1e9e5a':'#e08a00'; }
+  /* Erfasster Pfahl: statt des grünen Punkts eine grüne «5» (5.0 mm), «6» (6.35 mm) oder ein grünes «P» (Pfahlkopf
+     montiert), weiss umrandet fürs Satellitenbild – Victor 04.11. Leaflet zeichnet auf der Canvas nur Kreise; mit Zeichen
+     malt _updatePath nur den Buchstaben (der Radius bestimmt nur die Neuzeichen-Fläche). */
+  var ZeichenPunkt=typeof L==='undefined'?null:L.CircleMarker.extend({ _updatePath:function(){
+    var r=this._renderer, z=this.options.zeichen;
+    if(!z || !r._ctx){ r._updateCircle(this); return; }
+    if(!r._drawing || this._empty()) return;
+    var c=r._ctx, q=this._point, n=Math.max(Math.round(this._radius),1);
+    c.save(); c.globalAlpha=1; c.font='900 '+Math.round(n*1.9)+'px system-ui,Arial,sans-serif';
+    c.textAlign='center'; c.textBaseline='middle'; c.lineJoin='round';
+    c.lineWidth=Math.max(3,n*0.5); c.strokeStyle='#fff'; c.strokeText(z,q.x,q.y+1);
+    c.fillStyle=this.options.fillColor; c.fillText(z,q.x,q.y+1); c.restore(); } });
+  function zeichen(p){
+    if(modusAkt!=='g') return '';
+    var e=ERL.pfaehle[p.f]; if(!e) return '';
+    if(istKopf(e)) return 'P';
+    return +e.gew===5?'5':(+e.gew===6.35?'6':'');
+  }
+  function punkt(p,r,w,cv){ var z=zeichen(p);
+    return new ZeichenPunkt([p.lat,p.lon],{renderer:cv,radius:z?r+2:r,weight:w,color:'#fff',fillColor:farbe(p),fillOpacity:.95,interactive:false,zeichen:z}); }
   function miniBauen(){
     if(mini||typeof L==='undefined') return;
     mini=L.map('miniMap',{zoomControl:false, attributionControl:false, dragging:false, scrollWheelZoom:false, doubleClickZoom:false,
@@ -1261,7 +1283,7 @@
     if(!mini) return;
     if(miniPunkte) mini.removeLayer(miniPunkte);
     var cv=L.canvas({padding:.5}); miniPunkte=L.layerGroup();
-    kandidaten().forEach(function(p){ L.circleMarker([p.lat,p.lon],{renderer:cv,radius:5,weight:1,color:'#fff',fillColor:farbe(p),fillOpacity:.95,interactive:false}).addTo(miniPunkte); });
+    kandidaten().forEach(function(p){ punkt(p,5,1,cv).addTo(miniPunkte); });
     miniPunkte.addTo(mini);
   }
   function miniMalen(){
@@ -1304,9 +1326,7 @@
     if(!gross) return;
     if(grossLayer) gross.removeLayer(grossLayer);
     var cv=L.canvas({padding:.4}); grossLayer=L.layerGroup();
-    kandidaten().forEach(function(p){
-      L.circleMarker([p.lat,p.lon],{renderer:cv,radius:7,weight:1.5,color:'#fff',fillColor:farbe(p),fillOpacity:.95,interactive:false}).addTo(grossLayer);
-    });
+    kandidaten().forEach(function(p){ punkt(p,7,1.5,cv).addTo(grossLayer); });
     grossLayer.addTo(gross);
     $('grossTitel').textContent=(modusAkt==='ef'?'Einzelfundament':'Pfahl')+' antippen';
   }
