@@ -189,7 +189,7 @@
       <ol>
         <li><b>Hinlaufen</b> – das GPS wählt den ganzen Tisch (nicht das Bein, dafür ist GPS zu ungenau). Pfeil + Meter oben = wohin.</li>
         <li><b>Messen → Wert antippen</b> – speichert sofort (Piep + Ansage) und springt zum nächsten Bein. <b>1 Tipp je Pfahl.</b></li>
-        <li><b>Tisch fertig</b> = es geht von selbst zum nächsten offenen Tisch.</li>
+        <li><b>Tisch fertig</b> = weiterlaufen, das GPS nimmt den nächsten Tisch (auch fertige, grün). «➡ Nächster offener» zeigt, wo es noch fehlt.</li>
       </ol>
       <div class="sub">Falsches Bein? Kachel antippen, Wert neu tippen. «🔩 Kopf» = Pfahlkopf montiert, «❓» = Grund mit 1 Tipp. Schaden / Foto / Problem (auch 🎤 sprechen) = «✏ Details».
         Kein Netz? Egal – alles wartet auf dem Tablet. Zu zweit: das Handy kann gleichzeitig einen anderen Bereich machen.
@@ -308,6 +308,8 @@
 
     <div class="box" style="margin-top:10px">
       <div class="stand" id="stand"></div>
+      <button class="btn w" id="btnSync" onclick="syncNalpi()" style="margin-top:8px">🔄 Sync mit Nalpi</button>
+      <div class="sub" id="syncStand" style="margin-top:4px"></div>
       <div class="reihe" style="margin-top:8px">
         <button class="btn w" id="btnKacheln" onclick="kachelnLaden()">🗺 Satellitenbild offline laden</button>
         <button class="btn w" id="btnAnsage" onclick="ansageUmschalten()">🔊 Ansage an</button>
@@ -409,6 +411,7 @@
 <div id="toast"></div>
 
 <script src="assets/js/leaflet/leaflet.js"></script>
+<script src="assets/js/nalp-buildtrack.js"></script>
 <script>
 (function(){
   'use strict';
@@ -426,6 +429,7 @@
   var PUNKTE=[], PI={}, EF_TYPEN=[], STAND='';
   var R={pfaehle:{}, fundamente:{}, berg:{}};   // Server + Warteschlange, je id
   var ALT={};                                   // Gewinde-Inventur Juli/August je fid
+  var NG_LIVE=null;                             // Gewinde aus Nalpi live (Knopf «Sync mit Nalpi»): {tag, ts, g:{fid:mm}}
   var modusAkt='g', sel=null, auto=true, beruehrt=false, form={}, fotos=[], bForm={kat:'normteil',einh:'Stk'}, bFotos=[];
   var gps=null, letzteAutoZeit=0;
 
@@ -462,14 +466,20 @@
       PUNKTE=(j.punkte||[]).map(function(z){
         var f=String(z[0]), t=f.split('_');
         return {f:f, tisch:t[0], fuss:t[1]||'', lat:+z[1], lon:+z[2], typ:z[3]||'', ber:z[4]||'', st:+z[5], kopf:+z[6],
-                g:+z[7], ef:+z[8], eft:z[9]==null?null:+z[9]};
+                g:+z[7], ef:+z[8], eft:z[9]==null?null:+z[9], ng:z[10]==null?null:+z[10]};
       });
-      PI={}; PUNKTE.forEach(function(p){ PI[p.f]=p; }); tischeBauen();
+      PI={}; PUNKTE.forEach(function(p){ PI[p.f]=p; }); ngAnwenden(); tischeBauen();
+      if(sel && PI[sel.f]) sel=PI[sel.f];   /* nach «Sync mit Nalpi» zeigt die Auswahl auf die neuen Punkte */
       efKnoepfe();
     });
   }
-  function cacheLesen(){ try{ var c=JSON.parse(lsGet(LS_CACHE,'')||'{}'); ['pfaehle','fundamente','berg'].forEach(function(k){ R[k]=c[k]||{}; }); ALT=c.alt||{}; }catch(e){} }
-  function cacheSchreiben(){ lsSet(LS_CACHE,JSON.stringify({pfaehle:R.pfaehle,fundamente:R.fundamente,berg:R.berg,alt:ALT})); }
+  /* Gewinde aus Nalpi (Bohr-App, z. B. Anna 04.11.): ein Live-Abruf gilt, solange er nicht älter ist als die Datendatei */
+  function ngAnwenden(){
+    if(!NG_LIVE || !NG_LIVE.g || (STAND && NG_LIVE.tag<STAND)) return;
+    PUNKTE.forEach(function(p){ if(p.g) p.ng=NG_LIVE.g[p.f]!=null?+NG_LIVE.g[p.f]:null; });
+  }
+  function cacheLesen(){ try{ var c=JSON.parse(lsGet(LS_CACHE,'')||'{}'); ['pfaehle','fundamente','berg'].forEach(function(k){ R[k]=c[k]||{}; }); ALT=c.alt||{}; NG_LIVE=c.ng||null; }catch(e){} }
+  function cacheSchreiben(){ lsSet(LS_CACHE,JSON.stringify({pfaehle:R.pfaehle,fundamente:R.fundamente,berg:R.berg,alt:ALT,ng:NG_LIVE})); }
   function serverLaden(){
     if(!netzAn()) return Promise.resolve();
     function hol(p){ return fetch(RTDB+'/'+p+'.json',{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }); }
@@ -551,6 +561,10 @@
     neueEinmischen();
     ['pfaehle','fundamente'].forEach(function(k){ var m={}; for(var id in R[k]){ var e=R[k][id]; if(!e||!e.fid) continue;
       if(!m[e.fid]||(e.ts||0)>(m[e.fid].ts||0)) m[e.fid]=e; } ERL[k]=m; });
+    /* Gewinde, das schon in Nalpi steht, gilt als erfasst (Victor 04.11.: «damit ich die morgen nicht nochmal mache»).
+       Ein eigener Satz aus der Inventur geht immer vor. ts 0 = älter als jeder Tipp, zählt nicht unter «heute». */
+    PUNKTE.forEach(function(p){ if(p.g && p.ng!=null && !ERL.pfaehle[p.f])
+      ERL.pfaehle[p.f]={fid:p.f, tisch:p.tisch, fuss:p.fuss, typ:p.typ, bereich:p.ber, gew:p.ng, von:'Nalpi', datum:'', ts:0, quelle:'nalpi', _nalpi:1}; });
   }
   function istErledigt(p){ return !!ERL[modusAkt==='ef'?'fundamente':'pfaehle'][p.f]; }
   function kandidaten(){ return PUNKTE.filter(function(p){ return modusAkt==='ef'?p.ef:p.g; }); }
@@ -679,18 +693,17 @@
     return kandidaten().filter(function(p){ return !nurOffen||!istErledigt(p); })
       .map(function(p){ return {p:p, d:meter(gps,p)}; }).sort(function(a,b){ return a.d-b.d; }).slice(0,n);
   }
-  /* Automatisch: der nächste OFFENE Punkt unter den Füssen (Erfasstes nur von Hand – sonst springt es nach dem Speichern
-     zurück). Gewechselt wird nur, wenn am aktuellen Punkt noch nichts angetippt ist und der neue klar näher liegt
-     (0.7 m, sonst springt es bei zwei Beinen nebeneinander hin und her). */
+  /* Automatisch: der NÄCHSTE Punkt unter den Füssen, egal ob schon erfasst (Victor 04.11.: «ich will den nächsten Punkt
+     angewählt haben unabhängig davon, ob er schon erfasst wurde»; vorher nur offene). Gewechselt wird nur, wenn am
+     aktuellen Punkt noch nichts angetippt ist und der neue klar näher liegt (0.7 m, sonst springt es bei zwei Beinen
+     nebeneinander hin und her). Gerade Gespeichertes bleibt so grün stehen, bis man weggeht. */
   function autoWaehlen(){
     if(modusAkt==='g' && !detailOffen){ autoTisch(); return; }
     if(!auto||!gps||!PUNKTE.length||beruehrt) { kopfMalen(); return; }
-    var n=naechste(1,true)[0]; if(!n){ kopfMalen(); return; }
+    var n=naechste(1,false)[0]; if(!n){ kopfMalen(); return; }
     if(n.d>40){ if(sel&&meter(gps,sel)>40){ sel=null; formLeeren(); } kopfMalen(); return; }
-    /* Gerade Gespeichertes bleibt grün stehen, bis man weggeht (> 4 m) oder ein offener Punkt klar näher ist –
-       sonst sieht man die Bestätigung nie (Victor 03.11.: «blieb immer orange») */
     var ds=sel?meter(gps,sel):1e9;
-    if(!sel || (n.p!==sel && n.d < ds-0.7) || (istErledigt(sel) && ds>4)){ waehle(n.p,true); return; }
+    if(!sel || (n.p!==sel && n.d < ds-0.7)){ waehle(n.p,true); return; }
     kopfMalen();
   }
   window.autoUmschalten=function(){ auto=!auto; lsSet(LS_AUTO,auto?'1':'0'); $('autoBtn').classList.toggle('on',auto);
@@ -719,7 +732,7 @@
       var d=gps?meter(gps,sel):null;
       $('kWeg').textContent=d==null?'':(d<1?'📍 du stehst drauf ('+d.toFixed(1)+' m)':'📍 '+weg(d)+' entfernt');
       var e=ERL[art()][sel.f];
-      $('kBadge').innerHTML=e?'<span class="badge ok">✔ erfasst '+esc(zeit(e.ts||0))+' · '+esc(e.von||'')
+      $('kBadge').innerHTML=e?'<span class="badge ok">✔ '+(e._nalpi?'in Nalpi erfasst':'erfasst '+esc(zeit(e.ts||0))+' · '+esc(e.von||''))
         +(e.gew!=null&&modusAkt==='g'?' · '+(+e.gew?e.gew+' mm':'nicht messbar'):'')+(e.ef_label?' · '+esc(e.ef_label):'')
         +(e._wartet?' · wartet aufs Netz':'')+'</span>':'<span class="badge offen">noch offen</span>';
     }
@@ -758,8 +771,8 @@
     function w5(d){ return d<10?weg(d):(Math.round(d/5)*5<1000?Math.round(d/5)*5+' m':weg(d)); }
     if(modusAkt==='g' && !detailOffen){
       var b=gps||TI[tischAkt]; if(!b){ setzen(''); return; }
-      setzen(offeneTische(b).filter(function(x){ return x.t.t!==tischAkt; }).slice(0,4).map(function(x){
-        return '<button onclick="tischWaehlen(\''+esc(x.t.t)+'\',false)">Tisch '+esc(x.t.t)+'<small>'+w5(x.d)+' · '+zaehl(x.t)+'</small></button>'; }).join(''));
+      setzen(tischeNach(b,false).filter(function(x){ return x.t.t!==tischAkt; }).slice(0,4).map(function(x){ var ok=!offenBeine(x.t).length;
+        return '<button class="'+(ok?'ok':'')+'" onclick="tischWaehlen(\''+esc(x.t.t)+'\',false)">Tisch '+esc(x.t.t)+'<small>'+w5(x.d)+' · '+zaehl(x.t)+(ok?' ✔':'')+'</small></button>'; }).join(''));
       return;
     }
     var basis=sel||gps; if(!basis){ setzen(''); return; }
@@ -990,8 +1003,10 @@
 
   /* ── Schnellmodus Pfähle (Victor 02.11.: «1000 Pfähle an einem Tag»). GPS wählt den TISCH – auf ±2 m sicher, das Bein
      nicht. Vier Kacheln in echter Lage, Berg oben (S2/S3 bergseitig bei 1179 von 1201 Tischen mit Gefälle). Wert antippen =
-     sofort gespeichert (Piep + Ansage), weiter zum nächsten Bein; Tisch fertig = nächster offener Tisch. Gleiche Sätze wie
-     die Einzelerfassung. GPS-Meldungen zeichnen nur Pfeil + Punkt neu, nie die Knöpfe (sonst gehen Tipps verloren). */
+     sofort gespeichert (Piep + Ansage), weiter zum nächsten Bein; Tisch fertig = er bleibt stehen, bis GPS einen anderen
+     Tisch näher findet (seit 04.11. auch erfasste – kein Sprung mehr zum nächsten offenen; den holt «➡ Nächster offener»).
+     Gleiche Sätze wie die Einzelerfassung. GPS-Meldungen zeichnen nur Pfeil + Punkt neu, nie die Knöpfe (sonst gehen Tipps
+     verloren). */
   var TI={}, tischAkt=null, legAkt=null, tischBeruehrt=false, UEB={}, detailOffen=false, grundOffen=false;
   var ansage=lsGet(LS_ANSAGE,'1')!=='0';
   function tischeBauen(){
@@ -1022,25 +1037,28 @@
   function wertVon(f){ var e=ERL.pfaehle[f]; return e?+e.gew:null; }
   function offenBeine(t){ return t.beine.filter(function(p){ return !ERL.pfaehle[p.f]; }); }
   function zaehl(t){ return (t.beine.length-offenBeine(t).length)+'/'+t.beine.length; }
-  function offeneTische(von){
-    var a=[]; for(var k in TI){ var t=TI[k]; if(UEB[k]||!offenBeine(t).length) continue; a.push({t:t, d:meter(von,t)}); }
+  /* Tische nach Abstand; «⏭ später» zurückgestellte nur, wenn sie schon fertig sind */
+  function tischeNach(von,nurOffen){
+    var a=[]; for(var k in TI){ var t=TI[k], o=offenBeine(t).length; if((nurOffen&&!o)||(UEB[k]&&o)) continue; a.push({t:t, d:meter(von,t)}); }
     return a.sort(function(x,y){ return x.d-y.d; });
   }
+  function offeneTische(von){ return tischeNach(von,true); }
+  /* GPS nimmt den nächsten Tisch, auch einen fertigen (Victor 04.11.). Ein angefangener Tisch hält, bis er fertig ist. */
   function autoTisch(){
     if(!PUNKTE.length) return;
     var akt=TI[tischAkt];
     if(auto && gps && !(akt && tischBeruehrt && offenBeine(akt).length)){
-      var n=offeneTische(gps)[0];
-      if(n && n.d<80 && (!akt || !offenBeine(akt).length || (n.t!==akt && n.d < meter(gps,akt)-2))){ tischWaehlen(n.t.t,true); return; }
+      var n=tischeNach(gps,false)[0];
+      if(n && n.d<80 && n.t!==akt && (!akt || n.d < meter(gps,akt)-2)){ tischWaehlen(n.t.t,true); return; }
     }
     tischKopfMalen(); if(!akt) tischMalen(); else ichMalen();
   }
   window.tischWaehlen=function(k,vonAuto){
     var t=TI[k]; if(!t) return;
     tischAkt=k; tischBeruehrt=!vonAuto; grundOffen=false;
-    var o=offenBeine(t);
-    if(gps && o.length) o.sort(function(a,b){ return meter(gps,a)-meter(gps,b); });
-    legAkt=o.length?o[0].f:t.beine[0].f; sel=PI[legAkt];
+    var o=offenBeine(t); if(!o.length) o=t.beine.slice();   /* fertiger Tisch: das Bein, an dem ich stehe */
+    if(gps) o.sort(function(a,b){ return meter(gps,a)-meter(gps,b); });
+    legAkt=o[0].f; sel=PI[legAkt];
     if(vonAuto){ if(navigator.vibrate) navigator.vibrate([30,40,30]); sag('Tisch '+k); }
     tischKopfMalen(); tischMalen(); miniMalen(); if(gross && $('gross').classList.contains('an')) grossMalen();
   };
@@ -1053,7 +1071,7 @@
     if(!von){ toast('Noch kein GPS – oben Tisch-Nr. suchen',true); return; }
     var n=offeneTische(von).filter(function(x){ return x.t!==akt; })[0];
     if(!n){ toast('Alle Tische erfasst 🎉'); sag('Alle Tische erfasst'); return; }
-    tischWaehlen(n.t.t,false); tischBeruehrt=false;
+    tischWaehlen(n.t.t,false);   /* hält wie von Hand gewählt – sonst holt GPS sofort den Tisch zurück, an dem ich stehe */
     sag('Nächster Tisch '+n.t.t+', '+Math.round(n.d)+' Meter');
   }
   window.tischWeiter=function(){ if(tischAkt){ UEB[tischAkt]=1; toast('⏭ Tisch '+tischAkt+' kommt später'); } naechsterTisch(); };
@@ -1083,8 +1101,7 @@
     if(navigator.vibrate) navigator.vibrate(45); piep();
     var naechst=naechstesBein(t,p), sprich=p.fuss+', '+(v?gewSprache(v):(kopf?'Kopf montiert':'nicht messbar'));
     if(naechst){ legAkt=naechst; sel=PI[naechst]; sag(sprich+'. Weiter '+PI[naechst].fuss); }
-    else { legAkt=null; toast('✔ Tisch '+t.t+' fertig'); sag(sprich+'. Tisch '+t.t+' fertig.');
-      setTimeout(function(){ if(tischAkt===t.t && !offenBeine(t).length) naechsterTisch(); },1300); }
+    else { legAkt=null; toast('✔ Tisch '+t.t+' fertig'); sag(sprich+'. Tisch '+t.t+' fertig.'); }
     tischKopfMalen(); tischMalen(); standMalen(); if(mini) punkteLayer(); if(gross) grossPunkte(); miniMalen();
     return true;
   }
@@ -1099,7 +1116,6 @@
     legAkt=null; if(navigator.vibrate) navigator.vibrate(60); piep();
     toast('✔ Tisch '+t.t+' fertig – Rest '+(k?'Kopf montiert':gewText(v))); sag('Rest '+(k?'Kopf montiert':gewSprache(v))+'. Tisch '+t.t+' fertig.');
     tischKopfMalen(); tischMalen(); standMalen(); if(mini) punkteLayer(); if(gross) grossPunkte(); miniMalen();
-    setTimeout(function(){ if(tischAkt===t.t && !offenBeine(t).length) naechsterTisch(); },1300);
   };
   window.details=function(){
     var t=TI[tischAkt], f=legAkt||(t&&t.beine[0].f); if(!f){ toast('Erst einen Tisch wählen',true); return; }
@@ -1117,7 +1133,7 @@
   }
   function tischKopfMalen(){
     var t=TI[tischAkt];
-    if(!t){ $('kPid').className='pid leer'; $('kPid').textContent=gps?(PUNKTE.length?'Kein offener Tisch in der Nähe':'Daten laden …'):'GPS sucht …';
+    if(!t){ $('kPid').className='pid leer'; $('kPid').textContent=gps?(PUNKTE.length?'Kein Tisch in der Nähe':'Daten laden …'):'GPS sucht …';
       $('kTyp').textContent=''; $('kNalpi').textContent=''; $('kWeg').innerHTML=''; $('kBadge').innerHTML=''; $('efNalpi').textContent=''; nachbarnMalen(); return; }
     $('kPid').className='pid'; $('kPid').textContent='Tisch '+t.t;
     $('kTyp').innerHTML='Typ <b>'+esc(t.typ||'?')+'</b> · '+esc(t.ber||'–');
@@ -1144,7 +1160,7 @@
       var kurz=e&&GRUENDE.indexOf(e.text||'')>=0;   /* Knopf-Grund passt in die Kachel, lange Bemerkungen nur als 📝 */
       var wk=v==null?'':(v===5?'g5':(v===6.35?'g6':(v===0?'g0':'gx'))), wt=e?(v?gewText(v):(kurz?e.text:'nicht messbar')):'—';
       if(istKopf(e)){ wk='gk'; wt='🔩 Kopf'; }
-      var info=[]; if(ALT[p.f]) info.push('Aug '+gewText(ALT[p.f].g)); if(p.kopf) info.push('Kopf drauf'); if(e&&e.schaden==='ja') info.push('⚠');
+      var info=[]; if(e&&e._nalpi) info.push('Nalpi'); if(ALT[p.f]) info.push('Aug '+gewText(ALT[p.f].g)); if(p.kopf) info.push('Kopf drauf'); if(e&&e.schaden==='ja') info.push('⚠');
       if(e&&e.text&&!kurz) info.push('📝'); if(e&&e._sprach) info.push('🎤'); if(e&&e._wartet) info.push('⏳');
       h+='<div class="'+kl+'" style="left:'+(25+nx(t,q.sx)*50)+'%;top:'+(27+ny(t,q.sy)*46)+'%" onclick="beinWaehlen(\''+esc(p.f)+'\')">'
         +'<b>'+esc(p.fuss)+'</b><span class="wert '+wk+'">'+esc(wt)+'</span><small>'+esc(info.join(' · '))+'</small></div>';
@@ -1208,8 +1224,8 @@
   /* ── Stand ── */
   function standMalen(){
     erledigtRechnen();
-    var h=heute(), k=kandidaten(), e=ERL[art()], fertig=0, heuteN=0;
-    k.forEach(function(p){ if(e[p.f]) fertig++; });
+    var h=heute(), k=kandidaten(), e=ERL[art()], fertig=0, heuteN=0, nalpiN=0;
+    k.forEach(function(p){ if(e[p.f]){ fertig++; if(e[p.f]._nalpi) nalpiN++; } });
     for(var f in e){ if(e[f].datum===h) heuteN++; }
     var zg={}, zk=0; for(var f2 in ERL.pfaehle){ var gw=+ERL.pfaehle[f2].gew; if(istKopf(ERL.pfaehle[f2])) zk++; else zg[gw]=(zg[gw]||0)+1; }
     var gz=[5,6.35].concat(gewExtra()).map(function(v){ return gewText(v)+' mm: '+(zg[v]||0); }).concat(['Kopf montiert: '+zk,'nicht messbar: '+(zg[0]||0)]).join(' · ');
@@ -1220,7 +1236,8 @@
         tempo='<br>⏱ Tempo <b>'+Math.round(pro)+' Pfähle/h</b> ('+Math.round(3600/pro)+' s je Pfahl) · Rest '+rest+' ≈ '+(rest/pro).toFixed(1).replace('.',',')+' h'; }
       else tempo='<br>⏱ 1000 Pfähle in 9 h = 111 je Stunde = 32 s je Pfahl. Das Tempo erscheint ab dem 5. Pfahl.';
     }
-    $('stand').innerHTML='<b>'+fertig+' / '+k.length+'</b> '+(modusAkt==='ef'?'Einzelfundamente':'Pfähle')+' erfasst · heute '+heuteN
+    $('stand').innerHTML='<b>'+fertig+' / '+k.length+'</b> '+(modusAkt==='ef'?'Einzelfundamente':'Pfähle')+' erfasst'
+      +(nalpiN?' (davon '+nalpiN+' aus Nalpi)':'')+' · heute '+heuteN
       +(modusAkt==='g'?'<br>'+gz+tempo:'')
       +'<br><span class="sub">Daten Nalpi Stand '+esc(STAND.split('-').reverse().join('.'))+' – nur gebohrt/injiziert, ohne Primärkonstruktion.</span>';
   }
@@ -1351,7 +1368,7 @@
     [['pfaehle','Pfahl'],['fundamente','Einzelfundament']].forEach(function(x){
       Object.keys(ERL[x[0]]).sort().forEach(function(f){ var e=ERL[x[0]][f];
         z.push([x[1],f,e.tisch,e.fuss,e.typ,e.bereich,e.gew==null?'':(+e.gew?e.gew:'nicht messbar'),e.schaden,e.kopfplatte,e.ef_label||'',
-          e.nalpi_ef_typ==null?'':efLabel(e.nalpi_ef_typ),e.text,e.anzahl_fotos||0,e.von,e.datum,zeit(e.ts||0).slice(-5),e.gps_acc,e.dist,
+          e.nalpi_ef_typ==null?'':efLabel(e.nalpi_ef_typ),e.text,e.anzahl_fotos||0,e.von,e.datum,e.ts?zeit(e.ts).slice(-5):'',e.gps_acc,e.dist,
           e.neu?'ja':'',e.lat!=null?e.lat:(PI[f]?PI[f].lat:''),e.lon!=null?e.lon:(PI[f]?PI[f].lon:'')]); });
     });
     csvLaden('Inventur_Perimeter_'+heute()+'.csv',z);
@@ -1361,6 +1378,35 @@
     Object.keys(R.berg).map(function(k){ return R.berg[k]; }).sort(function(a,b){ return (a.ts||0)-(b.ts||0); }).forEach(function(e){
       z.push([e.kat,e.bez,e.teil,e.typ,e.serie,e.anzahl,e.einheit,e.ort,e.text,e.anzahl_fotos||0,e.von,e.datum,zeit(e.ts||0).slice(-5)]); });
     csvLaden('Inventur_Berg_'+heute()+'.csv',z);
+  };
+
+  /* ── Sync mit Nalpi (Victor 04.11.: «damit es den aktuellsten Stand holt») ──
+     1. Datendatei uploads/inventur.json neu (neue Pfähle, Gewinde aus Nalpi zum Zeitpunkt des Baus),
+     2. Gewinde live aus Nalpi über nalp-buildtrack.js (/api/w1/q/drillpoints). FALLE 04.11.: die API lässt die Website-Adresse
+        (maltv.github.io) noch nicht zu (CORS) – dann scheitert das still und es gilt die Datendatei,
+     3. Erfassungen der anderen Geräte (RTDB). */
+  var SYNC_Q='select=foundation_id,gewinde_mm&gewinde_mm=not.is.null';
+  function syncMalen(live,datei){
+    var n=PUNKTE.filter(function(p){ return p.g && p.ng!=null; }).length, s=STAND.split('-').reverse().join('.');
+    $('syncStand').textContent=live?'✔ Nalpi live '+zeit(NG_LIVE.ts)+': '+n+' Pfähle mit Gewinde in Nalpi'
+      :(datei===false?'Datendatei nicht geladen – später nochmals'
+        :(NG_LIVE&&NG_LIVE.tag>=STAND?'Nalpi live zuletzt '+zeit(NG_LIVE.ts):'Nalpi-Stand '+s+(datei?' (live nicht erreichbar)':''))+': '+n+' Pfähle mit Gewinde in Nalpi');
+  }
+  window.syncNalpi=function(){
+    if(!netzAn()){ toast('Kein Netz – Sync geht nur mit Netz',true); return; }
+    var btn=$('btnSync'); btn.disabled=true; btn.textContent='🔄 hole Nalpi …';
+    var live=window.nalpBT?nalpBT.q('drillpoints',SYNC_Q,{timeout:12000}).then(function(rows){ var g={};
+        rows.forEach(function(r){ if(r.foundation_id && r.gewinde_mm!=null) g[r.foundation_id]=+r.gewinde_mm; }); return g; },function(){ return null; })
+      :Promise.resolve(null);
+    var datei=false, ok=false;
+    laden().then(function(){ datei=true; },function(){})
+      .then(function(){ return live; })
+      .then(function(g){ if(g){ NG_LIVE={tag:heute(), ts:Date.now(), g:g}; ngAnwenden(); cacheSchreiben(); ok=true; } })
+      .then(function(){ return serverLaden(); })
+      .then(function(){ return warteMischen(); })
+      .then(function(){ allesMalen(); syncMalen(ok,datei); toast(datei||ok?'✔ Stand geholt':'Nichts geholt – Netz prüfen',!(datei||ok)); })
+      .catch(function(){ toast('Sync ging nicht',true); })
+      .then(function(){ btn.disabled=false; btn.textContent='🔄 Sync mit Nalpi'; });
   };
 
   /* ── Start ── */
@@ -1377,7 +1423,7 @@
     .then(function(){ miniBauen(); modus(lsGet(LS_MODUS,'g')==='ef'?'ef':'g'); netzMalen(); if(start==='berg'||start==='tal') reiter(start); })
     .then(function(){ return serverLaden(); })
     .then(function(){ return warteMischen(); })
-    .then(function(){ allesMalen(); senden(); });
+    .then(function(){ allesMalen(); syncMalen(false); senden(); });
   if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
 })();
 </script>
