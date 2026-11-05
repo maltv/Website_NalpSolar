@@ -12,6 +12,12 @@
  *   window.NALP_GATE_KEY   = 'nalp_logistik_unlock_v1';
  *   window.NALP_GATE_TITEL = 'Logistik';
  *   window.NALP_GATE_SUB   = 'Code = PLZ Sedrun';
+ *
+ * PORTAL (portal.buildtrack.ch, 05.11.2026): dort gibt es kein Tastenfeld und keinen Code (auch nicht die strengeren
+ * 8813/7188 — Dennis: «ein angemeldeter BuildTrack-Benutzer kommt durch»). Das Gate fragt nalpBT.sitzung()
+ * (assets/js/nalp-buildtrack.js, wird nachgeladen, falls die Seite es nicht selbst einbindet): angemeldet → frei,
+ * sonst die BuildTrack-Anmeldung (Name oder E-Mail + Passwort, bei neuem Geraet der Code). Kein localStorage-Flag.
+ * Test-Schalter wie in nalp-buildtrack.js: localStorage.nalp_portal_test = '1' oder ?portal=1 (nur zum lokalen Pruefen).
  */
 (function () {
   'use strict';
@@ -21,7 +27,13 @@
   var TITEL = String(window.NALP_GATE_TITEL || 'Baustellen-Portal');
   var SUB   = String(window.NALP_GATE_SUB   || 'Code eingeben, um fortzufahren');
   var MAXLEN = CODE.length;
+  var PORTAL = window.location.host === 'portal.buildtrack.ch' || (function () {
+    try { if (window.localStorage.getItem('nalp_portal_test') === '1') return true; } catch (e) { /* privater Modus */ }
+    return /[?&]portal=1(&|#|$)/.test(window.location.search || '');
+  })();
+  var SELBST = (document.currentScript && document.currentScript.src) || '';   // fuer den Pfad von nalp-buildtrack.js
 
+  if (!PORTAL) {
   // Bereits freigeschaltet? -> nichts tun.
   try { if (window.localStorage.getItem(KEY) === '1') return; } catch (e) { /* privater Modus */ }
 
@@ -39,6 +51,7 @@
       return;
     }
   } catch (e) { /* egal, dann kommt das Tastenfeld */ }
+  }
 
   // Scroll/Interaktion sperren bis freigeschaltet.
   var htmlEl = document.documentElement;
@@ -77,6 +90,16 @@
     '#nalpGate .ng-key.ghost{background:none;box-shadow:none;font-size:15px;font-weight:700;color:#63676d;}' +
     '#nalpGate .ng-foot{margin-top:18px;font-size:11px;color:#8a8e94;line-height:1.5;}' +
     '#nalpGate.ng-out{opacity:0;transform:scale(1.04);transition:opacity .35s,transform .35s;pointer-events:none;}';
+  if (PORTAL) css +=
+    '#nalpGate form{text-align:left;margin:0;}' +
+    '#nalpGate input{display:block;width:100%;box-sizing:border-box;padding:11px 12px;margin:0 0 10px;font-size:16px;' +
+      'border:1px solid #c4c8ce;border-radius:6px;background:#fff;color:#1a1a1a;user-select:text;-webkit-user-select:text;}' +
+    '#nalpGate .ng-ok{display:block;width:100%;padding:12px;font-size:16px;font-weight:700;border:0;border-radius:6px;' +
+      'background:#D72622;color:#fff;cursor:pointer;}' +
+    '#nalpGate .ng-ok[disabled]{opacity:.6;cursor:default;}' +
+    '#nalpGate .ng-back{display:block;margin:10px auto 0;border:0;background:none;color:#63676d;font-size:13px;cursor:pointer;}' +
+    '#nalpGate .ng-pmsg{min-height:18px;font-size:13px;font-weight:700;color:#D72622;margin:0 0 10px;}' +
+    '#nalpGate .ng-pmsg.info{color:#63676d;font-weight:400;}';
 
   var style = document.createElement('style');
   style.textContent = css;
@@ -84,7 +107,26 @@
 
   var gate = document.createElement('div');
   gate.id = 'nalpGate';
-  gate.innerHTML =
+  if (PORTAL) gate.innerHTML =
+    '<div class="ng-card">' +
+      '<div class="ng-brand"><img src="assets/img/strabag-logo.png" alt="STRABAG"></div>' +
+      '<h1></h1>' +
+      '<div class="ng-sub">Mit BuildTrack anmelden</div>' +
+      '<form id="ngForm" novalidate>' +
+        '<div class="ng-pmsg info" id="ngPMsg">Anmeldung wird geprüft …</div>' +
+        '<div id="ngSchritt1" style="display:none">' +
+          '<input name="n" autocomplete="username" placeholder="Name oder E-Mail" aria-label="Name oder E-Mail">' +
+          '<input name="p" type="password" autocomplete="current-password" placeholder="Passwort" aria-label="Passwort">' +
+        '</div>' +
+        '<div id="ngSchritt2" style="display:none">' +
+          '<input name="c" inputmode="numeric" autocomplete="one-time-code" placeholder="Code" aria-label="Code">' +
+        '</div>' +
+        '<button type="submit" class="ng-ok" id="ngOk" style="display:none">Anmelden</button>' +
+        '<button type="button" class="ng-back" id="ngZurueck" style="display:none">Zurück</button>' +
+      '</form>' +
+      '<div class="ng-foot">Interner Baustellen-Zugang mit Ihrem BuildTrack-Konto. Bei Fragen: Victor Malt, STRABAG B8-13.</div>' +
+    '</div>';
+  else gate.innerHTML =
     '<div class="ng-sun"></div>' +
     '<div class="ng-card">' +
       '<div class="ng-brand"><img src="assets/img/strabag-logo.png" alt="STRABAG"></div>' +
@@ -115,6 +157,7 @@
 
   function mount() {
     gate.querySelector('h1').textContent = TITEL;      // via textContent (kein HTML-Inject)
+    if (PORTAL) { (document.body || htmlEl).appendChild(gate); portal(); return; }
     gate.querySelector('.ng-sub').textContent = SUB;
     (document.body || htmlEl).appendChild(gate);
     wire();
@@ -182,8 +225,86 @@
     render();
   }
 
+  // ── Portal (05.11.2026): BuildTrack-Anmeldung statt Tastenfeld ──
+  function freigeben() {          // dieselbe Mechanik wie unlock(), nur ohne localStorage-Flag
+    gate.classList.add('ng-out');
+    htmlEl.classList.remove('nalp-gate-locked');
+    setTimeout(function () { if (gate.parentNode) gate.parentNode.removeChild(gate); }, 380);
+  }
+
+  // nalpBT bereitstellen: erst nach dem Parsen schauen (die Seite bindet nalp-buildtrack.js oft selbst weiter unten ein),
+  // sonst per <script> nachladen — Pfad neben diesem Skript (alle Seiten liegen im Wurzelverzeichnis).
+  function mitBT(weiter, fehlt) {
+    function pruefen() {
+      if (window.nalpBT && window.nalpBT.sitzung) { weiter(window.nalpBT); return; }
+      var s = document.createElement('script');
+      s.src = SELBST ? SELBST.replace(/nalp-gate\.js(\?.*)?$/, 'nalp-buildtrack.js') : 'assets/js/nalp-buildtrack.js';
+      s.onload = function () { if (window.nalpBT && window.nalpBT.sitzung) weiter(window.nalpBT); else fehlt(); };
+      s.onerror = fehlt;
+      (document.head || htmlEl).appendChild(s);
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', pruefen);
+    else pruefen();
+  }
+
+  function portal() {
+    var f = gate.querySelector('#ngForm');
+    var msg = gate.querySelector('#ngPMsg');
+    var s1 = gate.querySelector('#ngSchritt1'), s2 = gate.querySelector('#ngSchritt2');
+    var ok = gate.querySelector('#ngOk'), zurueck = gate.querySelector('#ngZurueck');
+    var bt = null, challenge = null;
+
+    function melden(t, info) { msg.textContent = t || ''; msg.classList.toggle('info', !!info); }
+    function schritt(n) {
+      s1.style.display = n === 1 ? '' : 'none';
+      s2.style.display = n === 2 ? '' : 'none';
+      ok.style.display = n ? '' : 'none';
+      zurueck.style.display = n === 2 ? '' : 'none';
+      ok.textContent = n === 2 ? 'Bestätigen' : 'Anmelden';
+      setTimeout(function () { var i = n === 2 ? f.c : f.n; if (i) i.focus(); }, 30);
+    }
+    function antwort(r) {
+      ok.disabled = false;
+      if (r.ok) { freigeben(); return; }
+      if (r.code) { challenge = r.challenge; f.c.value = ''; schritt(2); melden(r.msg, true); return; }
+      melden(r.msg);
+    }
+
+    f.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (!bt) return;
+      if (challenge) {
+        if (!f.c.value.trim()) { melden('Bitte geben Sie den Code ein.'); return; }
+        ok.disabled = true; melden('…', true);
+        bt.codeBestaetigen(challenge, f.c.value, f.n.value).then(antwort);
+        return;
+      }
+      if (!f.n.value.trim() || !f.p.value) { melden('Bitte geben Sie Name (oder E-Mail) und Passwort ein.'); return; }
+      ok.disabled = true; melden('…', true);
+      bt.anmelden(f.n.value, f.p.value).then(antwort);
+    });
+    zurueck.addEventListener('click', function () { challenge = null; f.p.value = ''; schritt(1); melden(''); });
+
+    mitBT(function (nalpBT) {
+      bt = nalpBT;
+      bt.sitzung().then(function (konto) {
+        if (konto) { freigeben(); return; }
+        schritt(1);
+        melden(bt.grund ? bt.grund() : '');
+      });
+    }, function () {
+      melden('Die Anmeldung konnte nicht geladen werden – bitte mit Netz neu laden.');
+    });
+  }
+
   // Optionaler Logout von jeder Seite: window.nalpLogout()
   window.nalpLogout = function () {
+    if (PORTAL) {                 // Portal: BuildTrack abmelden (Cookie bzw. Token), dann neu laden
+      var fertig = function () { location.reload(); };
+      if (window.nalpBT && window.nalpBT.abmelden) Promise.resolve(window.nalpBT.abmelden()).then(fertig, fertig);
+      else fertig();
+      return;
+    }
     try { window.localStorage.removeItem(KEY); } catch (e) {}
     location.reload();
   };
