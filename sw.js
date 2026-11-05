@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v227';
+var CACHE = 'nalpsolar-v228';
 var PRECACHE = [
   './index.html',
   // Webapp-Manifest + Icons des Portals (22.09.2026, Tools\Portal_Icons_Bauen.py) und die
@@ -165,7 +165,10 @@ self.addEventListener('install', function(e) {
   e.waitUntil(
     caches.open(CACHE).then(function(c) {
       return Promise.allSettled(PRECACHE.map(function(url) {
-        return c.add(url).catch(function(){});
+        // cache:'reload' (05.11.2026): beim Installieren am HTTP-Cache des Browsers vorbei vom Server holen. Sonst konnte
+        // der neue Worker die ALTE Datei aus dem Browser-Cache übernehmen (auf portal.buildtrack.ch blieb so das alte
+        // Code-Gate stehen).
+        return c.add(new Request(url, { cache: 'reload' })).catch(function(){});
       }));
     }).then(function() { return self.skipWaiting(); })
   );
