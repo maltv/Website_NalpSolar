@@ -188,9 +188,9 @@
       <button class="zu" onclick="tippZu()">✕</button>
       <b>⚡ Schnellmodus – so schaffst du 1000 Pfähle</b>
       <ol>
-        <li><b>Hinlaufen</b> – das GPS wählt den ganzen Tisch (nicht das Bein, dafür ist GPS zu ungenau). Pfeil + Meter oben = wohin.</li>
-        <li><b>Messen → Wert antippen</b> – speichert sofort (Piep + Ansage) und springt zum nächsten Bein. <b>1 Tipp je Pfahl.</b></li>
-        <li><b>Tisch fertig</b> = weiterlaufen, das GPS nimmt den nächsten Tisch (auch fertige, grün). «➡ Nächster offener» zeigt, wo es noch fehlt.</li>
+        <li><b>Hinlaufen</b> – das GPS wählt das Bein, an dem du stehst, und seinen Tisch, auch schon erfasste (grün). Pfeil + Meter oben = wohin.</li>
+        <li><b>Messen → Wert antippen</b> – speichert sofort (Piep + Ansage). Das Bein bleibt, bis du weitergehst. <b>Ganzer Tisch gleich: «⇉ Rest auch …».</b></li>
+        <li><b>Weiterlaufen</b> – der Tisch wechselt von selbst. «➡ Nächster offener» zeigt, wo es noch fehlt.</li>
       </ol>
       <div class="sub">Falsches Bein? Kachel antippen, Wert neu tippen. «🔩 Kopf» = Pfahlkopf montiert, «❓» = Grund mit 1 Tipp. Schaden / Foto / Problem (auch 🎤 sprechen) = «✏ Details».
         Kein Netz? Egal – alles wartet auf dem Tablet. Zu zweit: das Handy kann gleichzeitig einen anderen Bereich machen.
@@ -709,7 +709,7 @@
     kopfMalen();
   }
   window.autoUmschalten=function(){ auto=!auto; lsSet(LS_AUTO,auto?'1':'0'); $('autoBtn').classList.toggle('on',auto);
-    $('autoBtn').textContent=auto?'an':'aus'; if(auto){ beruehrt=false; autoWaehlen(); } };
+    $('autoBtn').textContent=auto?'an':'aus'; if(auto){ beruehrt=false; halt=null; autoWaehlen(); } };
 
   /* ── Auswahl + Kopf ── */
   function waehle(p,vonAuto){
@@ -929,7 +929,7 @@
     $('m-g').classList.toggle('on',m==='g'); $('m-ef').classList.toggle('on',m==='ef');
     $('formG').hidden=(m!=='g'); $('formEF').hidden=(m!=='ef');
     $('fotoLabel').innerHTML=m==='ef'?'Foto <span class="pf">* Pflicht – das ganze Fundament</span>':'Foto <span>– optional</span>';
-    sel=null; formLeeren(); beruehrt=false; detailOffen=false; tischAkt=null; legAkt=null; viewMalen();
+    sel=null; formLeeren(); beruehrt=false; detailOffen=false; tischAkt=null; legAkt=null; halt=null; viewMalen();
     $('btnNeuEf').hidden=(m!=='ef'); neuZu();
     if(mini){ punkteLayer(); } autoWaehlen(); if(m==='g') tischMalen(); miniMalen(); standMalen();
     if(gross){ grossPunkte(); }
@@ -1003,13 +1003,13 @@
     if(mini) punkteLayer(); if(gross) grossPunkte(); miniMalen(); standMalen();
   };
 
-  /* ── Schnellmodus Pfähle (Victor 02.11.: «1000 Pfähle an einem Tag»). GPS wählt den TISCH – auf ±2 m sicher, das Bein
-     nicht. Vier Kacheln in echter Lage, Berg oben (S2/S3 bergseitig bei 1179 von 1201 Tischen mit Gefälle). Wert antippen =
-     sofort gespeichert (Piep + Ansage), weiter zum nächsten Bein; Tisch fertig = er bleibt stehen, bis GPS einen anderen
-     Tisch näher findet (seit 04.11. auch erfasste – kein Sprung mehr zum nächsten offenen; den holt «➡ Nächster offener»).
-     Gleiche Sätze wie die Einzelerfassung. GPS-Meldungen zeichnen nur Pfeil + Punkt neu, nie die Knöpfe (sonst gehen Tipps
-     verloren). */
-  var TI={}, tischAkt=null, legAkt=null, tischBeruehrt=false, UEB={}, detailOffen=false, grundOffen=false;
+  /* ── Schnellmodus Pfähle (Victor 02.11.: «1000 Pfähle an einem Tag»). GPS wählt das nächste BEIN und damit den Tisch, egal
+     ob schon erfasst (Victor 05.11., mit RTK ±0.2 m). Vier Kacheln in echter Lage, Berg oben (S2/S3 bergseitig bei 1179 von
+     1201 Tischen mit Gefälle). Wert antippen = sofort gespeichert (Piep + Ansage), das Bein bleibt, bis GPS ein anderes klar
+     näher findet – kein Sprung zum nächsten offenen; den holt nur «➡ Nächster offener». Gleiche Sätze wie die
+     Einzelerfassung. GPS-Meldungen zeichnen nur Pfeil + Punkt neu und schalten beim Beinwechsel die Markierung um, nie die
+     Knöpfe (sonst gehen Tipps verloren). */
+  var TI={}, tischAkt=null, legAkt=null, halt=null, UEB={}, detailOffen=false, grundOffen=false;
   var ansage=lsGet(LS_ANSAGE,'1')!=='0';
   function tischeBauen(){
     TI={};
@@ -1045,23 +1045,47 @@
     return a.sort(function(x,y){ return x.d-y.d; });
   }
   function offeneTische(von){ return tischeNach(von,true); }
-  /* GPS nimmt den nächsten Tisch, auch einen fertigen (Victor 04.11.). Ein angefangener Tisch hält, bis er fertig ist. */
+  /* Von Hand Gewähltes hält gegen das GPS: am Tisch gewählt (≤ 15 m) bis ich 3 m weg bin, von weit weg gewählt bis ich dort
+     bin (≤ 5 m) oder klar anderswohin gehe (20 m weiter weg). Ein Tipp hebt es auf. */
+  function haltNeu(k){ return gps?{t:k, lat:gps.lat, lon:gps.lon, d0:meter(gps,TI[k])}:null; }
+  function haltGilt(){
+    if(!halt) return false;
+    var d=meter(gps,TI[halt.t]||gps);
+    if(halt.d0<=15?meter(gps,halt)>=3:(d<=5||d>halt.d0+20)) halt=null;
+    return !!halt;
+  }
+  function naechstesBeinGps(){
+    var best=null, bd=1e9;
+    for(var k in TI){ var t=TI[k]; if(UEB[k]&&offenBeine(t).length) continue;
+      for(var i=0;i<t.beine.length;i++){ var d=meter(gps,t.beine[i]); if(d<bd){ bd=d; best=t.beine[i]; } } }
+    return best?{p:best,d:bd}:null;
+  }
+  /* GPS nimmt das nächste Bein und seinen Tisch, auch erfasste und mitten aus einem angefangenen Tisch (Victor 05.11.:
+     «springt immer zum nächsten noch nicht erfassten, das will ich nicht» + «soll auch automatisch den Tisch wechseln»).
+     Gewechselt wird erst, wenn das neue Bein klar näher ist (0.7 m, bei schlechtem GPS die halbe Genauigkeit). */
   function autoTisch(){
     if(!PUNKTE.length) return;
-    var akt=TI[tischAkt];
-    if(auto && gps && !(akt && tischBeruehrt && offenBeine(akt).length)){
-      var n=tischeNach(gps,false)[0];
-      if(n && n.d<80 && n.t!==akt && (!akt || n.d < meter(gps,akt)-2)){ tischWaehlen(n.t.t,true); return; }
+    if(auto && gps && !grundOffen && !haltGilt()){
+      var n=naechstesBeinGps(), akt=legAkt?PI[legAkt]:null;
+      if(n && n.d<80 && n.p.f!==legAkt && (!akt || n.d < meter(gps,akt)-Math.max(0.7,(gps.acc||0)/2))){
+        if(n.p.tisch!==tischAkt){ tischWaehlen(n.p.tisch,true,n.p.f); return; }
+        beinAuto(n.p.f);
+      }
     }
-    tischKopfMalen(); if(!akt) tischMalen(); else ichMalen();
+    tischKopfMalen(); if(!TI[tischAkt]) tischMalen(); else ichMalen();
   }
-  window.tischWaehlen=function(k,vonAuto){
+  function beinAuto(f){
+    legAkt=f; sel=PI[f];
+    Array.prototype.forEach.call($('tisch').querySelectorAll('.bein'),function(el){ el.classList.toggle('akt',el.getAttribute('data-f')===f); });
+    tWerteAkt(); if(navigator.vibrate) navigator.vibrate(20);
+  }
+  window.tischWaehlen=function(k,vonAuto,bein){
     var t=TI[k]; if(!t) return;
-    tischAkt=k; tischBeruehrt=!vonAuto; grundOffen=false;
-    var o=offenBeine(t); if(!o.length) o=t.beine.slice();   /* fertiger Tisch: das Bein, an dem ich stehe */
-    if(gps) o.sort(function(a,b){ return meter(gps,a)-meter(gps,b); });
-    legAkt=o[0].f; sel=PI[legAkt];
-    if(vonAuto){ if(navigator.vibrate) navigator.vibrate([30,40,30]); sag('Tisch '+k); }
+    tischAkt=k; grundOffen=false;
+    if(!bein){ var o=t.beine.slice(); if(gps) o.sort(function(a,b){ return meter(gps,a)-meter(gps,b); }); bein=o[0].f; }
+    legAkt=bein; sel=PI[legAkt]; halt=vonAuto?null:haltNeu(k);
+    /* läuft noch die Ansage vom letzten Tipp, nicht dazwischenreden */
+    if(vonAuto){ if(navigator.vibrate) navigator.vibrate([30,40,30]); if(!(window.speechSynthesis&&speechSynthesis.speaking)) sag('Tisch '+k); }
     tischKopfMalen(); tischMalen(); miniMalen(); if(gross && $('gross').classList.contains('an')) grossMalen();
   };
   function naechstesBein(t,von){
@@ -1073,11 +1097,11 @@
     if(!von){ toast('Noch kein GPS – oben Tisch-Nr. suchen',true); return; }
     var n=offeneTische(von).filter(function(x){ return x.t!==akt; })[0];
     if(!n){ toast('Alle Tische erfasst 🎉'); sag('Alle Tische erfasst'); return; }
-    tischWaehlen(n.t.t,false);   /* hält wie von Hand gewählt – sonst holt GPS sofort den Tisch zurück, an dem ich stehe */
+    tischWaehlen(n.t.t,false,naechstesBein(n.t,von));   /* hält wie von Hand gewählt – sonst holt GPS sofort den Tisch zurück, an dem ich stehe */
     sag('Nächster Tisch '+n.t.t+', '+Math.round(n.d)+' Meter');
   }
   window.tischWeiter=function(){ if(tischAkt){ UEB[tischAkt]=1; toast('⏭ Tisch '+tischAkt+' kommt später'); } naechsterTisch(); };
-  window.beinWaehlen=function(f){ legAkt=f; sel=PI[f]; grundOffen=false; tischBeruehrt=true; tischMalen(); miniMalen(); if(navigator.vibrate) navigator.vibrate(15); };
+  window.beinWaehlen=function(f){ legAkt=f; sel=PI[f]; grundOffen=false; halt=haltNeu(PI[f].tisch); tischMalen(); miniMalen(); if(navigator.vibrate) navigator.vibrate(15); };
   window.wert=function(v){
     if(!legAkt){ toast('Erst ein Bein antippen',true); return; }
     if(v===0){ grundOffen=true; tWerteMalen(); return; }
@@ -1098,12 +1122,12 @@
              kopfplatte:kopf||aKopf, text:text||aText, von:von, ts:Date.now(), datum:heute(), quelle:'inventur.html#tisch'};
     sel=p; gpsFeld(rec);
     ablegen('pfaehle',rec,[]);
-    erledigtRechnen(); tischBeruehrt=true; grundOffen=false;
+    erledigtRechnen(); halt=null; grundOffen=false;
     if(still) return true;
     if(navigator.vibrate) navigator.vibrate(45); piep();
-    var naechst=naechstesBein(t,p), sprich=p.fuss+', '+(v?gewSprache(v):(kopf?'Kopf montiert':'nicht messbar'));
-    if(naechst){ legAkt=naechst; sel=PI[naechst]; sag(sprich+'. Weiter '+PI[naechst].fuss); }
-    else { legAkt=null; toast('✔ Tisch '+t.t+' fertig'); sag(sprich+'. Tisch '+t.t+' fertig.'); }
+    var sprich=p.fuss+', '+(v?gewSprache(v):(kopf?'Kopf montiert':'nicht messbar'));
+    if(offenBeine(t).length) sag(sprich);
+    else { toast('✔ Tisch '+t.t+' fertig'); sag(sprich+'. Tisch '+t.t+' fertig.'); }
     tischKopfMalen(); tischMalen(); standMalen(); if(mini) punkteLayer(); if(gross) grossPunkte(); miniMalen();
     return true;
   }
@@ -1115,7 +1139,7 @@
     var v=wertVon(fertig[0].f), k=istKopf(ERL.pfaehle[fertig[0].f]);
     if(!v && !k){ toast('Letzter Wert ist «nicht messbar» – bitte einzeln',true); return; }
     for(var i=0;i<o.length;i++){ if(!(k?beinSpeichern(o[i].f,0,KOPF_TXT,true,'ja'):beinSpeichern(o[i].f,v,'',true))) return; }
-    legAkt=null; if(navigator.vibrate) navigator.vibrate(60); piep();
+    if(legAkt) sel=PI[legAkt]; if(navigator.vibrate) navigator.vibrate(60); piep();
     toast('✔ Tisch '+t.t+' fertig – Rest '+(k?'Kopf montiert':gewText(v))); sag('Rest '+(k?'Kopf montiert':gewSprache(v))+'. Tisch '+t.t+' fertig.');
     tischKopfMalen(); tischMalen(); standMalen(); if(mini) punkteLayer(); if(gross) grossPunkte(); miniMalen();
   };
@@ -1127,7 +1151,7 @@
     $('detailTitel').textContent='Details zu '+sel.tisch+' '+sel.fuss+' – Gewinde prüfen, Rest nach Bedarf';
     window.scrollTo(0,0);
   };
-  window.detailZu=function(){ detailOffen=false; viewMalen(); var t=TI[tischAkt]; if(t) legAkt=naechstesBein(t,sel||t); tischKopfMalen(); tischMalen(); };
+  window.detailZu=function(){ detailOffen=false; viewMalen(); if(sel && sel.tisch===tischAkt) legAkt=sel.f; tischKopfMalen(); tischMalen(); };
   function viewMalen(){
     var g=modusAkt==='g';
     $('tischView').hidden=!g||detailOffen; $('detailView').hidden=g&&!detailOffen; $('btnZurueck').hidden=!(g&&detailOffen);
@@ -1164,7 +1188,7 @@
       if(istKopf(e)){ wk='gk'; wt='🔩 Kopf'; }
       var info=[]; if(e&&e._nalpi) info.push('Nalpi'); if(ALT[p.f]) info.push('Aug '+gewText(ALT[p.f].g)); if(p.kopf) info.push('Kopf drauf'); if(e&&e.schaden==='ja') info.push('⚠');
       if(e&&e.text&&!kurz) info.push('📝'); if(e&&e._sprach) info.push('🎤'); if(e&&e._wartet) info.push('⏳');
-      h+='<div class="'+kl+'" style="left:'+(25+nx(t,q.sx)*50)+'%;top:'+(27+ny(t,q.sy)*46)+'%" onclick="beinWaehlen(\''+esc(p.f)+'\')">'
+      h+='<div class="'+kl+'" data-f="'+esc(p.f)+'" style="left:'+(25+nx(t,q.sx)*50)+'%;top:'+(27+ny(t,q.sy)*46)+'%" onclick="beinWaehlen(\''+esc(p.f)+'\')">'
         +'<b>'+esc(p.fuss)+'</b><span class="wert '+wk+'">'+esc(wt)+'</span><small>'+esc(info.join(' · '))+'</small></div>';
     });
     box.innerHTML=h; ichMalen(); tWerteMalen();
@@ -1182,13 +1206,18 @@
   }
   function tWerteMalen(){
     $('tGruende').hidden=!grundOffen; $('tWerte').hidden=grundOffen;
-    var akt=legAkt?ERL.pfaehle[legAkt]:null, av=akt?+akt.gew:null;
-    var h=GEW_STD.map(function(g){ return '<button class="'+g[3]+(av===g[0]?' on':'')+'" onclick="wert('+g[0]+')">'+g[1].replace(' mm','')+'<small>'+g[2]+'</small></button>'; });
-    gewExtra().forEach(function(v){ h.push('<button class="'+(av===v?'on':'')+'" onclick="wert('+v+')">⚪ '+gewText(v)+'<small>neues Gewinde</small></button>'); });
-    h.push('<button class="gk'+(istKopf(akt)?' on':'')+'" onclick="kopfMontiert()">🔩 Kopf<small>Pfahlkopf montiert</small></button>');
-    h.push('<button class="'+(akt&&av===0&&!istKopf(akt)?'on':'')+'" onclick="wert(0)">❓<small>nicht messbar</small></button>');
+    var h=GEW_STD.map(function(g){ return '<button class="'+g[3]+'" data-w="'+g[0]+'" onclick="wert('+g[0]+')">'+g[1].replace(' mm','')+'<small>'+g[2]+'</small></button>'; });
+    gewExtra().forEach(function(v){ h.push('<button data-w="'+v+'" onclick="wert('+v+')">⚪ '+gewText(v)+'<small>neues Gewinde</small></button>'); });
+    h.push('<button class="gk" data-w="k" onclick="kopfMontiert()">🔩 Kopf<small>Pfahlkopf montiert</small></button>');
+    h.push('<button data-w="0" onclick="wert(0)">❓<small>nicht messbar</small></button>');
     h.push('<button onclick="gewNeu()">➕<small>anderes Gewinde</small></button>');
-    $('tWerte').innerHTML=h.join('');
+    $('tWerte').innerHTML=h.join(''); tWerteAkt();
+  }
+  /* «on» = Wert des aktiven Beins; ohne Neuzeichnen, damit ein Beinwechsel per GPS keinen Tipp schluckt */
+  function tWerteAkt(){
+    var akt=legAkt?ERL.pfaehle[legAkt]:null, av=akt?+akt.gew:null, k=istKopf(akt);
+    Array.prototype.forEach.call($('tWerte').querySelectorAll('button[data-w]'),function(b){ var w=b.getAttribute('data-w');
+      b.classList.toggle('on',w==='k'?k:(w==='0'?(!!akt&&av===0&&!k):av===+w)); });
   }
   /* Rückmeldung ohne hinzuschauen: Piep (WebAudio) + kurze Ansage (Sprachausgabe des Geräts, geht offline) */
   var AC=null;
