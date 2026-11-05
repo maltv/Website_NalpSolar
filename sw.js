@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v224';
+var CACHE = 'nalpsolar-v225';
 var PRECACHE = [
   './index.html',
   // Webapp-Manifest + Icons des Portals (22.09.2026, Tools\Portal_Icons_Bauen.py) und die
@@ -182,11 +182,13 @@ self.addEventListener('fetch', function(e) {
   if (e.request.method !== 'GET') return;   // POSTs (z.B. Firebase-Scores) nie cachen
   var url = e.request.url;
   var isExternal = url.includes('geo.admin.ch') || url.includes('api3.geo.admin.ch');
+  // portal.buildtrack.ch (05.11.2026): die API kommt dort über die eigene Adresse (/api/…); sie gilt wie api.buildtrack.ch.
+  var apiUrl = url.indexOf(self.location.origin + '/api/') === 0 ? 'api.buildtrack.ch' + url.slice(self.location.origin.length) : url;
 
   // BuildTrack-Live-Feed (injektion.html, zugproben.html): nie über den Service Worker, sonst friert der Live-Abgleich
   // ein und in Nalpi abgehakte Beine bleiben offen. Die Seite hat ohne Netz ihre eigene Kopie (localStorage). 28.09.2026
   // Seit dem v1-Aus liest die Seite die Query-Engine-Sicht /api/w1/q/drillpoints (nalp-buildtrack.js).
-  if (url.indexOf('api.buildtrack.ch/api/w1/q/drillpoints') !== -1 || url.indexOf('api.buildtrack.ch/api/v1/drillpoints/') !== -1) return;
+  if (apiUrl.indexOf('api.buildtrack.ch/api/w1/q/drillpoints') !== -1 || apiUrl.indexOf('api.buildtrack.ch/api/v1/drillpoints/') !== -1) return;
 
   // Firebase-RTDB (erdung-fotos.html «noch nicht übernommen», 02.10.2026): nie über den Service Worker.
   // `….json?shallow=true` endet nicht auf .json und lief deshalb cache-first – die Zahl blieb stehen.
@@ -209,7 +211,7 @@ self.addEventListener('fetch', function(e) {
   var isFresh = e.request.mode === 'navigate'
     || url.endsWith('.html') || url.endsWith('.json')
     || url.indexOf('nalp-passstueck-') !== -1   // SOLL-Daten/Konstanten: immer network first
-    || url.indexOf('api.buildtrack.ch') !== -1;   // Mängel-Feed stahlbau/verschrauben: lief cache-first und blieb stehen (28.09.2026)
+    || apiUrl.indexOf('api.buildtrack.ch') !== -1;   // Mängel-Feed stahlbau/verschrauben: lief cache-first und blieb stehen (28.09.2026)
   if (isFresh) {
     e.respondWith(
       fetch(e.request).then(function(resp) {

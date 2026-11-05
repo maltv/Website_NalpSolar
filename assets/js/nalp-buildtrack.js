@@ -20,7 +20,10 @@
 window.nalpBT = (function () {
   'use strict';
 
-  var BASIS = 'https://api.buildtrack.ch';
+  /* Auf portal.buildtrack.ch (unsere Adresse, 05.11.2026) läuft die API über die eigene Adresse (/api/…, nginx leitet weiter):
+     gleiche Herkunft, kein CORS. Auf maltv.github.io und überall sonst wie bisher direkt api.buildtrack.ch. */
+  var PORTAL = location.host === 'portal.buildtrack.ch';
+  var BASIS = PORTAL ? '' : 'https://api.buildtrack.ch';
   var KEY = 'b23CBdyHH4e15koZDKATwdxR5cOaIx8iirsNA5BiX9c';   /* Lese-Schluessel (nur Bohrpunkte + Maengel lesen), Konto victor-website-read, widerrufbar; Dennis 2026-11-03 */   /* <- Victor: Lese-Schluessel hier eintragen, oder leer lassen (nur Offline-Stand) */
   var LS_TOKEN = 'nalp_buildtrack_token_v1';
   var SEITE = 5000;          /* Zeilen je Abruf; die Engine deckelt bei 10000 */
@@ -128,7 +131,7 @@ window.nalpBT = (function () {
   function wer() { try { return String(localStorage.getItem(LS_NAME) || ''); } catch (e) { return ''; } }
   function anmelden(name, pw) {
     var seite = (location.pathname.split('/').pop() || 'portal').replace(/\.html$/, '');
-    return fetch(BASIS + '/api/v1/accounts/password-signin', {
+    return fetch(BASIS + '/api/v1/accounts/password-signin', {   /* PORTAL: gleiche Herkunft */
       method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json' },
       body: JSON.stringify({ email: String(name || '').trim(), password: String(pw || ''), label: ('Website ' + seite).slice(0, 60) })
     }).then(function (r) {
@@ -187,6 +190,6 @@ window.nalpBT = (function () {
     malen();
   }
 
-  return { BASIS: BASIS, token: token, setToken: setToken, hatToken: hatToken, q: q, ops: ops, mangelOp: mangelOp, fotoHochladen: fotoHochladen,
+  return { BASIS: BASIS, PORTAL: PORTAL, token: token, setToken: setToken, hatToken: hatToken, q: q, ops: ops, mangelOp: mangelOp, fotoHochladen: fotoHochladen,
            persoenlich: persoenlich, wer: wer, anmelden: anmelden, abmelden: abmelden, anmeldenDialog: anmeldenDialog, knopf: knopf };
 })();
