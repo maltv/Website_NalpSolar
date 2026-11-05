@@ -586,6 +586,7 @@
   /* ══════════ Im Browser ══════════ */
   if (root.nalpLive) return;           /* doppelt eingebunden: die erste Fassung gilt */
   var PORTAL = root.location.host === 'portal.buildtrack.ch' || (function () {   /* derselbe Test wie nalp-buildtrack.js */
+    if (!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(root.location.hostname)) return false;   /* Test-Schalter nur lokal */
     try { if (root.localStorage.getItem('nalp_portal_test') === '1') return true; } catch (e) { /* kein localStorage */ }
     return /[?&]portal=1(&|#|$)/.test(root.location.search || '');
   })();

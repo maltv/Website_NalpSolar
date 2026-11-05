@@ -29,10 +29,11 @@ window.nalpBT = window.nalpBT || (function () {
 
   /* Auf portal.buildtrack.ch (unsere Adresse, 05.11.2026) läuft die API über die eigene Adresse (/api/…, nginx leitet weiter):
      gleiche Herkunft, kein CORS. Auf maltv.github.io und überall sonst wie bisher direkt api.buildtrack.ch.
-     TEST-SCHALTER (nur zum lokalen Pruefen, 05.11.2026): localStorage.nalp_portal_test = '1' oder ?portal=1 in der Adresse
+     TEST-SCHALTER (nur zum lokalen Pruefen, 05.11.2026; wirkt nur auf localhost/127.0.0.1): localStorage.nalp_portal_test = '1' oder ?portal=1 in der Adresse
      → die Seite tut so, als liefe sie auf dem Portal (API dann ueber die eigene Adresse, z.B. 127.0.0.1). Sonst aendert er nichts.
      Dieselbe Pruefung steht in nalp-gate.js. */
   var PORTAL = location.host === 'portal.buildtrack.ch' || (function () {
+    if (!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return false;   /* Test-Schalter nur lokal, nie auf maltv.github.io */
     try { if (localStorage.getItem('nalp_portal_test') === '1') return true; } catch (e) { /* kein localStorage */ }
     return /[?&]portal=1(&|#|$)/.test(location.search || '');
   })();

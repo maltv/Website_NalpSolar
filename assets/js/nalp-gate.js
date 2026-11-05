@@ -30,6 +30,7 @@
   var SUB   = String(window.NALP_GATE_SUB   || 'Code eingeben, um fortzufahren');
   var MAXLEN = CODE.length;
   var PORTAL = window.location.host === 'portal.buildtrack.ch' || (function () {
+    if (!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname)) return false;   /* Test-Schalter nur lokal */
     try { if (window.localStorage.getItem('nalp_portal_test') === '1') return true; } catch (e) { /* privater Modus */ }
     return /[?&]portal=1(&|#|$)/.test(window.location.search || '');
   })();
