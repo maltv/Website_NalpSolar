@@ -478,7 +478,9 @@
   /* Gewinde aus Nalpi (Bohr-App, z. B. Anna 04.11.): ein Live-Abruf gilt, solange er nicht älter ist als die Datendatei */
   function ngAnwenden(){
     if(!NG_LIVE || !NG_LIVE.g || (STAND && NG_LIVE.tag<STAND)) return;
-    PUNKTE.forEach(function(p){ if(p.g) p.ng=NG_LIVE.g[p.f]!=null?+NG_LIVE.g[p.f]:null; });
+    PUNKTE.forEach(function(p){ if(p.g) p.ng=NG_LIVE.g[p.f]!=null?+NG_LIVE.g[p.f]:null;
+      if(NG_LIVE.kopf) p.kopf=NG_LIVE.kopf[p.f]?1:0;
+      if(NG_LIVE.ef) p.ef=(NG_LIVE.ef[p.f]||p.neu)?1:0; });
   }
   function cacheLesen(){ try{ var c=JSON.parse(lsGet(LS_CACHE,'')||'{}'); ['pfaehle','fundamente','berg'].forEach(function(k){ R[k]=c[k]||{}; }); ALT=c.alt||{}; NG_LIVE=c.ng||null; }catch(e){} }
   function cacheSchreiben(){ lsSet(LS_CACHE,JSON.stringify({pfaehle:R.pfaehle,fundamente:R.fundamente,berg:R.berg,alt:ALT,ng:NG_LIVE})); }
@@ -569,7 +571,10 @@
       ERL.pfaehle[p.f]={fid:p.f, tisch:p.tisch, fuss:p.fuss, typ:p.typ, bereich:p.ber, gew:p.ng, von:'Nalpi', datum:'', ts:0, quelle:'nalpi', _nalpi:1}; });
   }
   function istErledigt(p){ return !!ERL[modusAkt==='ef'?'fundamente':'pfaehle'][p.f]; }
-  function kandidaten(){ return PUNKTE.filter(function(p){ return modusAkt==='ef'?p.ef:p.g; }); }
+  /* Pfähle-Modus: nur Beine, die ein Gewinde brauchen – kein Einzelfundament und kein in Nalpi montierter Pfahlkopf
+     (Dennis 05.11.2026: «einzelfundamente und die in Nalpi als Pfahlkopf montiert markierten nicht anzeigen») */
+  function gewKand(p){ return !!p.g && !p.ef && !p.kopf; }
+  function kandidaten(){ return PUNKTE.filter(function(p){ return modusAkt==='ef'?p.ef:gewKand(p); }); }
 
   /* ── Warteschlange (IndexedDB, Muster injektion.html) ── */
   var Q=(function(){
@@ -1013,7 +1018,7 @@
   var ansage=lsGet(LS_ANSAGE,'1')!=='0';
   function tischeBauen(){
     TI={};
-    PUNKTE.forEach(function(p){ if(!p.g) return; var t=TI[p.tisch]||(TI[p.tisch]={t:p.tisch, beine:[], typ:p.typ, ber:p.ber}); t.beine.push(p); });
+    PUNKTE.forEach(function(p){ if(!gewKand(p)) return; var t=TI[p.tisch]||(TI[p.tisch]={t:p.tisch, beine:[], typ:p.typ, ber:p.ber}); t.beine.push(p); });
     Object.keys(TI).forEach(function(k){ var t=TI[k], la=0, lo=0;
       t.beine.sort(function(a,b){ return a.fuss<b.fuss?-1:1; });
       t.beine.forEach(function(p){ la+=p.lat; lo+=p.lon; }); t.lat=la/t.beine.length; t.lon=lo/t.beine.length;
@@ -1434,23 +1439,29 @@
      2. Gewinde live aus Nalpi über nalp-buildtrack.js (/api/w1/q/drillpoints). FALLE 04.11.: die API lässt die Website-Adresse
         (maltv.github.io) noch nicht zu (CORS) – dann scheitert das still und es gilt die Datendatei,
      3. Erfassungen der anderen Geräte (RTDB). */
-  var SYNC_Q='select=foundation_id,gewinde_mm&gewinde_mm=not.is.null';
+  var SYNC_Q='select=foundation_id,gewinde_mm,einzelfundament,head_mounted_on&or=(gewinde_mm.not.is.null,einzelfundament.is.true,head_mounted_on.not.is.null)';
   function syncMalen(live,datei){
     var n=PUNKTE.filter(function(p){ return p.g && p.ng!=null; }).length, s=STAND.split('-').reverse().join('.');
     $('syncStand').textContent=live?'✔ Nalpi live '+zeit(NG_LIVE.ts)+': '+n+' Pfähle mit Gewinde in Nalpi'
       :(datei===false?'Datendatei nicht geladen – später nochmals'
         :(NG_LIVE&&NG_LIVE.tag>=STAND?'Nalpi live zuletzt '+zeit(NG_LIVE.ts):'Nalpi-Stand '+s+(datei?' (live nicht erreichbar)':''))+': '+n+' Pfähle mit Gewinde in Nalpi');
   }
+  /* Nalpi live: Gewinde, Einzelfundament und montierter Pfahlkopf je Bein (eine Abfrage, /api/w1/q/drillpoints) */
+  function liveHolen(){
+    if(!window.nalpBT) return Promise.resolve(null);
+    return nalpBT.q('drillpoints',SYNC_Q,{timeout:15000}).then(function(rows){ var g={}, ef={}, kopf={};
+      rows.forEach(function(r){ var f=r.foundation_id; if(!f) return;
+        if(r.gewinde_mm!=null) g[f]=+r.gewinde_mm; if(r.einzelfundament) ef[f]=1; if(r.head_mounted_on) kopf[f]=1; });
+      return {tag:heute(), ts:Date.now(), g:g, ef:ef, kopf:kopf}; },function(){ return null; });
+  }
   window.syncNalpi=function(){
     if(!netzAn()){ toast('Kein Netz – Sync geht nur mit Netz',true); return; }
     var btn=$('btnSync'); btn.disabled=true; btn.textContent='🔄 hole Nalpi …';
-    var live=window.nalpBT?nalpBT.q('drillpoints',SYNC_Q,{timeout:12000}).then(function(rows){ var g={};
-        rows.forEach(function(r){ if(r.foundation_id && r.gewinde_mm!=null) g[r.foundation_id]=+r.gewinde_mm; }); return g; },function(){ return null; })
-      :Promise.resolve(null);
+    var live=liveHolen();
     var datei=false, ok=false;
     laden().then(function(){ datei=true; },function(){})
       .then(function(){ return live; })
-      .then(function(g){ if(g){ NG_LIVE={tag:heute(), ts:Date.now(), g:g}; ngAnwenden(); cacheSchreiben(); ok=true; } })
+      .then(function(x){ if(x){ NG_LIVE=x; ngAnwenden(); tischeBauen(); cacheSchreiben(); ok=true; } })
       .then(function(){ return serverLaden(); })
       .then(function(){ return warteMischen(); })
       .then(function(){ allesMalen(); syncMalen(ok,datei); toast(datei||ok?'✔ Stand geholt':'Nichts geholt – Netz prüfen',!(datei||ok)); })
@@ -1472,7 +1483,10 @@
     .then(function(){ miniBauen(); modus(lsGet(LS_MODUS,'g')==='ef'?'ef':'g'); netzMalen(); if(start==='berg'||start==='tal') reiter(start); })
     .then(function(){ return serverLaden(); })
     .then(function(){ return warteMischen(); })
-    .then(function(){ allesMalen(); syncMalen(false); senden(); });
+    .then(function(){ allesMalen(); syncMalen(false); senden(); })
+    .then(function(){ return netzAn()?liveHolen():null; })
+    .then(function(x){ if(x){ NG_LIVE=x; ngAnwenden(); tischeBauen(); cacheSchreiben(); allesMalen(); syncMalen(true); } })
+    .catch(function(){});
   if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
 })();
 </script>
