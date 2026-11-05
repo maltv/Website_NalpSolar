@@ -116,7 +116,22 @@
   <div class="topbar">
     <div class="logo"><img src="assets/img/strabag-logo.png" alt="STRABAG"></div>
     <div class="losnr">NALPSOLAR · LOS B8-13</div>
+    <!-- portal.buildtrack.ch (05.11.2026): Anmelde-/Statusknopf mit dem BuildTrack-Konto. Die Startseite selbst bleibt
+         offen (Kachel-Menue); die Seiten dahinter verlangen die Anmeldung. Auf maltv.github.io bleibt der Platz leer. -->
+    <span id="bt-konto" style="margin-left:auto"></span>
   </div>
+  <script>
+  (function () {
+    var portal = location.host === 'portal.buildtrack.ch'
+      || /[?&]portal=1(&|$)/.test(location.search)
+      || (function () { try { return localStorage.getItem('nalp_portal_test') === '1'; } catch (e) { return false; } })();
+    if (!portal) return;
+    var s = document.createElement('script');
+    s.src = 'assets/js/nalp-buildtrack.js';
+    s.onload = function () { if (window.nalpBT) nalpBT.knopf(document.getElementById('bt-konto')); };
+    document.head.appendChild(s);
+  })();
+  </script>
 
   <div class="hero">
     <div class="shade"></div>
