@@ -375,6 +375,7 @@
 </main>
 <div id="toast"></div>
 
+<script src="assets/js/nalp-live.js"></script>
 <script>
 'use strict';
 /* ══════════════════════════════════════════════════════════════════════
@@ -452,7 +453,7 @@ window.addEventListener('offline', netzMalen);
 function schluessel(t,s){ return String(t)+'-S'+s; }
 
 function inventarLaden(){
-  return fetch('uploads/inventar.json',{cache:'no-store'}).then(function(r){ return r.json(); }).then(function(j){
+  return (window.nalpLive||window).fetch('uploads/inventar.json',{cache:'no-store'}).then(function(r){ return r.json(); }).then(function(j){
     stand=j.stand||{}; bereiche=j.bereiche||[]; grenzen=j.grenzen||{};
     pfaehle=(j.pfaehle||[]).map(function(p){
       return {t:String(p[0]), s:p[1], lat:p[2], lon:p[3], tb:p[4], tv:p[5], ber:p[6], st:p[7], pk:p[8]};

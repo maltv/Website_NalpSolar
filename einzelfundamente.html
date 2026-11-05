@@ -241,6 +241,7 @@
 
 <div id="toast"></div>
 
+<script src="assets/js/nalp-live.js"></script>
 <script>
 /* ── Konstanten ──────────────────────────────────────────────────────── */
 var RTDB   = 'https://highscore-test-2e784-default-rtdb.europe-west1.firebasedatabase.app/erfassung';
@@ -309,7 +310,7 @@ window.addEventListener('offline', netzMalen);
 
 /* ── Laden ───────────────────────────────────────────────────────────── */
 function ladeAlles(neu){
-  return fetch('uploads/einzelfundamente.json', {cache: neu ? 'reload' : 'default'})
+  return (window.nalpLive||window).fetch('uploads/einzelfundamente.json', {cache: neu ? 'reload' : 'default'})
     .then(function(r){ return r.json(); })
     .then(function(j){
       DATEN = j;

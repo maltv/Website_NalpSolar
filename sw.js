@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v228';
+var CACHE = 'nalpsolar-v229';
 var PRECACHE = [
   './index.html',
   // Webapp-Manifest + Icons des Portals (22.09.2026, Tools\Portal_Icons_Bauen.py) und die
@@ -50,6 +50,7 @@ var PRECACHE = [
   // './pfahlkopf.html',   abgeschaltet 28.08.2026 (Auftrag Victor)
   './einzelfundamente.html',
   './uploads/einzelfundamente.json',
+  './uploads/einzelfundamente_no026.json',   // NO026-Liste fuer den Live-Bau der Einzelfundamente (nalp-live.js, 05.11.2026)
   './assets/js/leaflet/leaflet.js',
   './assets/js/leaflet/leaflet.css',
   './uploads/pfaehle.json',
