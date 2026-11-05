@@ -6,6 +6,7 @@
  *   Lesen     GET  /api/w1/q/<view>        Query-Engine (PostgREST-Syntax: select=, <spalte>=eq.x, order=, limit=, offset=)
  *   Schreiben POST /api/v2/ops             typisierte Kommandos ({ op:'mangel.create', idempotencyKey, args })
  *   Fotos     POST /api/v1/assets/<id>?feature=maengel   (bleibt, erst das Foto, dann die Op)
+ *   Dateien   GET  /api/w1/exports/<name>.csv  datei(pfad) mit demselben Zugang wie q() (assets/js/nalp-live.js, Portal)
  *
  * ZUGANG: alle drei Wege verlangen ein Token (Authorization: Bearer …). Die v1-Feeds waren ohne Token lesbar, die
  * neuen Wege sind es nicht. Das Token kommt
@@ -177,6 +178,19 @@ window.nalpBT = window.nalpBT || (function () {
         });
     }
     return seite();
+  }
+
+  /* Eine Datei der API (z.B. '/api/w1/exports/table-id.csv') mit demselben Zugang wie q(): Portal Cookie bzw.
+     persoenliches Token (nie KEY), sonst wie q(). Ergebnis: die Response (r.ok), sonst Error mit .status. */
+  function datei(pfad, opt) {
+    var o = opt || {};
+    if (PORTAL) return bereit().then(function () { return dateiJetzt(pfad, o); });
+    if (!hatToken()) return Promise.reject(new Error('kein Token'));
+    return dateiJetzt(pfad, o);
+  }
+  function dateiJetzt(pfad, o) {
+    return holen(BASIS + pfad, zugang({ headers: kopf({ accept: o.accept || '*/*' }), cache: 'no-store' }), o.timeout || 30000)
+      .then(function (r) { if (!r.ok) throw fehler(r); return r; });
   }
 
   /* Kommandos nach /api/v2/ops. `ops` = [{ op, idempotencyKey, args }]. Antwort: results[i] je Op mit
@@ -371,7 +385,7 @@ window.nalpBT = window.nalpBT || (function () {
     if (PORTAL) sitzung().then(function () { malen(); if (modusWert && nachher) nachher(true); });
   }
 
-  return { BASIS: BASIS, PORTAL: PORTAL, token: token, setToken: setToken, hatToken: hatToken, q: q, ops: ops, mangelOp: mangelOp, fotoHochladen: fotoHochladen,
+  return { BASIS: BASIS, PORTAL: PORTAL, token: token, setToken: setToken, hatToken: hatToken, q: q, datei: datei, ops: ops, mangelOp: mangelOp, fotoHochladen: fotoHochladen,
            persoenlich: persoenlich, wer: wer, anmelden: anmelden, abmelden: abmelden, anmeldenDialog: anmeldenDialog, knopf: knopf,
            sitzung: sitzung, modus: modus, offline: offline, grund: grund, codeBestaetigen: codeBestaetigen };
 })();
