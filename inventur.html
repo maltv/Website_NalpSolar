@@ -168,7 +168,7 @@
   <a class="home" href="index.html" aria-label="Portal">‹</a>
   <span class="logo"><img src="assets/img/strabag-logo.png" alt="STRABAG"></span>
   <h1>Inventur 2026</h1>
-  <span class="netz" id="netz">…</span>
+  <span class="netz" id="netz">…</span> <span id="nalpLogin"></span>
 </header>
 <div class="tabs">
   <button id="tb-perimeter" class="on" onclick="reiter('perimeter')">📍 Perimeter</button>
@@ -606,7 +606,7 @@
       weg:function(k){ memWeg(k); return tx('readwrite',function(s){ return s.delete(k); }).catch(function(){}); }
     };
   })();
-  function warteMischen(){ return Q.alle().then(function(a){ a.forEach(function(j){ if(j.del) { delete R[j.art][j.k]; return; }
+  function warteMischen(){ return Q.alle().then(function(a){ a.forEach(function(j){ if(j.mangel) return; if(j.del) { delete R[j.art][j.k]; return; }
     var r={}; for(var s in j.rec) r[s]=j.rec[s]; r.anzahl_fotos=(j.fotos||[]).length; r._wartet=1; r._sprach=(j.audios||[]).length; R[j.art][j.k]=r; }); return a; }); }
   function netzMalen(){ Q.alle().then(function(a){ var e=$('netz'); e.className='netz'+(netzAn()?'':' off');
     e.textContent=(netzAn()?'online':'offline')+(a.length?' · '+a.length+' wartet':''); }); }
@@ -621,6 +621,7 @@
     return Q.alle().then(function(jobs){
       return jobs.reduce(function(kette,j){
         return kette.then(function(){
+          if(j.mangel) return mangelSenden(j);
           var url=RTDB+'/'+P_BASIS+'/'+j.art+'/'+j.k+'.json';
           if(j.del) return fetch(url,{method:'DELETE'}).then(function(r){ if(r.ok){ delete R[j.art][j.k]; return Q.weg(j.k); } }).catch(function(){});
           var rec={}; for(var s in j.rec) rec[s]=j.rec[s];
@@ -653,10 +654,42 @@
           }).then(function(){
             rec.anzahl_fotos=bilder.length;
             return fetch(url,{method:'PUT',body:JSON.stringify(rec)});
-          }).then(function(r){ if(r&&r.ok){ R[j.art][j.k]=rec; return Q.weg(j.k); } }).catch(function(){});
+          }).then(function(r){ if(r&&r.ok){ R[j.art][j.k]=rec;
+              var m=mangelJob(j,rec,bilder);
+              return (m?Q.add(m):Promise.resolve()).then(function(){ return Q.weg(j.k); }); } }).catch(function(){});
         });
       },Promise.resolve());
     });
+  }
+  /* ── Mängel direkt in Nalps (Dennis 05.11.2026) ──
+     Ein Pfahl mit «Schaden: ja», oder mit Foto und Bemerkung, wird nach dem Speichern auch ein Mangel in Nalps (Bohrpunkt,
+     Art «Allgemein», mit den Fotos). Das braucht eine persönliche Anmeldung (🔑 oben); ohne sie wartet der Mangel hier. */
+  function uuid(){ if(window.crypto&&crypto.randomUUID) return crypto.randomUUID();
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){ var r=Math.random()*16|0; return (c==='x'?r:(r&3|8)).toString(16); }); }
+  function mangelJob(j,rec,bilder){
+    if(j.art!=='pfaehle' || j.del) return null;
+    var text=String(rec.text||'').replace(/🎤/g,'').trim();
+    if(!(rec.schaden==='ja' || (bilder.length && text))) return null;
+    var g=+rec.gew, gew=rec.gew==null?'nicht erfasst':(g===0?'nicht messbar':g+' mm');
+    var titel='Inventur: '+(text&&text!=='Foto'?text:(rec.schaden==='ja'?'Schaden':'Hinweis'));
+    return {k:'m_'+j.k, art:'mangel', mangel:{fid:rec.fid, titel:titel.slice(0,120),
+      text:'Aus der Inventur ('+(rec.datum||'')+', '+(rec.von||'')+'): '+(rec.schaden==='ja'?'Schaden':'Hinweis')+(text&&text!=='Foto'?' – '+text:'')+'. Gewinde: '+gew+'.',
+      ts:rec.ts||Date.now(), von:rec.von||'', fotos:bilder.slice(0,6), assets:bilder.slice(0,6).map(function(){ return uuid(); }),
+      mangelId:uuid(), postId:uuid(), op:uuid()}};
+  }
+  function mangelSenden(j){
+    if(!window.nalpBT || !nalpBT.persoenlich()) return Promise.resolve();    /* wartet auf die Anmeldung */
+    var m=j.mangel;
+    return m.fotos.reduce(function(k,data,ix){ return k.then(function(){
+        return fetch(data).then(function(r){ return r.blob(); }).then(function(b){ return nalpBT.fotoHochladen(m.assets[ix],b); })
+          .then(function(ok){ if(!ok) throw 0; }); }); },Promise.resolve())
+      .then(function(){ return nalpBT.ops([{op:'mangel.create', idempotencyKey:m.op, args:{mangelId:m.mangelId, postId:m.postId,
+          entityType:'drillpoint', entityKey:m.fid, mangelKind:'general', title:m.titel, severity:'MITTEL', body:m.text,
+          author:nalpBT.wer()||m.von||'Inventur', createdAt:new Date(m.ts).toISOString(), assetIds:m.assets}}]); })
+      .then(function(res){ var x=res&&res[0]; if(!x) return;
+        if(x.status==='applied'||x.status==='duplicate'){ toast('✔ Mangel in Nalps: '+m.fid); return Q.weg(j.k); }
+        if(x.status==='rejected'){ toast('Mangel '+m.fid+' abgelehnt: '+((x.error&&x.error.message)||'').slice(0,80),true); return Q.weg(j.k); } })
+      .catch(function(){});    /* Netz/Server: bleibt in der Warteschlange */
   }
   function senden(){
     if(!netzAn()) { netzMalen(); return Promise.resolve(); }
@@ -1474,6 +1507,7 @@
   $('fVon').addEventListener('change',function(){ lsSet(LS_VON,this.value.trim()); });
   auto=lsGet(LS_AUTO,'1')!=='0'; $('autoBtn').classList.toggle('on',auto); $('autoBtn').textContent=auto?'an':'aus';
   bMalen(); cacheLesen(); gewKnoepfe();
+  if(window.nalpBT) nalpBT.knopf($('nalpLogin'), function(drin){ if(drin) senden(); });
   $('tipp').hidden=lsGet(LS_TIPP,'')==='zu';
   $('btnAnsage').textContent=ansage?'🔊 Ansage an':'🔇 Ansage aus';
   (function(){ var k=+lsGet(LS_KACHEL,'0'); $('kachelStand').textContent=k?'✔ Satellitenbild offline gespeichert am '+zeit(k):'Satellitenbild noch nicht offline gespeichert.'; })();
