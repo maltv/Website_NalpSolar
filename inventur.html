@@ -414,6 +414,7 @@
 
 <script src="assets/js/leaflet/leaflet.js"></script>
 <script src="assets/js/nalp-buildtrack.js"></script>
+<script src="assets/js/nalp-live.js"></script>
 <script>
 (function(){
   'use strict';
@@ -508,7 +509,7 @@
     var lng=2.6779094+4.728982*y+0.791484*y*x+0.1306*y*x*x-0.0436*y*y*y; return [lat*100/36, lng*100/36]; }
   function beineLaden(){
     if(BEINE) return Promise.resolve();
-    function hol(u){ return fetch(u).then(function(r){ if(!r.ok) throw 0; return r.json(); }); }
+    function hol(u){ return (window.nalpLive||window).fetch(u).then(function(r){ if(!r.ok) throw 0; return r.json(); }); }
     return Promise.all([hol('uploads/tables/bohrstand.json'), hol('uploads/tables/modultische_all.json').catch(function(){ return []; })])
       .then(function(x){
         (x[1]||[]).forEach(function(z){ TYPEN_ALL[String(z[0])]=z[6]||''; });

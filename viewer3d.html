@@ -7,6 +7,7 @@
 <title>NalpSolar 3D</title>
 <script src="assets/js/nalp-gate.js"></script>
 <script src="assets/js/nalp-status.js"></script>
+<script src="assets/js/nalp-live.js"></script>
 <script src="assets/js/nalp-stahlteile.js"></script>
 <link rel="manifest" href="manifest-3d.json" id="manifestLink">
 <script>
@@ -1160,7 +1161,7 @@ function beinDatenHolen(){
   if(bohrDaten && bohrDaten.punkte){ beinDaten=bohrDaten.punkte; return Promise.resolve(beinDaten); }
   if(beinLaedt) return beinLaedt;
   // Schlägt der Abruf fehl (Funkloch), bleibt nichts gemerkt – nächster Tap versucht es neu
-  beinLaedt=fetch('uploads/tables/bohrstand.json',{cache:'no-store'})
+  beinLaedt=(window.nalpLive||window).fetch('uploads/tables/bohrstand.json',{cache:'no-store'})
     .then(function(r){ return r.ok ? r.json() : null; })
     .then(function(d){
       var p=(d&&d.punkte&&d.punkte.length) ? d.punkte : null;
@@ -1605,7 +1606,7 @@ async function loadTische(){
   // Zeile [id,E,N,Z,az,len,typ,h_soll,[[e,n,h] S1..S4]]
   var data=null;
   try{
-    var ra=await fetch('uploads/tables/modultische_all.json');
+    var ra=await (window.nalpLive||window).fetch('uploads/tables/modultische_all.json');
     if(ra.ok) data=await ra.json();
   }catch(e){}
   if(!data){
@@ -1628,7 +1629,7 @@ async function loadTische(){
   // 'mt' = Modulträger montiert. Ohne Datei: alle Tische wie früher.
   baustand=null;
   try{
-    var rb=await fetch('uploads/tables/baustand.json',{cache:'no-store'});
+    var rb=await (window.nalpLive||window).fetch('uploads/tables/baustand.json',{cache:'no-store'});
     if(rb.ok){
       var bj=await rb.json();
       baustand={stand:bj.stand||'?', tische:bj.tische||{}};
@@ -2040,7 +2041,7 @@ async function loadBohrpunkte(){
   bohrLaedt=true;
   var d=null;
   try{
-    var r=await fetch('uploads/tables/bohrstand.json',{cache:'no-store'});
+    var r=await (window.nalpLive||window).fetch('uploads/tables/bohrstand.json',{cache:'no-store'});
     if(r.ok) d=await r.json();
   }catch(e){}
   bohrLaedt=false;

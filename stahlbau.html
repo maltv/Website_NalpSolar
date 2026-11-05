@@ -8,6 +8,7 @@
 <script src="assets/js/nalp-gate.js"></script>
 <script src="assets/js/nalp-anweisungen.js"></script>
 <script src="assets/js/nalp-buildtrack.js"></script>
+<script src="assets/js/nalp-live.js"></script>
 <!-- Montage-Erfassung entfernt 27.07.2026: laeuft offiziell in Nalpi (Dennis) -->
 <style>
   :root{
@@ -981,7 +982,7 @@ function mgRender(){
 (function(){
   function fertig(){ mgRender(); pzRender(); }
   function ausSnapshot(grund){
-    fetch('uploads/maengel.json').then(function(r){ return r.json(); }).then(function(d){
+    (window.nalpLive||window).fetch('uploads/maengel.json').then(function(r){ return r.json(); }).then(function(d){
       MG=d.maengel||[]; mgQuelle='Stand der mitgelieferten Datei<br>('+grund+')'; fertig();
     }).catch(function(){
       document.getElementById('mgListe').innerHTML=

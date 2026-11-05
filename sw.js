@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v226';
+var CACHE = 'nalpsolar-v227';
 var PRECACHE = [
   './index.html',
   // Webapp-Manifest + Icons des Portals (22.09.2026, Tools\Portal_Icons_Bauen.py) und die
@@ -87,6 +87,7 @@ var PRECACHE = [
   './viewer3d.html',
   './assets/js/nalp-gate.js',
   './assets/js/nalp-buildtrack.js',   // BuildTrack-Zugang (w1-Sichten, v2-Ops) der Seiten injektion/zugproben/stahlbau/verschrauben
+  './assets/js/nalp-live.js',   // Portal: Tagesdateien live aus der API (05.11.2026); sonst nur fetch()
   './assets/js/nalp-auth.js',
   './assets/js/nalp-stahlteile.js',
   './assets/js/nalp-status.js',

@@ -14,6 +14,7 @@
 <script src="assets/js/nalp-gate.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="assets/js/nalp-live.js"></script>
 <style>
   :root{ color-scheme:light; --rot:#D72622; --ink:#1a1a1a; --mut:#63676d; --line:#e3e5e8;
          --blau:#1565c0; --gelb:#e0a800; --gruen:#1e9e5a; --grau:#8a8e94; --bg:#eef0f3; }
@@ -121,9 +122,9 @@ function ch1903PlusToWgs84(north, east){
 }
 
 Promise.all([
-  fetch('uploads/tables/bereiche.json').then(function(r){ return r.json(); }),
+  (window.nalpLive||window).fetch('uploads/tables/bereiche.json').then(function(r){ return r.json(); }),
   fetch('uploads/tables/typen.json').then(function(r){ return r.json(); }),
-  fetch('uploads/tables/modultische_all.json').then(function(r){ return r.json(); }),
+  (window.nalpLive||window).fetch('uploads/tables/modultische_all.json').then(function(r){ return r.json(); }),
   fetch(RTDB+'.json?_='+Date.now(),{cache:'no-store'}).then(function(r){ return r.json(); }).catch(function(){ return null; })
 ]).then(function(a){
   BEREICHE=a[0].bereiche||{};

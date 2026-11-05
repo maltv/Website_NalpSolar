@@ -14,6 +14,7 @@
 <script src="assets/js/nalp-gate.js"></script>
 <script src="assets/js/nalp-anweisungen.js"></script>
 <script src="assets/js/nalp-buildtrack.js"></script>
+<script src="assets/js/nalp-live.js"></script>
 <link rel="stylesheet" href="assets/js/leaflet/leaflet.css">
 <script src="assets/js/leaflet/leaflet.js"></script>
 <style>
@@ -508,7 +509,7 @@ function abweisText(r){
 }
 
 /* ─────────── Daten laden ─────────── */
-function jget(u){ return fetch(u, {cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }); }
+function jget(u){ return (window.nalpLive||window).fetch(u, {cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }); }
 
 /* Umriss einer Konstruktion aus ihren Pfahlpunkten.
    Die 2026er stehen auf vier Pfaehlen (S1–S4) – die Punkte sind in dieser

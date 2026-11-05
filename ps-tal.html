@@ -175,6 +175,7 @@
 
 <script src="assets/js/tesseract/tesseract.min.js"></script>
 <script src="assets/js/nalp-passstueck-tal.js"></script>
+<script src="assets/js/nalp-live.js"></script>
 <script>
 'use strict';
 var $=function(id){ return document.getElementById(id); };
@@ -185,7 +186,7 @@ function rund(x){ return x==null?'–':String(Math.round(+x)); }
 function datum(iso){ if(!iso) return ''; var p=String(iso).slice(0,10).split('-'); return p.length===3?(+p[2])+'.'+(+p[1])+'.':iso; }
 
 /* ══════════ Daten ══════════ */
-fetch('uploads/tables/ps_tal.json',{cache:'no-cache'}).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+(window.nalpLive||window).fetch('uploads/tables/ps_tal.json',{cache:'no-cache'}).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
   .then(function(d){ D=d; $('stand').textContent='Stand Nalpi: '+d.stand; batchesZeigen(); verlaufZeigen(); })
   .catch(function(){ $('stand').textContent='Daten fehlen – Netz prüfen'; $('stand').className='err'; });
 

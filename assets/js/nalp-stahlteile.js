@@ -59,7 +59,7 @@
   // vormontierte PKs/Modulträger verschwinden automatisch von den Karten,
   // sobald ihr Tisch den Status "montiert" hat. (Wunsch Victor 23.07.2026)
   var baustand = null;
-  fetch('uploads/tables/baustand.json', { cache:'no-store' })
+  (window.nalpLive || window).fetch('uploads/tables/baustand.json', { cache:'no-store' })   // Portal: live (nalp-live.js)
     .then(function(r){ return r.ok ? r.json() : null; })
     .then(function(j){ if (j && j.tische) { baustand = j.tische; notify(); } })
     .catch(function(){});

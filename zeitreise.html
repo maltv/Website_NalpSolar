@@ -83,6 +83,7 @@
 </div>
 
 <script src="assets/js/leaflet/leaflet.js"></script>
+<script src="assets/js/nalp-live.js"></script>
 <script>
 // Befliegungen über dem Baufeld laut swisstopo-Metadaten
 // (api3.geo.admin.ch identify, Ebene ch.swisstopo.swissimage-product.metadata, Punkt LV95 2701850/1165967,
@@ -195,7 +196,7 @@ function zeigeInfo() {
   document.getElementById('info').innerHTML = bildTxt + tischTxt;
 }
 
-fetch('uploads/tables/modultische_all.json', { cache: 'no-cache' })
+(window.nalpLive||window).fetch('uploads/tables/modultische_all.json', { cache: 'no-cache' })
   .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
   .then(rows => {
     rows.forEach(t => {

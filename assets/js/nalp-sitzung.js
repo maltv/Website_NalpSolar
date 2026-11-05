@@ -485,7 +485,7 @@ function laden(){
 }
 
 function datei(pfad){
-  return fetch(pfad+'?_='+Date.now(),{cache:'no-store'})
+  return (window.nalpLive||window).fetch(pfad+'?_='+Date.now(),{cache:'no-store'})   /* Portal: live (nalp-live.js) */
     .then(function(r){ return r.ok?r.json():null; }).catch(function(){ return null; });
 }
 
