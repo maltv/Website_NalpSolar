@@ -610,7 +610,36 @@
   function warteMischen(){ return Q.alle().then(function(a){ a.forEach(function(j){ if(j.mangel) return; if(j.del) { delete R[j.art][j.k]; return; }
     var r={}; for(var s in j.rec) r[s]=j.rec[s]; r.anzahl_fotos=(j.fotos||[]).length; r._wartet=1; r._sprach=(j.audios||[]).length; R[j.art][j.k]=r; }); return a; }); }
   function netzMalen(){ Q.alle().then(function(a){ var e=$('netz'); e.className='netz'+(netzAn()?'':' off');
+    if(window.nalpBT&&nalpBT.PORTAL){ mgSchlangeMalen(a); a=a.filter(function(j){ return !j.abgelehnt; }); }   /* Portal: Abgelehnte zählen nicht als «wartet» */
     e.textContent=(netzAn()?'online':'offline')+(a.length?' · '+a.length+' wartet':''); }); }
+  /* ── Portal (05.11.2026): die Mangel-Meldungen der Warteschlange sichtbar, mit Grund ──
+     Verweigert die API eine Meldung (403, oder die Op «rejected: forbidden»), bleibt sie hier stehen: «abgelehnt: <Recht>»,
+     wird NICHT alle 45 s neu gesendet und verschwindet erst, wenn man sie entfernt (oder «nochmals» sendet, z.B. nachdem
+     die Bauleitung das Recht gegeben hat). Ausserhalb des Portals gibt es diese Liste nicht. */
+  function mgSchlangeMalen(a){
+    var box=$('mgSchlange');
+    if(!box){ box=document.createElement('div'); box.id='mgSchlange'; box.className='box'; box.hidden=true;
+      var main=document.querySelector('main'); main.insertBefore(box,main.firstChild);
+      box.addEventListener('click',function(ev){ var b=ev.target.closest('button[data-k]'); if(!b) return;
+        var k=b.getAttribute('data-k');
+        if(b.getAttribute('data-was')==='weg'){ if(!confirm('Diese Mangel-Meldung entfernen? Sie wird dann nicht mehr gesendet.')) return;
+          Q.weg(k).then(netzMalen); return; }
+        Q.alle().then(function(x){ var j=x.filter(function(y){ return y.k===k; })[0]; if(!j) return;
+          delete j.abgelehnt; return Q.add(j).then(function(){ netzMalen(); senden(); }); }); }); }
+    var m=a.filter(function(j){ return j.mangel; });
+    box.hidden=!m.length;
+    box.innerHTML=m.length?'<b>Mangel-Meldungen an Nalps</b>'+m.map(function(j){
+      var t=esc(j.mangel.fid||'')+' – '+esc(j.mangel.titel||'');
+      return '<div style="margin-top:6px;font-size:13px">'+t+'<br>'+(j.abgelehnt
+        ?'<span style="color:#D72622;font-weight:700">abgelehnt: '+esc(j.abgelehnt)+'</span> '
+          +'<button type="button" data-k="'+esc(j.k)+'" data-was="nochmal" style="font-size:12px;padding:2px 8px">nochmals senden</button> '
+          +'<button type="button" data-k="'+esc(j.k)+'" data-was="weg" style="font-size:12px;padding:2px 8px">entfernen</button>'
+        :'<span style="color:var(--mut)">⏳ wartet</span>')+'</div>'; }).join(''):'';
+  }
+  function mangelAbgelehnt(j,grund){
+    j.abgelehnt=grund||'keine Berechtigung';
+    return Q.add(j).then(function(){ toast('Mangel '+j.mangel.fid+' abgelehnt: '+j.abgelehnt,true); netzMalen(); });
+  }
   window.addEventListener('online',function(){ netzMalen(); senden(); });
   window.addEventListener('offline',netzMalen);
   setInterval(function(){ Q.alle().then(function(a){ if(a.length) senden(); }); },45000);
@@ -680,6 +709,7 @@
   }
   function mangelSenden(j){
     if(!window.nalpBT || !nalpBT.persoenlich()) return Promise.resolve();    /* wartet auf die Anmeldung */
+    if(j.abgelehnt) return Promise.resolve();    /* Portal: verweigert – bleibt stehen, wird nicht wieder gesendet (mgSchlangeMalen) */
     var m=j.mangel;
     return m.fotos.reduce(function(k,data,ix){ return k.then(function(){
         return fetch(data).then(function(r){ return r.blob(); }).then(function(b){ return nalpBT.fotoHochladen(m.assets[ix],b); })
@@ -689,8 +719,13 @@
           author:nalpBT.wer()||m.von||'Inventur', createdAt:new Date(m.ts).toISOString(), assetIds:m.assets}}]); })
       .then(function(res){ var x=res&&res[0]; if(!x) return;
         if(x.status==='applied'||x.status==='duplicate'){ toast('✔ Mangel in Nalps: '+m.fid); return Q.weg(j.k); }
+        if(x.status==='rejected'&&nalpBT.PORTAL&&x.error&&x.error.code==='forbidden')    /* Portal: fehlendes Recht → stehen lassen */
+          return mangelAbgelehnt(j,nalpBT.verweigert(x.error.message));
         if(x.status==='rejected'){ toast('Mangel '+m.fid+' abgelehnt: '+((x.error&&x.error.message)||'').slice(0,80),true); return Q.weg(j.k); } })
-      .catch(function(){});    /* Netz/Server: bleibt in der Warteschlange */
+      .catch(function(e){    /* Netz/Server: bleibt in der Warteschlange */
+        if(nalpBT.PORTAL&&e&&e.status===403)     /* Portal: verweigert (Foto oder Op) → «abgelehnt: <Recht>», kein Dauer-Wiederholen */
+          return mangelAbgelehnt(j,e.ausstehend?'Konto wartet auf Freigabe':(e.rechtLabel||e.recht||''));
+      });
   }
   function senden(){
     if(!netzAn()) { netzMalen(); return Promise.resolve(); }
@@ -1483,7 +1518,7 @@
   /* Nalpi live: Gewinde, Einzelfundament und montierter Pfahlkopf je Bein (eine Abfrage, /api/w1/q/drillpoints) */
   function liveHolen(){
     if(!window.nalpBT) return Promise.resolve(null);
-    return nalpBT.q('drillpoints',SYNC_Q,{timeout:15000}).then(function(rows){ var g={}, ef={}, kopf={};
+    return nalpBT.q('drillpoints',SYNC_Q,{timeout:15000,haupt:true}).then(function(rows){ var g={}, ef={}, kopf={};
       rows.forEach(function(r){ var f=r.foundation_id; if(!f) return;
         if(r.gewinde_mm!=null) g[f]=+r.gewinde_mm; if(r.einzelfundament) ef[f]=1; if(r.head_mounted_on) kopf[f]=1; });
       return {tag:heute(), ts:Date.now(), g:g, ef:ef, kopf:kopf}; },function(){ return null; });

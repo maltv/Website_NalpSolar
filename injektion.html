@@ -412,7 +412,7 @@
   function apiLaden(){
     var A={};
     function seite(){
-      return nalpBT.q('drillpoints', API_Q, {timeout:12000}).then(function(rows){
+      return nalpBT.q('drillpoints', API_Q, {timeout:12000, haupt:true}).then(function(rows){
         rows.forEach(function(s){
           A[s.foundation_id]=[s.injected_at?1:0, s.drilled_at?1:0, 1, s.drilled_on||tagLokal(s.drilled_at)];
         });

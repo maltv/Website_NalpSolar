@@ -624,7 +624,7 @@ function btMaengel(){
      NUR Tisch-Mängel filtert MG_Q (Bohrpunkt-Mängel, z.B. «Kopf nicht montiert» an 202_S1, gehören dem
      Bohr-/Pfahlkopfteam – Entscheid Victor 18.08.2026). Wer erfasst hat (von) gibt die Sicht nicht her.
      Ohne Token (nalpBT) wird geworfen → Offline-Stand. */
-  return nalpBT.q('maengel', MG_Q, {timeout:12000}).then(function(rows){
+  return nalpBT.q('maengel', MG_Q, {timeout:12000, haupt:true}).then(function(rows){
     return rows.map(function(m){ return {
       nr:m.display_no, art:m.entity_type, key:m.entity_key,
       tisch:String(m.entity_key||'').split('_')[0], titel:m.title,

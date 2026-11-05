@@ -261,7 +261,7 @@
   /* Live-Stand BuildTrack (nur lesen, gleiche Quelle wie injektion.html): injected_at → injiziert, drilled_at → mind. gebohrt.
      Ohne Token (nalp-buildtrack.js) bleibt apiOk false und die Seite zeigt den Export-Stand. */
   function apiLaden(){
-    return nalpBT.q('drillpoints', API_Q, {timeout:12000}).then(function(rows){
+    return nalpBT.q('drillpoints', API_Q, {timeout:12000, haupt:true}).then(function(rows){
       rows.forEach(function(s){ api[s.foundation_id]=[s.injected_at?1:0, s.drilled_at?1:0]; });
       apiOk=true;
     }).catch(function(){ apiOk=false; });

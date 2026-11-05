@@ -23,6 +23,16 @@
  * (GET /api/v1/me ohne Authorization), sonst ein persoenliches Token aus localStorage (Server ohne Cookie-Sitzung).
  * nalpBT.modus() sagt danach 'cookie' | 'bearer' | null. Auf allen anderen Adressen bleibt alles wie bisher.
  * Mehrfach eingebunden (z.B. vom Gate nachgeladen) gilt die erste Fassung — ein Zustand je Seite.
+ *
+ * FEHLER UND RECHTE (nur PORTAL, 05.11.2026): q, datei, ops und fotoHochladen laufen dort durch EINE Stelle (portalRuf):
+ *   403 → ein Kasten «Keine Berechtigung: <Recht> – bitte die Bauleitung fragen.» (einer aufs Mal, je Recht einmal je
+ *         Seitenaufruf; account_pending → «Ihr Konto wartet auf Freigabe»); der Fehler traegt .recht/.rechtLabel/.code.
+ *   401 → der Anmeldedialog (anmeldenDialog), danach EIN neuer Versuch; abgebrochen → der Fehler wie bisher.
+ *   Option { still: true }: weder Kasten noch Dialog — fuer Aufrufe mit eigenem Rueckfall (nalp-live: die Datei).
+ *   Option { haupt: true }: der Hauptinhalt der Seite (an der Aufrufstelle der Seite gesetzt). Eine 403 darauf zeigt
+ *         statt des Kastens eine Seiten-Notiz «Für diese Seite fehlt Ihrem Konto: <Recht> – bitte die Bauleitung
+ *         fragen.» mit «Abmelden / anderes Konto» und «Zur Startseite» — die API entscheidet, keine Liste hier (Dennis).
+ * Ausserhalb des Portals ist nichts davon aktiv: dieselben Fehler, kein Kasten, kein Dialog, keine Notiz.
  */
 window.nalpBT = window.nalpBT || (function () {
   'use strict';
@@ -147,6 +157,7 @@ window.nalpBT = window.nalpBT || (function () {
   function fehler(r) {
     var e = new Error('buildtrack ' + r.status);
     e.status = r.status;
+    if (PORTAL) e.antwort = r;     /* Portal: portalRuf liest daraus den Grund einer 403 (Recht) */
     return e;
   }
 
@@ -155,7 +166,7 @@ window.nalpBT = window.nalpBT || (function () {
      (Error 'kein Token'), damit die Seiten sofort auf ihren Offline-Stand gehen. */
   function q(view, query, opt) {
     var o = opt || {};
-    if (PORTAL) return bereit().then(function () { return qJetzt(view, query, o); });
+    if (PORTAL) return portalRuf(function () { return qJetzt(view, query, o); }, o);
     if (!hatToken()) return Promise.reject(new Error('kein Token'));
     return qJetzt(view, query, o);
   }
@@ -185,7 +196,7 @@ window.nalpBT = window.nalpBT || (function () {
      persoenliches Token (nie KEY), sonst wie q(). Ergebnis: die Response (r.ok), sonst Error mit .status. */
   function datei(pfad, opt) {
     var o = opt || {};
-    if (PORTAL) return bereit().then(function () { return dateiJetzt(pfad, o); });
+    if (PORTAL) return portalRuf(function () { return dateiJetzt(pfad, o); }, o);
     if (!hatToken()) return Promise.reject(new Error('kein Token'));
     return dateiJetzt(pfad, o);
   }
@@ -197,8 +208,8 @@ window.nalpBT = window.nalpBT || (function () {
   /* Kommandos nach /api/v2/ops. `ops` = [{ op, idempotencyKey, args }]. Antwort: results[i] je Op mit
      status 'applied' | 'duplicate' | 'rejected' (rejected traegt error {code, message} und ist ENDGUELTIG).
      Geworfen wird nur, wenn die Anfrage selbst nicht durchkam (dann darf und muss wiederholt werden). */
-  function ops(liste) {
-    if (PORTAL) return bereit().then(function () { return opsJetzt(liste); });
+  function ops(liste, opt) {
+    if (PORTAL) return portalRuf(function () { return opsJetzt(liste); }, opt || {});
     if (!hatToken()) return Promise.reject(new Error('kein Token'));
     return opsJetzt(liste);
   }
@@ -224,15 +235,143 @@ window.nalpBT = window.nalpBT || (function () {
     return { op: KIND_ZU_OP[v1.kind] || v1.kind, idempotencyKey: v1.idempotencyKey, args: args };
   }
 
-  /* Foto hochladen (Mangel-Foto). true = angenommen (auch wenn es schon da war). */
-  function fotoHochladen(id, blob) {
-    if (PORTAL) return sitzung().then(function () { return modusWert ? fotoJetzt(id, blob) : false; });   /* ohne Anmeldung: nicht angenommen */
+  /* Foto hochladen (Mangel-Foto). true = angenommen (auch wenn es schon da war).
+     Portal: 401/403 laufen durch portalRuf (Dialog bzw. Kasten) und werfen dann (Fehler mit .status/.recht), damit eine
+     Warteschlange eine Verweigerung erkennt; alles andere wie bisher true/false. */
+  function fotoHochladen(id, blob, opt) {
+    if (PORTAL) return sitzung().then(function () {   /* ohne Anmeldung: nicht angenommen */
+      return modusWert ? portalRuf(function () { return fotoPortal(id, blob); }, opt || {}) : false;
+    });
     return fotoJetzt(id, blob);
   }
+  function fotoPortal(id, blob) {
+    return fotoAnfrage(id, blob).then(function (r) { if (r.status === 401 || r.status === 403) throw fehler(r); return r.ok; });
+  }
   function fotoJetzt(id, blob) {
+    return fotoAnfrage(id, blob).then(function (r) { return r.ok; });
+  }
+  function fotoAnfrage(id, blob) {
     return holen(BASIS + '/api/v1/assets/' + encodeURIComponent(id) + '?feature=maengel', zugang({
       method: 'POST', headers: kopf({ 'content-type': blob.type || 'image/jpeg' }), body: blob
-    }), 60000).then(function (r) { return r.ok; });
+    }), 60000);
+  }
+
+  /* ── Rechte und Fehler auf dem Portal (05.11.2026) ──
+     Die deutschen Namen der Rechte: das kurze `label` aus der Office-App (src/domain/config/permissions.ts,
+     PERMISSION_LABELS) — nur die, die die API bei den Aufrufen dieser Seiten nennen kann. Unbekannt → der Name. */
+  var RECHT_LABEL = {
+    'accounts:self': 'Eigenes Konto',
+    'plan:read': 'Plan: Tische, Bohrpunkte (Soll), Geometrie, Bereiche, Kartenebenen',
+    'drill:read': 'Bohrstand und Bohrverlauf',
+    'maengel:read': 'Mängel',
+    'standorte:read': 'Standorte',
+    'topo:read': 'Topo-Punkte',
+    'photos:read': 'Fotos',
+    'office:read': 'Büro: Freigaben, Bestellungen, Passstücke, Ausmass, Verlauf, Werkleitungen',
+    'freigabe:read': 'Freigaben an ILF und ihre Antworten',
+    'documents:read': 'Dokumente',
+    'field:write': 'Felddaten erfassen (Bohrstand, Mängel, Standorte, Topo-Punkte)',
+    'assets:write': 'Fotos hochladen',
+    'drill:write': 'Bohrstand erfassen',
+    'maengel:resolve:any': 'Jeden Mangel erledigen oder löschen',
+    'app:map': 'Karte', 'app:drill': 'Bohr-App', 'app:issues': 'Mängel-App', 'app:vormontage': 'Vormontage', 'app:office': 'Office'
+  };
+  function rechtLabel(p) {
+    p = String(p || '');
+    return Object.prototype.hasOwnProperty.call(RECHT_LABEL, p) ? RECHT_LABEL[p] : p;
+  }
+
+  /* Der Kasten bei einer 403: einer aufs Mal, je Recht (bzw. «wartet auf Freigabe») einmal je Seitenaufruf. */
+  var kastenOffen = false, kastenGezeigt = {};
+  function kasten(text, schluessel) {
+    if (!PORTAL || kastenOffen || kastenGezeigt[schluessel] || !document.body) return;
+    if (document.getElementById('nalpBtNotiz')) return;     /* die Seiten-Notiz sagt es schon */
+    kastenGezeigt[schluessel] = 1; kastenOffen = true;
+    var k = document.createElement('div');
+    k.id = 'nalpBtKasten'; k.setAttribute('role', 'alert');
+    k.style.cssText = 'position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:9998;box-sizing:border-box;'
+      + 'width:calc(100% - 32px);max-width:420px;background:#fff;color:#1a1a1a;border-left:6px solid #D72622;border-radius:8px;'
+      + 'box-shadow:0 8px 30px rgba(0,0,0,.3);padding:12px 12px 12px 14px;font:14px/1.4 system-ui,Arial,sans-serif;display:flex;gap:10px;align-items:flex-start';
+    var t = document.createElement('div'); t.style.flex = '1'; t.textContent = text;
+    var x = document.createElement('button'); x.type = 'button'; x.textContent = 'Schliessen';
+    x.style.cssText = 'flex:none;padding:6px 10px;font-size:13px;border:1px solid #bbb;border-radius:6px;background:#fff;cursor:pointer';
+    x.onclick = function () { if (k.parentNode) k.parentNode.removeChild(k); kastenOffen = false; };
+    k.appendChild(t); k.appendChild(x); document.body.appendChild(k);
+  }
+  function verweigertText(e) {
+    if (e.ausstehend) return 'Ihr Konto wartet auf Freigabe – bitte die Bauleitung fragen.';
+    return 'Keine Berechtigung: ' + (e.rechtLabel || 'diese Funktion') + ' – bitte die Bauleitung fragen.';
+  }
+  /* Die Seiten-Notiz: der Hauptinhalt der Seite (Option haupt) wurde verweigert — statt einer leeren Seite. */
+  function seitenNotiz(e) {
+    if (!PORTAL || !document.body || document.getElementById('nalpBtNotiz')) return;
+    var k = document.getElementById('nalpBtKasten');
+    if (k && k.parentNode) { k.parentNode.removeChild(k); kastenOffen = false; }
+    var n = document.createElement('div');
+    n.id = 'nalpBtNotiz'; n.setAttribute('role', 'alert');
+    n.style.cssText = 'position:fixed;inset:0;z-index:9997;background:#eef0f2;display:flex;align-items:center;justify-content:center;'
+      + 'padding:16px;box-sizing:border-box;font:15px/1.45 system-ui,Arial,sans-serif;color:#1a1a1a';
+    var c = document.createElement('div');
+    c.style.cssText = 'background:#fff;border-top:6px solid #D72622;border-radius:8px;max-width:380px;width:100%;padding:20px;'
+      + 'box-sizing:border-box;box-shadow:0 8px 30px rgba(0,0,0,.2)';
+    var t = document.createElement('div'); t.style.cssText = 'font-weight:700;margin-bottom:14px';
+    t.textContent = e.ausstehend ? 'Ihr Konto wartet auf Freigabe – bitte die Bauleitung fragen.'
+      : 'Für diese Seite fehlt Ihrem Konto: ' + (e.rechtLabel || 'eine Berechtigung') + ' – bitte die Bauleitung fragen.';
+    var aus = document.createElement('button'); aus.type = 'button'; aus.textContent = 'Abmelden / anderes Konto';
+    aus.style.cssText = 'display:block;width:100%;padding:11px;font-size:16px;font-weight:700;border:0;border-radius:6px;background:#D72622;color:#fff;cursor:pointer';
+    aus.onclick = function () {
+      aus.disabled = true;
+      var neu = function () { location.reload(); };
+      Promise.resolve(abmelden()).then(neu, neu);      /* nach dem Neuladen fragt das Gate die Anmeldung */
+    };
+    var heim = document.createElement('a'); heim.href = 'index.html'; heim.textContent = 'Zur Startseite';
+    heim.style.cssText = 'display:block;text-align:center;margin-top:12px;color:#63676d;font-size:14px';
+    c.appendChild(t); c.appendChild(aus); c.appendChild(heim); n.appendChild(c); document.body.appendChild(n);
+  }
+  /* Auch fuer die Seiten: eine Verweigerung, die nicht als 403 kam (v2-Op «rejected: forbidden», message = das Recht). */
+  function verweigert(recht) {
+    var e = { recht: String(recht || ''), rechtLabel: recht ? rechtLabel(recht) : '' };
+    kasten(verweigertText(e), 'r:' + e.recht);
+    return e.rechtLabel;
+  }
+  /* 403: den Grund aus der Antwort lesen ({error, permission, errorCode?}) und an den Fehler haengen. */
+  function grundLesen(e) {
+    var r = e && e.antwort;
+    if (!r || e.status !== 403) return Promise.resolve(e);
+    return r.json().catch(function () { return {}; }).then(function (j) {
+      j = j || {};
+      e.recht = String(j.permission || ''); e.code = String(j.errorCode || j.error || '');
+      e.ausstehend = e.code === 'account_pending';
+      e.rechtLabel = e.recht ? rechtLabel(e.recht) : '';
+      return e;
+    });
+  }
+  var dialogP = null;     /* mehrere 401 gleichzeitig: EIN Dialog */
+  function dialogEinmal() {
+    if (!dialogP) dialogP = anmeldenDialog('Ihre Anmeldung ist abgelaufen – bitte melden Sie sich neu an.')
+      .then(function (ok) { dialogP = null; return ok; });
+    return dialogP;
+  }
+  /* Die eine Stelle fuer alle API-Aufrufe auf dem Portal: Sitzung abwarten, aufrufen, 401/403 behandeln (siehe oben). */
+  function portalRuf(fn, o) {
+    o = o || {};
+    function pruefen(e, ersterVersuch) {
+      return grundLesen(e).then(function (e) {
+        if (!o.still && e && e.status === 401 && ersterVersuch) {
+          return dialogEinmal().then(function (ok) {
+            if (!ok) throw e;
+            return fn().catch(function (e2) { return pruefen(e2, false); });
+          });
+        }
+        if (!o.still && e && e.status === 403 && o.haupt) seitenNotiz(e);
+        else if (!o.still && e && e.status === 403) kasten(verweigertText(e), e.ausstehend ? 'pending' : 'r:' + (e.recht || ''));
+        throw e;
+      });
+    }
+    return bereit().then(function () { return fn(); }).catch(function (e) {
+      if (!e || !e.status) throw e;          /* kein Token, Netz, Abbruch: wie bisher */
+      return pruefen(e, true);
+    });
   }
 
 
@@ -333,7 +472,7 @@ window.nalpBT = window.nalpBT || (function () {
     return fetch(BASIS + '/api/v1/me/sign-out', { method: 'POST', credentials: 'same-origin' })
       .then(function () {}, function () {});
   }
-  function anmeldenDialog() {
+  function anmeldenDialog(untertitel) {     /* untertitel: nur portalRuf gibt einen (abgelaufene Anmeldung) */
     return new Promise(function (fertig) {
       var o = document.createElement('div');
       o.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
@@ -346,6 +485,7 @@ window.nalpBT = window.nalpBT || (function () {
         + '<div data-f style="color:#D72622;font-size:13px;min-height:18px;margin-bottom:8px"></div>'
         + '<div style="display:flex;gap:8px"><button type="submit" style="flex:1;padding:10px;font-size:16px;font-weight:700;border:0;border-radius:8px;background:#1f6feb;color:#fff">Anmelden</button>'
         + '<button type="button" data-x style="padding:10px 14px;font-size:16px;border:1px solid #bbb;border-radius:8px;background:#fff">Abbrechen</button></div></form>';
+      if (untertitel) o.querySelector('form').children[1].textContent = String(untertitel);   /* der graue Satz unter dem Titel */
       document.body.appendChild(o);
       var f = o.querySelector('form'), fehler = o.querySelector('[data-f]');
       function zu(v) { o.remove(); fertig(v); }
@@ -388,5 +528,6 @@ window.nalpBT = window.nalpBT || (function () {
 
   return { BASIS: BASIS, PORTAL: PORTAL, token: token, setToken: setToken, hatToken: hatToken, q: q, datei: datei, ops: ops, mangelOp: mangelOp, fotoHochladen: fotoHochladen,
            persoenlich: persoenlich, wer: wer, anmelden: anmelden, abmelden: abmelden, anmeldenDialog: anmeldenDialog, knopf: knopf,
-           sitzung: sitzung, modus: modus, offline: offline, grund: grund, codeBestaetigen: codeBestaetigen };
+           sitzung: sitzung, modus: modus, offline: offline, grund: grund, codeBestaetigen: codeBestaetigen,
+           rechtLabel: rechtLabel, verweigert: verweigert };
 })();

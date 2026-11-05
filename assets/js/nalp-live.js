@@ -593,7 +593,9 @@
   var SELBST = (document.currentScript && document.currentScript.src) || '';
   var ORDNER = SELBST ? SELBST.replace(/[^\/]*$/, '') : 'assets/js/';
   var CSV_BOHR = '/api/w1/exports/drilling-point-data.csv', CSV_TISCH = '/api/w1/exports/table-id.csv';
-  var LANG = { timeout: 30000 };
+  /* still: true — jeder Builder faellt bei einem Fehler auf die mitgelieferte Datei zurueck, die Seite geht weiter: darum
+     KEIN Kasten «Keine Berechtigung» und kein Anmeldedialog von nalpBT (nur Portal, 05.11.2026). */
+  var LANG = { timeout: 30000, still: true };
 
   /* nalpBT abwarten bzw. nachladen (wie nalp-gate.js) — null, wenn es nicht kommt. */
   var btP = null;
@@ -623,7 +625,7 @@
   var csvCache = {};
   function csvHolen(bt, pfad) {
     if (!csvCache[pfad]) {
-      csvCache[pfad] = bt.datei(pfad, { accept: 'text/csv', timeout: 60000 }).then(function (r) {
+      csvCache[pfad] = bt.datei(pfad, { accept: 'text/csv', timeout: 60000, still: true }).then(function (r) {
         var m = /(\d{4}-\d{2}-\d{2})/.exec(r.headers.get('content-disposition') || '');
         var tag = m ? m[1] : zuerichTag(new Date());
         return r.text().then(function (t) {
