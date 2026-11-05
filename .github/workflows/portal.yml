@@ -1,0 +1,56 @@
+# Deploy the website to portal.buildtrack.ch (the static website of the storage account `nalpsportal`, container
+# `$web`), on every push to main — the nightly nalpi-stand.yml commits included — and by hand (workflow_dispatch).
+# GitHub Pages (static.yml) keeps running beside it until the switch.
+#
+# Only changed files are uploaded: azcopy compares MD5 hashes (a fresh checkout gives every file a new mtime, so a
+# time compare would re-upload all ~330 MB), and files gone from the repo are deleted from $web. Not published:
+# .git, .github and _Archiv.
+#
+# Auth: GitHub OIDC → an Entra app registration with a federated credential for this repo's main branch and the
+# role «Storage Blob Data Contributor» on nalpsportal only. The three values are IDs, not secrets.
+name: Deploy to portal.buildtrack.ch
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+# A newer push makes an older, still running sync pointless: the latest commit wins.
+concurrency:
+  group: portal
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Sync to $web
+        env:
+          AZCOPY_AUTO_LOGIN_TYPE: AZCLI
+          AZCOPY_DISABLE_SYSLOG: "true"
+        run: |
+          azcopy --version
+          azcopy sync . 'https://nalpsportal.blob.core.windows.net/$web' \
+            --recursive \
+            --delete-destination=true \
+            --compare-hash=MD5 \
+            --put-md5 \
+            --exclude-path='.git;.github;_Archiv' \
+            --log-level=WARNING
