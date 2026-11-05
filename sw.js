@@ -190,6 +190,10 @@ self.addEventListener('fetch', function(e) {
   // Seit dem v1-Aus liest die Seite die Query-Engine-Sicht /api/w1/q/drillpoints (nalp-buildtrack.js).
   if (apiUrl.indexOf('api.buildtrack.ch/api/w1/q/drillpoints') !== -1 || apiUrl.indexOf('api.buildtrack.ch/api/v1/drillpoints/') !== -1) return;
 
+  // Portal-Sitzung (05.11.2026): /api/v1/me nie über den Service Worker. Eine gespeicherte 200-Antwort hielte die Seite
+  // ohne Netz – und nach dem Abmelden – für angemeldet; ohne Netz entscheidet nalp-buildtrack.js selbst (Merker der letzten Sitzung).
+  if (apiUrl.indexOf('api.buildtrack.ch/api/v1/me') !== -1) return;
+
   // Firebase-RTDB (erdung-fotos.html «noch nicht übernommen», 02.10.2026): nie über den Service Worker.
   // `….json?shallow=true` endet nicht auf .json und lief deshalb cache-first – die Zahl blieb stehen.
   if (url.indexOf('firebasedatabase.app') !== -1) return;

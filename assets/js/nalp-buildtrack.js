@@ -71,8 +71,20 @@ window.nalpBT = window.nalpBT || (function () {
      1. GET /api/v1/me mit Cookie, ohne Authorization: 200 → COOKIE (ein altes localStorage-Token wird geloescht);
         403 (account_pending) → nicht angemeldet, grund() sagt warum.
      2. sonst, wenn ein persoenliches Token da ist: GET /api/v1/me mit diesem Token: 200 → BEARER; 401 → Token loeschen.
-     3. sonst nicht angemeldet. Ergebnis: Promise<Konto|null>. Netzfehler gelten als «nicht angemeldet» (Token bleibt). */
-  var sitzungP = null, modusWert = null, konto = null, geklaert = false, grundText = '';
+     3. sonst nicht angemeldet. Ergebnis: Promise<Konto|null>.
+     OFFLINE: kommt von /api/v1/me gar keine Antwort (Netzfehler, keine HTTP-Antwort) und war beim letzten Seitenaufruf
+     eine Sitzung bestaetigt (Merker localStorage nalp_portal_session_v1 = {modus, name, at}), liefert sitzung() ein
+     Konto mit offline:true — das Gate laesst durch, offline() ist true, modus() bleibt null: Lesen geht dann wie ohne
+     Anmeldung auf den mitgelieferten Stand. Ohne Merker: nicht angemeldet. Der Merker faellt bei 401/403 und Abmelden. */
+  var sitzungP = null, modusWert = null, konto = null, geklaert = false, grundText = '', offlineWert = false;
+  var LS_SITZUNG = 'nalp_portal_session_v1';
+  function merkerSetzen() {
+    try { localStorage.setItem(LS_SITZUNG, JSON.stringify({ modus: modusWert, name: wer(), at: new Date().toISOString() })); } catch (e) {}
+  }
+  function merkerLoeschen() { try { localStorage.removeItem(LS_SITZUNG); } catch (e) {} }
+  function merkerLesen() {
+    try { var m = JSON.parse(localStorage.getItem(LS_SITZUNG) || 'null'); return m && m.modus ? m : null; } catch (e) { return null; }
+  }
   function meLesen(h) {
     h.accept = 'application/json';
     return holen(BASIS + '/api/v1/me', { headers: h, credentials: 'same-origin', cache: 'no-store' }, 12000)
@@ -89,23 +101,32 @@ window.nalpBT = window.nalpBT || (function () {
       return sitzungP;
     }
     sitzungP = meLesen({}).then(function (a) {
-      if (a.status === 200) { setToken(''); modusWert = 'cookie'; konto = kontoAus(a.j); return konto; }
+      if (a.status === 200) { setToken(''); modusWert = 'cookie'; konto = kontoAus(a.j); merkerSetzen(); return konto; }
+      if (a.status === 0) {          /* keine Antwort: offline, wenn der letzte Aufruf angemeldet war */
+        var m = merkerLesen();
+        if (!m) return null;
+        offlineWert = true;
+        return { displayName: m.name || gespeicherterName(), offline: true };
+      }
       if (a.status === 403) {
-        grundText = (a.j.error === 'account_pending' || a.j.code === 'account_pending')
+        merkerLoeschen();
+        var c = a.j.errorCode || a.j.error || a.j.code;
+        grundText = c === 'account_pending'
           ? 'Ihr Konto ist noch nicht freigeschaltet.' : (a.j.message || 'Kein Zugang mit diesem Konto.');
         return null;
       }
       var t = token();
-      if (!t) return null;
+      if (!t) { if (a.status === 401) merkerLoeschen(); return null; }
       return meLesen({ authorization: 'Bearer ' + t }).then(function (b) {
-        if (b.status === 200) { modusWert = 'bearer'; konto = kontoAus(b.j); return konto; }
-        if (b.status === 401) setToken('');
+        if (b.status === 200) { modusWert = 'bearer'; konto = kontoAus(b.j); merkerSetzen(); return konto; }
+        if (b.status === 401) { setToken(''); merkerLoeschen(); }
         return null;
       });
     }).then(function (k) { geklaert = true; return k; }, function () { geklaert = true; return null; });
     return sitzungP;
   }
   function modus() { return modusWert; }
+  function offline() { return offlineWert; }
   function grund() { return grundText; }
   /* Portal: vor jedem Zugriff die Sitzung abwarten; ohne Anmeldung 'kein Token' wie bisher ohne Schluessel. */
   function bereit() {
@@ -253,7 +274,8 @@ window.nalpBT = window.nalpBT || (function () {
         konto = j.account || konto;
         var n = (j.account && (j.account.displayName || j.account.name)) || String(name || '').trim();
         try { localStorage.setItem(LS_NAME, n); } catch (e) {}
-        geklaert = true; grundText = ''; sitzungP = Promise.resolve(konto || { displayName: n });
+        geklaert = true; grundText = ''; offlineWert = false; sitzungP = Promise.resolve(konto || { displayName: n });
+        merkerSetzen();
         return { ok: true, name: n };
       }
       if (r.status === 202 && j.challenge) {
@@ -290,8 +312,8 @@ window.nalpBT = window.nalpBT || (function () {
   }
   function abmeldenPortal() {
     var war = modusWert;
-    modusWert = null; konto = null; geklaert = true; sitzungP = Promise.resolve(null);
-    setToken(''); try { localStorage.removeItem(LS_NAME); } catch (e) {}
+    modusWert = null; konto = null; geklaert = true; offlineWert = false; sitzungP = Promise.resolve(null);
+    merkerLoeschen(); setToken(''); try { localStorage.removeItem(LS_NAME); } catch (e) {}
     if (war !== 'cookie') return Promise.resolve();
     return fetch(BASIS + '/api/v1/me/sign-out', { method: 'POST', credentials: 'same-origin' })
       .then(function () {}, function () {});
@@ -344,10 +366,12 @@ window.nalpBT = window.nalpBT || (function () {
       };
     }
     malen();
-    if (PORTAL) sitzung().then(malen);     /* Portal: sobald die Sitzung geklaert ist, richtig anzeigen */
+    /* Portal: sobald die Sitzung geklaert ist, richtig anzeigen — und ist sie angemeldet, nachher(true) wie nach
+       einer Anmeldung ueber den Knopf (inventur sendet dann seine Warteschlange). */
+    if (PORTAL) sitzung().then(function () { malen(); if (modusWert && nachher) nachher(true); });
   }
 
   return { BASIS: BASIS, PORTAL: PORTAL, token: token, setToken: setToken, hatToken: hatToken, q: q, ops: ops, mangelOp: mangelOp, fotoHochladen: fotoHochladen,
            persoenlich: persoenlich, wer: wer, anmelden: anmelden, abmelden: abmelden, anmeldenDialog: anmeldenDialog, knopf: knopf,
-           sitzung: sitzung, modus: modus, grund: grund, codeBestaetigen: codeBestaetigen };
+           sitzung: sitzung, modus: modus, offline: offline, grund: grund, codeBestaetigen: codeBestaetigen };
 })();

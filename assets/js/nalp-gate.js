@@ -17,6 +17,8 @@
  * 8813/7188 — Dennis: «ein angemeldeter BuildTrack-Benutzer kommt durch»). Das Gate fragt nalpBT.sitzung()
  * (assets/js/nalp-buildtrack.js, wird nachgeladen, falls die Seite es nicht selbst einbindet): angemeldet → frei,
  * sonst die BuildTrack-Anmeldung (Name oder E-Mail + Passwort, bei neuem Geraet der Code). Kein localStorage-Flag.
+ * Nach der Anmeldung laedt die Seite neu (ihre ersten Abrufe laufen dann angemeldet). Ohne Netz und mit zuletzt
+ * bestaetigter Sitzung (nalpBT, Merker nalp_portal_session_v1) geht das Gate auf, mit einem kleinen Hinweis «Offline».
  * Test-Schalter wie in nalp-buildtrack.js: localStorage.nalp_portal_test = '1' oder ?portal=1 (nur zum lokalen Pruefen).
  */
 (function () {
@@ -232,6 +234,17 @@
     setTimeout(function () { if (gate.parentNode) gate.parentNode.removeChild(gate); }, 380);
   }
 
+  // Offline mit zuletzt bestaetigter Sitzung: kleiner Hinweis unten, verschwindet nach ein paar Sekunden.
+  function hinweisOffline() {
+    var h = document.createElement('div');
+    h.textContent = 'Offline – angezeigt wird der zuletzt gespeicherte Stand.';
+    h.style.cssText = 'position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:2147483646;' +
+      'background:#3a3f45;color:#fff;font:13px Arial,sans-serif;padding:7px 12px;border-radius:999px;' +
+      'box-shadow:0 4px 14px rgba(0,0,0,.3);max-width:calc(100% - 32px);text-align:center;pointer-events:none';
+    (document.body || htmlEl).appendChild(h);
+    setTimeout(function () { if (h.parentNode) h.parentNode.removeChild(h); }, 6000);
+  }
+
   // nalpBT bereitstellen: erst nach dem Parsen schauen (die Seite bindet nalp-buildtrack.js oft selbst weiter unten ein),
   // sonst per <script> nachladen — Pfad neben diesem Skript (alle Seiten liegen im Wurzelverzeichnis).
   function mitBT(weiter, fehlt) {
@@ -265,7 +278,11 @@
     }
     function antwort(r) {
       ok.disabled = false;
-      if (r.ok) { freigeben(); return; }
+      if (r.ok) {                 // angemeldet: neu laden, damit die Seite ihre ersten Abrufe angemeldet macht
+        melden('Angemeldet – die Seite wird neu geladen …', true);
+        location.reload();
+        return;
+      }
       if (r.code) { challenge = r.challenge; f.c.value = ''; schritt(2); melden(r.msg, true); return; }
       melden(r.msg);
     }
@@ -288,7 +305,11 @@
     mitBT(function (nalpBT) {
       bt = nalpBT;
       bt.sitzung().then(function (konto) {
-        if (konto) { freigeben(); return; }
+        if (konto) {
+          freigeben();
+          if (konto.offline) hinweisOffline();
+          return;
+        }
         schritt(1);
         melden(bt.grund ? bt.grund() : '');
       });
