@@ -90,7 +90,7 @@ footer { font-size: 13px; color: var(--muted); }
     <div class="eyebrow">Nalps · Materialerfassung · Stand 09.11.2026 · nur Admins</div>
     <h1>Offene Fragen zur Stückliste der Tische</h1>
     <p class="lead">Hoi Victor. Nalps soll pro Tisch, Pfahl und Passstück wissen, welches Material verbaut ist, bis zur einzelnen Schraube. Daraus rechnet Nalps «verbaut», «Bedarf» und «offen» je Artikel. Die Grundlage sind die Mauchle-Bestelllisten 2026 und die IFC-Tischmodelle. Für die Serie 2026 stimmen sie Schraube für Schraube überein. Bei den folgenden Punkten widersprechen sich die Quellen, oder es fehlt eine Angabe. Bitte schreib zu jedem Punkt, was du weisst. «Weiss nicht» ist auch eine Antwort, dann fragen wir Mauchle oder ILF. Ganz unten steht der Kontext für deinen Agenten: wie wir das aufbauen und die Antwort zu deinem PR #601.</p>
-    <div class="meta"><span class="progress" id="progress">Antworten werden geladen …</span><span>Jede Antwort wird beim Klick auf «Speichern» gespeichert und bleibt für Dennis sichtbar.</span></div>
+    <div class="meta"><span class="progress" id="progress"></span><span>Jede Antwort wird beim Klick auf «Speichern» gespeichert und bleibt für Dennis sichtbar.</span></div>
   </header>
   <div class="sperre" id="sperre" hidden></div>
   <div id="inhalt" hidden style="display:grid;gap:22px">
@@ -142,6 +142,7 @@ Die Fragen auf dieser Seite beantwortet Victor selbst (oben). Rückfragen gehen 
   </div>
   <footer>Bereits geklärt: Längere Schrauben dürfen statt kürzerer verbaut werden (Dennis 09.11.). Die M12-Länge am Modulträger ist darum kein Problem. Quellen: Mauchle «Befestigungsmaterial Typ A–E» vom 26.02.2026; IFC-Gesamtmodelle PL_0350–0356 (2025) und PL_0360–0369 (2026).</footer>
 </div>
+<script src="assets/js/nalp-buildtrack.js"></script>
 <script>
 (function () {
 'use strict';
@@ -267,18 +268,20 @@ document.getElementById('kopieren').addEventListener('click', function () {
   function waehlen() { var r = document.createRange(); r.selectNodeContents(document.getElementById('agenttext')); var s = getSelection(); s.removeAllRanges(); s.addRange(r); k.textContent = 'Text markiert: mit Strg+C kopieren.'; }
 });
 if (!PORTAL) { sperre('Diese Seite gibt es nur auf portal.buildtrack.ch, mit BuildTrack-Anmeldung als Admin.'); return; }
-fetch('/api/v1/me', { credentials: 'same-origin', cache: 'no-store' })
-  .then(function (r) { if (r.status === 401) return null; if (!r.ok) throw new Error(r.status); return r.json(); })
-  .then(function (j) {
-    var a = j && (j.account || j);
-    if (!a) { sperre('Bitte zuerst mit BuildTrack anmelden.'); return; }
-    var admin = a.level === 'admin' || a.role === 'admin' || a.effectiveRole === 'admin';
-    if (!admin) { sperre('Diese Seite ist nur für Admins.'); return; }
-    wer = a.displayName || '';
-    document.getElementById('inhalt').hidden = false;
-    render(); fortschritt(); laden();
-  })
-  .catch(function () { sperre('Die Anmeldung konnte nicht geprüft werden. Bitte später neu laden.'); });
+// Sitzung ueber nalpBT (Cookie ODER persoenliches Token, wie das Gate): ohne Anmeldung zeigt das Gate seine Maske,
+// diese Seite zeigt dann nichts eigenes (sonst laege ein Hinweis unter der Anmeldung).
+var bt = window.nalpBT;
+if (!bt || !bt.sitzung) { sperre('Die Anmeldung konnte nicht geprüft werden. Bitte die Seite neu laden.'); return; }
+bt.sitzung().then(function (a) {
+  if (!a) return;                       // nicht angemeldet: das Gate zeigt die Anmeldung
+  if (a.offline) { sperre('Offline: Die Fragen brauchen eine Verbindung. Bitte später neu laden.'); return; }
+  var perms = Array.isArray(a.permissions) ? a.permissions : [];
+  var admin = a.level === 'admin' || a.role === 'admin' || a.effectiveRole === 'admin' || perms.indexOf('accounts:admin') >= 0;
+  if (!admin) { sperre('Diese Seite ist nur für Admins.'); return; }
+  wer = a.displayName || '';
+  document.getElementById('inhalt').hidden = false;
+  render(); fortschritt(); laden();
+}, function () { sperre('Die Anmeldung konnte nicht geprüft werden. Bitte später neu laden.'); });
 })();
 </script>
 </body>
