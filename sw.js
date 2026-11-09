@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v230';
+var CACHE = 'nalpsolar-v231';
 var PRECACHE = [
   './index.html',
   // Webapp-Manifest + Icons des Portals (22.09.2026, Tools\Portal_Icons_Bauen.py) und die
@@ -35,14 +35,14 @@ var PRECACHE = [
   './assets/js/nalp-install.js',
   './lieferscheine.html',
   './vormontage.html',
-  './wasserleitung.html',
+  // './wasserleitung.html'   Kachel abgeschaltet 09.11.2026 (Auftrag Victor)
   './uploads/wasserleitung.json',
   './altlasten.html',
   './uploads/altlasten.json',
-  './injektion.html',   // Injektion Einzelbeine ablaufen (28.09.2026, WERKZEUGE §68)
+  // './injektion.html',   // Injektion Einzelbeine ablaufen (28.09.2026, WERKZEUGE §68)   Kachel abgeschaltet 09.11.2026 (Auftrag Victor)
   './inventur.html',    // Inventur 2026 Perimeter/Berg/Tal, offline (02.11.2026, WERKZEUGE §87)
   './uploads/inventur.json',
-  './zugproben.html',   // Zugproben PZ3/PZ4 nach BA 0269 (29.09.2026, WERKZEUGE §71)
+  // './zugproben.html',   // Zugproben PZ3/PZ4 nach BA 0269 (29.09.2026, WERKZEUGE §71)   Kachel abgeschaltet 09.11.2026 (Auftrag Victor)
   './uploads/zugproben.json',   // liest auch injektion.html (Zugproben-Beine nie als Einzelbein)
   './deckbleche.html',   // Deckbleche Einzelfundamente nach BA 0272 + Borner 09.10. (27.10.2026, WERKZEUGE §84)
   './uploads/deckbleche.json',
@@ -73,10 +73,10 @@ var PRECACHE = [
   './assets/data/bpc.enc',
   './assets/js/nalp-terrain.js',
   './passstueck.html',
-  './tagesrapport.html',  // digitaler Tagesrapport (23.09.2026)
-  './me-messung.html',    // ME-Messung = Plattendruckversuch, offline mit PDF (02.10.2026, WERKZEUGE §76)
+  // './tagesrapport.html',  // digitaler Tagesrapport (23.09.2026)   Kachel abgeschaltet 09.11.2026 (Auftrag Victor)
+  // './me-messung.html',    // ME-Messung = Plattendruckversuch, offline mit PDF (02.10.2026, WERKZEUGE §76)   Kachel abgeschaltet 09.11.2026 (Auftrag Victor)
   './assets/js/jspdf.umd.min.js',   // PDF auf dem Handy bauen (me-messung.html)
-  './pfahl-lage.html',   // Schrägpfahl Lage & Auszug (22.09.2026, WERKZEUGE §64)
+  // './pfahl-lage.html',   // Schrägpfahl Lage & Auszug (22.09.2026, WERKZEUGE §64)   Kachel abgeschaltet 09.11.2026 (Auftrag Victor)
   './assets/js/nalp-passstueck-daten.js',
   // Laufende Normteil-Inventur im Tal - muss offline laufen
   './assets/js/nalp-lager.js',
@@ -159,7 +159,7 @@ var PRECACHE = [
   './uploads/tables/bereiche.json',
   // Einkauf (26.08.2026): Bedarf melden muss am Berg ohne Empfang gehen -
   // die Meldung samt Foto wartet dann in der IndexedDB-Warteschlange.
-  './einkauf.html'
+  // './einkauf.html'   Kachel abgeschaltet 09.11.2026 (Auftrag Victor)
 ];
 
 self.addEventListener('install', function(e) {
