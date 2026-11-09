@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v231';
+var CACHE = 'nalpsolar-v232';
 var PRECACHE = [
   './index.html',
   // Webapp-Manifest + Icons des Portals (22.09.2026, Tools\Portal_Icons_Bauen.py) und die
@@ -10,6 +10,7 @@ var PRECACHE = [
   './assets/img/ico-portal-maskable-512.png',
   './assets/img/ico-portal-180.png',
   './assets/img/ico/sicherheit.png',
+  './assets/img/ico/lieferschein.png',   // Kachel Bestand & Lieferscheine (09.11.2026, WERKZEUGE §93)
   './assets/img/ico/tagesrapport.png',  // Kachel Tagesrapport (23.09.2026)
   './assets/img/ico/ueberstand.png',   // Kachel Schrägpfahl (22.09.2026)
   './assets/img/ico/altlasten.png',

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bestand &amp; Lieferscheine</title>
+<!-- Portal (09.11.2026, WERKZEUGE §93): Bilanz Pfähle/Köpfe, Lieferschein-Register, Terno-Konto. Inhalt verschlüsselt in
+     uploads/bestand/bestand.enc.json (Tools\Inventur_Portal_Bauen.py) – das Website-Repo ist öffentlich. -->
+<style>
+  :root { --rot: #c8102e; --text: #1f2328; --mut: #6b7280; --rand: #d9dce1; --grund: #f3f4f6; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px;
+         background: var(--grund); color: var(--text); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  form { width: 100%; max-width: 380px; background: #fff; border: 1px solid var(--rand); border-radius: 12px; padding: 22px 20px; }
+  img { height: 22px; display: block; margin-bottom: 14px; }
+  h1 { margin: 0 0 4px; font-size: 20px; }
+  p { margin: 0 0 16px; color: var(--mut); font-size: 13.5px; }
+  input[type=password] { width: 100%; font: inherit; padding: 11px 12px; border: 1px solid var(--rand); border-radius: 8px; }
+  input[type=password]:focus { outline: 2px solid var(--rot); outline-offset: 1px; }
+  label { display: flex; gap: 8px; align-items: center; margin: 10px 0 14px; font-size: 13.5px; color: var(--mut); }
+  button { width: 100%; font: inherit; font-weight: 700; padding: 11px; border: 0; border-radius: 8px; background: var(--rot); color: #fff; cursor: pointer; }
+  #fehler { min-height: 20px; margin-top: 10px; font-size: 13.5px; color: var(--rot); }
+  a { color: var(--mut); font-size: 13px; text-decoration: none; }
+</style>
+</head>
+<body>
+<form id="tresor" autocomplete="on">
+  <img src="assets/img/strabag-logo.png" alt="STRABAG">
+  <h1>Bestand &amp; Lieferscheine</h1>
+  <p>Bilanz Pfähle und Pfahlköpfe, Lieferschein-Register, Chronologie – Lieferanten-Belege und Rechnungen, darum mit Passwort.</p>
+  <input type="text" name="username" value="bestand" autocomplete="username" hidden>
+  <input type="password" id="pw" autocomplete="current-password" placeholder="Passwort" required autofocus>
+  <label><input type="checkbox" id="merken" checked> auf diesem Gerät merken</label>
+  <button type="submit">Öffnen</button>
+  <div id="fehler" role="status"></div>
+  <a href="index.html">← Portal</a>
+</form>
+<script src="assets/js/nalp-tresor.js"></script>
+<script>nalpTresor('uploads/bestand/bestand.enc.json');</script>
+</body>
+</html>
