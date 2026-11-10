@@ -142,6 +142,7 @@ Alle drei hinter dem Recht «Material lesen» (material:read; vorerst nur Admins
 DEINE BESTAND-SEITE
 - «verbaut» und «Bedarf» je Artikel aus /api/v2/material/summary lesen, statt sie in Tools\Inventur_Portal_Bauen.py aus den Bohr- und Kopfdaten selbst zu rechnen. Die Bilanz bleibt bei dir: noch nicht eingebaut = Eingang − verbaut − an Terno − Rücklieferungen.
 - Weil die Seite verschlüsselt ist, gehört der Abruf in den entschlüsselten Seitencode (läuft nach dem Passwort, auf dem Portal mit Login). Die Eingangs-, Terno- und Zähl-Daten bleiben verschlüsselt im Repo.
+- VORSCHLAG (Dennis' Seite, 10.11.): Code und Daten trennen. Seitencode (Layout, Kacheln, Bilanz, Abruf von /api/v2/material/summary) im Klartext ins Repo; nur die vertraulichen Daten (Eingänge/Rechnungsbeträge, Lieferanten-Register, Terno-Konto, Rücklieferungen, Zählungen) verschlüsselt in z.B. uploads/bestand/daten.enc.json, gleiches Format und Passwort. nalpTresor gibt das entschlüsselte JSON an einen Callback, statt das ganze Dokument zu schreiben. Dann ist die Seite pflegbar wie die anderen, und der «verbaut»-Teil fällt aus deinem Werkzeug weg. Details im Kommentar auf PR #601.
 - Artikel abbilden: deine material.json-IDs auf article.key (z.B. ror_89x7, muffe_114, pk_ab; Schrauben sr_…). Die Schlüssel stehen in der Antwort und in Admin-Daten → material_article.
 
 WAS SCHON FEST STEHT (Quelle: Mauchle «Befestigungsmaterial Typ A–E» 26.02.2026 + IFC-Tischmodelle)
