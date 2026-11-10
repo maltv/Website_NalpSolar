@@ -101,7 +101,7 @@ footer { font-size: 13px; color: var(--muted); }
       <ul>
         <li>Nalps wird das Material-System: Stücklisten pro Bauteil, daraus «verbaut», «Bedarf» und «offen». Ohne Lieferscheine.</li>
         <li>Lieferschein-Register, Eingangsbuch und Terno-Konto bleiben vorerst auf deiner Seite. Später ziehen sie ins Lieferschein-Modul der Nachträge-App.</li>
-        <li>#601 wird nicht gemerged. Den Nalps-Teil baut Dennis' Seite. Deine Seite liest «verbaut» und «Bedarf» dann aus Nalps.</li>
+        <li>#601 ist geschlossen. Der Nalps-Teil ist seit Deploy 119 (10.11.) live. Deine Bestand-Seite liest «verbaut» und «Bedarf» ab jetzt aus Nalps (Anleitung im Text unten).</li>
       </ul>
       <div class="row"><button type="button" id="kopieren">Text für den Agenten kopieren</button><span class="state" id="kopiert"></span></div>
       <pre id="agenttext">Kontext für Victors Agenten — Antwort von Dennis zu PR #601 (Inventur), Stand 09.11.2026
@@ -125,11 +125,24 @@ WAS DU NICHT TUN SOLLST
 - Keine zweite Stückliste führen, sobald Nalps sie hat: Mengen pro Tisch (Schrauben, Normteile) kommen dann aus Nalps.
 - Keine Schreibzugriffe auf Nalps für Material. Material-Stammdaten pflegt, wer das Recht «Material-Stammdaten pflegen» bekommt (Dennis vergibt es).
 
-GEPLANTE NALPS-SCHNITTSTELLE (Spec, Phasen M3/M4; Pfade können sich bis zum Bau noch ändern)
-- GET /api/v2/material/summary          verbaut/Bedarf/offen je Artikel; Filter nach Gruppe, Bereich, Tag, Attribut
-- GET /api/v2/material/element/:kind/:id was in einem Bauteil steckt (z.B. Tisch 707)
-- GET /api/w1/q/material_lines           Abfrage-Ansicht (PostgREST-Filter), auch über MCP
-- Recht: material:read (startet nur für Admins, wird dann pro Funktion geöffnet)
+NALPS-SCHNITTSTELLE — LIVE SEIT DEPLOY 119 (10.11.2026)
+Alle drei hinter dem Recht «Material lesen» (material:read; vorerst nur Admins, z.B. Victor). Auf dem Portal mit dem Login-Cookie, über die vorhandenen Helfer in assets/js/nalp-buildtrack.js. Kein neuer Code im Helfer nötig, kein Token, kein Lese-Schlüssel:
+- Zusammenfassung je Artikel:
+    nalpBT.datei('/api/v2/material/summary?groupBy=article&grp=pfaehle', {accept:'application/json'}).then(function(r){ return r.json(); })
+  groupBy = article | bereich | day | attr:&lt;name&gt; (z.B. attr:gewinde = alle M24, egal welche Länge); Filter grp, bereich, kind, from/to (nur verbaut), cumulative (nur day).
+  Je Zeile: article {key, name, grp, unit, supplier, attrs}, bedarf, verbaut, offen, elements. Dazu computedAt («Stand») und pending (eine Änderung wartet auf den nächsten Lauf, Sekunden bis höchstens 10 Minuten).
+- Was in einem Bauteil steckt:
+    nalpBT.datei('/api/v2/material/element/table/707', {accept:'application/json'}).then(function(r){ return r.json(); })
+  kind = table | drillpoint | passstueck | einzelfundament | …; key = Tischnummer, Fundament-ID (707_S2) oder Stück-Schlüssel.
+- Alle Zeilen als Abfrage (PostgREST-Filter, seitenweise):
+    nalpBT.q('material_lines', 'select=article_key,qty,built,built_on,element_key&grp=eq.schrauben')
+- Die Felder sind Feld für Feld in der Nalpipedia-Einheit «material-stuecklisten» beschrieben (Office → Nalpipedia, oder über MCP).
+- Ein 403 heisst: der angemeldeten Person fehlt «Material lesen». Der Helfer zeigt dann den Rechte-Kasten. Nicht umgehen.
+
+DEINE BESTAND-SEITE
+- «verbaut» und «Bedarf» je Artikel aus /api/v2/material/summary lesen, statt sie in Tools\Inventur_Portal_Bauen.py aus den Bohr- und Kopfdaten selbst zu rechnen. Die Bilanz bleibt bei dir: noch nicht eingebaut = Eingang − verbaut − an Terno − Rücklieferungen.
+- Weil die Seite verschlüsselt ist, gehört der Abruf in den entschlüsselten Seitencode (läuft nach dem Passwort, auf dem Portal mit Login). Die Eingangs-, Terno- und Zähl-Daten bleiben verschlüsselt im Repo.
+- Artikel abbilden: deine material.json-IDs auf article.key (z.B. ror_89x7, muffe_114, pk_ab; Schrauben sr_…). Die Schlüssel stehen in der Antwort und in Admin-Daten → material_article.
 
 WAS SCHON FEST STEHT (Quelle: Mauchle «Befestigungsmaterial Typ A–E» 26.02.2026 + IFC-Tischmodelle)
 - Serie 2026, pro Tisch: Typ A 70 Schrauben, B–E je 78, verteilt auf 8 Verbindungen: Fussplatte (16 HV), Fussbolzen Tal, Flansch Tal-Passstück, Quertraverse, Fussbolzen Berg, Stoss Berg-Passstück, Kopfbolzen, Modulträger (24 M12). 8er-Tische = 10er.
