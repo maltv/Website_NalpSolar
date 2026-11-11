@@ -1,5 +1,5 @@
 'use strict';
-var CACHE = 'nalpsolar-v232';
+var CACHE = 'nalpsolar-v233';
 var PRECACHE = [
   './index.html',
   // Webapp-Manifest + Icons des Portals (22.09.2026, Tools\Portal_Icons_Bauen.py) und die
@@ -41,8 +41,8 @@ var PRECACHE = [
   './altlasten.html',
   './uploads/altlasten.json',
   // './injektion.html',   // Injektion Einzelbeine ablaufen (28.09.2026, WERKZEUGE §68)   Kachel abgeschaltet 09.11.2026 (Auftrag Victor)
-  './inventur.html',    // Inventur 2026 Perimeter/Berg/Tal, offline (02.11.2026, WERKZEUGE §87)
-  './uploads/inventur.json',
+  // './inventur.html',    // Inventur 2026 Perimeter/Berg/Tal, offline (02.11.2026, WERKZEUGE §87)   Kachel abgeschaltet 11.11.2026 (Auftrag Victor)
+  // './uploads/inventur.json',
   // './zugproben.html',   // Zugproben PZ3/PZ4 nach BA 0269 (29.09.2026, WERKZEUGE §71)   Kachel abgeschaltet 09.11.2026 (Auftrag Victor)
   './uploads/zugproben.json',   // liest auch injektion.html (Zugproben-Beine nie als Einzelbein)
   './deckbleche.html',   // Deckbleche Einzelfundamente nach BA 0272 + Borner 09.10. (27.10.2026, WERKZEUGE §84)
