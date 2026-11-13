@@ -12,7 +12,7 @@
   window.NALP_GATE_TITEL = 'Team Verschrauben';
 </script>
 <script src="assets/js/nalp-gate.js"></script>
-<script src="assets/js/nalp-anweisungen.js"></script>
+<script src="assets/js/nalp-anweisungen.js?v=261113"></script>
 <script src="assets/js/nalp-buildtrack.js"></script>
 <script src="assets/js/nalp-live.js"></script>
 <link rel="stylesheet" href="assets/js/leaflet/leaflet.css">
@@ -213,6 +213,8 @@
   <!-- ══ Karte ══ -->
   <section id="s_karte" class="an">
     <div class="filter" id="filter"></div>
+    <!-- Filter «Erfasst von» + «Problemart» der Arbeitsanweisungen (nalp-anweisungen.js, 13.11.2026) -->
+    <div id="filterAnw" style="background:#fff;border-bottom:1px solid var(--line);padding:6px 8px 0"></div>
     <div style="position:relative;flex:1">
       <div class="suche">
         <input id="q" type="text" inputmode="numeric" placeholder="Tisch-Nr. suchen …">
@@ -589,7 +591,7 @@ Promise.all([
   filterMalen();
   karteAufbauen();
   maengelLaden();
-  if(window.NalpAnw) NalpAnw.laden().then(function(){ if(AKT) blattMalen(AKT); }).catch(function(){});
+  if(window.NalpAnw) NalpAnw.laden().then(function(){ wahlMalen(); if(AKT) blattMalen(AKT); }).catch(function(){});
   netzMalen(); pendSenden();
   if(location.hash) reiter(location.hash.replace('#','')||'karte');
 }).catch(function(e){
@@ -662,11 +664,33 @@ function setFilter(f){
     karte.fitBounds(L.latLngBounds(alle).pad(0.2));
   }
 }
+/* Auswahl «Erfasst von» / «Problemart»: gezeichnet und ausgewertet vom Modul
+   nalp-anweisungen.js (EINE Stelle). Eine Auswahl schaltet die Karte auf «Mit Anweisung»
+   und zoomt auf die Treffer. */
+function wahlMalen(){
+  if(window.NalpAnw && $('filterAnw')) $('filterAnw').innerHTML = NalpAnw.auswahlHtml();
+}
+window.nalpAnwFilter = function(w){
+  wahlMalen();
+  if(w.wer || w.art){
+    FILTER = 'anw';
+    Array.prototype.forEach.call(document.querySelectorAll('.filter button'), function(b){
+      b.classList.toggle('an', b.getAttribute('data-f')==='anw'); });
+  }
+  faerben(); listeMalen();
+  if(karte && (w.wer || w.art)){
+    var alle = [];
+    Object.keys(TISCHE).filter(passt).forEach(function(id){
+      if(TISCHE[id].pts.length>=3) alle = alle.concat(TISCHE[id].pts); });
+    if(alle.length) karte.fitBounds(L.latLngBounds(alle).pad(0.15));
+  }
+};
 function passt(id){
   var t = TISCHE[id];
   if(FILTER==='alle') return true;
   if(FILTER==='offen') return t.mt && !VERSCHRAUBT[id];
-  if(FILTER==='anw')   return !!(ANWEISUNG[id] && !ANWEISUNG[id].erledigt);
+  if(FILTER==='anw')   return window.NalpAnw ? NalpAnw.passtAnw(ANWEISUNG[id])
+                                              : !!(ANWEISUNG[id] && !ANWEISUNG[id].erledigt);
   return t.ber === FILTER;
 }
 function stil(id){
@@ -810,7 +834,8 @@ function blattMalen(id){
   var pzA = (window.NalpAnw && NalpAnw.daten.pz[id]) || null;
   var rSt = window.NalpAnw ? NalpAnw.stand(id) : null;
   if(an && !an.erledigt){
-    h += '<div class="kasten anw"><b>📋 Arbeitsanweisung</b>'+esc(an.text)
+    h += '<div class="kasten anw"><b>📋 Arbeitsanweisung</b>'
+       + (window.NalpAnw ? NalpAnw.marken(an) : '') + esc(an.text)
        + '<div class="q">'+esc(an.von||'Bauleitung')+(an.bis?(' · bis '+dm(an.bis)):'')+'</div></div>';
   }
   if(pzA && pzA.akt){

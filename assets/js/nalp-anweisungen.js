@@ -123,6 +123,15 @@
       + '.nanw-btn{display:block;width:100%;margin-top:8px;border:1px solid #e3e5e8;background:#fff;'
       +   'border-radius:6px;padding:10px;font:700 13.5px Arial,sans-serif;color:#1a1a1a;cursor:pointer;}'
       + '.nanw-btn:active{background:#f2f3f5;}'
+      + '.nanw-wahl{display:flex;gap:6px;margin:0 0 10px;flex-wrap:wrap;align-items:center;}'
+      + '.nanw-wahl select{flex:1 1 150px;min-width:0;max-width:100%;border:1px solid #c9cdd2;background:#fff;'
+      +   'border-radius:8px;padding:8px 6px;font:13px Arial,sans-serif;color:#1a1a1a;}'
+      + '.nanw-wahl button{border:1px solid #D72622;background:#fff;color:#D72622;border-radius:14px;'
+      +   'padding:6px 11px;font:700 12px Arial,sans-serif;}'
+      + '.nanw-zahl{font:700 12px Arial,sans-serif;color:#63676d;white-space:nowrap;}'
+      + '.nanw-m{display:flex;gap:4px;flex-wrap:wrap;margin:4px 0 0;}'
+      + '.nanw-m span{font:11px Arial,sans-serif;background:#eceef1;color:#3d4147;border-radius:9px;padding:1px 8px;}'
+      + '.nanw-m span.q{background:#1565c0;color:#fff;font-weight:700;} .nanw-m span.e{background:#e3eefb;color:#0d47a1;}'
       + '.nanw-f{display:flex;gap:6px;margin:0 0 10px;flex-wrap:wrap;}'
       + '.nanw-f button{border:1px solid #e3e5e8;background:#fff;border-radius:14px;padding:5px 12px;'
       +   'font:700 11.5px Arial,sans-serif;color:#63676d;cursor:pointer;}'
@@ -246,6 +255,74 @@
          + statusZeichen(s.status) + ' ' + esc(statusWort(s.status)) + '</span>';
   }
 
+  /* ── Filter «Erfasst von» + «Problemart» (13.11.2026) ──
+     Felder je Anweisung: quellen[], erfasser[], arten[] – geschrieben von
+     Tools/BL_Kontrollen_Anweisungen.py (§97). Fehlen sie (Anweisung von Hand im
+     Admin), gilt: Quelle = «von», Art = «ohne Art». EINE Stelle fuer Liste UND Karte:
+     die Seiten fragen NalpAnw.passtAnw(a) und zeigen NalpAnw.auswahlHtml(). */
+  var wahl = { wer: '', art: '' };
+  function feld(a, f) {
+    var v = a && a[f];
+    if (v && !Array.isArray(v)) v = Object.keys(v).map(function (k) { return v[k]; });
+    if (v && v.length) return v;
+    if (f === 'quellen') return [(a && a.von) || '–'];
+    if (f === 'arten') return ['ohne Art'];
+    return [];
+  }
+  function passtAnw(a) {
+    if (!a || a.erledigt) return false;
+    if (wahl.wer && feld(a, 'quellen').indexOf(wahl.wer) < 0 && feld(a, 'erfasser').indexOf(wahl.wer) < 0) return false;
+    if (wahl.art && feld(a, 'arten').indexOf(wahl.art) < 0) return false;
+    return true;
+  }
+  function zaehlen(f, andere) {
+    /* Zahl je Wert – gezaehlt unter der jeweils ANDEREN Auswahl, damit die Zahlen stimmen */
+    var m = {}, merk = wahl[andere === 'wer' ? 'art' : 'wer'];
+    Object.keys(A.anw).forEach(function (id) {
+      var a = A.anw[id]; if (!a || a.erledigt) return;
+      var w0 = wahl.wer, a0 = wahl.art;
+      if (andere === 'wer') wahl.art = ''; else wahl.wer = '';
+      var ok = passtAnw(a); wahl.wer = w0; wahl.art = a0;
+      if (ok) feld(a, f).forEach(function (x) { m[x] = (m[x] || 0) + 1; });
+    });
+    return m;
+  }
+  function optionen(m, akt) {
+    return Object.keys(m).sort(function (x, y) { return m[y] - m[x] || x.localeCompare(y); })
+      .map(function (x) {
+        return '<option value="' + esc(x) + '"' + (x === akt ? ' selected' : '') + '>'
+             + esc(x) + ' (' + m[x] + ')</option>';
+      }).join('');
+  }
+  function auswahlHtml() {
+    css();
+    var q = zaehlen('quellen', 'art'), e = zaehlen('erfasser', 'art'), ar = zaehlen('arten', 'wer');
+    var n = Object.keys(A.anw).filter(function (id) { return passtAnw(A.anw[id]); }).length;
+    return '<div class="nanw-wahl">'
+      + '<select onchange="NalpAnw.waehlen(\'wer\',this.value)" aria-label="Erfasst von">'
+      + '<option value="">Erfasst von: alle</option>'
+      + '<optgroup label="Stelle">' + optionen(q, wahl.wer) + '</optgroup>'
+      + '<optgroup label="Person">' + optionen(e, wahl.wer) + '</optgroup></select>'
+      + '<select onchange="NalpAnw.waehlen(\'art\',this.value)" aria-label="Problemart">'
+      + '<option value="">Problemart: alle</option>' + optionen(ar, wahl.art) + '</select>'
+      + '<span class="nanw-zahl">' + n + ' Tische</span>'
+      + ((wahl.wer || wahl.art) ? '<button onclick="NalpAnw.waehlen(\'\',\'\')">✕ Filter</button>' : '')
+      + '</div>';
+  }
+  function waehlen(f, wert) {
+    if (!f) { wahl.wer = ''; wahl.art = ''; } else wahl[f] = wert || '';
+    neuMalen();
+    if (typeof window.nalpAnwFilter === 'function') window.nalpAnwFilter(wahl);
+  }
+  function marken(a) {
+    if (!a || !(a.arten || a.quellen)) return '';
+    return '<div class="nanw-m">'
+      + feld(a, 'quellen').map(function (x) { return '<span class="q">' + esc(x) + '</span>'; }).join('')
+      + feld(a, 'erfasser').map(function (x) { return '<span class="e">' + esc(x) + '</span>'; }).join('')
+      + feld(a, 'arten').map(function (x) { return '<span>' + esc(x) + '</span>'; }).join('')
+      + '</div>';
+  }
+
   /* ── Karten ── */
   var nurOffen = true;
   function karte(id) {
@@ -256,7 +333,7 @@
           + '<span class="nanw-meta">' + esc([(p && p.typ) || '', (p && p.ber) || ''].filter(Boolean).join(' · ')) + '</span>'
           + chip(id) + '</div>';
     if (a && a.text) {
-      h += '<div class="nanw-t">' + esc(a.text) + '</div>'
+      h += marken(a) + '<div class="nanw-t">' + esc(a.text) + '</div>'
          + '<div class="nanw-q">' + esc(T('bauleitung')) + ': ' + esc(a.von || '–')
          + (a.ts ? (' · ' + dmz(a.ts).slice(0, 10)) : '')
          + (a.bis ? (' · ' + esc(T('bis')) + ' ' + dm(a.bis)) : '') + '</div>';
@@ -289,6 +366,7 @@
     if (!el) return;
     el._nanw = 1;
     var ids = tischIds().filter(function (id) {
+      if ((wahl.wer || wahl.art) && !passtAnw(A.anw[id])) return false;
       if (!nurOffen) return true;
       var s = stand(id);
       return !s || s.status !== 'ok';
@@ -296,7 +374,7 @@
     var h = '<div class="nanw-f">'
           + '<button class="' + (nurOffen ? 'an' : '') + '" onclick="NalpAnw.filter(1)">' + esc(T('nurOffen')) + '</button>'
           + '<button class="' + (nurOffen ? '' : 'an') + '" onclick="NalpAnw.filter(0)">' + esc(T('alle')) + '</button>'
-          + '</div>';
+          + '</div>' + auswahlHtml();
     h += ids.length ? ids.map(karte).join('')
                     : '<div class="nanw-k ok">' + esc(T('keine')) + '</div>';
     el.innerHTML = h;
@@ -383,6 +461,7 @@
     daten: A,
     sprache: function (l) { if (TXT[l]) { lang = l; neuMalen(); } },
     filter: function (n) { nurOffen = !!n; neuMalen(); },
+    passtAnw: passtAnw, auswahlHtml: auswahlHtml, waehlen: waehlen, marken: marken, wahl: wahl,
     offen: function () {
       return tischIds().filter(function (id) { var s = stand(id); return !s || s.status !== 'ok'; }).length;
     },
