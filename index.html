@@ -82,6 +82,10 @@
     color: #fff; background: var(--rot); border-radius: 999px; padding: 3px 8px;
   }
 
+  /* Gruppentitel zwischen den Kacheln (24.11.2026) */
+  .gruppe { grid-column: 1 / -1; margin: 10px 2px -4px; font-size: 12px; font-weight: 900; letter-spacing: .08em;
+            text-transform: uppercase; color: var(--mut); }
+
   /* Sicherheit: eine Zeile quer, Piktogramm links – immer zuoberst */
   .k.breit { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 14px; min-height: 0; border-left: 6px solid var(--rot); }
   .k.breit img { margin: 0; width: 50px; height: 50px; flex: none; }
@@ -150,88 +154,20 @@
       <small>Notruf · Rettung · Konzepte · DE EN IT PL</small></span>
     </a>
 
-    <a class="k" href="bestand.html">
-      <img src="assets/img/ico/lieferschein.png" alt="">
+    <!-- Kacheln in Gruppen seit 24.11.2026 (Victor: «bitte die kacheln ein bisschen sortieren»); «Neu» nur noch bei Frischem. -->
+    <h2 class="gruppe">Bauprogramm 2027</h2>
+    <a class="k" href="bauprogramm-2027.html">
+      <img src="assets/img/ico/programm.png" alt="">
       <span class="neu">Neu</span>
-      <b>Bestand &amp; Lieferscheine</b>
-      <small>Pfähle, Köpfe, Lieferschein-Register – mit Passwort</small>
+      <b>Bauprogramm 2027</b>
+      <small>Vorarbeiten Schritt für Schritt entscheiden – mit Passwort</small>
     </a>
-
-    <a class="k" href="geraete.html">
-      <img src="assets/img/ico/transporte.png" alt="">
-      <span class="neu">Neu</span>
-      <b>Geräte &amp; Miete</b>
-      <small>Zurückgeben, winterfrei oder bleibt – mit Kosten, mit Passwort</small>
-    </a>
-
     <a class="k" href="leistungswerte.html">
       <img src="assets/img/ico/programm.png" alt="">
       <span class="neu">Neu</span>
       <b>Leistungswerte 2027</b>
       <small>Stahlbau und Bohren fürs Bauprogramm – mit Passwort</small>
     </a>
-
-    <a class="k" href="altlasten.html">
-      <img src="assets/img/ico/altlasten.png" alt="">
-      <span class="neu">Neu</span>
-      <b>Altlasten</b>
-      <small>55 Fremdkörper auf der Karte – entfernen, abhaken, Foto</small>
-    </a>
-
-    <!-- Kachel «Erdung Fotos» abgeschaltet 11.10.2026 (Auftrag Dennis): Topo-Fotos laufen neu über die Bohr-App -->
-
-    <a class="k" href="deckbleche.html">
-      <img src="assets/img/ico/schrauben.png" alt="">
-      <span class="neu">Neu</span>
-      <b>Deckbleche Einzelfundamente</b>
-      <small>15 Fundamente – Blech auflegen, Anker durchbohren, untergiessen</small>
-    </a>
-
-    <a class="k" href="vormontage.html">
-      <img src="assets/img/ico/vormontage.png" alt="">
-      <b>Vormontage</b>
-      <small>Etikett fotografieren, Lager, Karte, Einführung</small>
-    </a>
-
-    <a class="k" href="ps-tal.html">
-      <img src="assets/img/ico/vormontage.png" alt="">
-      <span class="neu">Neu</span>
-      <b>Passstück-Check Tal</b>
-      <small>Etikett scannen: behalten, Mauchle oder entsorgen</small>
-    </a>
-
-    <a class="k" href="stahlbau.html">
-      <img src="assets/img/ico/stahlbau.png" alt="">
-      <b>Stahlbau</b>
-      <small>Schrauben &amp; Drehmomente, Pläne, 3D-Modell je Typ</small>
-    </a>
-
-    <a class="k" href="logistik.html">
-      <img src="assets/img/ico/transporte.png" alt="">
-      <b>Transporte</b>
-      <small>Fuhre bei Schuoler bestellen – was, wohin, bis wann</small>
-    </a>
-
-    <a class="k" href="karte.html">
-      <img src="assets/img/ico/karte.png" alt="">
-      <b>Pläne 2D &amp; 3D</b>
-      <small>Karte mit Tischen und ID-Suche, 3D-Gelände</small>
-    </a>
-
-    <a class="k" href="zeitreise.html">
-      <img src="assets/img/ico/karte.png" alt="">
-      <span class="neu">Neu</span>
-      <b>Zeitreise</b>
-      <small>Luftbilder 1959–2025 mit den Tischen darüber</small>
-    </a>
-
-    <a class="k" href="kranstandorte.html">
-      <img src="assets/img/ico/karte.png" alt="">
-      <span class="neu">Neu</span>
-      <b>Kranstandorte 2026</b>
-      <small>27 Kranstandorte mit Radius, Tische und Baupisten</small>
-    </a>
-
     <a class="k" href="ebenen.html">
       <img src="assets/img/ico/karte.png" alt="">
       <span class="neu">Neu</span>
@@ -239,14 +175,80 @@
       <small>Alle Zonen, Baupisten, Kranplätze und Leitungen ein-/ausblenden</small>
     </a>
 
+    <h2 class="gruppe">Stahlbau &amp; Montage</h2>
+    <a class="k" href="stahlbau.html">
+      <img src="assets/img/ico/stahlbau.png" alt="">
+      <b>Stahlbau</b>
+      <small>Schrauben &amp; Drehmomente, Pläne, 3D-Modell je Typ</small>
+    </a>
+    <a class="k" href="vormontage.html">
+      <img src="assets/img/ico/vormontage.png" alt="">
+      <b>Vormontage</b>
+      <small>Etikett fotografieren, Lager, Karte, Einführung</small>
+    </a>
+    <a class="k" href="ps-tal.html">
+      <img src="assets/img/ico/vormontage.png" alt="">
+      <b>Passstück-Check Tal</b>
+      <small>Etikett scannen: behalten, Mauchle oder entsorgen</small>
+    </a>
+    <!-- Wieder eingeschaltet 13.11.2026 (Auftrag Victor: «wo ist der Button in der Website?») -->
+    <a class="k" href="verschrauben.html">
+      <img src="assets/img/ico/verschrauben.png" alt="">
+      <b>Mängel &amp; Anweisungen je Tisch</b>
+      <small>Team Verschrauben: Karte mit Filter nach Erfasser (BL, Abnahme) und Problemart</small>
+    </a>
+    <a class="k" href="deckbleche.html">
+      <img src="assets/img/ico/schrauben.png" alt="">
+      <b>Deckbleche Einzelfundamente</b>
+      <small>15 Fundamente – Blech auflegen, Anker durchbohren, untergiessen</small>
+    </a>
+
+    <h2 class="gruppe">Material &amp; Logistik</h2>
+    <a class="k" href="bestand.html">
+      <img src="assets/img/ico/lieferschein.png" alt="">
+      <b>Bestand &amp; Lieferscheine</b>
+      <small>Pfähle, Köpfe, Lieferschein-Register – mit Passwort</small>
+    </a>
+    <a class="k" href="geraete.html">
+      <img src="assets/img/ico/transporte.png" alt="">
+      <b>Geräte &amp; Miete</b>
+      <small>Zurückgeben, winterfrei oder bleibt – mit Kosten, mit Passwort</small>
+    </a>
+    <a class="k" href="logistik.html">
+      <img src="assets/img/ico/transporte.png" alt="">
+      <b>Transporte</b>
+      <small>Fuhre bei Schuoler bestellen – was, wohin, bis wann</small>
+    </a>
+
+    <h2 class="gruppe">Karten &amp; Umwelt</h2>
+    <a class="k" href="karte.html">
+      <img src="assets/img/ico/karte.png" alt="">
+      <b>Pläne 2D &amp; 3D</b>
+      <small>Karte mit Tischen und ID-Suche, 3D-Gelände</small>
+    </a>
+    <a class="k" href="zeitreise.html">
+      <img src="assets/img/ico/karte.png" alt="">
+      <b>Zeitreise</b>
+      <small>Luftbilder 1959–2025 mit den Tischen darüber</small>
+    </a>
+    <a class="k" href="kranstandorte.html">
+      <img src="assets/img/ico/karte.png" alt="">
+      <b>Kranstandorte 2026</b>
+      <small>27 Kranstandorte mit Radius, Tische und Baupisten</small>
+    </a>
+    <a class="k" href="altlasten.html">
+      <img src="assets/img/ico/altlasten.png" alt="">
+      <b>Altlasten</b>
+      <small>55 Fremdkörper auf der Karte – entfernen, abhaken, Foto</small>
+    </a>
+
+    <!-- Kachel «Erdung Fotos» abgeschaltet 11.10.2026 (Auftrag Dennis): Topo-Fotos laufen neu über die Bohr-App -->
+
     <a class="k klein" href="game.html">
       <img src="assets/img/ico/spiele.png" alt="">
       <b>Spiele</b>
       <small>Birkhuhn-Jagd &amp; Creeper-Nacht</small>
     </a>
-
-    <!-- Wieder eingeschaltet 13.11.2026 (Auftrag Victor: «wo ist der Button in der Website?») -->
-    <a class="k" href="verschrauben.html">  <img src="assets/img/ico/verschrauben.png" alt=""><b>Mängel &amp; Anweisungen je Tisch</b><small>Team Verschrauben: Karte mit Filter nach Erfasser (BL, Abnahme) und Problemart</small></a>
 
     <!-- Fünf (bis 13.11. sechs, Team Verschrauben ist wieder da) Kacheln abgeschaltet 22.09.2026 (Auftrag Victor: «weg können») – die Seiten
          bleiben liegen und sind per Adresse weiter erreichbar (lieferscheine.html/ls.html
