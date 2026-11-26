@@ -76,6 +76,8 @@
   .k b { display: block; font-size: 17px; font-weight: 900; margin-top: 12px; line-height: 1.2; }
   .k b::after { content: " →"; color: var(--rot); }
   .k small { display: block; font-size: 12.5px; color: var(--mut); margin-top: 3px; line-height: 1.4; }
+  .k small.stand { margin-top: 6px; font-size: 11.5px; font-weight: 700; color: #3b4048; font-variant-numeric: tabular-nums; }
+  .k small.stand:empty { display: none; }
   .k .neu {
     position: absolute; top: 12px; right: 12px;
     font-size: 10.5px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase;
@@ -155,49 +157,44 @@
     </a>
 
     <!-- Kacheln in Gruppen seit 24.11.2026 (Victor: «bitte die kacheln ein bisschen sortieren»); «Neu» nur noch bei Frischem. -->
+    <!-- «Stand» je Kachel (26.11.2026, Victor: «bei jedem der aktuellen reiter eine uhrzeit und datum … damit ich sehe ob alle
+         auf dem gleichen stand sind»): data-stand = Dateien der Seite; das Skript unten fragt per HEAD den Last-Modified-Header
+         des Portals ab (wird beim Hochladen gesetzt, nur geänderte Dateien) und zeigt den jüngsten. Kein Bauskript muss etwas tun. -->
     <h2 class="gruppe">Bauprogramm 2027</h2>
     <a class="k" href="bauprogramm-aktuell.html">
       <img src="assets/img/ico/programm.png" alt="">
       <span class="neu">Neu</span>
       <b>Bauprogramm 2026+</b>
       <small>Aktuelles Gesamtprogramm (Borner, 03.08.2026) als PDF – zoomen, suchen – mit Passwort</small>
+      <small class="stand" data-stand="uploads/bauprogramm/bauprogramm-aktuell.enc.json bauprogramm-aktuell.html"></small>
     </a>
     <a class="k" href="bauprogramm-rechner.html">
       <img src="assets/img/ico/programm.png" alt="">
       <span class="neu">Neu</span>
       <b>Bauprogramm 2027 – Rechner</b>
       <small>Programm mit Drehrädern: Start, Leistung, Passstücke, Birkhuhn – mit Passwort</small>
+      <small class="stand" data-stand="uploads/bp2027/rechner.enc.json bauprogramm-rechner.html"></small>
     </a>
     <a class="k" href="bauprogramm-karte.html">
       <img src="assets/img/ico/karte.png" alt="">
       <span class="neu">Neu</span>
       <b>Bauprogramm 2027 – Karte</b>
       <small>Ablauf je Arbeitswoche: Bohren, Passstücke, Stahlbau, Pfeile für Kran und Bohrgerät – mit Passwort</small>
-    </a>
-    <a class="k" href="bauprogramm-2027.html">
-      <img src="assets/img/ico/programm.png" alt="">
-      <span class="neu">Neu</span>
-      <b>Bauprogramm 2027</b>
-      <small>Vorarbeiten Schritt für Schritt entscheiden – mit Passwort</small>
-    </a>
-    <a class="k" href="leistungswerte.html">
-      <img src="assets/img/ico/programm.png" alt="">
-      <span class="neu">Neu</span>
-      <b>Leistungswerte 2027</b>
-      <small>Stahlbau und Bohren fürs Bauprogramm – mit Passwort</small>
-    </a>
-    <a class="k" href="rahmenbedingungen.html">
-      <img src="assets/img/ico/karte.png" alt="">
-      <span class="neu">Neu</span>
-      <b>Birkhuhn &amp; Planungszonen</b>
-      <small>Schongebiet, Regeln und neue Zonen PZ1–PZ5 auf der Karte – mit Passwort</small>
+      <small class="stand" data-stand="uploads/bp2027/karte.enc.json bauprogramm-karte.html"></small>
     </a>
     <a class="k" href="ebenen.html">
       <img src="assets/img/ico/karte.png" alt="">
       <span class="neu">Neu</span>
       <b>Ebenen</b>
       <small>Alle Zonen, Baupisten, Kranplätze und Leitungen ein-/ausblenden</small>
+      <small class="stand" data-stand="ebenen.html"></small>
     </a>
+    <!-- Drei Kacheln entfernt 26.11.2026 (Victor: «du kannst das tool birkhuhn und planungszonen entfernen. leistungswerte auch.
+         Bauprogram 2027 auch.») – Seiten bleiben liegen und sind per Adresse erreichbar.
+    <a class="k" href="bauprogramm-2027.html"><img src="assets/img/ico/programm.png" alt=""> <b>Bauprogramm 2027</b> <small>Vorarbeiten Schritt für Schritt entscheiden – mit Passwort</small></a>
+    <a class="k" href="leistungswerte.html"><img src="assets/img/ico/programm.png" alt=""> <b>Leistungswerte 2027</b> <small>Stahlbau und Bohren fürs Bauprogramm – mit Passwort</small></a>
+    <a class="k" href="rahmenbedingungen.html"><img src="assets/img/ico/karte.png" alt=""> <b>Birkhuhn &amp; Planungszonen</b> <small>Schongebiet, Regeln und neue Zonen PZ1–PZ5 auf der Karte – mit Passwort</small></a>
+    -->
 
     <h2 class="gruppe">Stahlbau &amp; Montage</h2>
     <a class="k" href="stahlbau.html">
@@ -319,6 +316,26 @@
   </div>
 
   <script>
+    /* Stand je Kachel (26.11.2026): jüngster Last-Modified der Dateien in data-stand, Schweizer Zeit. HEAD geht am Service
+       Worker vorbei (der fasst nur GET an). Kommt kein Datum (offline, lokal), bleibt die Zeile leer. */
+    (function () {
+      var el = document.querySelectorAll('.k small.stand[data-stand]');
+      Array.prototype.forEach.call(el, function (s) {
+        var dateien = s.getAttribute('data-stand').split(/\s+/).filter(Boolean);
+        Promise.all(dateien.map(function (f) {
+          return fetch(f, { method: 'HEAD', cache: 'no-store' })
+            .then(function (r) { var lm = r.ok && r.headers.get('Last-Modified'); return lm ? Date.parse(lm) : 0; })
+            .catch(function () { return 0; });
+        })).then(function (t) {
+          var m = Math.max.apply(null, t);
+          if (!m) return;
+          var d = new Date(m), z = { timeZone: 'Europe/Zurich' };
+          s.textContent = 'Stand ' + d.toLocaleDateString('de-CH', Object.assign({ day: '2-digit', month: '2-digit', year: 'numeric' }, z))
+            + ', ' + d.toLocaleTimeString('de-CH', Object.assign({ hour: '2-digit', minute: '2-digit' }, z)) + ' Uhr';
+        });
+      });
+    })();
+
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
         navigator.serviceWorker.register('sw.js').catch(function () {});
