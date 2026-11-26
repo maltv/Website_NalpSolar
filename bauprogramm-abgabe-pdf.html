@@ -37,7 +37,7 @@
 </form>
 <script src="assets/js/nalp-tresor.js"></script>
 <script>(function () {
-  var ERLAUBT = ["programm-b", "programm-a", "karten-b", "karten-a", "uebersicht"];
+  var ERLAUBT = ["programm-b", "karten-b", "uebersicht"];
   var d = (new URLSearchParams(location.search).get('d') || '').toLowerCase();
   if (ERLAUBT.indexOf(d) < 0) { location.replace('bauprogramm-abgabe.html'); return; }
   nalpTresor('uploads/bp2027/abgabe/' + d + '.enc.json');
